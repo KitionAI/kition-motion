@@ -1,0 +1,32 @@
+[package]
+name = "kition-motion-media"
+description = "Footage import: probing, stills, image sequences, video and audio via Kition Film's pure-Rust codecs, memory-budgeted frame cache"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kition-motion-time = { workspace = true }
+kition-motion-project = { workspace = true }
+kition-motion-raster = { workspace = true }
+kition-motion-render = { workspace = true }
+kition-motion-psd = { workspace = true }
+kition-motion-svg = { workspace = true }
+kition-motion-pdf = { workspace = true }
+kition-motion-model = { workspace = true }
+kition-film-codecs = { workspace = true }
+kition-film-media = { workspace = true }
+kition-film-frame = { workspace = true }
+kition-film-color = { workspace = true }
+kition-film-time = { workspace = true }
+exr = { workspace = true }
+gif = { workspace = true }
+image = { workspace = true, features = ["gif", "webp", "tiff", "bmp", "exr"] }
+rayon = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }

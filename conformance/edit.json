@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {
+      "command": "layer.newSolid",
+      "params": {
+        "color": "#ff0000",
+        "height": 80,
+        "name": "Red",
+        "width": 80
+      }
+    }
+  ]
+}

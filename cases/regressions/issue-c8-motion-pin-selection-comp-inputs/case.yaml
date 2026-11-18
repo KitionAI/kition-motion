@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-selection-comp-inputs
+feature: motion.agent.premises
+intent: Compositions queued from Project selection retain queue allocation and default templates while unrelated opacity remains independent.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_selection_comp_inputs
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

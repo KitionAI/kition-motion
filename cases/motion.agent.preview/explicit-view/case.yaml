@@ -1,0 +1,30 @@
+format: 1
+id: motion.agent.preview/explicit-view
+feature: motion.agent.preview
+intent: >-
+  file.render, the kit's agent preview, draws an explicit composition at an explicit comp time (or
+  a labelled contact sheet of frames over a range, or the middle of a layer named by a diagnostic's
+  comp:<id>/layer:<id>) as a pure function of the project, on the CPU compositor: the same call
+  answers the same bytes whatever the current time and whichever comp is open, and rendering moves
+  no current time, opens no comp, selects nothing and leaves the document clean at its revision.
+  A time outside the comp, an unknown comp, or a project with several root comps and none named
+  answer typed invalid-params errors that give the valid range or list the comps with their names
+  and durations; scale (up to 2) and maxSize (16 to 4096 on the longer side) size the picture as
+  KHP A39 says.
+layer: gate
+source:
+  kind: synthetic
+  from: bindings/wasm/tests/agent_render.rs
+  license: Apache-2.0
+  note: A 320 x 180, two-second comp of two one-second solids (red, then blue), made by the test.
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-kit
+      test: agent_render
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-17"
+timeout_s: 60

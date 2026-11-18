@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-indirect-geometry
+feature: motion.agent.premises
+intent: Track application holds target-parent matrices and auto trace holds nested source pixels, while unrelated opacity and comments apply.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_indirect_geometry
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

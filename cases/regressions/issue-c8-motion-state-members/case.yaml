@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-state-members
+feature: motion.agent.premises
+intent: The editor state names the members commands declare as reads, so a person moving only the current time leaves an agent's selection reader applying, and a person selecting another layer refuses it as changed on selection rather than as an editor state the guard cannot compare.
+layer: gate
+source:
+  kind: synthetic
+  from: motion-state-members
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_state_members
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

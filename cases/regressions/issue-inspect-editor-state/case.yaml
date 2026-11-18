@@ -1,0 +1,26 @@
+format: 1
+id: regressions/issue-inspect-editor-state
+feature: motion.agent.context
+intent: >-
+  What an agent reads of a project served headless (`view.describe`, the motion_inspect details)
+  is the project, not the editing session: moving the current time or selecting layers leaves it
+  unchanged, while keyframe times and the animated properties' paths stay. kition-sdk stopped
+  leaving out `time`-like keys by name, so the kit declares its editor state itself
+  (`EDITOR_STATE`, JSON Pointers where a name is ambiguous); the current time showed up
+  undeclared.
+layer: gate
+tags: [headless]
+source:
+  kind: probe
+  from: 'task card C4-motion (kition-sdk 1d39fb1, "inspect details leave out only declared editor state")'
+  license: owned
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: context
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

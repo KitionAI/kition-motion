@@ -1,0 +1,223 @@
+/* The Motion editor's own layout; colors and shapes come from @kition/kit-editor's tokens. */
+
+.motion-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.motion-transport {
+  gap: 4px;
+  border-top: 1px solid var(--kit-border);
+  border-bottom: 0;
+}
+
+.motion-timecode {
+  margin-left: 6px;
+  font-family: var(--kit-font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.motion-timeline {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  min-height: 128px;
+  max-height: 256px;
+  overflow: hidden;
+  border-top: 1px solid var(--kit-border);
+  background: var(--kit-surface);
+  font-size: 12px;
+}
+
+.motion-timeline-head {
+  display: flex;
+  flex: none;
+  height: 28px;
+  border-bottom: 1px solid var(--kit-border);
+}
+
+.motion-timeline-names {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  width: 200px;
+  padding: 0 12px;
+  overflow: hidden;
+}
+
+.motion-ruler {
+  position: relative;
+  flex: 1;
+  cursor: ew-resize;
+  user-select: none;
+}
+
+.motion-ruler-mark {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  padding-left: 4px;
+  border-left: 1px solid var(--kit-border);
+  color: var(--kit-text-muted);
+  font-size: 10px;
+  line-height: 28px;
+}
+
+.motion-playhead {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  width: 1px;
+  height: 100%;
+  background: var(--kit-primary);
+  pointer-events: none;
+}
+
+.motion-timeline-rows {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.motion-row {
+  display: flex;
+  height: 28px;
+  border-bottom: 1px solid var(--kit-border);
+  cursor: default;
+}
+
+.motion-row[data-selected='true'] {
+  background: var(--kit-primary-soft);
+}
+
+.motion-row-index {
+  width: 20px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.motion-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.motion-row-track {
+  position: relative;
+  flex: 1;
+}
+
+.motion-bar {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  border: 1px solid var(--kit-border);
+  border-radius: 6px;
+  background: var(--kit-surface-muted);
+}
+
+.motion-row[data-selected='true'] .motion-bar {
+  border-color: var(--kit-primary);
+  background: var(--kit-primary-soft);
+}
+
+.motion-key {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--kit-primary);
+  background: var(--kit-surface);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.motion-empty {
+  padding: 12px;
+}
+
+.motion-side {
+  width: 272px;
+}
+
+.motion-props {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.motion-prop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.motion-key-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--kit-text-muted);
+  cursor: pointer;
+}
+
+.motion-key-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.motion-key-button[data-animated='true'] {
+  color: var(--kit-primary);
+}
+
+.motion-key-button[data-animated='true'] svg {
+  fill: currentColor;
+}
+
+.motion-prop-name {
+  width: 80px;
+  flex: none;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.motion-prop-values {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.motion-number {
+  width: 100%;
+  min-width: 0;
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.motion-number:read-only {
+  color: var(--kit-text-muted);
+}
+
+.kui-spin {
+  animation: kui-spin 1s linear infinite;
+}
+
+@keyframes kui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

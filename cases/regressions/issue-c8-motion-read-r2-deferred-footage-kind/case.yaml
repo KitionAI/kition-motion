@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-deferred-footage-kind
+feature: motion.agent.premises
+dimension: [function, collab]
+layer: gate
+intent: A queued footage presence check refuses an item that became excluded Data footage before its result was applied.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, filter: deferred_footage_check_refuses_changed_kind }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

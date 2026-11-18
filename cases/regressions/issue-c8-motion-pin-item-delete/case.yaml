@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-item-delete
+feature: motion.model.objects
+intent: Raw item deletion refuses unread owned-layer changes and preserves another composition.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_item_delete
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

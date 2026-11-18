@@ -1,0 +1,20 @@
+format: 1
+id: regressions/issue-8
+feature: motion.agent.design
+intent: >-
+  The design check and inspect's design advice have no false positives: text an expression
+  animates (the countUp preset) moves, so it is not static-text; contrast is measured against what
+  is right behind the text when it comes on (a white card under dark text reads well), not the
+  background solid; and weak-hierarchy compares only texts on screen together.
+layer: gate
+source:
+  kind: issue
+  from: Kition Motion regression suite
+  license: owned
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: design_check }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

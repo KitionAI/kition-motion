@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-template-media
+feature: motion.agent.premises
+dimension: [security, data-safety]
+layer: gate
+intent: Template archive media paths contain only normal relative components; invalid paths refuse before extracting media or changing the document.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, test: template_media_paths }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

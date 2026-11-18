@@ -1,0 +1,20 @@
+format: 1
+id: regressions/issue-khp-bench-video-advice-in-check
+feature: motion.agent.design
+intent: >-
+  motion_check reports the design advice on the active composition at Info, one diagnostic per
+  layer where the advice is about one, each with a fix that runs as written and clears its code.
+  In the video runs after the P0 fixes, every agent called motion_check before exporting and none
+  read _inspect's advice or the guide, so the advice never reached them.
+layer: unit
+source:
+  kind: probe
+  from: KitionAI/khp-bench video batch p0, the agents' tool calls
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: checks }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

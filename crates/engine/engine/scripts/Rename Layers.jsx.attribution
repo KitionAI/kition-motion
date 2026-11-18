@@ -1,0 +1,7 @@
+asset:        Rename Layers.jsx
+title:        Sample script (Rename Layers)
+author:       upstream contributors (see NOTICE)
+source:       upstream project credited in NOTICE (original work of its contributors)
+license:      MIT (the upstream license, see NOTICE)
+added:        2026-11-17 upstream
+notes:        Written from scratch for the upstream project against the documented scripting behaviour; not derived from any Adobe sample.

@@ -1,0 +1,7 @@
+asset:        Ease Presets.jsx
+title:        Bundled script panel (Ease Presets) and its built-in ease presets
+author:       upstream contributors (see NOTICE)
+source:       upstream project credited in NOTICE (original work of its contributors)
+license:      MIT (the upstream license, see NOTICE)
+added:        2026-11-17 upstream
+notes:        Written from scratch for the upstream project against After Effects' documented scripting behaviour (Scripting Guide); not derived from any Adobe sample or third-party panel. The twelve built-in curves are the upstream contributors' own values, moved unchanged from the core Ease Presets panel (#254).

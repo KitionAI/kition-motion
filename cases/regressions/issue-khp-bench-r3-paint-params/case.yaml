@@ -1,0 +1,25 @@
+format: 1
+id: regressions/issue-khp-bench-r3-paint-params
+feature: motion.agent.act
+intent: >-
+  An agent's shape and text colours pass the parameter checks in every form the engine reads
+  (`#rrggbb`, `[r, g, b]`, `false` for none, a paint type by name), and a shape's `size` is
+  `[w, h]` or one number. The schemas typed `stroke` as a whole number, so no stroke colour could
+  be given, and a number `size` passed the check but drew the default 300 x 300 (khp-bench r3, V05
+  and V06).
+layer: gate
+source:
+  kind: probe
+  from: KitionAI/khp-bench round 3 generation runs, issues (f) and (h)
+  license: owned
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: paint_params
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-17"
+timeout_s: 60

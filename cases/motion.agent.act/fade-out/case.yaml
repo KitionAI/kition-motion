@@ -1,0 +1,43 @@
+format: 1
+id: motion.agent.act/fade-out
+feature: motion.agent.act
+intent: >-
+  The agent keys a fade on a layer's opacity from a request that mixes seconds and frames, turning
+  frame 60 at 30 fps into 2 s, with numeric keyframe values.
+layer: eval
+source:
+  kind: synthetic
+  from: repo:conformance/basic.kmotion
+  license: Apache-2.0
+  note: A copy of the conformance project the motion engine writes (Comp 1, 320×180, 30 fps, 10 s; a Band solid over a Background solid).
+input: [input/motion.kmotion]
+steps:
+  - task:
+      prompt: >-
+        In motion.kmotion, fade the Band layer out: its opacity should be 100% at 1 second and 0%
+        at frame 60 of Comp 1.
+      max_turns: 20
+  - inspect: { path: motion.kmotion, as: after }
+expected:
+  - actual: out:after
+    compare: values
+    value:
+      details.info.layers.0.name: Band
+      details.info.layers.0.animated: [{ path: transform/opacity, name: Opacity, times: [1, 2] }]
+  - actual: out:after
+    compare: values
+    collateral: true
+    value:
+      details.info.layers: { count: 2 }
+      details.info.layers.0.in: 0
+      details.info.layers.0.out: 10
+      details.info.layers.1.animated: []
+solution:
+  - tool: motion_run
+    args:
+      path: motion.kmotion
+      steps:
+        - { command: prop.addKey, params: { layer: 28, path: transform/opacity, time: 1, value: 100 } }
+        - { command: prop.addKey, params: { layer: 28, path: transform/opacity, time: 2, value: 0 } }
+since: "2026-11-17"
+timeout_s: 600

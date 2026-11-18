@@ -1,0 +1,34 @@
+format: 1
+id: motion.agent.recover/missing-parent
+feature: motion.agent.recover
+intent: >-
+  The agent runs the kit's check, which reports a layer parented to a layer that no longer exists
+  (an error), and clears the broken parent without removing the layer (KHP Verify).
+layer: eval
+source:
+  kind: synthetic
+  from: repo:conformance/check-missing-parent.kmotion
+  license: Apache-2.0
+  note: A copy of the conformance fixture for motion.missing-parent, written by the motion engine.
+input: [input/orphan.kmotion]
+steps:
+  - task:
+      prompt: >-
+        Run the kit's check on orphan.kmotion and fix every error it reports. Keep every layer.
+      max_turns: 20
+  - inspect: { path: orphan.kmotion, as: after }
+  - check: { path: orphan.kmotion, as: diagnostics }
+expected:
+  - actual: out:diagnostics
+    compare: diagnostics
+    value: { absent: [motion.missing-parent], max_errors: 0 }
+  - actual: out:after
+    compare: values
+    collateral: true
+    value:
+      details.info.layers: { any: { name: Background } }
+solution:
+  - tool: motion_run
+    args: { path: orphan.kmotion, steps: [{ command: layer.setParent, params: { comp: 1, compensate: false, layers: [4], parent: null } }] }
+since: "2026-11-17"
+timeout_s: 600

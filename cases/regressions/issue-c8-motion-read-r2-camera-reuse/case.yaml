@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-camera-reuse
+feature: motion.agent.premises
+dimension: [function, collab]
+layer: gate
+intent: Camera analysis recomputes tracks after a preceding effect edit instead of reusing tracks whose key omits that pixel dependency.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, filter: camera_analysis_does_not_reuse_tracks_after_preceding_effect_edit }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

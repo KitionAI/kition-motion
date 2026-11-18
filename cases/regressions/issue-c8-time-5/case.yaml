@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-time-5
+feature: motion.agent.premises
+intent: Time, key, marker, effect and layer addresses retain the observed premises across independently rewritten files and allow unrelated edits.
+layer: gate
+dimension: collab
+source: { kind: synthetic, from: C8-time-5, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: time5 }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }
+since: "2026-11-17"

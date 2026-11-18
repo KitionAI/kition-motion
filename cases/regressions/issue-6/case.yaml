@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-6
+feature: motion.text.animate
+intent: >-
+  The text animation presets start at start (comp seconds), not the current time, and frames sets
+  their length per unit: typewriter with frames 3 on six characters takes 18 frames. Before,
+  trackingIn and typewriter keyed from the current time and typewriter always took 2 s.
+layer: gate
+source:
+  kind: issue
+  from: Kition Motion regression suite
+  license: owned
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: preset_timing, filter: issue_6_text_presets_start_at_start_and_take_frames }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

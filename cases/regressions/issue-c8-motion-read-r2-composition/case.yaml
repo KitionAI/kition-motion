@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-composition
+feature: motion.agent.premises
+dimension: [ai, collab]
+layer: gate
+intent: Composition edits hold assigned fields and the child position or timing fields they rewrite, while accepting unrelated changes.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_r2_composition }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

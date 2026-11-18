@@ -1,0 +1,36 @@
+[package]
+name = "kition-motion-host"
+description = "Builds a fully wired Kition Motion session: media decoding (Kition Film codecs), importer, the expression engine and scripting"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kition-motion-engine = { workspace = true }
+kition-motion-project = { workspace = true }
+kition-motion-media = { workspace = true }
+kition-motion-expr = { workspace = true }
+kition-motion-script = { workspace = true }
+kition-motion-export = { workspace = true }
+kition-motion-plugin = { workspace = true }
+
+# WebAssembly effect plug-ins run in wasmi on native builds.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+kition-motion-plugin = { workspace = true, features = ["wasm"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+kition-motion-psd = { workspace = true }
+kition-motion-svg = { workspace = true }
+kition-motion-pdf = { workspace = true }
+kition-motion-raster = { workspace = true }
+kition-motion-time = { workspace = true }
+kition-motion-interchange = { workspace = true }
+image = { workspace = true }
+gif = { workspace = true }
+exr = { workspace = true }
+rayon = { workspace = true }

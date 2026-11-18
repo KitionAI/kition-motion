@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-file-open-description
+feature: motion.agent.act
+intent: >-
+  file.open tells an agent what it does: it opens the project file at `path` and replaces the open
+  project. Its description had been an XML parser comment ("An opening tag …"), which the generated
+  writing format passed on to agents.
+layer: unit
+source:
+  kind: probe
+  from: kit-matrix W1 run (docs/writing-format.md listed file.open as "An opening tag")
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: commands_described, filter: file_open_says_it_opens_the_project_at_path }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

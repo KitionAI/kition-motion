@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-deferred-footage
+feature: motion.agent.premises
+dimension: [function, collab]
+layer: gate
+intent: Deferred footage checks refuse replacement footage and still apply after an unrelated item rename.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, filter: deferred_footage_check_preserves_changed_footage }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

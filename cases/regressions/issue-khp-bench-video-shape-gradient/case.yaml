@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-khp-bench-video-shape-gradient
+feature: motion.agent.act
+intent: >-
+  A new shape takes its gradient's colours (`fillGradient`, `strokeGradient`) and direction
+  (`fillAngle`, `strokeAngle`) in the same step; every gradient a shape could be made with ran
+  white to black, left to right. Checked on the rendered pixels.
+layer: unit
+source:
+  kind: probe
+  from: KitionAI/khp-bench video runs (video plan P0)
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, test: shape_gradient }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

@@ -1,0 +1,39 @@
+format: 1
+id: motion.agent.observe/top-label
+feature: motion.agent.observe
+intent: >-
+  The agent reads the layer order of a composition to find the layer drawn on top (index 1, not
+  the last in a list it may expect bottom-up) and labels it, changing nothing else.
+layer: eval
+source:
+  kind: synthetic
+  from: repo:conformance/basic.kmotion
+  license: Apache-2.0
+  note: A copy of the conformance project the motion engine writes (Comp 1, 320×180, 30 fps, 10 s; a Band solid over a Background solid).
+input: [input/motion.kmotion]
+steps:
+  - task:
+      prompt: >-
+        In motion.kmotion, set the label colour of the layer that is drawn on top of the others in
+        Comp 1 to Blue. Change nothing else.
+      max_turns: 20
+  - inspect: { path: motion.kmotion, as: after }
+expected:
+  - actual: out:after
+    compare: values
+    value:
+      details.info.layers: { any: { index: 1, label: Blue } }
+  - actual: out:after
+    compare: values
+    collateral: true
+    value:
+      details.info.layers: { count: 2 }
+      details.info.layers.0.name: Band
+      details.info.layers.1.name: Background
+      details.info.layers.1.label: Red
+      details.info.layers.0.animated: []
+solution:
+  - tool: motion_run
+    args: { path: motion.kmotion, steps: [{ command: edit.label, params: { layers: [28], label: Blue } }] }
+since: "2026-11-17"
+timeout_s: 600

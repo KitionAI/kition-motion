@@ -1,0 +1,13 @@
+format: 1
+id: motion.agent.premises/nested-schema
+feature: motion.agent.premises
+dimension: [ai, data-safety]
+layer: gate
+intent: Nested object-reference declarations have schema nodes the guard can traverse.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: declarations_independent, filter: nested_reference_roles_have_schema_nodes }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }

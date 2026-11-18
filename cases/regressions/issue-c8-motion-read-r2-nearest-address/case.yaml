@@ -1,0 +1,15 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-nearest-address
+feature: motion.agent.premises
+dimension: [function, data-safety]
+layer: gate
+intent: >-
+  An ease edit at the nearest key refuses after another writer deletes that key or inserts
+  a closer one, and accepts distant key and unrelated property changes that preserve its inputs.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_r2_nearest_address }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

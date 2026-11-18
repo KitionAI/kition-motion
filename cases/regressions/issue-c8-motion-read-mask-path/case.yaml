@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-mask-path
+feature: motion.agent.premises
+dimension: [ai, data-safety]
+layer: gate
+intent: A static mask path closed assignment holds the path and key state it reads while accepting unrelated opacity and unevaluated expression changes.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_mask_path }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }

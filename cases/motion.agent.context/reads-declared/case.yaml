@@ -1,0 +1,25 @@
+format: 1
+id: motion.agent.context/reads-declared
+feature: motion.agent.context
+intent: >-
+  Every command declares the editor state it reads (`reads`: selection, part, time) as its code
+  reads it: a scan follows each command's definition through the engine's functions, Session
+  methods, macros and the commands it runs to the layer, property, keyframe and vertex
+  selections, the active comp and the current times, and fails on any difference; the kit's table
+  of commands that read the keyframe selection and the `targets` (`layers`, else `layer`) match
+  too.
+layer: gate
+source:
+  kind: synthetic
+  from: bindings/wasm/tests/acts.rs
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-kit
+      test: acts
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

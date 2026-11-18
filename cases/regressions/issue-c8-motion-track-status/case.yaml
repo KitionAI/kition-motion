@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-track-status
+feature: motion.agent.premises
+intent: Track status without a layer reads the layer selection, so a person selecting another layer after the agent's basis refuses the write, while no selection change or a layer named with on lets it apply.
+layer: gate
+source:
+  kind: synthetic
+  from: motion-track-status
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_track_status_selection
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

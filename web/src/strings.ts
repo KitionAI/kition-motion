@@ -1,0 +1,77 @@
+import type { Catalog } from '@kition/kit-editor'
+
+/** The editor's own strings (`en-US` is required; others fall back to it). */
+const enUS: Catalog = {
+  "layers": "Layers",
+  "noLayers": "No layers yet. Add one with New layer.",
+  "newLayer": "New layer",
+  "layerKind.text": "Text",
+  "layerKind.shape": "Shape",
+  "layerKind.solid": "Solid",
+  "layerKind.null": "Null object",
+  "layerKind.adjustment": "Adjustment layer",
+  "layerKind.camera": "Camera",
+  "layerKind.light": "Light",
+  "homeTab": "Home",
+  "home.effects": "Effects",
+  "play": "Play",
+  "pause": "Pause",
+  "stepBack": "Previous frame",
+  "stepForward": "Next frame",
+  "goToStart": "Go to start",
+  "goToEnd": "Go to end",
+  "properties": "Transform",
+  "selectLayer": "Select a layer to see its Transform values.",
+  "addKey": "Add a {name} keyframe here",
+  "renderMovie": "Render MP4",
+  "rendering": "Rendering…",
+  "rendered": "Rendered {name}",
+  "renderFailed": "Could not render the movie",
+  "summary": "{name}: {width} × {height}, {fps} fps, {layers} layers",
+  "noComp": "This project has no composition yet.",
+}
+
+const zhCN: Catalog = {
+  "layers": "图层",
+  "noLayers": "还没有图层。用“新建图层”添加一个。",
+  "newLayer": "新建图层",
+  "layerKind.text": "文本",
+  "layerKind.shape": "形状",
+  "layerKind.solid": "纯色",
+  "layerKind.null": "空对象",
+  "layerKind.adjustment": "调整图层",
+  "layerKind.camera": "摄像机",
+  "layerKind.light": "灯光",
+  "homeTab": "开始",
+  "home.effects": "效果",
+  "play": "播放",
+  "pause": "暂停",
+  "stepBack": "上一帧",
+  "stepForward": "下一帧",
+  "goToStart": "转到开头",
+  "goToEnd": "转到结尾",
+  "properties": "属性",
+  "selectLayer": "选择一个图层以查看其变换属性。",
+  "addKey": "在此处添加“{name}”关键帧",
+  "renderMovie": "渲染 MP4",
+  "rendering": "正在渲染…",
+  "rendered": "已渲染 {name}",
+  "renderFailed": "无法渲染影片",
+  "summary": "{name}：{width} × {height}，{fps} fps，{layers} 个图层",
+  "noComp": "此项目还没有合成。",
+}
+
+export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }
+
+/** Kition Motion ships no Chinese catalog: After Effects' Chinese menu names. */
+export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
+  "File": "文件",
+  "Edit": "编辑",
+  "Composition": "合成",
+  "Layer": "图层",
+  "Effect": "效果",
+  "Animation": "动画",
+  "View": "视图",
+  "Window": "窗口",
+  "Help": "帮助",
+} }

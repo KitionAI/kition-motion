@@ -1,0 +1,14 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-recent-preset
+feature: motion.agent.premises
+dimension: [ai, collab, data-safety]
+layer: gate
+intent: Recent animation preset application declares the current time used to shift stored keys. Keys land at the explicit call time, a colleague's changed destination refuses, and another layer's unrelated edit remains applicable.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: independent_r2_recent_preset_context }
+  - cargo-test: { package: kition-motion, test: independent_r2_recent_preset_context }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

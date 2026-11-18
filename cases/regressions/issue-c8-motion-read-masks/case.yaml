@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-masks
+feature: motion.agent.premises
+dimension: [ai, data-safety]
+layer: gate
+intent: Scalar mask writes refuse changes to their assigned fields and selector resolution while accepting unrelated changes to their layer.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_masks }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }

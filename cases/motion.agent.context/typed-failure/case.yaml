@@ -1,0 +1,22 @@
+format: 1
+id: motion.agent.context/typed-failure
+feature: motion.agent.context
+intent: >-
+  Why a command did not run is typed (kition_kit::failure): an unknown command is
+  command_not_found, one that cannot run now command_disabled, wrong parameters (a comp the
+  project lacks among them) and a call context the project lacks invalid_params.
+layer: gate
+source:
+  kind: synthetic
+  from: bindings/wasm/tests/typed_failure.rs
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-kit
+      test: typed_failure
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-7
+feature: motion.keys.properties
+intent: >-
+  keys.applyEase snaps from and to to the comp's frame grid as prop.addKey snaps key times, so a
+  range given off the grid (0.333 to 1.666 s at 30 fps) finds the keys added at those times.
+  Before, it answered no two consecutive keyframes.
+layer: gate
+source:
+  kind: issue
+  from: Kition Motion regression suite
+  license: owned
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: preset_timing, filter: issue_7_apply_ease_snaps_its_range }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

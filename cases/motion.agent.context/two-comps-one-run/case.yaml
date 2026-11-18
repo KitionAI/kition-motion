@@ -1,0 +1,45 @@
+format: 1
+id: motion.agent.context/two-comps-one-run
+feature: motion.agent.context
+intent: >-
+  The project has two comps, Intro (open) and Outro. In one motion_run the agent keys the Title
+  layer of Intro to 0 % opacity at 2 s of the comp's time (the layer's own time starts 1 s in, so
+  layer time would put the key at 3 s) and sets the Logo layer of Outro to 50 % opacity, naming
+  each step's comp (`at.part`), time (`at.time`, comp seconds) and layer (`on`) instead of opening
+  comps or moving the current time first.
+layer: eval
+source:
+  kind: synthetic
+  from: 'task card C4-motion; two 320 x 180 comps the motion engine wrote (Intro: Background solid, Title text from 1 s; Outro: Logo solid)'
+  license: owned
+input: [input/promo.kmotion]
+steps:
+  - task:
+      prompt: >-
+        In promo.kmotion, in one motion_run call: give the Title layer of the composition "Intro"
+        an opacity keyframe of 0% at 2 seconds of the composition's time, and set the opacity of
+        the Logo layer of the composition "Outro" to 50%. Change nothing else.
+      max_turns: 20
+  - run: { path: promo.kmotion, args: { save: false }, steps: [{ command: prop.get, params: { comp: 1, layer: 27, path: transform/opacity } }], as: title }
+  - run: { path: promo.kmotion, args: { save: false }, steps: [{ command: prop.get, params: { comp: 66, layer: 68, path: transform/opacity } }], as: logo }
+expected:
+  - actual: out:title
+    compare: values
+    value:
+      completed.0.result.keys: { count: 1 }
+      completed.0.result.keys.0.compTime: 2
+      completed.0.result.keys.0.value: 0
+  - actual: out:logo
+    compare: values
+    value:
+      completed.0.result.value: 50
+      completed.0.result.animated: false
+solution:
+  - tool: motion_run
+    args:
+      path: promo.kmotion
+      steps:
+        - { command: prop.addKey, on: [27], at: { part: { comp: 1 }, time: 2 }, params: { path: transform/opacity, value: 0 } }
+        - { command: prop.set, on: [68], at: { part: { comp: 66 } }, params: { path: transform/opacity, value: 50 } }
+since: "2026-11-17"
+timeout_s: 600

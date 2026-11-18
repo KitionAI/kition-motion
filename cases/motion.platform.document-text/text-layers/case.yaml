@@ -1,0 +1,21 @@
+format: 1
+id: motion.platform.document-text/text-layers
+feature: motion.platform.document-text
+intent: >-
+  document.text answers every composition's text layers (Source Text, layer #1 first, line breaks
+  as newlines, each keyframed text once) as plain text with one part per composition, cut at the
+  limit in characters with truncated set and every part within the text; hidden layers are left
+  out, an empty project answers empty text, reading changes nothing
+  (kition_kit::testing::check_text), and the headless kit lists document-text and answers it.
+layer: unit
+source:
+  kind: synthetic
+  from: bindings/headless/tests/document_text.rs
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: document_text }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

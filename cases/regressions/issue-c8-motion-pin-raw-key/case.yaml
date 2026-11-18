@@ -1,0 +1,22 @@
+format: 1
+id: regressions/issue-c8-motion-pin-raw-key
+feature: motion.model.objects
+intent: >-
+  A raw key value assignment refuses another writer's change to the assigned value,
+  and keeps the same key through an unrelated insertion, ease change, or layer rename.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_raw_batch
+      filter: raw_key_value_holds_its_field
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

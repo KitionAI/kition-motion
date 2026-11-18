@@ -1,0 +1,60 @@
+use super::Row;
+
+pub(super) const ROWS: &[Row] = &[
+    Row {
+        command: "layer.autoTrace",
+        path: "current frame, append masks to existing layer",
+        resolves: &["comp:id|name|active", "layer:id|numeric-index-fallback|#index|name|selected"],
+        reads: &[
+            "layer.source.is_av",
+            "source frame at CTI via tracking::source_frame; footage interpretation/proxy/timeRemap or nested comp/text/shape render closure",
+            "layer.start_time/stretch",
+            "existing masks children count for palette/names",
+            "source dimensions",
+            "project.next_id",
+        ],
+        checks: &["has_layers", "AV source", "valid channel", "at least one traced contour", "target masks group exists"],
+        writes: &["layer.masks.children append contours; new path/opacity keys when multiple frames", "project.next_id"],
+        state: &["part", "selection if layer absent", "time currentFrame", "writes selected_layers"],
+        source: "commands/autotrace.rs:78-198; tracking.rs:201-235; render/lib.rs:1083-1175,1335-1337; render/eval.rs:93-122",
+    },
+    Row {
+        command: "layer.autoTrace",
+        path: "workArea, append masks to existing layer",
+        resolves: &["same layer resolution"],
+        reads: &[
+            "current-frame branch source-render/mask facts",
+            "comp.work_area",
+            "comp.frame_rate",
+            "layer.in_point/out_point",
+            "source frames at every overlapping snapped frame",
+        ],
+        checks: &["current-frame branch eligibility", "work area overlaps layer"],
+        writes: &["layer.masks.children appended animated path/opacity contours", "project.next_id"],
+        state: &["part", "selection if layer absent", "area (workArea stored comp state)", "writes selected_layers"],
+        source: "commands/autotrace.rs:99-198; tracking.rs:201-235",
+    },
+    Row {
+        command: "layer.autoTrace",
+        path: "applyToNewLayer true, currentFrame or workArea",
+        resolves: &["same input resolution; new solid inserted immediately above input"],
+        reads: &[
+            "chosen time-span branch facts",
+            "input.name/start_time/in_point/out_point/stretch/parent",
+            "input.transform entire group cloned and reuid",
+            "source.width/height",
+            "comp.pixel_aspect/duration",
+            "Solids folder names",
+            "input stack position",
+            "existing layer names for unique build name",
+        ],
+        checks: &["chosen time-span eligibility", "new solid masks exists"],
+        writes: &[
+            "new Solid source item and optional Solids folder",
+            "comp.layers new traced solid with cloned transform/timing/parent and masks",
+            "project.next_id",
+        ],
+        state: &["part", "selection if layer absent", "time or area by span", "writes selected_layers"],
+        source: "commands/autotrace.rs:128-198; project/build.rs:737-850",
+    },
+];

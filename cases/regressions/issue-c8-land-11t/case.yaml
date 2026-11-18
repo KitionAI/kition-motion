@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-land-11t
+feature: motion.agent.premises
+intent: Object parameters follow the engine's resolvers, including names and nested layer references, so a stale write cannot select a changed object.
+layer: gate
+dimension: collab
+source: { kind: synthetic, from: C8-land-11t, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: land11 }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }
+since: "2026-11-17"

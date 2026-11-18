@@ -1,0 +1,1331 @@
+{
+ "less": {},
+ "more": {
+  "align/0": [
+   "target:whole-for-fields"
+  ],
+  "align/1": [
+   "target:whole-for-fields"
+  ],
+  "align/2": [
+   "target:whole-for-fields"
+  ],
+  "anim/0": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim/1": [
+   "target:whole-for-fields"
+  ],
+  "anim/11": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim/12": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim/13": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim/14": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim/2": [
+   "target:whole-for-fields"
+  ],
+  "anim/3": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim/4": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim/5": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim/6": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim/7": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim_tools/0": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim_tools/1": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "anim_tools/2": [
+   "target:whole-for-fields"
+  ],
+  "animation/0": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "animation/1": [
+   "target:whole-for-fields"
+  ],
+  "animation/2": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "animation/4": [
+   "target:whole-for-fields"
+  ],
+  "animation/6": [
+   "target:unread"
+  ],
+  "app_more/1": [
+   "comp:unread"
+  ],
+  "app_more/3": [
+   "target:whole-for-fields"
+  ],
+  "app_more/4": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "app_more/7": [
+   "target:whole-for-fields",
+   "comp:whole-for-fields"
+  ],
+  "app_more/8": [
+   "target:whole-for-fields",
+   "comp:whole-for-fields",
+   "layers:unread"
+  ],
+  "autotrace/0": [
+   "target:whole-for-fields"
+  ],
+  "autotrace/1": [
+   "target:whole-for-fields"
+  ],
+  "batch/0": [
+   "target:unread"
+  ],
+  "camera_cmds/2": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "camera_cmds/3": [
+   "target:whole-for-fields"
+  ],
+  "camera_cmds/4": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "comp/0": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "comp/5": [
+   "target:whole-for-fields",
+   "comp:whole-for-fields"
+  ],
+  "comp/8": [
+   "target:whole-for-fields",
+   "items:unread"
+  ],
+  "comp/9": [
+   "target:unread",
+   "comp:unread",
+   "layers:unread"
+  ],
+  "comp_more/0": [
+   "target:unread",
+   "comp:whole-for-fields"
+  ],
+  "comp_more/2": [
+   "comp:whole-for-fields"
+  ],
+  "comp_more/4": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "comp_more/5": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "comp_more/6": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "content_fill/0": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "content_fill/3": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "edit/10": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/11": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/13": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/14": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/15": [
+   "layers:unread"
+  ],
+  "edit/17": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/18": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/19": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/2": [
+   "layers:unread"
+  ],
+  "edit/20": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/21": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/22": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/23": [
+   "target:unread"
+  ],
+  "edit/24": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/28": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/3": [
+   "layers:unread"
+  ],
+  "edit/30": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "edit/31": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "edit/5": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/7": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/8": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "edit/9": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "effect/1": [
+   "target:whole-for-fields"
+  ],
+  "effect/10": [
+   "target:whole-for-fields"
+  ],
+  "effect/11": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "effect/2": [
+   "target:whole-for-fields"
+  ],
+  "effect/9": [
+   "target:whole-for-fields"
+  ],
+  "template_props/0": [
+   "target:whole-for-fields",
+   "comp:unread",
+   "layers:unread"
+  ],
+  "template_props/1": [
+   "target:whole-for-fields"
+  ],
+  "template_props/11": [
+   "target:whole-for-fields"
+  ],
+  "template_props/12": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "template_props/14": [
+   "target:whole-for-fields"
+  ],
+  "template_props/15": [
+   "target:whole-for-fields"
+  ],
+  "template_props/16": [
+   "target:whole-for-fields"
+  ],
+  "template_props/17": [
+   "target:whole-for-fields"
+  ],
+  "template_props/19": [
+   "target:whole-for-fields"
+  ],
+  "template_props/20": [
+   "target:whole-for-fields",
+   "comp:unread",
+   "layers:unread"
+  ],
+  "template_props/22": [
+   "target:unread"
+  ],
+  "template_props/3": [
+   "target:whole-for-fields"
+  ],
+  "template_props/7": [
+   "target:whole-for-fields"
+  ],
+  "template_props/8": [
+   "target:whole-for-fields"
+  ],
+  "template_props/9": [
+   "target:whole-for-fields"
+  ],
+  "file/7": [
+   "comp:unread"
+  ],
+  "file_more/1": [
+   "comp:whole-for-fields"
+  ],
+  "file_more/10": [
+   "comp:unread"
+  ],
+  "file_more/13": [
+   "comp:unread"
+  ],
+  "file_more/14": [
+   "comp:unread"
+  ],
+  "file_more/15": [
+   "comp:unread"
+  ],
+  "file_more/20": [
+   "comp:unread"
+  ],
+  "file_more/25": [
+   "comp:unread"
+  ],
+  "file_more/4": [
+   "comp:unread"
+  ],
+  "file_more/7": [
+   "comp:unread"
+  ],
+  "file_more/8": [
+   "comp:unread"
+  ],
+  "file_more/9": [
+   "comp:unread"
+  ],
+  "focus/0": [
+   "comp:unread"
+  ],
+  "focus/1": [
+   "comp:unread"
+  ],
+  "focus/2": [
+   "target:whole-for-fields"
+  ],
+  "focus/3": [
+   "target:whole-for-fields"
+  ],
+  "footage_panel/5": [
+   "items:unread"
+  ],
+  "footage_panel/6": [
+   "items:unread"
+  ],
+  "frontend/0": [
+   "target:unread"
+  ],
+  "frontend/1": [
+   "target:unread"
+  ],
+  "frontend/2": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "frontend/3": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "key_labels/0": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "key_labels/1": [
+   "target:whole-for-fields"
+  ],
+  "key_transform/0": [
+   "comp:whole-for-fields"
+  ],
+  "key_transform/2": [
+   "target:whole-for-fields"
+  ],
+  "keys_more/0": [
+   "target:unread",
+   "comp:whole-for-fields"
+  ],
+  "keys_more/1": [
+   "target:unread",
+   "comp:whole-for-fields"
+  ],
+  "layer/0": [
+   "target:unread"
+  ],
+  "layer/1": [
+   "target:unread"
+  ],
+  "layer/11": [
+   "target:whole-for-fields"
+  ],
+  "layer/12": [
+   "target:whole-for-fields"
+  ],
+  "layer/17": [
+   "target:whole-for-fields"
+  ],
+  "layer/18": [
+   "target:whole-for-fields"
+  ],
+  "layer/19": [
+   "target:whole-for-fields"
+  ],
+  "layer/2": [
+   "target:unread"
+  ],
+  "layer/20": [
+   "target:whole-for-fields"
+  ],
+  "layer/28": [
+   "target:whole-for-fields"
+  ],
+  "layer/29": [
+   "target:whole-for-fields"
+  ],
+  "layer/3": [
+   "target:unread"
+  ],
+  "layer/30": [
+   "target:whole-for-fields"
+  ],
+  "layer/32": [
+   "target:whole-for-fields"
+  ],
+  "layer/33": [
+   "target:whole-for-fields"
+  ],
+  "layer/34": [
+   "target:whole-for-fields"
+  ],
+  "layer/35": [
+   "target:whole-for-fields"
+  ],
+  "layer/36": [
+   "target:whole-for-fields"
+  ],
+  "layer/37": [
+   "target:whole-for-fields"
+  ],
+  "layer/38": [
+   "target:whole-for-fields"
+  ],
+  "layer/39": [
+   "target:whole-for-fields"
+  ],
+  "layer/4": [
+   "target:unread"
+  ],
+  "layer/43": [
+   "target:whole-for-fields"
+  ],
+  "layer/5": [
+   "target:whole-for-fields"
+  ],
+  "layer/7": [
+   "comp:unread"
+  ],
+  "layer/8": [
+   "target:whole-for-fields"
+  ],
+  "layer/9": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/10": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/11": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/12": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/13": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/18": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/19": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/24": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/25": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/26": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/28": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/29": [
+   "target:unread",
+   "comp:unread",
+   "layers:unread"
+  ],
+  "layer_menu/3": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/31": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/32": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/4": [
+   "target:unread",
+   "comp:unread"
+  ],
+  "layer_menu/5": [
+   "target:unread",
+   "comp:unread"
+  ],
+  "layer_menu/6": [
+   "target:whole-for-fields"
+  ],
+  "layer_menu/9": [
+   "target:whole-for-fields"
+  ],
+  "layer_time/0": [
+   "target:whole-for-fields"
+  ],
+  "layer_time/1": [
+   "target:whole-for-fields"
+  ],
+  "layer_time/2": [
+   "target:whole-for-fields"
+  ],
+  "layer_time/5": [
+   "target:whole-for-fields"
+  ],
+  "layer_time/6": [
+   "target:whole-for-fields"
+  ],
+  "learn/0": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "learn/1": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "learn/2": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "learn/3": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "link/0": [
+   "target:whole-for-fields"
+  ],
+  "link/1": [
+   "target:whole-for-fields"
+  ],
+  "link/2": [
+   "target:whole-for-fields"
+  ],
+  "link/3": [
+   "layers:unread"
+  ],
+  "link/4": [
+   "layers:unread"
+  ],
+  "liquify/0": [
+   "target:whole-for-fields"
+  ],
+  "liquify/1": [
+   "target:whole-for-fields"
+  ],
+  "liquify/2": [
+   "target:whole-for-fields"
+  ],
+  "liquify/3": [
+   "target:whole-for-fields"
+  ],
+  "lottie/0": [
+   "comp:unread"
+  ],
+  "markers/0": [
+   "target:unread"
+  ],
+  "markers/1": [
+   "target:unread"
+  ],
+  "markers/2": [
+   "comp:whole-for-fields"
+  ],
+  "markers/3": [
+   "target:unread"
+  ],
+  "markers/4": [
+   "comp:whole-for-fields"
+  ],
+  "markers/5": [
+   "target:whole-for-fields"
+  ],
+  "markers/6": [
+   "target:whole-for-fields",
+   "comp:unread"
+  ],
+  "mask/0": [
+   "target:whole-for-fields"
+  ],
+  "mask/1": [
+   "target:whole-for-fields"
+  ],
+  "mask/10": [
+   "target:whole-for-fields"
+  ],
+  "mask/11": [
+   "target:whole-for-fields"
+  ],
+  "mask/12": [
+   "target:whole-for-fields"
+  ],
+  "mask/13": [
+   "target:whole-for-fields"
+  ],
+  "mask/2": [
+   "target:whole-for-fields"
+  ],
+  "mask/4": [
+   "target:whole-for-fields"
+  ],
+  "mask/5": [
+   "target:whole-for-fields"
+  ],
+  "mask/6": [
+   "target:whole-for-fields"
+  ],
+  "mask/7": [
+   "target:whole-for-fields"
+  ],
+  "mask/8": [
+   "target:whole-for-fields"
+  ],
+  "mask/9": [
+   "target:whole-for-fields"
+  ],
+  "mask_interp/0": [
+   "target:whole-for-fields",
+   "comp:whole-for-fields"
+  ],
+  "mask_interp/1": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "mask_interp/2": [
+   "target:whole-for-fields",
+   "comp:whole-for-fields"
+  ],
+  "mask_interp/3": [
+   "target:whole-for-fields",
+   "comp:whole-for-fields"
+  ],
+  "mask_interp/4": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "model3d/2": [
+   "target:unread"
+  ],
+  "model3d/3": [
+   "target:unread"
+  ],
+  "model3d/4": [
+   "target:unread",
+   "comp:whole-for-fields"
+  ],
+  "model3d/5": [
+   "target:unread",
+   "comp:whole-for-fields",
+   "layers:unread"
+  ],
+  "model3d/7": [
+   "target:whole-for-fields"
+  ],
+  "model3d/8": [
+   "target:whole-for-fields"
+  ],
+  "model3d/9": [
+   "target:whole-for-fields"
+  ],
+  "paint/0": [
+   "target:whole-for-fields"
+  ],
+  "paint/1": [
+   "target:whole-for-fields"
+  ],
+  "paint/2": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "paint/3": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "panels/3": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "panels/5": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "panels/6": [
+   "target:unread"
+  ],
+  "path_nulls/0": [
+   "target:whole-for-fields"
+  ],
+  "path_nulls/1": [
+   "target:whole-for-fields"
+  ],
+  "path_nulls/2": [
+   "target:whole-for-fields"
+  ],
+  "path_nulls/3": [
+   "target:whole-for-fields"
+  ],
+  "path_nulls/4": [
+   "target:whole-for-fields"
+  ],
+  "paths/0": [
+   "target:whole-for-fields"
+  ],
+  "paths/4": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "paths/5": [
+   "target:whole-for-fields"
+  ],
+  "paths/6": [
+   "target:whole-for-fields"
+  ],
+  "paths/7": [
+   "target:whole-for-fields"
+  ],
+  "paths/8": [
+   "target:whole-for-fields"
+  ],
+  "pinned_r2_animation/1": [
+   "target:unread"
+  ],
+  "pinned_r2_animation/2": [
+   "target:whole-for-fields"
+  ],
+  "promo_camera/0": [
+   "target:whole-for-fields"
+  ],
+  "promo_camera/1": [
+   "target:whole-for-fields"
+  ],
+  "promo_carry/0": [
+   "target:whole-for-fields"
+  ],
+  "promo_carry/1": [
+   "target:whole-for-fields"
+  ],
+  "promo_carry/2": [
+   "target:whole-for-fields"
+  ],
+  "promo_ease/0": [
+   "target:whole-for-fields"
+  ],
+  "promo_ease/1": [
+   "target:whole-for-fields"
+  ],
+  "promo_light/0": [
+   "target:whole-for-fields"
+  ],
+  "promo_light/1": [
+   "target:whole-for-fields"
+  ],
+  "promo_light/2": [
+   "target:whole-for-fields"
+  ],
+  "promo_moves/0": [
+   "target:whole-for-fields"
+  ],
+  "promo_moves/1": [
+   "target:whole-for-fields"
+  ],
+  "promo_moves/2": [
+   "target:whole-for-fields"
+  ],
+  "promo_moves/3": [
+   "target:whole-for-fields"
+  ],
+  "prop/0": [
+   "target:whole-for-fields"
+  ],
+  "prop/1": [
+   "target:whole-for-fields"
+  ],
+  "prop/10": [
+   "target:whole-for-fields"
+  ],
+  "prop/11": [
+   "target:whole-for-fields"
+  ],
+  "prop/14": [
+   "target:whole-for-fields"
+  ],
+  "prop/15": [
+   "target:whole-for-fields"
+  ],
+  "prop/18": [
+   "target:whole-for-fields"
+  ],
+  "prop/19": [
+   "target:whole-for-fields"
+  ],
+  "prop/20": [
+   "comp:whole-for-fields"
+  ],
+  "prop/21": [
+   "comp:unread"
+  ],
+  "prop/22": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "prop/23": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "prop/24": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "prop/25": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "prop/26": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "prop/27": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "prop/3": [
+   "target:whole-for-fields"
+  ],
+  "prop/4": [
+   "target:whole-for-fields"
+  ],
+  "prop/5": [
+   "target:whole-for-fields"
+  ],
+  "prop/6": [
+   "target:whole-for-fields"
+  ],
+  "prop/7": [
+   "target:whole-for-fields"
+  ],
+  "prop/8": [
+   "target:whole-for-fields"
+  ],
+  "prop/9": [
+   "target:whole-for-fields"
+  ],
+  "prop_groups/2": [
+   "target:whole-for-fields"
+  ],
+  "prop_groups/4": [
+   "target:whole-for-fields"
+  ],
+  "puppet/0": [
+   "target:whole-for-fields"
+  ],
+  "puppet/1": [
+   "target:whole-for-fields"
+  ],
+  "puppet/10": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "puppet/2": [
+   "target:whole-for-fields"
+  ],
+  "puppet/3": [
+   "target:whole-for-fields"
+  ],
+  "puppet/4": [
+   "target:whole-for-fields"
+  ],
+  "puppet/5": [
+   "comp:unread"
+  ],
+  "puppet/6": [
+   "target:whole-for-fields"
+  ],
+  "puppet/7": [
+   "target:whole-for-fields"
+  ],
+  "puppet/8": [
+   "target:whole-for-fields"
+  ],
+  "puppet/9": [
+   "target:whole-for-fields"
+  ],
+  "relink/2": [
+   "comp:unread"
+  ],
+  "render_queue/0": [
+   "comp:whole-for-fields"
+  ],
+  "render_queue/11": [
+   "comp:whole-for-fields"
+  ],
+  "render_queue/16": [
+   "queue:unread"
+  ],
+  "render_queue/17": [
+   "queue:unread"
+  ],
+  "rig3d/0": [
+   "target:unread"
+  ],
+  "rig3d/2": [
+   "target:whole-for-fields"
+  ],
+  "rig3d/3": [
+   "target:whole-for-fields"
+  ],
+  "roto_cmds/0": [
+   "target:whole-for-fields"
+  ],
+  "roto_cmds/1": [
+   "target:whole-for-fields"
+  ],
+  "roto_cmds/2": [
+   "target:whole-for-fields"
+  ],
+  "roto_cmds/3": [
+   "target:whole-for-fields"
+  ],
+  "roto_cmds/5": [
+   "target:whole-for-fields"
+  ],
+  "roto_cmds/6": [
+   "target:whole-for-fields"
+  ],
+  "roto_cmds/7": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "roto_cmds/8": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "roto_cmds/9": [
+   "target:unread"
+  ],
+  "scene_detect/0": [
+   "target:whole-for-fields"
+  ],
+  "scripts/3": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "settings/2": [
+   "comp:unread"
+  ],
+  "shape_stroke/0": [
+   "target:whole-for-fields"
+  ],
+  "shape_stroke/1": [
+   "target:whole-for-fields"
+  ],
+  "shape_stroke/2": [
+   "target:whole-for-fields"
+  ],
+  "shape_stroke/3": [
+   "target:whole-for-fields"
+  ],
+  "shape_stroke/4": [
+   "target:whole-for-fields"
+  ],
+  "shape_stroke/5": [
+   "target:whole-for-fields"
+  ],
+  "shape_stroke/6": [
+   "target:whole-for-fields"
+  ],
+  "shape_stroke/7": [
+   "target:whole-for-fields"
+  ],
+  "shape_tool/1": [
+   "target:whole-for-fields"
+  ],
+  "shape_tool/2": [
+   "target:unread"
+  ],
+  "shape_tool/3": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "storage/0": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "storage/1": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "styles/12": [
+   "target:whole-for-fields"
+  ],
+  "styles/13": [
+   "target:whole-for-fields"
+  ],
+  "styles/14": [
+   "target:whole-for-fields"
+  ],
+  "styles/15": [
+   "target:unread",
+   "comp:whole-for-fields"
+  ],
+  "styles/16": [
+   "target:unread",
+   "comp:whole-for-fields",
+   "layers:unread"
+  ],
+  "styles/17": [
+   "comp:unread"
+  ],
+  "text_anim/0": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/1": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/10": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/12": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/13": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/2": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/3": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/4": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/5": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/6": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/7": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/8": [
+   "target:whole-for-fields"
+  ],
+  "text_anim/9": [
+   "target:whole-for-fields"
+  ],
+  "text_edit/0": [
+   "target:whole-for-fields"
+  ],
+  "text_edit/1": [
+   "layers:unread"
+  ],
+  "text_edit/10": [
+   "target:whole-for-fields"
+  ],
+  "text_edit/2": [
+   "target:whole-for-fields"
+  ],
+  "text_edit/3": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "text_edit/4": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "text_edit/5": [
+   "target:whole-for-fields"
+  ],
+  "text_edit/6": [
+   "target:whole-for-fields"
+  ],
+  "text_edit/7": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "text_edit/8": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "text_edit/9": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "three_d/0": [
+   "target:unread"
+  ],
+  "three_d/1": [
+   "target:whole-for-fields"
+  ],
+  "three_d/12": [
+   "target:unread"
+  ],
+  "three_d/14": [
+   "comp:unread"
+  ],
+  "three_d/15": [
+   "comp:unread"
+  ],
+  "three_d/16": [
+   "comp:unread"
+  ],
+  "three_d/17": [
+   "comp:unread"
+  ],
+  "three_d/18": [
+   "comp:unread"
+  ],
+  "three_d/19": [
+   "comp:unread"
+  ],
+  "three_d/2": [
+   "target:whole-for-fields"
+  ],
+  "three_d/20": [
+   "comp:unread"
+  ],
+  "three_d/21": [
+   "comp:unread"
+  ],
+  "three_d/22": [
+   "comp:unread"
+  ],
+  "three_d/23": [
+   "comp:unread"
+  ],
+  "three_d/24": [
+   "comp:unread"
+  ],
+  "three_d/25": [
+   "comp:unread"
+  ],
+  "three_d/26": [
+   "comp:unread"
+  ],
+  "three_d/27": [
+   "comp:unread"
+  ],
+  "three_d/28": [
+   "comp:whole-for-fields"
+  ],
+  "three_d/3": [
+   "target:unread"
+  ],
+  "three_d/4": [
+   "target:whole-for-fields"
+  ],
+  "three_d/7": [
+   "target:whole-for-fields"
+  ],
+  "three_d/8": [
+   "target:whole-for-fields"
+  ],
+  "three_d/9": [
+   "target:whole-for-fields"
+  ],
+  "track/10": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "track/11": [
+   "target:whole-for-fields"
+  ],
+  "track/14": [
+   "target:whole-for-fields"
+  ],
+  "track/15": [
+   "target:whole-for-fields"
+  ],
+  "track/16": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "track/17": [
+   "target:whole-for-fields",
+   "layers:unread"
+  ],
+  "track/18": [
+   "target:unread"
+  ],
+  "track/3": [
+   "target:whole-for-fields"
+  ],
+  "track/4": [
+   "target:whole-for-fields"
+  ],
+  "track/5": [
+   "target:whole-for-fields"
+  ],
+  "track/6": [
+   "target:whole-for-fields"
+  ],
+  "track/8": [
+   "target:whole-for-fields"
+  ],
+  "track/9": [
+   "target:whole-for-fields"
+  ],
+  "vr_editor/0": [
+   "target:unread"
+  ],
+  "warp_cmds/0": [
+   "target:whole-for-fields"
+  ],
+  "warp_cmds/1": [
+   "target:whole-for-fields"
+  ],
+  "warp_cmds/2": [
+   "target:unread",
+   "layers:unread"
+  ],
+  "warp_cmds/3": [
+   "target:whole-for-fields"
+  ],
+  "watch_folder/0": [
+   "comp:unread"
+  ],
+  "watch_folder/1": [
+   "comp:unread"
+  ],
+  "watch_folder/2": [
+   "comp:unread"
+  ]
+ },
+ "unresolved": [
+  "align_data/0",
+  "align_data/1",
+  "animation/3",
+  "app_more/5",
+  "batch/1",
+  "camera_cmds/5",
+  "camera_cmds/6",
+  "camera_cmds/7",
+  "create/0",
+  "create/3",
+  "edit/1",
+  "edit/32",
+  "edit/6",
+  "template_props/13",
+  "template_props/18",
+  "template_props/5",
+  "template_props/6",
+  "template_props_sync/0",
+  "template_props_sync/1",
+  "template_props_sync/2",
+  "file_more/16",
+  "file_more/17",
+  "file_more/19",
+  "file_more/26",
+  "key_transform/1",
+  "layer/6",
+  "layer_menu/27",
+  "layer_menu/30",
+  "model3d/0",
+  "model3d/1",
+  "model3d/10",
+  "panels/0",
+  "panels/1",
+  "panels/4",
+  "pinned_r2_render_queue/0",
+  "prop/2",
+  "proxy/2",
+  "proxy/3",
+  "proxy/4",
+  "proxy/5",
+  "relink/0",
+  "relink/1",
+  "rig3d/4",
+  "rig3d/5",
+  "rig3d/6",
+  "roto_cmds/4",
+  "scripts/4",
+  "scripts/5",
+  "scripts/6",
+  "templates/2"
+ ]
+}

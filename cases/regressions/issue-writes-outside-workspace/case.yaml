@@ -1,0 +1,25 @@
+format: 1
+id: regressions/issue-writes-outside-workspace
+feature: motion.file.projects
+intent: >-
+  The headless kit reads and writes only inside its workspace (KHP A29, §10.6): whatever an agent
+  runs (Auto-Save Now, save before rendering, Enable Logging, every command it is offered), nothing
+  appears in the process's current folder, home folder or temporary folder. An agent-ready
+  self-test found `Kition Motion Auto-Save/basic auto-save 1.kmotion` in the current folder and a
+  log file in the temporary folder.
+layer: gate
+tags: [headless, security]
+source:
+  kind: probe
+  from: agent readiness review (effect rows)
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: workspace_only
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

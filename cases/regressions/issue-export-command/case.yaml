@@ -1,0 +1,25 @@
+format: 1
+id: regressions/issue-export-command
+feature: motion.file.projects
+intent: >-
+  kit.json's `exports[].command` names the command `agent.export.command` names, the one every
+  format runs (kition-sdk manifest rule K21), and that command exports the entry's format as the
+  agent-ready check asks for it. The manifest named `renderQueue.render`, which refuses `format`,
+  while `file.exportMovie` exports the MP4.
+layer: gate
+tags: [headless]
+source:
+  kind: probe
+  from: agent readiness review (effect rows)
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: export
+      filter: every_export_entry_runs_the_agent_export_command
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

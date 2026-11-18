@@ -1,0 +1,26 @@
+format: 1
+id: motion.agent.context/explicit-call-context
+feature: motion.agent.context
+intent: >-
+  An agent's step names its comp (`at.part` {comp}), its time (`at.time`, comp seconds, on the
+  comp's frames as file.render draws them) and its layers (`on`, layer ids): a selection command
+  changes exactly the layers named, a key lands at that comp time on a layer whose own time is
+  offset, two steps act in two comps, and afterwards the open comp, the current time and the
+  selection are as the person left them. Unknown comps and layers, out-of-range times, stack
+  positions and `#n` in `on` are refused with what is valid, and an agent's command given its
+  layers, comp or time leaves the editor as it was, also when it fails.
+layer: gate
+source:
+  kind: synthetic
+  from: bindings/wasm/tests/context.rs
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-kit
+      test: context
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

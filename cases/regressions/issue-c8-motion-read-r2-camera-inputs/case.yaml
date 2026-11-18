@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-camera-inputs
+feature: motion.agent.premises
+dimension: [function, collab]
+layer: gate
+intent: Stored camera solves clear after preceding effect or nested source edits while an unrelated ordinary footage layer rename preserves the solve.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, filter: stored_camera_solve_invalidates_ }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

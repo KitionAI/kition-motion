@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-environment
+feature: motion.agent.premises
+dimension: [ai, collab, data-safety]
+layer: gate
+intent: Environment assignments refuse competing environment changes and accept an unrelated opacity saved by an independent writer.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_r2_environment }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

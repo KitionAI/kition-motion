@@ -1,0 +1,20 @@
+format: 1
+id: regressions/issue-ae-blur-defaults
+feature: motion.effect.basics
+intent: >-
+  Gaussian Blur, Fast Box Blur, Directional Blur, Sharpen and Noise start at After Effects'
+  defaults (0), the kit's target app. 0.3.24 had started them visible (20, 20, 30, 20, 8), which
+  broke Kition's motion regression baseline and diverged from the target; an agent gives the
+  amount with effect.apply's params instead.
+layer: unit
+source:
+  kind: probe
+  from: "kition pnpm test:motion (effect-directional-blur default 30 != 0; effect-blur pixels)"
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-effects, test: ae_defaults }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

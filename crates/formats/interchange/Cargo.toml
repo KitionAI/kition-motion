@@ -1,0 +1,25 @@
+[package]
+name = "kition-motion-interchange"
+description = "Premiere Pro interop through timeline interchange: Final Cut Pro 7 XML (xmeml), FCPXML, OpenTimelineIO and CMX 3600 EDL sequences to and from compositions (via kition-film-interchange)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kition-motion-time = { workspace = true }
+kition-motion-color = { workspace = true }
+kition-motion-keyframe = { workspace = true }
+kition-motion-project = { workspace = true }
+kition-film-interchange = { workspace = true }
+kition-film-project = { workspace = true }
+kition-film-media = { workspace = true }
+kition-film-time = { workspace = true }
+kition-film-geom = { workspace = true }
+kition-film-color = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

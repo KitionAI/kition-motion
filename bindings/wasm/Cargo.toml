@@ -1,0 +1,31 @@
+[package]
+name = "kition-motion-kit"
+description = "The Motion engine for Kition's in-page editor: open, preview, edit, and save Kition Motion projects from JavaScript (WebAssembly), on the Kition SDK."
+version.workspace = true
+edition.workspace = true
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+kition-kit = { workspace = true, features = ["session"] }
+kdm-model = { workspace = true }
+kition-motion-engine = { workspace = true }
+kition-motion-host = { workspace = true }
+kition-motion-project = { workspace = true }
+kition-motion-media = { workspace = true }
+kition-motion-export = { workspace = true }
+kition-motion-time = { workspace = true }
+kition-motion-text = { workspace = true }
+# PNG pictures of `file.render` (and the conformance fixtures' golden previews).
+image = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# The Kition platform convergence suite (L6), on the same kition-sdk revision.
+kition-convergence = { workspace = true }

@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-new-layer-inputs
+feature: motion.agent.premises
+intent: New lights, cameras, spotlights, outlines and path nulls hold the composition attributes they build from, path nulls hold sibling names and the parent chain, and next or previous selection holds hidden shy layers; unrelated edits apply.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_new_layer_inputs
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

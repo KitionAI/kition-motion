@@ -1,0 +1,15 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-nearest-overflow
+feature: motion.agent.premises
+dimension: [function, robustness]
+layer: gate
+intent: >-
+  The nearest-key resolver accepts hostile stored tick values without overflowing its
+  distance arithmetic and edits the mathematically nearest key.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: independent_r2_nearest_overflow }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

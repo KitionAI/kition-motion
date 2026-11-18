@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-retarget-inputs
+feature: motion.agent.premises
+intent: Source replacement protects existing and historical user references while preserving user opacity.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_retarget_inputs
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

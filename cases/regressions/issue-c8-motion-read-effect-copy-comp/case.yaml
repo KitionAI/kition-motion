@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-effect-copy-comp
+feature: motion.effect.basics
+dimension: [function, data-safety]
+layer: gate
+intent: Copying an explicitly addressed effect reads the addressed composition even when another composition is active.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: independent_r2_effect_copy }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

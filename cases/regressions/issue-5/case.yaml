@@ -1,0 +1,21 @@
+format: 1
+id: regressions/issue-5
+feature: motion.effect.apply
+intent: >-
+  effect.apply takes the grouped parameters effect.list lists (positionsColors/color1, Fractal
+  Noise transform/scale); layer.newCamera and layer.newLight take their documented position and
+  poi (and the camera focalLength and angleOfView), as do the other commands whose notation wrote
+  key? hint without a colon; shape.newPath with a name and no layer makes a new shape layer of
+  that name instead of adding to the selected one.
+layer: gate
+source:
+  kind: issue
+  from: Kition Motion regression suite
+  license: owned
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: command_params }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

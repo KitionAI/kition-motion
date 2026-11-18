@@ -1,0 +1,5911 @@
+{
+ "app.commandPalette": {
+  "query": {
+   "type": "string"
+  }
+ },
+ "app.find": {
+  "query": {
+   "type": "string"
+  }
+ },
+ "app.settings": {
+  "page": {
+   "description": "general|startup|project|composition|previews|appearance|grids|labels|type|import|export|audio|disk|memory|video|3d|scripting",
+   "type": "string"
+  }
+ },
+ "camera.analyze": {
+  "effect": {
+   "description": "uid|name|index",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  },
+  "wait": {
+   "description": "block until done",
+   "type": "boolean"
+  }
+ },
+ "camera.create": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "camera.createFromSolve": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  },
+  "kind": {
+   "description": "text|solid|null|shadowCatcher|camera",
+   "type": "string"
+  },
+  "multiple": {
+   "type": "boolean"
+  }
+ },
+ "camera.deletePoints": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  },
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "camera.dolly": {
+  "amount": {
+   "description": "px, + = forward",
+   "type": "number"
+  },
+  "merge": {
+   "type": "string"
+  }
+ },
+ "camera.fromModel": {
+  "comp": {
+   "type": "integer"
+  },
+  "layers": {
+   "description": "3D model layers (default selected); default selected",
+   "items": {
+    "oneOf": [
+     {
+      "type": "integer"
+     },
+     {
+      "type": "string"
+     }
+    ]
+   },
+   "type": "array"
+  }
+ },
+ "camera.fromView": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "camera.linkFocusToLayer": {
+  "camera": {
+   "type": "integer"
+  },
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "camera.linkFocusToPoi": {
+  "camera": {
+   "type": "integer"
+  },
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "camera.move": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "ease": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "layers": {
+   "description": "layer ids, names or #n",
+   "items": {
+    "oneOf": [
+     {
+      "type": "integer"
+     },
+     {
+      "type": "string"
+     }
+    ]
+   },
+   "type": "array"
+  },
+  "target": {
+   "description": "the layer the camera works around",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "camera.orbit": {
+  "merge": {
+   "type": "string"
+  }
+ },
+ "camera.orbitNull": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layer": {
+   "description": "camera (default selected/active); default selected/active",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "camera.pan": {
+  "merge": {
+   "type": "string"
+  }
+ },
+ "camera.points": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  },
+  "time": {
+   "description": "comp seconds",
+   "type": "number"
+  }
+ },
+ "camera.selectPoints": {
+  "add": {
+   "type": "boolean"
+  },
+  "toggle": {
+   "type": "boolean"
+  }
+ },
+ "camera.setFocusToLayer": {
+  "camera": {
+   "type": "integer"
+  },
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "camera.setGroundPlane": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "camera.solveStatus": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "camera.stereoRig": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "sceneDepth": {
+   "description": "% of comp width, default 3",
+   "type": "number"
+  },
+  "view3d": {
+   "description": "3D Glasses view index (default 5 Balanced Colored Red Blue); default 5 Balanced Colored Red Blue",
+   "type": "integer"
+  },
+  "zOffset": {
+   "type": "number"
+  }
+ },
+ "command.describe": {
+  "command": {
+   "type": "string"
+  }
+ },
+ "command.list": {
+  "enabledOnly": {
+   "type": "boolean"
+  },
+  "filter": {
+   "type": "string"
+  },
+  "schemas": {
+   "description": "add each command's params JSON Schema",
+   "type": "boolean"
+  }
+ },
+ "comp.addMarker": {
+  "comment": {
+   "type": "string"
+  }
+ },
+ "comp.close": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "comp.cropToRegionOfInterest": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "comp.info": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "comp.new": {
+  "adaptiveSampleLimit": {
+   "description": "16–256",
+   "type": "integer"
+  },
+  "anchor": {
+   "type": "integer"
+  },
+  "frameRate": {
+   "type": "number"
+  },
+  "motionBlurSamples": {
+   "type": "integer"
+  },
+  "open": {
+   "type": "boolean"
+  },
+  "pixelAspect": {
+   "type": "number"
+  },
+  "shutterAngle": {
+   "type": "number"
+  },
+  "shutterPhase": {
+   "type": "number"
+  },
+  "startTime": {
+   "description": "(s) | startTimecode?",
+   "type": "number"
+  }
+ },
+ "comp.open": {
+  "comp": {
+   "description": "id|name",
+   "type": "integer"
+  }
+ },
+ "comp.openInGraphicsTemplates": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "comp.renderer": {
+  "value": {
+   "type": "string"
+  }
+ },
+ "comp.revealInProject": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "comp.saveFrameAsExr": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "comp.saveFrameAsPsd": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "comp.setSwitch": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "comp.settings": {
+  "adaptiveSampleLimit": {
+   "description": "16–256",
+   "type": "integer"
+  },
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "frameRate": {
+   "type": "number"
+  },
+  "motionBlurSamples": {
+   "type": "integer"
+  },
+  "pixelAspect": {
+   "type": "number"
+  },
+  "shutterAngle": {
+   "type": "number"
+  },
+  "shutterPhase": {
+   "type": "number"
+  },
+  "startTime": {
+   "description": "(s) | startTimecode?",
+   "type": "number"
+  }
+ },
+ "comp.trimToWorkArea": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "comp.vr.createEnvironment": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "size": {
+   "description": "face pixels (1024); 1024",
+   "type": "integer"
+  }
+ },
+ "comp.vr.extractCubemap": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "faceSize": {
+   "type": "integer"
+  }
+ },
+ "comp.vr.setView": {
+  "comp": {
+   "description": "an environment's output / cube map / face comp",
+   "type": "integer"
+  },
+  "orientation": {
+   "description": "[x",
+   "items": {
+    "type": "number"
+   },
+   "type": "array"
+  },
+  "pan": {
+   "type": "number"
+  },
+  "tilt": {
+   "type": "number"
+  }
+ },
+ "contentFill.generate": {
+  "alphaExpansion": {
+   "description": "(px)",
+   "type": "number"
+  },
+  "method": {
+   "description": "object|surface|edgeBlend",
+   "type": "string"
+  },
+  "outputDir": {
+   "type": "string"
+  },
+  "referenceLayer": {
+   "type": "string"
+  },
+  "referenceTime": {
+   "description": "s",
+   "type": "number"
+  }
+ },
+ "contentFill.set": {
+  "alphaExpansion": {
+   "description": "px",
+   "type": "number"
+  },
+  "method": {
+   "description": "object|surface|edgeBlend",
+   "type": "string"
+  },
+  "referenceLayer": {
+   "description": "layer|null",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "referenceTime": {
+   "description": "s",
+   "type": "number"
+  }
+ },
+ "edit.history.goto": {
+  "index": {
+   "description": "(from edit.history.list) | id? | steps? (negative = back along the line)",
+   "type": "integer"
+  }
+ },
+ "edit.label": {
+  "keys": {
+   "type": "string"
+  },
+  "label": {
+   "description": "Red|Yellow|Aqua|…",
+   "type": "string"
+  },
+  "target": {
+   "description": "layers",
+   "type": "string"
+  }
+ },
+ "edit.purge": {
+  "what": {
+   "description": "all|memoryAndDisk|memory|disk|3d|image|snapshot",
+   "type": "string"
+  }
+ },
+ "effect.apply": {
+  "effect": {
+   "description": "id|name (e.g. Gaussian Blur); e.g. Gaussian Blur",
+   "type": "string"
+  }
+ },
+ "effect.duplicate": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "effect.list": {
+  "filter": {
+   "type": "string"
+  }
+ },
+ "effect.pickColor": {
+  "effect": {
+   "description": "index|uid|name",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  },
+  "param": {
+   "description": "id (e.g. screenColour) | prop: uid; e.g. screenColour",
+   "type": "string"
+  }
+ },
+ "effect.remove": {
+  "effect": {
+   "description": "index|uid|name",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "effect.reorder": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "effect.reset": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "effect.toggle": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  },
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "effect.warning": {
+  "effect": {
+   "description": "index|uid|name (default: the selected effect)",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "templateProps.addComment": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "group": {
+   "type": "integer"
+  }
+ },
+ "templateProps.addGroup": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "templateProps.addMedia": {
+  "group": {
+   "type": "integer"
+  }
+ },
+ "templateProps.addMirror": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "control": {
+   "type": "integer"
+  },
+  "group": {
+   "type": "integer"
+  }
+ },
+ "templateProps.addProperty": {
+  "as": {
+   "description": "font (Source Text font family/style/size) | scale (uniform Scale); Source Text font family/style/size; uniform Scale",
+   "type": "string"
+  },
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "group": {
+   "description": "control id",
+   "type": "integer"
+  },
+  "path": {
+   "description": "uid (default: the selected properties); default: the selected properties; one of several alternative parameters",
+   "type": "string"
+  },
+  "prop": {
+   "description": "uid (default: the selected properties); default: the selected properties; one of several alternative parameters",
+   "type": "integer"
+  }
+ },
+ "templateProps.canAdd": {
+  "as": {
+   "type": "string"
+  }
+ },
+ "templateProps.exportTemplate": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "templateProps.importTemplate": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "templateProps.linkProperty": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "control": {
+   "type": "integer"
+  },
+  "prop": {
+   "description": "default: the selected property; one of several alternative parameters",
+   "type": "integer"
+  }
+ },
+ "templateProps.list": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "templateProps.move": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "control": {
+   "type": "integer"
+  }
+ },
+ "templateProps.pushToComp": {
+  "control": {
+   "description": "default: all overridden",
+   "type": "integer"
+  }
+ },
+ "templateProps.remove": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "control": {
+   "type": "integer"
+  }
+ },
+ "templateProps.rename": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "control": {
+   "type": "integer"
+  }
+ },
+ "templateProps.revert": {
+  "control": {
+   "description": "default: all overridden",
+   "type": "integer"
+  }
+ },
+ "templateProps.set": {
+  "control": {
+   "description": "id|name",
+   "type": "integer"
+  },
+  "value": {
+   "description": "media; one of several alternative parameters",
+   "type": "string"
+  }
+ },
+ "templateProps.setName": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "templateProps.setPrimary": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "templateProps.soloSupported": {
+  "on": {
+   "type": "boolean"
+  }
+ },
+ "templateProps.unlinkProperty": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "control": {
+   "type": "integer"
+  },
+  "prop": {
+   "description": "default: the selected property; one of several alternative parameters",
+   "type": "integer"
+  }
+ },
+ "expr.errors": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "face.model.download": {
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "face.model.install": {
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "face.model.select": {
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "file.close": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "file.createProxy": {
+  "output": {
+   "description": "template; one of several alternative parameters",
+   "type": "string"
+  },
+  "resolution": {
+   "description": "default 0.5",
+   "type": "number"
+  }
+ },
+ "file.executeFile": {
+  "confirmed": {
+   "type": "boolean"
+  }
+ },
+ "file.exportLottie": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "file.exportMovie": {
+  "format": {
+   "description": "mp4",
+   "type": "string"
+  }
+ },
+ "file.exportTimeline": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "file.import": {
+  "frameRate": {
+   "description": "fps (image sequences; default Settings ▸ Import ▸ Sequence Footage)",
+   "type": "number"
+  },
+  "layer": {
+   "description": "name|index (footage of one Photoshop layer); footage of one Photoshop layer",
+   "type": "integer"
+  },
+  "page": {
+   "description": "number from 1 (PDF / Illustrator page); PDF / Illustrator page",
+   "type": "string"
+  }
+ },
+ "file.importPlaceholder": {
+  "frameRate": {
+   "type": "number"
+  }
+ },
+ "file.interpretFootage": {
+  "guessAlpha": {
+   "type": "boolean"
+  },
+  "invertAlpha": {
+   "type": "boolean"
+  },
+  "linearLight": {
+   "type": "boolean"
+  },
+  "pixelAspect": {
+   "type": "number"
+  },
+  "startTimecode": {
+   "description": "timecode|frame (Override Start); Override Start",
+   "type": "string"
+  }
+ },
+ "file.interpretProxy": {
+  "alpha": {
+   "type": "string"
+  },
+  "colorProfile": {
+   "type": "string"
+  },
+  "fields": {
+   "type": "string"
+  },
+  "invertAlpha": {
+   "type": "boolean"
+  },
+  "linearLight": {
+   "type": "boolean"
+  },
+  "pixelAspect": {
+   "type": "number"
+  }
+ },
+ "file.newCompFromSelection": {
+  "overlapDuration": {
+   "description": "s",
+   "type": "number"
+  }
+ },
+ "file.projectSettings": {
+  "blendLinear": {
+   "type": "boolean"
+  },
+  "linearize": {
+   "type": "boolean"
+  },
+  "timeDisplay": {
+   "description": "timecode|frames|feet35|feet16",
+   "type": "string"
+  }
+ },
+ "file.replaceWithPlaceholder": {
+  "frameRate": {
+   "type": "number"
+  }
+ },
+ "file.useProxy": {
+  "on": {
+   "type": "boolean"
+  }
+ },
+ "footage.check": {
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "footage.open": {
+  "item": {
+   "description": "id|name",
+   "type": "integer"
+  }
+ },
+ "footage.overlayEdit": {
+  "at": {
+   "description": "comp s; default the current time",
+   "type": "number"
+  },
+  "comp": {
+   "type": "integer"
+  },
+  "in": {
+   "description": "(s)",
+   "type": "number"
+  },
+  "out": {
+   "description": "(s)",
+   "type": "number"
+  }
+ },
+ "footage.rippleInsertEdit": {
+  "at": {
+   "description": "comp s; default the current time",
+   "type": "number"
+  },
+  "comp": {
+   "type": "integer"
+  },
+  "in": {
+   "description": "(s)",
+   "type": "number"
+  },
+  "out": {
+   "description": "(s)",
+   "type": "number"
+  }
+ },
+ "footage.setTime": {
+  "time": {
+   "description": "(s, source) | frame?",
+   "type": "number"
+  }
+ },
+ "help.enableLogging": {
+  "on": {
+   "type": "boolean"
+  }
+ },
+ "help.systemReport": {
+  "quiet": {
+   "type": "boolean"
+  }
+ },
+ "item.metadata": {
+  "item": {
+   "description": "id|name",
+   "type": "integer"
+  }
+ },
+ "jobs.cancel": {
+  "job": {
+   "description": "render|track|maskTrack|warp|camera|roto|task:<n>|all",
+   "type": "string"
+  }
+ },
+ "keys.applyEase": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layer": {
+   "description": "default the first selected layer",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "keys.audioToKeyframes": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "keys.interpolation": {
+  "autoBezier": {
+   "type": "boolean"
+  },
+  "continuous": {
+   "type": "boolean"
+  },
+  "roving": {
+   "type": "boolean"
+  }
+ },
+ "keys.move": {
+  "delta": {
+   "description": "s",
+   "type": "number"
+  },
+  "merge": {
+   "type": "string"
+  }
+ },
+ "keys.nudge": {
+  "frames": {
+   "type": "integer"
+  },
+  "merge": {
+   "type": "string"
+  }
+ },
+ "keys.rpfCameraImport": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "keys.select": {
+  "add": {
+   "type": "boolean"
+  }
+ },
+ "keys.set": {
+  "merge": {
+   "type": "string"
+  },
+  "value": {
+   "description": "the property's value: a number (opacity 0..100, rotation in degrees), a vector [x, y] or [x, y, z], a colour #rrggbb or [r, g, b, a], true or false for a checkbox, text, or an object for shapes and paths",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     }
+    },
+    {
+     "type": "string"
+    },
+    {
+     "type": "object",
+     "additionalProperties": true
+    },
+    {
+     "type": "boolean"
+    }
+   ]
+  }
+ },
+ "keys.setEase": {
+  "dim": {
+   "type": "integer"
+  },
+  "merge": {
+   "type": "string"
+  },
+  "speed": {
+   "type": "number"
+  }
+ },
+ "keys.setLabel": {
+  "label": {
+   "description": "name|none|0–16",
+   "type": "string"
+  }
+ },
+ "keys.setSpatialTangents": {
+  "break": {
+   "type": "boolean"
+  },
+  "merge": {
+   "type": "string"
+  },
+  "out": {
+   "type": "number"
+  }
+ },
+ "keys.smooth": {
+  "tolerance": {
+   "description": "property units, 1",
+   "type": "number"
+  }
+ },
+ "keys.toggleTransform": {
+  "prop": {
+   "description": "anchor|position|scale|rotation|opacity",
+   "type": "string"
+  }
+ },
+ "keys.transform": {
+  "merge": {
+   "type": "string"
+  },
+  "timeAnchor": {
+   "description": "comp s",
+   "type": "number"
+  },
+  "timeOffset": {
+   "description": "s",
+   "type": "number"
+  },
+  "timeScale": {
+   "type": "number"
+  },
+  "valueAnchor": {
+   "type": "number"
+  },
+  "valueOffset": {
+   "type": "number"
+  },
+  "valueScale": {
+   "type": "number"
+  }
+ },
+ "keys.velocity": {
+  "continuous": {
+   "type": "boolean"
+  },
+  "inSpeed": {
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     }
+    }
+   ],
+   "description": "a number, or one per dimension"
+  },
+  "outSpeed": {
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     }
+    }
+   ],
+   "description": "a number, or one per dimension"
+  }
+ },
+ "keys.wiggle": {
+  "dimension": {
+   "description": "index for `one`",
+   "type": "integer"
+  },
+  "frequency": {
+   "description": "keys/s, 5",
+   "type": "number"
+  },
+  "magnitude": {
+   "type": "number"
+  },
+  "seed": {
+   "type": "integer"
+  }
+ },
+ "layer.addItem": {
+  "item": {
+   "description": "id|name",
+   "type": "integer"
+  },
+  "position": {
+   "description": "[x, y] comp px; default the centre",
+   "type": "number"
+  }
+ },
+ "layer.addMarker": {
+  "comment": {
+   "type": "string"
+  }
+ },
+ "layer.addMask": {
+  "mode": {
+   "type": "string"
+  }
+ },
+ "layer.addShapeItem": {
+  "group": {
+   "description": "uid|path",
+   "type": "integer"
+  },
+  "kind": {
+   "description": "group|rect|ellipse|star|polygon|path|fill|stroke|gfill|gstroke|trim|repeater|round|offset|pucker|twist|zigzag|wiggle|merge",
+   "type": "string"
+  }
+ },
+ "layer.addTextAnimatorProperty": {
+  "animator": {
+   "description": "uid|index",
+   "type": "integer"
+  }
+ },
+ "layer.addTextSelector": {
+  "animator": {
+   "description": "uid|index",
+   "type": "integer"
+  }
+ },
+ "layer.alignVideoToData": {
+  "data": {
+   "description": "data footage id|name",
+   "type": "string"
+  },
+  "dataStart": {
+   "description": "comp s of the first sample, 0",
+   "type": "number"
+  },
+  "key": {
+   "description": "time field",
+   "type": "string"
+  },
+  "videoStart": {
+   "description": "ISO date-time | hh:mm:ss | timecode | seconds (default: file creation time); default: file creation time",
+   "type": "string"
+  }
+ },
+ "layer.applyTextPreset": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "ease": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "layer": {
+   "description": "a text layer; default the first selected layer",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "layer.arrange": {
+  "above": {
+   "description": "layer",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "layer.autoTrace": {
+  "applyToNewLayer": {
+   "type": "boolean"
+  },
+  "blur": {
+   "description": "px, 1",
+   "type": "number"
+  },
+  "cornerRoundness": {
+   "description": "%, 50",
+   "type": "number"
+  },
+  "invert": {
+   "type": "boolean"
+  },
+  "minimumArea": {
+   "description": "px, 10",
+   "type": "number"
+  },
+  "threshold": {
+   "description": "%, 50",
+   "type": "number"
+  },
+  "tolerance": {
+   "description": "px, 1",
+   "type": "number"
+  }
+ },
+ "layer.cameraSettings": {
+  "angleOfView": {
+   "type": "number"
+  },
+  "aperture": {
+   "type": "number"
+  },
+  "blurLevel": {
+   "type": "number"
+  },
+  "dof": {
+   "type": "boolean"
+  },
+  "fStop": {
+   "type": "number"
+  },
+  "focalLength": {
+   "type": "number"
+  },
+  "focusDistance": {
+   "type": "number"
+  },
+  "poi": {
+   "description": "[x, y, z]",
+   "items": {
+    "type": "number"
+   },
+   "type": "array"
+  },
+  "position": {
+   "description": "[x, y, z]",
+   "items": {
+    "type": "number"
+   },
+   "type": "array"
+  },
+  "type": {
+   "type": "string"
+  },
+  "zoom": {
+   "type": "number"
+  }
+ },
+ "layer.enableTimeRemap": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "layer.environment": {
+  "on": {
+   "type": "boolean"
+  }
+ },
+ "layer.gather": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layers": {
+   "description": "layer ids, names or #n",
+   "items": {
+    "oneOf": [
+     {
+      "type": "integer"
+     },
+     {
+      "type": "string"
+     }
+    ]
+   },
+   "type": "array"
+  },
+  "center": {
+   "description": "[x, y] ring centre (comp px)",
+   "items": {
+    "type": "number"
+   },
+   "type": "array"
+  },
+  "ease": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  }
+ },
+ "layer.handheld": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layer": {
+   "description": "the layer (or camera layer) that floats",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "camera": {
+   "description": "a camera layer, or true for the comp's top camera",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    },
+    {
+     "type": "boolean"
+    }
+   ]
+  },
+  "holds": {
+   "description": "[[from, to]] comp seconds where the float is exactly zero",
+   "items": {
+    "items": {
+     "type": "number"
+    },
+    "type": "array"
+   },
+   "type": "array"
+  }
+ },
+ "layer.hop": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layer": {
+   "description": "the layer that hops",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "to": {
+   "description": "[x, y] landing position (comp px)",
+   "items": {
+    "type": "number"
+   },
+   "type": "array"
+  }
+ },
+ "layer.liftShadow": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "ease": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "keys": {
+   "description": "[[comp seconds, elevation], …]",
+   "items": {
+    "items": {
+     "type": "number"
+    },
+    "type": "array"
+   },
+   "type": "array"
+  },
+  "layer": {
+   "description": "default the first selected layer",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "layer.lightSettings": {
+  "castsShadows": {
+   "type": "boolean"
+  },
+  "coneAngle": {
+   "type": "number"
+  },
+  "coneFeather": {
+   "type": "number"
+  },
+  "falloff": {
+   "type": "number"
+  },
+  "falloffDistance": {
+   "type": "number"
+  },
+  "intensity": {
+   "type": "number"
+  },
+  "poi": {
+   "description": "[x, y, z]",
+   "items": {
+    "type": "number"
+   },
+   "type": "array"
+  },
+  "position": {
+   "description": "[x, y, z]",
+   "items": {
+    "type": "number"
+   },
+   "type": "array"
+  },
+  "shadowDarkness": {
+   "type": "number"
+  },
+  "shadowDiffusion": {
+   "type": "number"
+  }
+ },
+ "layer.markersLock": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "layer.mask.featherFalloff": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "layer.mask.hideLocked": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "layer.mask.invert": {
+  "mask": {
+   "type": "integer"
+  },
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "layer.mask.lock": {
+  "mask": {
+   "type": "integer"
+  },
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "layer.mask.lockOthers": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "layer.mask.mode": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "layer.mask.motionBlur": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "layer.mask.remove": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "layer.mask.reset": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "layer.mask.set": {
+  "mask": {
+   "type": "integer"
+  },
+  "value": {
+   "type": "string"
+  }
+ },
+ "layer.mask.shape": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "layer.new3dPrimitive": {
+  "acceptsLights": {
+   "type": "boolean"
+  },
+  "acceptsShadows": {
+   "type": "number"
+  },
+  "baseColor": {
+   "oneOf": [
+    {
+     "description": "#rrggbb",
+     "type": "string"
+    },
+    {
+     "description": "[r, g, b(, a)] 0 to 1",
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "castsShadows": {
+   "type": "boolean"
+  },
+  "depth": {
+   "type": "integer"
+  },
+  "emissive": {
+   "oneOf": [
+    {
+     "description": "#rrggbb",
+     "type": "string"
+    },
+    {
+     "description": "[r, g, b(, a)] 0 to 1",
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "metallic": {
+   "type": "number"
+  },
+  "roughness": {
+   "type": "number"
+  },
+  "segments": {
+   "type": "number"
+  }
+ },
+ "layer.newCamera": {
+  "aperture": {
+   "type": "number"
+  },
+  "blurLevel": {
+   "type": "number"
+  },
+  "dof": {
+   "type": "boolean"
+  },
+  "fStop": {
+   "type": "number"
+  },
+  "focusDistance": {
+   "type": "number"
+  },
+  "lockToZoom": {
+   "type": "boolean"
+  },
+  "preset": {
+   "description": "15mm|20mm|24mm|28mm|35mm|50mm|80mm|135mm|200mm",
+   "enum": [
+    "15mm",
+    "20mm",
+    "24mm",
+    "28mm",
+    "35mm",
+    "50mm",
+    "80mm",
+    "135mm",
+    "200mm"
+   ],
+   "type": "string"
+  },
+  "zoom": {
+   "type": "number"
+  }
+ },
+ "layer.newContentAwareFill": {
+  "alphaExpansion": {
+   "description": "(px)",
+   "type": "number"
+  },
+  "method": {
+   "description": "object|surface|edgeBlend",
+   "type": "string"
+  },
+  "outputDir": {
+   "type": "string"
+  },
+  "referenceLayer": {
+   "type": "string"
+  },
+  "referenceTime": {
+   "description": "s",
+   "type": "number"
+  }
+ },
+ "layer.newLight": {
+  "castsShadows": {
+   "type": "boolean"
+  },
+  "coneAngle": {
+   "type": "number"
+  },
+  "coneFeather": {
+   "type": "number"
+  },
+  "falloff": {
+   "description": "None|Smooth|Inverse Square Clamped",
+   "type": "number"
+  },
+  "falloffDistance": {
+   "type": "number"
+  },
+  "intensity": {
+   "type": "number"
+  },
+  "shadowDarkness": {
+   "type": "number"
+  },
+  "shadowDiffusion": {
+   "type": "number"
+  }
+ },
+ "layer.newModel": {
+  "item": {
+   "description": "id or name of a 3D model footage item",
+   "type": "integer"
+  },
+  "position": {
+   "description": "[x, y] comp px",
+   "type": "number"
+  }
+ },
+ "layer.newPrimitive": {
+  "acceptsLights": {
+   "type": "boolean"
+  },
+  "acceptsShadows": {
+   "type": "number"
+  },
+  "baseColor": {
+   "oneOf": [
+    {
+     "description": "#rrggbb",
+     "type": "string"
+    },
+    {
+     "description": "[r, g, b(, a)] 0 to 1",
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "castsShadows": {
+   "type": "boolean"
+  },
+  "depth": {
+   "type": "integer"
+  },
+  "emissive": {
+   "oneOf": [
+    {
+     "description": "#rrggbb",
+     "type": "string"
+    },
+    {
+     "description": "[r, g, b(, a)] 0 to 1",
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "metallic": {
+   "type": "number"
+  },
+  "roughness": {
+   "type": "number"
+  },
+  "segments": {
+   "type": "number"
+  }
+ },
+ "layer.newShape": {
+  "fill": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    },
+    {
+     "type": "boolean",
+     "description": "false for none"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1), or false for none"
+  },
+  "fillBlend": {
+   "description": "a blend mode name (normal, multiply, …)",
+   "type": "string"
+  },
+  "fillOpacity": {
+   "description": "percent, 0 to 100",
+   "type": "number"
+  },
+  "fillType": {
+   "enum": [
+    "none",
+    "solid",
+    "linear",
+    "radial"
+   ],
+   "type": "string"
+  },
+  "position": {
+   "items": {
+    "type": "json"
+   },
+   "type": "array"
+  },
+  "size": {
+   "oneOf": [
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[w, h]"
+    },
+    {
+     "type": "number",
+     "description": "w and h"
+    }
+   ],
+   "description": "pixels: [w, h], or one number for both"
+  },
+  "stroke": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    },
+    {
+     "type": "boolean",
+     "description": "false for none"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1), or false for none"
+  },
+  "strokeBlend": {
+   "description": "a blend mode name (normal, multiply, …)",
+   "type": "string"
+  },
+  "strokeOpacity": {
+   "description": "percent, 0 to 100",
+   "type": "number"
+  },
+  "strokeType": {
+   "enum": [
+    "none",
+    "solid",
+    "linear",
+    "radial"
+   ],
+   "type": "string"
+  },
+  "strokeWidth": {
+   "type": "number"
+  }
+ },
+ "layer.newSolid": {
+  "pixelAspect": {
+   "type": "number"
+  }
+ },
+ "layer.newText": {
+  "allCaps": {
+   "type": "boolean"
+  },
+  "applyFill": {
+   "type": "boolean"
+  },
+  "applyStroke": {
+   "type": "boolean"
+  },
+  "baseline": {
+   "type": "string"
+  },
+  "baselineShift": {
+   "type": "number"
+  },
+  "composer": {
+   "type": "string"
+  },
+  "direction": {
+   "type": "string"
+  },
+  "edit": {
+   "description": "start editing",
+   "type": "boolean"
+  },
+  "fauxBold": {
+   "type": "boolean"
+  },
+  "fauxItalic": {
+   "type": "boolean"
+  },
+  "fill": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1)"
+  },
+  "hScale": {
+   "type": "number"
+  },
+  "hangingPunctuation": {
+   "type": "boolean"
+  },
+  "indentFirst": {
+   "type": "number"
+  },
+  "indentLeft": {
+   "type": "number"
+  },
+  "indentRight": {
+   "type": "number"
+  },
+  "justify": {
+   "type": "string"
+  },
+  "kerning": {
+   "oneOf": [
+    {
+     "enum": [
+      "metrics",
+      "optical"
+     ],
+     "type": "string"
+    },
+    {
+     "type": "number"
+    }
+   ]
+  },
+  "leading": {
+   "type": "number"
+  },
+  "ligatures": {
+   "type": "boolean"
+  },
+  "smallCaps": {
+   "type": "boolean"
+  },
+  "spaceAfter": {
+   "type": "number"
+  },
+  "spaceBefore": {
+   "type": "number"
+  },
+  "stroke": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1)"
+  },
+  "strokeOverFill": {
+   "type": "boolean"
+  },
+  "strokeWidth": {
+   "type": "number"
+  },
+  "subscript": {
+   "type": "boolean"
+  },
+  "superscript": {
+   "type": "boolean"
+  },
+  "tracking": {
+   "type": "number"
+  },
+  "tsume": {
+   "type": "number"
+  },
+  "vScale": {
+   "type": "number"
+  },
+  "vertical": {
+   "type": "boolean"
+  }
+ },
+ "layer.nudge": {
+  "merge": {
+   "type": "string"
+  }
+ },
+ "layer.precompose": {
+  "adjustDuration": {
+   "type": "boolean"
+  },
+  "open": {
+   "type": "boolean"
+  }
+ },
+ "layer.revealExpressionErrors": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "layer.sceneEditDetection": {
+  "threshold": {
+   "description": "0…1, 0.25",
+   "type": "number"
+  }
+ },
+ "layer.select": {
+  "add": {
+   "type": "boolean"
+  },
+  "toggle": {
+   "type": "boolean"
+  }
+ },
+ "layer.selectNext": {
+  "add": {
+   "type": "boolean"
+  }
+ },
+ "layer.selectPrevious": {
+  "add": {
+   "type": "boolean"
+  }
+ },
+ "layer.setBlendMode": {
+  "mode": {
+   "description": "Normal|Multiply|Screen|…",
+   "type": "string"
+  },
+  "step": {
+   "description": "±1",
+   "type": "integer"
+  }
+ },
+ "layer.setComment": {
+  "comment": {
+   "type": "string"
+  }
+ },
+ "layer.setMask": {
+  "inverted": {
+   "type": "boolean"
+  },
+  "mask": {
+   "description": "index|uid|name",
+   "type": "integer"
+  },
+  "mode": {
+   "type": "string"
+  }
+ },
+ "layer.setParent": {
+  "parent": {
+   "description": "layer|null",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "layer.setSwitch": {
+  "merge": {
+   "type": "string"
+  },
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "layer.setText": {
+  "allCaps": {
+   "type": "boolean"
+  },
+  "allSmallCaps": {
+   "type": "boolean"
+  },
+  "applyFill": {
+   "type": "boolean"
+  },
+  "applyStroke": {
+   "type": "boolean"
+  },
+  "box": {
+   "description": "[x,y,w,h]|null (layer space); layer space",
+   "items": {
+    "type": "json"
+   },
+   "type": "array"
+  },
+  "contextualAlternates": {
+   "type": "boolean"
+  },
+  "discretionaryLigatures": {
+   "description": "OpenType",
+   "type": "boolean"
+  },
+  "fauxBold": {
+   "type": "boolean"
+  },
+  "fauxItalic": {
+   "type": "boolean"
+  },
+  "fill": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1)"
+  },
+  "fractions": {
+   "type": "boolean"
+  },
+  "hangingPunctuation": {
+   "type": "boolean"
+  },
+  "indentFirst": {
+   "type": "number"
+  },
+  "indentLeft": {
+   "type": "number"
+  },
+  "indentRight": {
+   "type": "number"
+  },
+  "kerning": {
+   "description": "metrics|optical|number",
+   "oneOf": [
+    {
+     "enum": [
+      "metrics",
+      "optical"
+     ],
+     "type": "string"
+    },
+    {
+     "type": "number"
+    }
+   ]
+  },
+  "leading": {
+   "description": "px|\"auto\"",
+   "type": "number"
+  },
+  "ligatures": {
+   "type": "boolean"
+  },
+  "ordinals": {
+   "type": "boolean"
+  },
+  "smallCaps": {
+   "type": "boolean"
+  },
+  "spaceAfter": {
+   "type": "number"
+  },
+  "spaceBefore": {
+   "type": "number"
+  },
+  "ss01": {
+   "description": "OpenType stylistic set 1",
+   "type": "boolean"
+  },
+  "ss02": {
+   "description": "OpenType stylistic set 2",
+   "type": "boolean"
+  },
+  "ss03": {
+   "description": "OpenType stylistic set 3",
+   "type": "boolean"
+  },
+  "ss04": {
+   "description": "OpenType stylistic set 4",
+   "type": "boolean"
+  },
+  "ss05": {
+   "description": "OpenType stylistic set 5",
+   "type": "boolean"
+  },
+  "ss06": {
+   "description": "OpenType stylistic set 6",
+   "type": "boolean"
+  },
+  "ss07": {
+   "description": "OpenType stylistic set 7",
+   "type": "boolean"
+  },
+  "ss08": {
+   "description": "OpenType stylistic set 8",
+   "type": "boolean"
+  },
+  "ss09": {
+   "description": "OpenType stylistic set 9",
+   "type": "boolean"
+  },
+  "ss10": {
+   "description": "OpenType stylistic set 10",
+   "type": "boolean"
+  },
+  "ss11": {
+   "description": "OpenType stylistic set 11",
+   "type": "boolean"
+  },
+  "ss12": {
+   "description": "OpenType stylistic set 12",
+   "type": "boolean"
+  },
+  "ss13": {
+   "description": "OpenType stylistic set 13",
+   "type": "boolean"
+  },
+  "ss14": {
+   "description": "OpenType stylistic set 14",
+   "type": "boolean"
+  },
+  "ss15": {
+   "description": "OpenType stylistic set 15",
+   "type": "boolean"
+  },
+  "ss16": {
+   "description": "OpenType stylistic set 16",
+   "type": "boolean"
+  },
+  "ss17": {
+   "description": "OpenType stylistic set 17",
+   "type": "boolean"
+  },
+  "ss18": {
+   "description": "OpenType stylistic set 18",
+   "type": "boolean"
+  },
+  "ss19": {
+   "description": "OpenType stylistic set 19",
+   "type": "boolean"
+  },
+  "ss20": {
+   "description": "OpenType stylistic set 20",
+   "type": "boolean"
+  },
+  "stroke": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1)"
+  },
+  "strokeOverFill": {
+   "type": "boolean"
+  },
+  "strokeWidth": {
+   "type": "number"
+  },
+  "stylisticAlternates": {
+   "type": "boolean"
+  },
+  "subscript": {
+   "type": "boolean"
+  },
+  "superscript": {
+   "type": "boolean"
+  },
+  "swash": {
+   "type": "boolean"
+  },
+  "titling": {
+   "type": "boolean"
+  },
+  "tracking": {
+   "type": "number"
+  },
+  "vertical": {
+   "type": "boolean"
+  }
+ },
+ "layer.setTrackMatte": {
+  "matte": {
+   "description": "layer|null",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "layer.setTransform": {
+  "prop": {
+   "description": "anchor|position|scale|orientation|rotation|opacity",
+   "type": "string"
+  },
+  "value": {
+   "description": "the property's value: a number (opacity 0..100, rotation in degrees), a vector [x, y] or [x, y, z], a colour #rrggbb or [r, g, b, a], true or false for a checkbox, text, or an object for shapes and paths",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     }
+    },
+    {
+     "type": "string"
+    },
+    {
+     "type": "object",
+     "additionalProperties": true
+    },
+    {
+     "type": "boolean"
+    }
+   ]
+  }
+ },
+ "layer.settings": {
+  "pixelAspect": {
+   "type": "number"
+  }
+ },
+ "layer.shake": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layer": {
+   "description": "the layer (or camera layer) to shake",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "camera": {
+   "description": "a camera layer, or true for the comp's top camera",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    },
+    {
+     "type": "boolean"
+    }
+   ]
+  }
+ },
+ "layer.showAllVideo": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "layer.slip": {
+  "delta": {
+   "description": "(seconds) | frames?",
+   "type": "number"
+  },
+  "merge": {
+   "type": "string"
+  }
+ },
+ "layer.style.globalLight": {
+  "altitude": {
+   "description": "deg, 0..90",
+   "type": "number"
+  },
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "layer.style.options": {
+  "style": {
+   "description": "blendingOptions|dropShadow|…",
+   "type": "string"
+  }
+ },
+ "layer.style.remove": {
+  "style": {
+   "description": "id|name|uid|layerStyles",
+   "type": "string"
+  }
+ },
+ "layer.style.toggle": {
+  "style": {
+   "description": "id|name|uid|layerStyles",
+   "type": "string"
+  },
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "layer.timeStretch": {
+  "op": {
+   "description": "reverse",
+   "type": "string"
+  },
+  "percent": {
+   "description": "s; one of several alternative parameters",
+   "type": "number"
+  }
+ },
+ "layer.timing": {
+  "delta": {
+   "type": "number"
+  },
+  "in": {
+   "type": "number"
+  },
+  "merge": {
+   "type": "string"
+  },
+  "out": {
+   "type": "number"
+  }
+ },
+ "layer.tree": {
+  "comp": {
+   "type": "integer"
+  },
+  "depth": {
+   "type": "integer"
+  }
+ },
+ "layer.unlockAll": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "light.controlWithCamera": {
+  "camera": {
+   "description": "default active",
+   "type": "integer"
+  },
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layers": {
+   "description": "lights (default selected); default selected",
+   "items": {
+    "oneOf": [
+     {
+      "type": "integer"
+     },
+     {
+      "type": "string"
+     }
+    ]
+   },
+   "type": "array"
+  }
+ },
+ "light.environmentBackground": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layer": {
+   "description": "environment light (default selected / first); default selected / first",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "light.fromModel": {
+  "comp": {
+   "type": "integer"
+  },
+  "layers": {
+   "description": "3D model layers (default selected); default selected",
+   "items": {
+    "oneOf": [
+     {
+      "type": "integer"
+     },
+     {
+      "type": "string"
+     }
+    ]
+   },
+   "type": "array"
+  }
+ },
+ "light.sheen": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "ease": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "layer": {
+   "description": "default the first selected layer",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "light.spotlight": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "ease": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "layers": {
+   "description": "layer ids, names or #n",
+   "items": {
+    "oneOf": [
+     {
+      "type": "integer"
+     },
+     {
+      "type": "string"
+     }
+    ]
+   },
+   "type": "array"
+  },
+  "radius": {
+   "description": "px: a number, or [from, to]",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "target": {
+   "description": "the layer the light follows",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "liquify.clear": {
+  "effect": {
+   "description": "uid",
+   "type": "integer"
+  }
+ },
+ "liquify.stroke": {
+  "effect": {
+   "description": "uid",
+   "type": "integer"
+  },
+  "jitter": {
+   "description": "1-100",
+   "type": "number"
+  },
+  "pressure": {
+   "description": "1-100",
+   "type": "number"
+  },
+  "time": {
+   "description": "(s) | frame?",
+   "type": "number"
+  }
+ },
+ "markers.delete": {
+  "at": {
+   "description": "comp s; one of several alternative parameters",
+   "type": "number"
+  }
+ },
+ "markers.nested": {
+  "comp": {
+   "type": "integer"
+  },
+  "layer": {
+   "description": "a precomp layer",
+   "type": "integer"
+  }
+ },
+ "markers.set": {
+  "chapter": {
+   "type": "string"
+  },
+  "comment": {
+   "type": "string"
+  },
+  "cuePoint": {
+   "description": "{name, navigation?, params?: [[name, value]…]} | null",
+   "type": "string"
+  },
+  "frameTarget": {
+   "type": "string"
+  },
+  "index": {
+   "description": "(0-based) | at? (comp s) | new?: true",
+   "type": "integer"
+  },
+  "protected": {
+   "type": "boolean"
+  }
+ },
+ "mask.addVertex": {
+  "in": {
+   "type": "number"
+  },
+  "mask": {
+   "type": "integer"
+  },
+  "out": {
+   "type": "number"
+  }
+ },
+ "mask.convertVertex": {
+  "mask": {
+   "description": "uid (mask or shape Path item); mask or shape Path item",
+   "type": "integer"
+  },
+  "smooth": {
+   "type": "boolean"
+  }
+ },
+ "mask.featherPoint.add": {
+  "mask": {
+   "type": "integer"
+  },
+  "segment": {
+   "type": "integer"
+  },
+  "tension": {
+   "description": "%",
+   "type": "number"
+  }
+ },
+ "mask.featherPoint.list": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "mask.featherPoint.remove": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "mask.featherPoint.set": {
+  "mask": {
+   "type": "integer"
+  },
+  "merge": {
+   "type": "string"
+  },
+  "segment": {
+   "type": "integer"
+  },
+  "t": {
+   "type": "number"
+  },
+  "tension": {
+   "description": "%",
+   "type": "number"
+  }
+ },
+ "mask.insertVertex": {
+  "mask": {
+   "description": "uid (mask or shape Path item); mask or shape Path item",
+   "type": "integer"
+  },
+  "segment": {
+   "type": "integer"
+  }
+ },
+ "mask.interpolate": {
+  "addVertices": {
+   "description": "n|false",
+   "oneOf": [
+    {
+     "type": "boolean"
+    },
+    {
+     "type": "number"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  },
+  "addVerticesUnit": {
+   "description": "pixels|total|percent",
+   "type": "string"
+  },
+  "bendingResistance": {
+   "description": "0-100",
+   "type": "number"
+  },
+  "keyframeRate": {
+   "description": "n|auto",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  },
+  "mask": {
+   "type": "integer"
+  },
+  "quality": {
+   "description": "0-100",
+   "type": "number"
+  }
+ },
+ "mask.interpolationOptions": {
+  "addVertices": {
+   "description": "n|false",
+   "oneOf": [
+    {
+     "type": "boolean"
+    },
+    {
+     "type": "number"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  },
+  "addVerticesUnit": {
+   "description": "pixels|total|percent",
+   "type": "string"
+  },
+  "bendingResistance": {
+   "type": "number"
+  },
+  "keyframeRate": {
+   "description": "n|auto",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  },
+  "quality": {
+   "type": "number"
+  }
+ },
+ "mask.moveVertices": {
+  "merge": {
+   "type": "string"
+  }
+ },
+ "mask.new": {
+  "inTangents": {
+   "description": "[[x, y], …]",
+   "items": {
+    "items": {
+     "type": "number"
+    },
+    "type": "array"
+   },
+   "type": "array"
+  },
+  "mode": {
+   "type": "string"
+  },
+  "outTangents": {
+   "description": "[[x, y], …]",
+   "items": {
+    "items": {
+     "type": "number"
+    },
+    "type": "array"
+   },
+   "type": "array"
+  }
+ },
+ "mask.remove": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "mask.selectVertices": {
+  "add": {
+   "type": "boolean"
+  },
+  "toggle": {
+   "type": "boolean"
+  }
+ },
+ "mask.setClosed": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "mask.setVertex": {
+  "in": {
+   "type": "number"
+  },
+  "mask": {
+   "type": "integer"
+  },
+  "merge": {
+   "type": "string"
+  },
+  "out": {
+   "type": "number"
+  }
+ },
+ "material.set": {
+  "acceptsLights": {
+   "type": "boolean"
+  },
+  "ambient": {
+   "type": "number"
+  },
+  "appearsInReflections": {
+   "type": "boolean"
+  },
+  "baseColor": {
+   "oneOf": [
+    {
+     "description": "#rrggbb",
+     "type": "string"
+    },
+    {
+     "description": "[r, g, b(, a)] 0 to 1",
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "diffuse": {
+   "type": "number"
+  },
+  "emissive": {
+   "oneOf": [
+    {
+     "description": "#rrggbb",
+     "type": "string"
+    },
+    {
+     "description": "[r, g, b(, a)] 0 to 1",
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "lightTransmission": {
+   "type": "number"
+  },
+  "metal": {
+   "type": "number"
+  },
+  "metallic": {
+   "type": "number"
+  },
+  "roughness": {
+   "type": "number"
+  },
+  "specularIntensity": {
+   "type": "number"
+  },
+  "specularShininess": {
+   "type": "number"
+  }
+ },
+ "mediaBrowser.action": {
+  "action": {
+   "type": "string"
+  }
+ },
+ "mediaBrowser.go": {
+  "importableOnly": {
+   "type": "boolean"
+  }
+ },
+ "mediaBrowser.import": {
+  "addToComp": {
+   "type": "boolean"
+  },
+  "position": {
+   "description": "where the layers go, as in layer.addItem",
+   "type": "number"
+  },
+  "sequence": {
+   "description": "default true: a numbered still brings its image sequence",
+   "type": "boolean"
+  }
+ },
+ "mediaBrowser.list": {
+  "importableOnly": {
+   "type": "boolean"
+  }
+ },
+ "motion.sketch": {
+  "captureSpeed": {
+   "description": "%, 100",
+   "type": "number"
+  },
+  "points": {
+   "description": "[[t, x, y]…] (t = capture seconds) | [[x, y]…] (one per frame); t = capture seconds; one per frame",
+   "items": {
+    "type": "json"
+   },
+   "type": "array"
+  },
+  "smoothing": {
+   "description": "px, 1",
+   "type": "number"
+  }
+ },
+ "paint.brushPreset": {
+  "preset": {
+   "description": "index | name",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "paint.options": {
+  "aligned": {
+   "type": "boolean"
+  },
+  "background": {
+   "oneOf": [
+    {
+     "description": "#rrggbb",
+     "type": "string"
+    },
+    {
+     "description": "[r, g, b(, a)] 0 to 1",
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "channels": {
+   "type": "string"
+  },
+  "cloneOffset": {
+   "items": {
+    "type": "json"
+   },
+   "type": "array"
+  },
+  "clonePreset": {
+   "type": "integer"
+  },
+  "cloneSource": {
+   "type": "number"
+  },
+  "cloneTime": {
+   "type": "number"
+  },
+  "cloneTimeShift": {
+   "type": "number"
+  },
+  "customFrames": {
+   "type": "integer"
+  },
+  "diameter": {
+   "type": "number"
+  },
+  "flow": {
+   "type": "number"
+  },
+  "flowPressure": {
+   "type": "boolean"
+  },
+  "hardness": {
+   "type": "number"
+  },
+  "lockSourceTime": {
+   "type": "boolean"
+  },
+  "minSize": {
+   "type": "number"
+  },
+  "mode": {
+   "type": "string"
+  },
+  "opacityPressure": {
+   "type": "boolean"
+  },
+  "overlayDifference": {
+   "type": "boolean"
+  },
+  "overlayOpacity": {
+   "type": "number"
+  },
+  "reset": {
+   "type": "boolean"
+  },
+  "roundness": {
+   "type": "number"
+  },
+  "sizePressure": {
+   "type": "boolean"
+  }
+ },
+ "paint.removeStroke": {
+  "stroke": {
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ],
+   "description": "uid | name"
+  }
+ },
+ "paint.stroke": {
+  "cloneSource": {
+   "description": "layer id",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "cloneTime": {
+   "description": "s",
+   "type": "number"
+  },
+  "cloneTimeShift": {
+   "description": "(s)",
+   "type": "number"
+  },
+  "customFrames": {
+   "type": "integer"
+  },
+  "diameter": {
+   "type": "number"
+  },
+  "flow": {
+   "type": "number"
+  },
+  "flowPressure": {
+   "type": "boolean"
+  },
+  "hardness": {
+   "type": "number"
+  },
+  "lockSourceTime": {
+   "type": "boolean"
+  },
+  "minSize": {
+   "type": "number"
+  },
+  "mode": {
+   "type": "string"
+  },
+  "opacityPressure": {
+   "type": "boolean"
+  },
+  "roundness": {
+   "type": "number"
+  },
+  "sizePressure": {
+   "type": "boolean"
+  },
+  "time": {
+   "description": "(s) | frame?",
+   "type": "number"
+  }
+ },
+ "path.convertToBezier": {
+  "mask": {
+   "type": "integer"
+  }
+ },
+ "path.freeTransform": {
+  "mask": {
+   "type": "integer"
+  },
+  "scale": {
+   "description": "% | [x%, y%]",
+   "type": "number"
+  }
+ },
+ "path.rotoBezier": {
+  "mask": {
+   "type": "integer"
+  },
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "path.setFirstVertex": {
+  "mask": {
+   "description": "uid",
+   "type": "integer"
+  }
+ },
+ "playback.audio": {
+  "value": {
+   "description": "include audio in previews",
+   "type": "string"
+  }
+ },
+ "playback.cacheWhenIdle": {
+  "value": {
+   "type": "string"
+  }
+ },
+ "playback.settings.set": {
+  "cacheBeforePlayback": {
+   "type": "boolean"
+  },
+  "current": {
+   "description": "shortcut shown in the panel",
+   "type": "string"
+  },
+  "customResolution": {
+   "type": "integer"
+  },
+  "fullScreen": {
+   "type": "boolean"
+  },
+  "loop": {
+   "type": "boolean"
+  },
+  "moveTimeToPreviewTime": {
+   "type": "boolean"
+  },
+  "playCachedFrames": {
+   "type": "boolean"
+  },
+  "preRoll": {
+   "description": "seconds",
+   "type": "number"
+  },
+  "shortcut": {
+   "type": "string"
+  },
+  "skip": {
+   "description": "frames skipped between previewed frames, 0 to 99",
+   "type": "integer"
+  }
+ },
+ "prefs.get": {
+  "key": {
+   "description": "e.g. general.undoLevels (omit for all settings); omit for all settings",
+   "type": "string"
+  }
+ },
+ "prefs.open": {
+  "page": {
+   "description": "general|startup|project|composition|previews|appearance|grids|labels|type|import|export|audio|disk|memory|video|3d|scripting",
+   "type": "string"
+  }
+ },
+ "prefs.reset": {
+  "page": {
+   "description": "general|labels|project|…",
+   "type": "string"
+  }
+ },
+ "prefs.set": {
+  "key": {
+   "type": "string"
+  },
+  "value": {
+   "type": "string"
+  }
+ },
+ "project.move": {
+  "folder": {
+   "description": "id|name|null (root)",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "project.newFolder": {
+  "parent": {
+   "type": "integer"
+  }
+ },
+ "project.rename": {
+  "item": {
+   "description": "id|name (default: selected); default: selected",
+   "type": "integer"
+  }
+ },
+ "project.select": {
+  "add": {
+   "type": "boolean"
+  }
+ },
+ "project.setComment": {
+  "comment": {
+   "type": "string"
+  }
+ },
+ "project.setLabel": {
+  "label": {
+   "description": "name|index",
+   "type": "string"
+  }
+ },
+ "project.setProjectComment": {
+  "comment": {
+   "type": "string"
+  }
+ },
+ "prop.addKey": {
+  "value": {
+   "description": "the property's value: a number (opacity 0..100, rotation in degrees), a vector [x, y] or [x, y, z], a colour #rrggbb or [r, g, b, a], true or false for a checkbox, text, or an object for shapes and paths",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     }
+    },
+    {
+     "type": "string"
+    },
+    {
+     "type": "object",
+     "additionalProperties": true
+    },
+    {
+     "type": "boolean"
+    }
+   ]
+  }
+ },
+ "prop.duplicateGroup": {
+  "prop": {
+   "description": "uid",
+   "type": "integer"
+  }
+ },
+ "prop.moveGroup": {
+  "prop": {
+   "description": "uid",
+   "type": "integer"
+  }
+ },
+ "prop.pickWhip": {
+  "expression": {
+   "type": "string"
+  }
+ },
+ "prop.removeGroup": {
+  "prop": {
+   "description": "uid",
+   "type": "integer"
+  }
+ },
+ "prop.renameGroup": {
+  "prop": {
+   "description": "uid",
+   "type": "integer"
+  }
+ },
+ "prop.select": {
+  "add": {
+   "type": "boolean"
+  },
+  "selectKeys": {
+   "type": "boolean"
+  }
+ },
+ "prop.separateDimensions": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "prop.set": {
+  "merge": {
+   "type": "string"
+  },
+  "value": {
+   "description": "the property's value: a number (opacity 0..100, rotation in degrees), a vector [x, y] or [x, y, z], a colour #rrggbb or [r, g, b, a], true or false for a checkbox, text, or an object for shapes and paths",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     }
+    },
+    {
+     "type": "string"
+    },
+    {
+     "type": "object",
+     "additionalProperties": true
+    },
+    {
+     "type": "boolean"
+    }
+   ]
+  }
+ },
+ "prop.setExpression": {
+  "expression": {
+   "type": "string"
+  }
+ },
+ "prop.setGroupEnabled": {
+  "prop": {
+   "description": "uid",
+   "type": "integer"
+  },
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "prop.toggleAnimation": {
+  "merge": {
+   "type": "string"
+  },
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "puppet.addPin": {
+  "density": {
+   "type": "number"
+  },
+  "expansion": {
+   "type": "number"
+  },
+  "mesh": {
+   "description": "uid",
+   "type": "integer"
+  },
+  "newMesh": {
+   "type": "boolean"
+  },
+  "time": {
+   "description": "(s) | frame?",
+   "type": "number"
+  },
+  "triangles": {
+   "type": "number"
+  }
+ },
+ "puppet.follow": {
+  "amount": {
+   "description": "%, 100",
+   "type": "number"
+  },
+  "cascade": {
+   "description": "true: the k-th nearest pin trails k × delay",
+   "type": "boolean"
+  },
+  "delay": {
+   "description": "s, 0.1",
+   "type": "number"
+  },
+  "leader": {
+   "description": "uid | name (default: the first selected pin)",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "puppet.mesh": {
+  "density": {
+   "type": "number"
+  },
+  "expansion": {
+   "type": "number"
+  },
+  "merge": {
+   "type": "string"
+  },
+  "mesh": {
+   "description": "uid",
+   "type": "integer"
+  },
+  "triangles": {
+   "type": "number"
+  }
+ },
+ "puppet.movePin": {
+  "merge": {
+   "type": "string"
+  },
+  "pin": {
+   "description": "uid | name",
+   "type": "integer"
+  }
+ },
+ "puppet.recordOptions": {
+  "smoothing": {
+   "description": "0-100",
+   "type": "number"
+  },
+  "speed": {
+   "description": "%, 100",
+   "type": "number"
+  }
+ },
+ "puppet.recordPin": {
+  "pin": {
+   "description": "uid | name",
+   "type": "integer"
+  },
+  "smoothing": {
+   "description": "Record Options",
+   "type": "number"
+  },
+  "speed": {
+   "description": "%, Record Options",
+   "type": "number"
+  }
+ },
+ "puppet.removePin": {
+  "pin": {
+   "description": "uid | name",
+   "type": "integer"
+  }
+ },
+ "puppet.selectPins": {
+  "add": {
+   "type": "boolean"
+  },
+  "toggle": {
+   "type": "boolean"
+  }
+ },
+ "puppet.setPin": {
+  "amount": {
+   "description": "%",
+   "type": "number"
+  },
+  "extent": {
+   "description": "(px)",
+   "type": "number"
+  },
+  "merge": {
+   "type": "string"
+  },
+  "pin": {
+   "description": "uid | name",
+   "type": "integer"
+  },
+  "position": {
+   "type": "number"
+  }
+ },
+ "render.addOutputModule": {
+  "bitrate": {
+   "type": "number"
+  },
+  "channels": {
+   "type": "string"
+  },
+  "format": {
+   "type": "string"
+  },
+  "output": {
+   "type": "string"
+  },
+  "proresProfile": {
+   "type": "string"
+  }
+ },
+ "render.preRender": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "format": {
+   "type": "string"
+  },
+  "output": {
+   "description": "path|template",
+   "type": "string"
+  }
+ },
+ "render.saveCurrentPreview": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "renderQueue.add": {
+  "audioBitrate": {
+   "type": "number"
+  },
+  "audioChannels": {
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  },
+  "audioFormat": {
+   "type": "string"
+  },
+  "bitrate": {
+   "description": "kbps",
+   "type": "number"
+  },
+  "comp": {
+   "description": "id|name",
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "crop": {
+   "type": "boolean"
+  },
+  "duration": {
+   "description": "s",
+   "type": "number"
+  },
+  "end": {
+   "description": "s",
+   "type": "number"
+  },
+  "keyframeInterval": {
+   "type": "integer"
+  },
+  "level": {
+   "type": "number"
+  },
+  "opusApplication": {
+   "type": "string"
+  },
+  "output": {
+   "description": "path|template",
+   "type": "string"
+  },
+  "profile": {
+   "type": "string"
+  },
+  "proresProfile": {
+   "type": "string"
+  },
+  "proxyUse": {
+   "type": "string"
+  },
+  "rateControl": {
+   "type": "string"
+  },
+  "resize": {
+   "additionalProperties": true,
+   "type": "object"
+  },
+  "resolution": {
+   "description": "full|half|third|quarter|scale",
+   "type": "number"
+  },
+  "sampleRate": {
+   "type": "integer"
+  },
+  "start": {
+   "description": "s",
+   "type": "number"
+  },
+  "template": {
+   "description": "Render Settings template",
+   "type": "string"
+  },
+  "webmBitrate": {
+   "type": "boolean"
+  },
+  "webmCodec": {
+   "type": "string"
+  }
+ },
+ "renderQueue.applyTemplate": {
+  "outputModule": {
+   "description": "template name",
+   "type": "string"
+  },
+  "renderSettings": {
+   "description": "template name",
+   "type": "string"
+  }
+ },
+ "renderQueue.saveTemplate": {
+  "from": {
+   "description": "template to copy",
+   "type": "string"
+  },
+  "module": {
+   "type": "integer"
+  }
+ },
+ "renderQueue.setOutputModule": {
+  "audioBitrate": {
+   "description": "Opus kbps",
+   "type": "number"
+  },
+  "bitrate": {
+   "description": "kbps",
+   "type": "number"
+  },
+  "crop": {
+   "description": "bool|{useRoi?",
+   "type": "boolean"
+  },
+  "level": {
+   "description": "auto|4.1",
+   "type": "number"
+  },
+  "output": {
+   "type": "string"
+  },
+  "proresProfile": {
+   "description": "proxy|lt|standard|hq|4444|4444xq",
+   "type": "string"
+  },
+  "quality": {
+   "description": "1-100",
+   "type": "integer"
+  },
+  "resize": {
+   "additionalProperties": true,
+   "description": "bool|{preset?, width?, height?, lockAspect?, quality?: low|high}",
+   "type": "object"
+  },
+  "sampleRate": {
+   "type": "integer"
+  }
+ },
+ "renderQueue.setRenderSettings": {
+  "colorDepth": {
+   "description": "current|8|16|32",
+   "enum": [
+    "current",
+    "8",
+    "16",
+    "32"
+   ],
+   "type": "string"
+  },
+  "duration": {
+   "description": "s",
+   "type": "number"
+  },
+  "end": {
+   "description": "s",
+   "type": "number"
+  },
+  "motionBlur": {
+   "description": "bool|current|onForChecked|offForAll",
+   "type": "boolean"
+  },
+  "resolution": {
+   "description": "full|half|third|quarter|scale",
+   "type": "number"
+  },
+  "start": {
+   "description": "s",
+   "type": "number"
+  }
+ },
+ "roto.clearStrokes": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  },
+  "kind": {
+   "type": "string"
+  }
+ },
+ "roto.freeze": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  },
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "roto.model.download": {
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "roto.model.install": {
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "roto.model.select": {
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "roto.options": {
+  "autoPropagate": {
+   "type": "boolean"
+  },
+  "diameter": {
+   "type": "number"
+  },
+  "overlayOpacity": {
+   "type": "number"
+  },
+  "refineDiameter": {
+   "type": "number"
+  }
+ },
+ "roto.propagate": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  },
+  "to": {
+   "description": "layer frame: extend the span",
+   "type": "number"
+  },
+  "wait": {
+   "description": "block until done",
+   "type": "boolean"
+  }
+ },
+ "roto.span": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "roto.status": {
+  "compareTo": {
+   "description": "RLE matte to report the IoU against",
+   "type": "string"
+  },
+  "compute": {
+   "description": "compute the frame if needed",
+   "type": "boolean"
+  },
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  },
+  "matte": {
+   "description": "include the matte (RLE, base64); RLE, base64",
+   "type": "boolean"
+  }
+ },
+ "roto.stroke": {
+  "effect": {
+   "type": "integer"
+  }
+ },
+ "roto.unfreeze": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "scopes.analyze": {
+  "clamp": {
+   "type": "boolean"
+  },
+  "comp": {
+   "type": "integer"
+  },
+  "float": {
+   "type": "boolean"
+  }
+ },
+ "script.run": {
+  "code": {
+   "description": "JavaScript: app, app.project, CompItem, Layer, Property… like After Effects scripting",
+   "type": "string"
+  },
+  "console": {
+   "description": "Script Console context",
+   "type": "boolean"
+  }
+ },
+ "script.settings.get": {
+  "key": {
+   "type": "string"
+  }
+ },
+ "script.settings.save": {
+  "key": {
+   "type": "string"
+  },
+  "value": {
+   "description": "text",
+   "type": "string"
+  }
+ },
+ "scriptWindow.click": {
+  "widget": {
+   "description": "id | \"#id\" | properties.name | text",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  },
+  "window": {
+   "description": "id | title",
+   "type": "integer"
+  }
+ },
+ "scriptWindow.close": {
+  "window": {
+   "type": "integer"
+  }
+ },
+ "scriptWindow.get": {
+  "window": {
+   "description": "id | title",
+   "type": "integer"
+  }
+ },
+ "scriptWindow.set": {
+  "value": {
+   "description": "text | number | bool | item index | item text",
+   "type": "string"
+  },
+  "window": {
+   "type": "integer"
+  }
+ },
+ "shape.dashes.add": {
+  "prop": {
+   "description": "stroke uid",
+   "type": "integer"
+  }
+ },
+ "shape.dashes.remove": {
+  "prop": {
+   "description": "stroke uid",
+   "type": "integer"
+  }
+ },
+ "shape.fillStroke": {
+  "merge": {
+   "type": "string"
+  },
+  "strokeWidth": {
+   "type": "number"
+  }
+ },
+ "shape.newPath": {
+  "fill": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    },
+    {
+     "type": "boolean",
+     "description": "false for none"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1), or false for none"
+  },
+  "fillBlend": {
+   "description": "a blend mode name (normal, multiply, …)",
+   "type": "string"
+  },
+  "fillOpacity": {
+   "description": "percent, 0 to 100",
+   "type": "number"
+  },
+  "fillType": {
+   "enum": [
+    "none",
+    "solid",
+    "linear",
+    "radial"
+   ],
+   "type": "string"
+  },
+  "inTangents": {
+   "description": "[[x, y], …]",
+   "items": {
+    "items": {
+     "type": "number"
+    },
+    "type": "array"
+   },
+   "type": "array"
+  },
+  "outTangents": {
+   "description": "[[x, y], …]",
+   "items": {
+    "items": {
+     "type": "number"
+    },
+    "type": "array"
+   },
+   "type": "array"
+  },
+  "stroke": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    },
+    {
+     "type": "boolean",
+     "description": "false for none"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1), or false for none"
+  },
+  "strokeBlend": {
+   "description": "a blend mode name (normal, multiply, …)",
+   "type": "string"
+  },
+  "strokeOpacity": {
+   "description": "percent, 0 to 100",
+   "type": "number"
+  },
+  "strokeType": {
+   "enum": [
+    "none",
+    "solid",
+    "linear",
+    "radial"
+   ],
+   "type": "string"
+  },
+  "strokeWidth": {
+   "description": "default the Tools bar's, shape.toolOptions",
+   "type": "number"
+  }
+ },
+ "shape.newShape": {
+  "fill": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    },
+    {
+     "type": "boolean",
+     "description": "false for none"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1), or false for none"
+  },
+  "fillBlend": {
+   "description": "a blend mode name (normal, multiply, …)",
+   "type": "string"
+  },
+  "fillOpacity": {
+   "description": "percent, 0 to 100",
+   "type": "number"
+  },
+  "fillType": {
+   "enum": [
+    "none",
+    "solid",
+    "linear",
+    "radial"
+   ],
+   "type": "string"
+  },
+  "size": {
+   "oneOf": [
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[w, h]"
+    },
+    {
+     "type": "number",
+     "description": "w and h"
+    }
+   ],
+   "description": "pixels: [w, h], or one number for both"
+  },
+  "stroke": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    },
+    {
+     "type": "boolean",
+     "description": "false for none"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1), or false for none"
+  },
+  "strokeBlend": {
+   "description": "a blend mode name (normal, multiply, …)",
+   "type": "string"
+  },
+  "strokeOpacity": {
+   "description": "percent, 0 to 100",
+   "type": "number"
+  },
+  "strokeType": {
+   "enum": [
+    "none",
+    "solid",
+    "linear",
+    "radial"
+   ],
+   "type": "string"
+  },
+  "strokeWidth": {
+   "description": "default the Tools bar's, shape.toolOptions",
+   "type": "number"
+  }
+ },
+ "shape.stroke.taper": {
+  "endEase": {
+   "description": "(%)",
+   "type": "number"
+  },
+  "endLength": {
+   "type": "number"
+  },
+  "endWidth": {
+   "description": "(%)",
+   "type": "number"
+  },
+  "prop": {
+   "description": "stroke uid",
+   "type": "integer"
+  },
+  "startEase": {
+   "description": "(%)",
+   "type": "number"
+  },
+  "startLength": {
+   "type": "number"
+  },
+  "startWidth": {
+   "description": "(%)",
+   "type": "number"
+  },
+  "units": {
+   "description": "pixels|percent",
+   "enum": [
+    "pixels",
+    "percent"
+   ],
+   "type": "string"
+  }
+ },
+ "shape.stroke.wave": {
+  "amount": {
+   "description": "%",
+   "type": "number"
+  },
+  "cycles": {
+   "type": "number"
+  },
+  "phase": {
+   "description": "°",
+   "type": "number"
+  },
+  "prop": {
+   "description": "stroke uid",
+   "type": "integer"
+  },
+  "wavelength": {
+   "type": "number"
+  }
+ },
+ "shape.toolOptions": {
+  "fill": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    },
+    {
+     "type": "boolean",
+     "description": "false for none"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1), or false for none"
+  },
+  "fillBlend": {
+   "description": "blend mode",
+   "type": "string"
+  },
+  "reset": {
+   "type": "boolean"
+  },
+  "stroke": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    },
+    {
+     "type": "boolean",
+     "description": "false for none"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1), or false for none"
+  },
+  "strokeBlend": {
+   "description": "a blend mode name (normal, multiply, …)",
+   "type": "string"
+  },
+  "strokeOpacity": {
+   "description": "percent, 0 to 100",
+   "type": "number"
+  },
+  "strokeType": {
+   "enum": [
+    "none",
+    "solid",
+    "linear",
+    "radial"
+   ],
+   "type": "string"
+  }
+ },
+ "shortcuts.import": {
+  "preset": {
+   "description": "exported document; one of several alternative parameters",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "shortcuts.list": {
+  "keys": {
+   "type": "string"
+  },
+  "query": {
+   "type": "string"
+  }
+ },
+ "shortcuts.preset": {
+  "from": {
+   "type": "string"
+  }
+ },
+ "shortcuts.reset": {
+  "command": {
+   "type": "string"
+  }
+ },
+ "shortcuts.set": {
+  "command": {
+   "type": "string"
+  },
+  "keys": {
+   "description": "\"Cmd+Shift+K\" | [keys] | null",
+   "type": "string"
+  }
+ },
+ "templates.create": {
+  "footageDir": {
+   "type": "string"
+  },
+  "id": {
+   "description": "(templates.list) | path (.ectemplate)",
+   "type": "string"
+  },
+  "projectPath": {
+   "description": "save the new project there; embedded footage goes to `<stem> Footage/` next to it",
+   "type": "string"
+  }
+ },
+ "templates.delete": {
+  "id": {
+   "description": "user/<file>",
+   "type": "string"
+  }
+ },
+ "templates.saveAs": {
+  "category": {
+   "type": "string"
+  },
+  "description": {
+   "type": "string"
+  },
+  "embedLimitMB": {
+   "description": "default 256: footage beyond it stays linked, with a warning",
+   "type": "number"
+  }
+ },
+ "text.addSelector": {
+  "animator": {
+   "description": "uid|index",
+   "type": "integer"
+  }
+ },
+ "text.animatorFontAxes": {
+  "animator": {
+   "description": "uid|index",
+   "type": "integer"
+  },
+  "axis": {
+   "description": "tag|name (omit to list the font's axes); omit to list the font's axes",
+   "type": "string"
+  }
+ },
+ "text.delete": {
+  "merge": {
+   "type": "string"
+  },
+  "word": {
+   "type": "boolean"
+  }
+ },
+ "text.edit": {
+  "caret": {
+   "type": "integer"
+  },
+  "created": {
+   "type": "boolean"
+  },
+  "select": {
+   "description": "[anchor, caret]|\"none\"",
+   "type": "string"
+  }
+ },
+ "text.fonts": {
+  "query": {
+   "type": "string"
+  },
+  "rescan": {
+   "type": "boolean"
+  }
+ },
+ "text.insert": {
+  "merge": {
+   "type": "string"
+  }
+ },
+ "text.moveCaret": {
+  "extend": {
+   "type": "boolean"
+  }
+ },
+ "time.go": {
+  "prop": {
+   "description": "uid",
+   "type": "integer"
+  }
+ },
+ "time.set": {
+  "time": {
+   "description": "(s) | frame? | timecode?",
+   "type": "number"
+  }
+ },
+ "time.step": {
+  "frames": {
+   "type": "integer"
+  }
+ },
+ "track.analyze": {
+  "tracker": {
+   "oneOf": [
+    {
+     "description": "tracker uid",
+     "type": "integer"
+    },
+    {
+     "description": "tracker name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "wait": {
+   "description": "block until done",
+   "type": "boolean"
+  }
+ },
+ "track.apply": {
+  "dimensions": {
+   "description": "xy|x|y",
+   "type": "string"
+  },
+  "tracker": {
+   "oneOf": [
+    {
+     "description": "tracker uid",
+     "type": "integer"
+    },
+    {
+     "description": "tracker name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.camera": {
+  "detailed": {
+   "type": "boolean"
+  },
+  "lensDistortion": {
+   "description": "solve k1/k2",
+   "type": "boolean"
+  },
+  "undistort": {
+   "description": "render undistorted",
+   "type": "boolean"
+  },
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "track.delete": {
+  "tracker": {
+   "oneOf": [
+    {
+     "description": "tracker uid",
+     "type": "integer"
+    },
+    {
+     "description": "tracker name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.mask": {
+  "mask": {
+   "description": "uid|index|name",
+   "type": "integer"
+  },
+  "wait": {
+   "description": "block until done",
+   "type": "boolean"
+  }
+ },
+ "track.new": {
+  "position": {
+   "type": "number"
+  },
+  "target": {
+   "description": "layer",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.options": {
+  "adaptEveryFrame": {
+   "type": "boolean"
+  },
+  "blur": {
+   "description": "px, 0 = off",
+   "type": "number"
+  },
+  "enhance": {
+   "type": "boolean"
+  },
+  "subpixel": {
+   "type": "boolean"
+  },
+  "threshold": {
+   "description": "%",
+   "type": "number"
+  },
+  "trackShape": {
+   "type": "boolean"
+  },
+  "tracker": {
+   "oneOf": [
+    {
+     "description": "tracker uid",
+     "type": "integer"
+    },
+    {
+     "description": "tracker name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.property": {
+  "source": {
+   "description": "layer",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.reset": {
+  "tracker": {
+   "oneOf": [
+    {
+     "description": "tracker uid",
+     "type": "integer"
+    },
+    {
+     "description": "tracker name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.select": {
+  "tracker": {
+   "description": "uid|name|#n",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.setPoint": {
+  "tracker": {
+   "oneOf": [
+    {
+     "description": "tracker uid",
+     "type": "integer"
+    },
+    {
+     "description": "tracker name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.setTarget": {
+  "target": {
+   "description": "layer|null",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "tracker": {
+   "oneOf": [
+    {
+     "description": "tracker uid",
+     "type": "integer"
+    },
+    {
+     "description": "tracker name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.setType": {
+  "position": {
+   "type": "number"
+  },
+  "tracker": {
+   "oneOf": [
+    {
+     "description": "tracker uid",
+     "type": "integer"
+    },
+    {
+     "description": "tracker name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.status": {
+  "tracker": {
+   "oneOf": [
+    {
+     "description": "tracker uid",
+     "type": "integer"
+    },
+    {
+     "description": "tracker name or #n",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "track.warpStabilizer": {
+  "wait": {
+   "type": "boolean"
+  }
+ },
+ "transition.iris": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layer": {
+   "description": "the incoming layer or precomp",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "ease": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "center": {
+   "description": "[x, y] comp px, or a layer whose middle the iris follows",
+   "oneOf": [
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    },
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "ring": {
+   "description": "a stroke on the iris edge: {color?, width?} or true",
+   "oneOf": [
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "color": {
+       "description": "#rrggbb or [r, g, b] 0..1",
+       "oneOf": [
+        {
+         "type": "string"
+        },
+        {
+         "items": {
+          "type": "number"
+         },
+         "type": "array"
+        }
+       ]
+      },
+      "width": {
+       "type": "number"
+      }
+     }
+    },
+    {
+     "type": "boolean"
+    }
+   ]
+  }
+ },
+ "transition.morphRect": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "from": {
+   "description": "the outgoing layer (its on-screen rectangle at start)",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "to": {
+   "description": "the incoming layer (its rectangle at the end)",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "ease": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "radius": {
+   "description": "corner radius px: a number or [from, to]",
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  }
+ },
+ "transition.zoomThrough": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "layer": {
+   "description": "the outgoing layer",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "toLayer": {
+   "description": "the incoming layer",
+   "oneOf": [
+    {
+     "description": "layer id or 1-based index",
+     "type": "integer"
+    },
+    {
+     "description": "layer name or #n",
+     "type": "string"
+    }
+   ]
+  },
+  "target": {
+   "description": "[x, y] comp px: the point pushed into",
+   "items": {
+    "type": "number"
+   },
+   "type": "array"
+  },
+  "ease": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  },
+  "settleEase": {
+   "description": "a curve name (snappy, out, smooth, swift, settle, pop, reseat, fly, linear) or [x1, y1, x2, y2]",
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "items": {
+      "type": "number"
+     },
+     "type": "array"
+    }
+   ]
+  }
+ },
+ "view.3d.activeCamera": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.back": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.bottom": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.custom1": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.custom2": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.custom3": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.default": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.front": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.last": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "view.3d.left": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.right": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.3d.top": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.addGuide": {
+  "position": {
+   "description": "comp px",
+   "type": "number"
+  }
+ },
+ "view.assign3dShortcut": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "view.channel": {
+  "colorized": {
+   "type": "boolean"
+  },
+  "toggle": {
+   "type": "boolean"
+  }
+ },
+ "view.clearGuides": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "view.customRgb": {
+  "from": {
+   "description": "a Simulate Output profile to start from",
+   "type": "string"
+  },
+  "gamma": {
+   "type": "number"
+  },
+  "reload": {
+   "type": "boolean"
+  },
+  "reset": {
+   "type": "boolean"
+  }
+ },
+ "view.displayColorManagement": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "view.extendedViewer": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "view.get3D": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.grid": {
+  "value": {
+   "type": "string"
+  }
+ },
+ "view.guides": {
+  "value": {
+   "type": "string"
+  }
+ },
+ "view.layerControls": {
+  "value": {
+   "type": "string"
+  }
+ },
+ "view.lockGuides": {
+  "value": {
+   "type": "string"
+  }
+ },
+ "view.lookAtAll": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.lookAtSelected": {
+  "comp": {
+   "type": "integer"
+  }
+ },
+ "view.moveGuide": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "merge": {
+   "type": "string"
+  },
+  "position": {
+   "description": "comp px",
+   "type": "number"
+  }
+ },
+ "view.panelBackground": {
+  "color": {
+   "description": "black|darkGray|mediumGray|lightGray|white|custom|#hex",
+   "type": "string"
+  }
+ },
+ "view.removeGuide": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "view.reset3DView": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "view.rulers": {
+  "value": {
+   "type": "string"
+  }
+ },
+ "view.set3DView": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "view.set3DViewCamera": {
+  "view": {
+   "type": "string"
+  },
+  "zoom": {
+   "type": "number"
+  }
+ },
+ "view.setRegionOfInterest": {
+  "rect": {
+   "description": "[x, y, w, h] | null",
+   "items": {
+    "type": "json"
+   },
+   "type": "array"
+  }
+ },
+ "view.shareViewOptions": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "view.showSnapshot": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "view.simulateOutput": {
+  "space": {
+   "description": "custom",
+   "type": "string"
+  }
+ },
+ "view.snapToGrid": {
+  "value": {
+   "type": "string"
+  }
+ },
+ "view.snapToGuides": {
+  "value": {
+   "type": "string"
+  }
+ },
+ "view.snapping": {
+  "value": {
+   "type": "boolean"
+  }
+ },
+ "view.snappingOptions": {
+  "toggle": {
+   "description": "one of those keys",
+   "type": "string"
+  }
+ },
+ "view.splitLockedViewer": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  },
+  "view": {
+   "description": "3D view id",
+   "type": "string"
+  }
+ },
+ "view.takeSnapshot": {
+  "comp": {
+   "oneOf": [
+    {
+     "description": "item id",
+     "type": "integer"
+    },
+    {
+     "description": "comp name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "warp.analyze": {
+  "effect": {
+   "description": "uid|name|index",
+   "oneOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "string"
+    }
+   ]
+  },
+  "wait": {
+   "description": "block until done",
+   "type": "boolean"
+  }
+ },
+ "warp.status": {
+  "effect": {
+   "oneOf": [
+    {
+     "description": "1-based index or uid",
+     "type": "integer"
+    },
+    {
+     "description": "effect name or match name",
+     "type": "string"
+    }
+   ]
+  }
+ },
+ "window.assignWorkspaceShortcut": {
+  "slot": {
+   "description": "Shift+F10|Shift+F11|Shift+F12",
+   "type": "string"
+  },
+  "workspace": {
+   "type": "string"
+  }
+ },
+ "window.workspace": {
+  "name": {
+   "description": "Default|Standard|Small Screen|Animation|Effects|Motion Tracking|Paint|Text|Minimal|All Panels",
+   "type": "string"
+  }
+ }
+}

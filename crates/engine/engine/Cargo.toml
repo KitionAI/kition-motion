@@ -1,0 +1,40 @@
+[package]
+name = "kition-motion-engine"
+description = "The Kition Motion engine: session, undo history, editor state and the command registry every frontend (UI, CLI, control channel, MCP) dispatches through"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kition-motion-time = { workspace = true }
+kition-motion-geom = { workspace = true }
+kition-motion-color = { workspace = true }
+kition-motion-keyframe = { workspace = true }
+kition-motion-project = { workspace = true }
+kition-motion-raster = { workspace = true }
+kition-motion-path = { workspace = true }
+kition-motion-text = { workspace = true }
+kition-motion-effects = { workspace = true }
+kition-motion-render = { workspace = true }
+kition-motion-segment = { workspace = true }
+kition-motion-track = { workspace = true }
+kition-motion-model = { workspace = true }
+kition-motion-lottie = { workspace = true }
+kition-motion-interchange = { workspace = true }
+kition-motion-psd = { workspace = true }
+kurbo = { workspace = true }
+kition-motion-svg = { workspace = true }
+kition-motion-pdf = { workspace = true }
+kdm-model = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+rayon = { workspace = true }
+image = { workspace = true }
+web-time = { workspace = true }
+exr = { workspace = true }

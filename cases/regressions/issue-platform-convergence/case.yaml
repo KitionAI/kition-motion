@@ -1,0 +1,25 @@
+format: 1
+id: regressions/issue-platform-convergence
+feature: motion.model.objects
+dimension: collab
+intent: >-
+  The Kition platform convergence suite (kition-convergence) runs against the motion kit through
+  its own commands and change exchange, and every scenario that applies to a project passes (L6):
+  concurrent field edits, creation, reorder, layer reparenting cycles, delete against edit,
+  duplicate against delete, undo, any delivery order, a crash before the push, and seeded fuzzing
+  on two to five replicas, with every list (Project.items too) holding live objects once and every
+  reference valid. Text and blob scenarios do not apply to a project.
+layer: gate
+source:
+  kind: probe
+  from: agent readiness review (effect rows)
+  license: owned
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: convergence }
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-17"
+timeout_s: 60

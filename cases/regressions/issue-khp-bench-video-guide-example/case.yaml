@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-khp-bench-video-guide-example
+feature: motion.agent.design
+intent: >-
+  The agent guide's first example runs exactly as written, with the layer ids its answer gives,
+  and leaves no design advice. Models copy the guide's examples, and the old one was a 320 x 180
+  comp with 40 px text on black.
+layer: unit
+source:
+  kind: probe
+  from: KitionAI/khp-bench video runs (video plan P0)
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: guide_example }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

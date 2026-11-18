@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-land-13t-positions
+feature: motion.agent.premises
+intent: Position paths belong to the object whose model fields they describe, including named layer premises.
+layer: gate
+dimension: collab
+source: { kind: synthetic, from: C8-land-13t, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: places }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }
+since: "2026-11-17"

@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-effect-list-point-units
+feature: motion.effects.list
+intent: >-
+  effect.list reports a point parameter's default in the units prop.get and prop.set use (pixels of
+  a comp-sized layer, unit px), so an agent that copies a listed default into prop.set gets the
+  default back; with no comp open the default is a layer fraction and says so (unit layer).
+layer: unit
+source:
+  kind: probe
+  from: /tmp/motion-audit/t6b.mjs (PROMO-10a; Gradient Ramp start listed as [0.5, 0] while prop.get answered [540, 0])
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, filter: "commands::effect::list_point_unit_tests" }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

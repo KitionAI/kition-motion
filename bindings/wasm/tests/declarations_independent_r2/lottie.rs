@@ -1,0 +1,5 @@
+use super::Row;
+
+pub(super) const ROWS: &[Row] = &[
+    Row { command: "file.importLottie", path: "JSON/stored archive append with new asset namespace", resolves: &["path host input", "embedded image ids sanitized into neighboring host filenames", "external image refs relative to input directory", "asset/parent/matte indices resolve only newly imported objects"], reads: &["host bytes and imported document metadata", "project.next_id; fix_next_id scans existing identities", "static effect definitions/defaults; new comp dimensions/frame_rate/duration", "new asset sizes and new comp layer names/order for builder defaults"], checks: &["path supplied/readable", "JSON/archive parse and w/h present", "unsupported/missing imported refs skipped with warning"], writes: &["new comps/footage/solids/folder/layers/properties/keys", "next_id", "host embedded image files", "project selection/open imported main comp"], state: &["selection/open comp overwritten"], source: "crates/engine/engine/src/commands/lottie.rs:35; crates/formats/lottie/src/import.rs:93; crates/formats/lottie/src/import.rs:363; crates/engine/project/src/build.rs" },
+];

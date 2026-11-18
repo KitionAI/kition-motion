@@ -1,0 +1,13 @@
+format: 1
+id: motion.agent.premises/explicit-focus-time
+feature: motion.agent.premises
+dimension: [function, data-safety]
+layer: gate
+intent: Explicit composition camera focus writes a key at that composition's current time.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: independent_focus }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }

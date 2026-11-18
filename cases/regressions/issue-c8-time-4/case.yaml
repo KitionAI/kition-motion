@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-time-4
+feature: motion.agent.premises
+intent: Receipts name all saved deletions, unsupported writes are refused, and marker premises depend on markers and time rather than layer stack order.
+layer: gate
+source: { kind: synthetic, from: bindings/headless/tests/time4.rs, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: time4 }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }
+since: "2026-11-17"
+timeout_s: 60

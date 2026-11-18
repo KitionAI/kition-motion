@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-render-prefs
+feature: motion.agent.premises
+dimension: [ai, collab]
+layer: gate
+intent: Render preferences refuse same-field changes; notification writes accept unrelated queue logs, while overflow folder writes remain host-only.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_r2_render_prefs }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

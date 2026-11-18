@@ -1,0 +1,24 @@
+format: 1
+id: regressions/issue-khp-bench-formal-checkbox
+feature: motion.agent.act
+intent: >-
+  An agent sets a checkbox property with `true` / `false` and a one-dimensional keyframe speed
+  with one number; the parameter schemas refused both although the engine reads them (khp-bench
+  formal runs, V02 and V03).
+layer: gate
+source:
+  kind: probe
+  from: KitionAI/khp-bench formal generation runs, issues (k) and (l)
+  license: owned
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: property_values
+      filter: the_agent_sets_checkboxes_and_one_number_speeds
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-17"
+timeout_s: 60

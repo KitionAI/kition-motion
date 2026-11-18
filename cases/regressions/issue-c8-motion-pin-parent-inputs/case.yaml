@@ -1,0 +1,21 @@
+format: 1
+id: regressions/issue-c8-motion-pin-parent-inputs
+feature: motion.agent.premises
+intent: >-
+  A comp-space nudge refuses a parent's changed transform, while allowing an
+  unrelated opacity change on that same parent and preserving both edits.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_parent_inputs
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

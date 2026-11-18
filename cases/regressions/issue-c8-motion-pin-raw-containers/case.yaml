@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-raw-containers
+feature: motion.model.objects
+intent: Raw layer moves and property insertion protect their historical recipients and gaps, while new folders protect parent identity, invalid tree ownership refuses atomically, and unrelated edits apply.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_raw_containers
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

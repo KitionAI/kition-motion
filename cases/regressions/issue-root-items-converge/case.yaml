@@ -1,0 +1,25 @@
+format: 1
+id: regressions/issue-root-items-converge
+feature: motion.model.objects
+dimension: collab
+intent: >-
+  Project.items (schema 2) lists every item and every object type is reachable from the root; two
+  replicas adding items offline converge with both listed in one order; a delete unlists the item
+  in the same transaction; the repair every replica runs lists an unlisted item and drops a second
+  or dead listing, and the replicas end equal; a schema 1 replica is refused (no migration), never
+  read as an empty project.
+layer: gate
+source:
+  kind: probe
+  from: agent readiness review (effect rows)
+  license: owned
+input: []
+steps:
+  - cargo-test: { package: kdm-model, test: items_list }
+  - cargo-test: { package: kdm-model, test: convergence }
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-17"
+timeout_s: 60

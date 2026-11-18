@@ -1,0 +1,51 @@
+use super::Row;
+
+pub(super) const ROWS: &[Row] = &[
+    Row {
+        command: "shape.newShape",
+        path: "existing shape layer, comp space",
+        resolves: &["comp id/name/default active", "explicit layer ref else first selected unlocked shape layer", "comp position default comp centre"],
+        reads: &[
+            "target source Shape",
+            "lock only implicit-target search",
+            "comp width/height if position omitted",
+            "target layer and ancestor transform values/keys at time_of(comp), source time conversion",
+            "contents names for unique group name",
+            "project.next_id",
+        ],
+        checks: &["kind supported", "size finite nonnegative", "paint parameters valid", "target transform invertible"],
+        writes: &["contents.children insert new shape group at top", "project.next_id", "selected_layers"],
+        state: &["active_comp", "selected_layers", "shape_tool fill/stroke defaults", "time_of(comp)"],
+        source: "commands/shape_tool.rs:255,267,344; commands/shape_tool.rs:178,225",
+    },
+    Row {
+        command: "shape.newShape",
+        path: "existing shape layer, layer space",
+        resolves: &["same target resolution", "position and size taken in layer space"],
+        reads: &["source/implicit lock eligibility", "comp width/height only default position", "contents names", "project.next_id"],
+        checks: &["kind/size/paint valid", "target Shape"],
+        writes: &["contents.children top new shape group", "project.next_id", "selected_layers"],
+        state: &["active_comp", "selected_layers", "shape_tool"],
+        source: "commands/shape_tool.rs:344",
+    },
+    Row {
+        command: "shape.newShape",
+        path: "create new shape layer",
+        resolves: &["no explicit or selected unlocked shape target", "new layer inserted above first selected layer else top"],
+        reads: &["comp width/height/duration", "layer source kinds count for default name", "layer names for unique name", "insertion gap", "project.next_id"],
+        checks: &["kind/size/paint valid"],
+        writes: &["comp.layers insert Shape layer with shape group", "project.next_id", "selected_layers"],
+        state: &["active_comp", "selected_layers", "shape_tool", "layer insertion preferences"],
+        source: "commands/shape_tool.rs:283,344; project/src/build.rs:737",
+    },
+    Row {
+        command: "shape.toolOptions",
+        path: "editor only partial assignment or reset",
+        resolves: &[],
+        reads: &["shape_tool unsupplied fields unless reset true", "paint.kind for supplied color/gradient default transitions"],
+        checks: &["valid paint kinds/blend/gradient/finite numeric values"],
+        writes: &["editor shape_tool"],
+        state: &["shape_tool"],
+        source: "commands/shape_tool.rs:107,386",
+    },
+];

@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-reread-deleted
+feature: motion.agent.premises
+intent: A stale write reports deleted across an intervening reread and replayed creation retains the returned object reference.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_reread_deleted
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

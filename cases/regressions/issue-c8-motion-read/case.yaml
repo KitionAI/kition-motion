@@ -1,0 +1,13 @@
+format: 1
+id: motion.agent.premises/independent-reading
+feature: motion.agent.premises
+dimension: [ai, collab, data-safety]
+layer: gate
+intent: Source-derived assigned fields and result dependencies refuse relevant saved-file edits and accept unrelated edits.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }

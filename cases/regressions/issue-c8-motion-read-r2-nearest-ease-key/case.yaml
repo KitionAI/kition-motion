@@ -1,0 +1,16 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-nearest-ease-key
+feature: motion.agent.premises
+dimension: [function, data-safety]
+layer: gate
+intent: >-
+  A complete stored ease refuses a competing side update and accepts an unrelated key insertion
+  when addressed by property UID. Separate waiting_for_sdk assertions for nearest-key deletion
+  and named-path metadata remain intentional failures.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_r2_key_time, filter: stored_ease_uses_only }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

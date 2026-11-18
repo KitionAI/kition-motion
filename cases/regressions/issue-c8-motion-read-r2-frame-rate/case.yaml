@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-frame-rate
+feature: motion.agent.premises
+dimension: [ai, collab]
+layer: gate
+intent: Layer timing that snaps to the composition's frame grid is refused after a colleague changes the frame rate, and applies after an unrelated composition change.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_r2_frame_rate }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

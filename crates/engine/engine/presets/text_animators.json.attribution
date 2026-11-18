@@ -1,0 +1,7 @@
+asset:        text_animators.json
+title:        Text animator presets (Typewriter, Fade Up Characters, Bounce In Words, Tracking In, Scramble, Blur In, Jitter, Drop In Lines)
+author:       upstream contributors (see NOTICE)
+source:       upstream project credited in NOTICE (original work of its contributors)
+license:      MIT (the upstream license, see NOTICE)
+added:        2026-11-17 upstream
+notes:        Animator/selector settings written from scratch for the upstream project; not derived from any Adobe preset (.ffx).

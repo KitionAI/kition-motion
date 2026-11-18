@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-pick-whip-comp
+feature: motion.agent.premises
+dimension: [function, data-safety]
+layer: gate
+intent: Pick-whip expression replacement and insertion write the explicitly addressed composition while another composition remains active.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: independent_links }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }

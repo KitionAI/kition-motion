@@ -1,0 +1,51 @@
+use super::Row;
+
+pub(super) const ROWS: &[Row] = &[
+    Row {
+        command: "layer.align",
+        path: "composition or selection target; combined or separated position",
+        resolves: &["comp:id|name|active", "layers:explicit references|single|selection"],
+        reads: &[
+            "each transform existence",
+            "each content_bounds via source/text glyphs/shape contents and expressions",
+            "world_matrix chain and to_parent parent chain up to63 ancestors",
+            "transform rotation/orientation/position/anchor/scale with keys/expressions including separated dimensions",
+            "source pixel aspect and comp.pixel_aspect in world_matrix",
+            "each is_3d/source/switches",
+            "comp.width/height for composition target",
+            "layer.start_time/stretch",
+            "position or positionX/Y[/Z] value_at and keys emptiness/hold_only",
+        ],
+        checks: &["has_layers", "at least one layer with transform/bounds", "selection mode requires2 eligible layers", "valid edge/target"],
+        writes: &["nonzero-offset target position or separated position values/keys at layer_time(CTI)"],
+        state: &["part", "selection if targets absent", "time (s.time active comp even if explicit comp)"],
+        source: "commands/align.rs:29-178; render/eval.rs:52-70,135-232; project/props.rs:125-142",
+    },
+    Row {
+        command: "layer.distribute",
+        path: "sort by requested bounds edge and space uniformly",
+        resolves: &["comp", "layers:refs|single|selection"],
+        reads: &["align geometry/evaluation/timing/property facts", "every eligible layer bounds edge controls rank and endpoint span"],
+        checks: &["has_layers", "at least3 eligible layers", "valid mode"],
+        writes: &["nonzero-offset position/separated values or keys at CTI"],
+        state: &["part", "selection if targets absent", "time"],
+        source: "commands/align.rs:29-110,158-178; render/eval.rs:52-70,135-232",
+    },
+    Row {
+        command: "layer.nudge",
+        path: "unlocked layers with transform; combined or separated position",
+        resolves: &["comp", "layers:refs|single|selection"],
+        reads: &[
+            "each layer.switches.locked",
+            "transform existence",
+            "parent chain links and evaluated local transforms up to63 ancestors",
+            "each layer.is_3d/source/switches",
+            "layer.start_time/stretch",
+            "position/separated value_at, keys emptiness, hold_only",
+        ],
+        checks: &["has_layers", "finite x/y", "at least one unlocked target if any locked"],
+        writes: &["nonzero offset position or separated position values/keys at layer_time(CTI)"],
+        state: &["part", "selection if targets absent", "time"],
+        source: "commands/align.rs:54-110,182-197; commands/mod.rs:548-559; render/eval.rs:135-190",
+    },
+];

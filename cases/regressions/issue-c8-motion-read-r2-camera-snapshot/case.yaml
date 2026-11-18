@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-camera-snapshot
+feature: motion.agent.premises
+dimension: [function, collab]
+layer: gate
+intent: A replacement project snapshot cannot expose or apply stored camera analysis made from different input pixels.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, filter: stored_camera_solve_refuses_replaced_snapshot_input }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

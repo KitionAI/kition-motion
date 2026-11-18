@@ -1,0 +1,7 @@
+asset:        made-2.png
+title:        README picture: the showcase sample neon-sign-flicker
+author:       The Kition authors
+source:       Rendered by Kition Motion from the showcase sample neon-sign-flicker (its thumb.png in kition-showcase motion/neon-sign-flicker)
+license:      Apache-2.0
+added:        2026-11-17 by Claude (agent)
+notes:        A copy of the sample's thumb.png, a frame Kition Motion rendered of a composition built with its own commands.

@@ -1,0 +1,21 @@
+format: 1
+id: regressions/issue-c8-motion-read-track-empty-range
+feature: motion.track.motion
+intent: >-
+  Motion analysis returns no frames for empty, reversed, subframe, and out-of-comp layer
+  ranges, so malformed or tightly trimmed footage cannot panic in range clamping.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-read independent handler reading
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-engine
+      filter: empty_or_subframe_analysis_range_returns_no_frames
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

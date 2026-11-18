@@ -1,0 +1,6 @@
+use super::Row;
+
+pub(super) const ROWS: &[Row] = &[
+    Row { command: "file.importTimeline", path: "external timeline namespace appended to project", resolves: &["path host input; relative media base_dir input parent", "format explicit or detected", "document bins/sequences/media/clip refs refer only imported objects"], reads: &["host timeline bytes and media exists/probe results", "sequence_rate preference for probes", "project.next_id", "imported settings/duration/clip timing/transitions/motion/opacity/audio and new source sizes", "new comp unique_layer_name for audio layer names"], checks: &["path supplied", "native unsupported extension rejected", "format valid", "XML/JSON depth<=256", "import parser/probe success or offline placeholder"], writes: &["new folder/comps/media/solid/layers/properties/keys", "next_id", "project_selection imported comps/open first comp"], state: &["sequence_rate preference", "selection/open comp overwritten"], source: "crates/engine/engine/src/commands/timeline.rs:29; crates/formats/interchange/src/import.rs:123; crates/formats/interchange/src/import.rs:183; crates/formats/interchange/src/import.rs:395" },
+    Row { command: "file.timelineFormats", path: "advertised write but constant query", resolves: &[], reads: &[], checks: &[], writes: &[], state: &[], source: "crates/engine/engine/src/commands/timeline.rs:221" },
+];

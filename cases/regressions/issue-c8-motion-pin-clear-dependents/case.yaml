@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-clear-dependents
+feature: motion.agent.premises
+intent: Deleting a layer holds the layers whose parent or track matte it is; a layer a colleague creates and ties to it after the read refuses the deletion, and an unrelated new layer or reparenting applies.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_clear_inputs
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

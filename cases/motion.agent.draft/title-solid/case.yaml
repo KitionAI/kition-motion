@@ -1,0 +1,40 @@
+format: 1
+id: motion.agent.draft/title-solid
+feature: motion.agent.draft
+intent: >-
+  Over two messages the agent adds a layer in a draft for the person to review and then trims it
+  there; the project file keeps its two layers (KHP Recover, A12–A14).
+layer: eval
+source:
+  kind: synthetic
+  from: repo:conformance/basic.kmotion
+  license: Apache-2.0
+  note: A copy of the conformance project the motion engine writes (Comp 1, 320×180, 30 fps, 10 s; a Band solid over a Background solid).
+input: [input/motion.kmotion]
+steps:
+  - task:
+      turns:
+        - >-
+          As a draft for me to review (leave motion.kmotion itself unchanged), add a new white
+          solid layer named Title to Comp 1.
+        - In the same draft, make the Title layer end at 3 seconds.
+      max_turns: 25
+  - inspect: { path: motion.kmotion, args: { draft: true }, as: draft, missing_ok: true }
+  - inspect: { path: motion.kmotion, as: after }
+expected:
+  - actual: out:draft
+    compare: values
+    value:
+      details.info.layers: { any: { name: Title, out: { approx: 3, tol: 0.034 } } }
+  - actual: out:after
+    compare: values
+    collateral: true
+    value:
+      details.info.layers: { count: 2 }
+solution:
+  - tool: motion_run
+    args: { path: motion.kmotion, draft: true, steps: [{ command: layer.newSolid, params: { name: Title, color: "#ffffff" } }] }
+  - tool: motion_run
+    args: { path: motion.kmotion, draft: true, steps: [{ command: layer.timing, params: { out: 3 } }] }
+since: "2026-11-17"
+timeout_s: 600

@@ -1,0 +1,424 @@
+format: 1
+kit: motion
+updated: "2026-11-17"
+gate_budget_s: 600
+protected: []
+features:
+  - id: motion.agent.observe
+    title: An agent reads a composition's layers and acts on what it finds
+    dimension: [ai]
+    priority: P0
+    status: has
+    requirements: [AX13]
+    cases: [motion.agent.observe/top-label, regressions/issue-khp-bench-r3-prop-group]
+    since: "2026-11-17"
+  - id: motion.agent.act
+    title: An agent animates properties with keyframes
+    dimension: [ai]
+    priority: P0
+    status: has
+    requirements: [AX13]
+    cases: [motion.agent.act/fade-out, regressions/issue-khp-bench-r3-layer-delete, regressions/issue-khp-bench-r3-paint-params, regressions/issue-khp-bench-r3-near-misses, regressions/issue-khp-bench-formal-checkbox, regressions/issue-file-open-description, regressions/issue-khp-bench-video-descriptions, regressions/issue-khp-bench-video-effect-params, regressions/issue-khp-bench-video-shape-gradient, regressions/issue-schema-additional-properties]
+    since: "2026-11-17"
+  - id: motion.agent.design
+    title: An agent is told what a designer would change, with the commands that change it
+    dimension: [ai]
+    priority: P1
+    status: has
+    requirements: [AX13]
+    cases: [motion.agent.design/plain-comp, regressions/issue-khp-bench-video-design-advice, regressions/issue-khp-bench-video-guide-example, regressions/issue-khp-bench-video-advice-in-check, regressions/issue-8]
+    since: "2026-11-17"
+  - id: motion.agent.preview
+    title: An agent previews a composition at a time, or a contact sheet over a range, whatever the editor shows
+    dimension: [ai]
+    priority: P1
+    status: has
+    commands: [file.render]
+    paths: [bindings/wasm/src/render.rs, crates/render/render/src/label.rs, bindings/headless/src/main.rs, kit.json, agent/guide.md]
+    cases: [motion.agent.preview/explicit-view, motion.agent.preview/headless-agent-view]
+    since: "2026-11-17"
+  - id: motion.agent.context
+    title: An agent's call names the comp, time and layers it acts on, and leaves the editor's open comp, current time and selection as they were
+    dimension: [ai]
+    priority: P0
+    status: has
+    commands: [comp.open, time.set, layer.select, keys.select, prop.addKey]
+    paths: [bindings/wasm/src/lib.rs, bindings/wasm/src/acts.rs, bindings/wasm/src/reads.json, bindings/wasm/src/collab.rs, crates/engine/engine/src/context.rs, bindings/headless/src/main.rs, bindings/headless/tests/context.rs, kit.json, agent/guide.md]
+    requirements: [AX13]
+    cases: [motion.agent.context/explicit-call-context, motion.agent.context/reads-declared, motion.agent.context/two-comps-one-run, motion.agent.context/typed-failure, regressions/issue-inspect-editor-state, regressions/issue-c8-motion-read-r2-view-mode, regressions/issue-c8-motion-pin-reread, regressions/issue-c8-motion-pin-read-inputs, regressions/issue-c8-motion-pin-content-regions]
+    since: "2026-11-17"
+  - id: motion.agent.ids
+    title: "One id space: tools, receipts and others name items and layers by the ids inspect lists and commands take, and the premise guard checks a write against them"
+    dimension: [ai, collab]
+    priority: P0
+    status: has
+    paths: [crates/kdm/kdm-model/model/schema.json, crates/kdm/kdm-model/src/read.rs, crates/kdm/kdm-model/src/validate.rs, bindings/wasm/src/param_keys.rs, bindings/wasm/src/params.rs, crates/engine/engine/src/commands/mod.rs, crates/engine/engine/src/context.rs, bindings/headless/tests/ids.rs, bindings/headless/tests/outside.rs, agent/guide.md]
+    requirements: [AX13]
+    cases: [motion.agent.ids/one-id-space, motion.agent.ids/tool-ids-in-replicas, motion.agent.ids/outside-file]
+    since: "2026-11-17"
+  - id: motion.agent.places
+    title: "A write by stack position (\"#3\") or by time has as premise what that place named, and a layer's startTime, inPoint and outPoint are its place, not its content"
+    dimension: [ai, collab]
+    priority: P0
+    status: partial
+    paths: [bindings/wasm/src/place.rs, bindings/wasm/src/acts.rs, bindings/wasm/src/lib.rs, crates/kdm/kdm-model/model/schema.json, bindings/wasm/tests/places.rs, bindings/headless/tests/outside.rs, agent/guide.md]
+    requirements: [AX13]
+    cases: [motion.agent.places/place-premise]
+    since: "2026-11-17"
+  - id: motion.agent.premises
+    title: A write with basis is refused only for others' changes to what its command reads of the layer, by id, by name or by place
+    dimension: [ai, collab]
+    priority: P0
+    status: partial
+    paths: [bindings/wasm/src/place.rs, bindings/wasm/src/rests.rs, bindings/wasm/src/rest_animation.rs, bindings/wasm/src/rest_layer.rs, bindings/wasm/src/rest_mask_path.rs, bindings/wasm/src/rest_masks.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/commands/focus.rs, crates/engine/engine/src/commands/link.rs, bindings/wasm/tests/independent_focus.rs, bindings/wasm/tests/independent_links.rs, bindings/wasm/tests/declarations_independent.rs, bindings/wasm/tests/independent_animation.rs, bindings/wasm/tests/independent_geometry.rs, bindings/wasm/tests/independent_layer.rs, bindings/headless/tests/independent.rs, bindings/headless/tests/independent_animation.rs, bindings/headless/tests/independent_layer.rs, bindings/headless/tests/independent_mask_path.rs, bindings/headless/tests/independent_masks.rs, bindings/headless/tests/premises.rs, bindings/headless/tests/outside.rs, agent/guide.md, bindings/wasm/src/rest_visual.rs, bindings/wasm/tests/declarations_independent_r2.rs, bindings/wasm/tests/declarations_independent_r2, bindings/wasm/tests/independent_r2_key_time.rs, bindings/wasm/tests/independent_r2_links.rs, bindings/wasm/tests/independent_r2_explicit_time.rs, bindings/headless/tests/independent_r2_key_time.rs, bindings/headless/tests/independent_r2_environment.rs, bindings/headless/tests/independent_r2_render_prefs.rs, bindings/headless/tests/common/mod.rs, crates/engine/engine/src/commands/edit.rs, crates/engine/engine/src/commands/frame_export.rs, bindings/wasm/tests/independent_r2_path_camera.rs, crates/engine/engine/src/commands/paths.rs, crates/engine/engine/src/commands/three_d.rs, bindings/headless/tests/independent_r2_model_context.rs, bindings/headless/tests/independent_r2_nearest_address.rs, bindings/headless/tests/independent_r2_scene_inputs.rs, bindings/headless/tests/independent_r2_tracker_options.rs, bindings/headless/tests/waiting_for_sdk_r2_nearest_budget.rs, bindings/wasm/src/reads.json, bindings/wasm/tests/independent_r2_model_context.rs, bindings/wasm/tests/independent_r2_nearest_overflow.rs, crates/engine/engine/src/camera_track.rs, crates/engine/engine/src/commands/anim.rs, crates/engine/engine/src/commands/content_fill.rs, crates/engine/engine/src/commands/template_props.rs, crates/engine/engine/src/commands/scene_detect.rs, crates/engine/engine/src/footage_check.rs, crates/engine/engine/src/jobs.rs, crates/engine/engine/src/mask_track.rs, crates/engine/engine/src/offload.rs, crates/engine/engine/src/tests_camera_track.rs, crates/engine/engine/src/tests_mask_warp.rs, crates/engine/engine/src/tests_panels.rs, crates/engine/engine/tests/template_media_paths.rs, crates/engine/project/src/template_props.rs, crates/kdm/kdm-model/model/schema.json, bindings/wasm/tests/declarations_r2_comparison, bindings/wasm/src/rest_comp.rs, bindings/headless/tests/independent_r2_composition.rs, bindings/headless/tests/independent_r2_frame_rate.rs, bindings/headless/tests/independent_r2_source_size.rs, bindings/wasm/src/rest_comp_reads.rs, bindings/headless/tests/independent_r2_switch.rs, bindings/headless/tests/sdk_track_status_selection.rs, bindings/wasm/src/state_members.rs, bindings/headless/tests/sdk_state_members.rs, bindings/headless/tests/sdk_undeclared_time.rs]
+    requirements: [AX13]
+    cases: [motion.agent.premises/call-premises, motion.agent.premises/independent-reading, motion.agent.premises/explicit-focus-time, motion.agent.premises/declaration-order, motion.agent.premises/nested-schema, motion.agent.premises/comp-fields, motion.agent.premises/layer-inputs, regressions/issue-c8-motion-read-masks, regressions/issue-c8-motion-read-mask-path, regressions/issue-c8-motion-read-animation, regressions/issue-c8-motion-read-key-gap, regressions/issue-c8-motion-read-vertex-schema, regressions/issue-c8-motion-read-pick-whip-comp, regressions/issue-c8-time-4, regressions/issue-c8-land-11t, regressions/issue-c8-land-13t, regressions/issue-c8-land-13t-positions, regressions/issue-c8-time-5, regressions/issue-c8-motion-read-r2-pick-whip-target, regressions/issue-c8-motion-read-r2-prop-set-snap, regressions/issue-c8-motion-read-r2-nearest-ease-key, regressions/issue-c8-motion-read-r2-environment, regressions/issue-c8-motion-read-r2-render-prefs, regressions/issue-c8-motion-read-r2-hidden-writes, regressions/issue-c8-motion-read-r2-explicit-time, regressions/issue-c8-motion-read-r2-path-camera, regressions/issue-c8-motion-read-r2-camera-reuse, regressions/issue-c8-motion-read-r2-deferred-camera, regressions/issue-c8-motion-read-r2-deferred-fill, regressions/issue-c8-motion-read-r2-deferred-footage-kind, regressions/issue-c8-motion-read-r2-deferred-footage, regressions/issue-c8-motion-read-r2-deferred-mask, regressions/issue-c8-motion-read-r2-deferred-probe, regressions/issue-c8-motion-read-r2-deferred-scene, regressions/issue-c8-motion-read-r2-deferred-worker, regressions/issue-c8-motion-read-r2-fill-reply, regressions/issue-c8-motion-read-r2-model-context, regressions/issue-c8-motion-read-r2-nearest-address, regressions/issue-c8-motion-read-r2-nearest-overflow, regressions/issue-c8-motion-read-r2-scene-inputs, regressions/issue-c8-motion-read-r2-template-ids, regressions/issue-c8-motion-read-r2-template-media, regressions/issue-c8-motion-read-r2-tracker-options, regressions/issue-c8-motion-read-r2-composition, regressions/issue-c8-motion-read-r2-camera-expression, regressions/issue-c8-motion-read-r2-camera-inputs, regressions/issue-c8-motion-read-r2-camera-snapshot, regressions/issue-c8-motion-read-r2-deferred-roto, regressions/issue-c8-motion-read-r2-deferred-track, regressions/issue-c8-motion-read-r2-deferred-warp, regressions/issue-c8-motion-read-r2-guides, regressions/issue-c8-motion-read-r2-recent-preset, regressions/issue-c8-motion-read-r2-spatial-nearest-overflow, regressions/issue-c8-motion-read-r2-text-context, regressions/issue-c8-motion-read-r2-frame-rate, regressions/issue-c8-motion-read-r2-source-size, regressions/issue-c8-motion-read-r2-switch, regressions/issue-c8-motion-pin-key-history, regressions/issue-c8-motion-pin-mask-members, regressions/issue-c8-motion-pin-parent-inputs, regressions/issue-c8-motion-pin-exact-key, regressions/issue-c8-motion-pin-effect-ordinal, regressions/issue-c8-motion-pin-other-layers, regressions/issue-c8-motion-pin-project-delete-inputs, regressions/issue-c8-motion-pin-retarget-inputs, regressions/issue-c8-motion-pin-precompose-inputs, regressions/issue-c8-motion-pin-marker-fields, regressions/issue-c8-motion-pin-project-replacement, regressions/issue-c8-motion-pin-indirect-geometry, regressions/issue-c8-motion-pin-queue-inputs, regressions/issue-c8-motion-pin-project-inputs, regressions/issue-c8-motion-pin-source-inputs, regressions/issue-c8-motion-pin-comp-inputs, regressions/issue-c8-motion-pin-style-camera-inputs, regressions/issue-c8-motion-pin-selection-comp-inputs, regressions/issue-c8-motion-pin-source-geometry-inputs, regressions/issue-c8-motion-pin-reread-deleted, regressions/issue-c8-motion-pin-promo-inputs, regressions/issue-c8-motion-pin-shape-inputs, regressions/issue-c8-motion-pin-new-layer-inputs, regressions/issue-c8-motion-pin-stack-inputs, regressions/issue-c8-motion-pin-twin-inputs, regressions/issue-c8-motion-pin-clear-inputs, regressions/issue-c8-motion-pin-clear-dependents, regressions/issue-c8-motion-pin-effect-source-inputs, regressions/issue-c8-motion-pin-replace-item-data, regressions/issue-c8-motion-track-status, regressions/issue-c8-motion-state-members, regressions/issue-c8-motion-undeclared-time]
+    since: "2026-11-17"
+  - id: motion.agent.recover
+    title: An agent fixes what the check reports
+    dimension: [ai]
+    priority: P0
+    status: has
+    requirements: [AX13]
+    cases: [motion.agent.recover/missing-parent, regressions/issue-unknown-params]
+    since: "2026-11-17"
+  - id: motion.agent.draft
+    title: An agent works in a draft over a conversation
+    dimension: [ai]
+    priority: P1
+    status: has
+    requirements: [AX13]
+    cases: [motion.agent.draft/title-solid]
+    since: "2026-11-17"
+  - id: motion.model.objects
+    title: "The object model is reached from its root: query follows fields, batch edits them, replicas converge"
+    dimension: [ai, collab]
+    priority: P0
+    status: partial
+    paths: [crates/kdm/kdm-model/model/schema.json, crates/kdm/kdm-model/src/settle.rs, crates/kdm/kdm-model/src/write.rs, crates/kdm/kdm-model/src/read.rs, crates/kdm/kdm-model/src/validate.rs, bindings/wasm/src/collab.rs, bindings/wasm/tests/convergence.rs, kit.json]
+    gap: "Raw assignments, key-list edits, item creation/deletion, owned property creation and layer reordering have guarded contracts. Remaining structural classes and private outside-created receipt fields remain under review."
+    requirements: [A4, AX4, M1, M2]
+    cases: [regressions/issue-root-items-reachable, regressions/issue-root-items-converge, regressions/issue-platform-convergence, regressions/issue-c8-motion-pin-raw-batch, regressions/issue-c8-motion-pin-raw-key, regressions/issue-c8-motion-pin-key-structure, regressions/issue-c8-motion-pin-item-delete, regressions/issue-c8-motion-pin-raw-containers]
+    since: "2026-11-17"
+  - id: motion.platform.document-text
+    title: "document.text: every composition's text layers as plain text for a host's search, cut at a limit"
+    dimension: [platform]
+    priority: P1
+    status: has
+    paths: [kit.json, bindings/wasm/src/text.rs, bindings/wasm/src/lib.rs]
+    cases: [motion.platform.document-text/text-layers]
+    since: "2026-11-17"
+  - id: motion.effects.list
+    title: List the effects and their parameters with defaults in the units prop.set takes
+    dimension: [function, ai]
+    priority: P1
+    status: has
+    commands: [effect.list]
+    paths: [crates/engine/engine/src/commands/effect.rs]
+    cases: [regressions/issue-effect-list-point-units]
+    since: "2026-11-17"
+  - id: motion.keys.select
+    title: Select keyframes by layer, property and time
+    dimension: [function, ai]
+    priority: P1
+    status: has
+    commands: [keys.select]
+    paths: [crates/engine/engine/src/commands/prop.rs]
+    cases: [regressions/issue-keys-select-unknown-params]
+    since: "2026-11-17"
+  - id: motion.markers.layer
+    title: Add markers to layers
+    dimension: [function, ai]
+    priority: P1
+    status: has
+    commands: [layer.addMarker, markers.list]
+    paths: [crates/engine/engine/src/commands/layer_menu.rs]
+    cases: [regressions/issue-layer-add-marker-reply]
+    since: "2026-11-17"
+  - id: motion.layer.basics
+    title: Make solid, text, shape and null layers, rename, blend, parent and trim them; text edits keep CJK and emoji
+    dimension: [function, conversion, data-safety]
+    priority: P0
+    status: has
+    commands: [layer.newText, layer.newSolid, layer.newNull, layer.newShape, layer.rename, layer.setBlendMode, layer.setParent, layer.timing]
+    paths: [crates/engine/engine/src/commands/layer.rs, crates/engine/engine/src/commands/layer_menu.rs, crates/engine/engine/src/commands/layer_time.rs, bindings/wasm/tests/round_trip.rs]
+    target: "After Effects 2026 (26.5)"
+    cases: [motion.layer.basics/save-reopen]
+    since: "2026-11-17"
+  - id: motion.comp.basics
+    title: Set a composition's size, frame rate, duration and background, and mark it; read it back
+    dimension: [function, conversion, data-safety]
+    priority: P0
+    status: has
+    commands: [comp.settings, comp.addMarker, comp.info]
+    paths: [crates/engine/engine/src/commands/comp.rs, crates/engine/engine/src/commands/markers.rs, bindings/wasm/tests/round_trip.rs, crates/engine/project/src/lib.rs, crates/engine/project/tests/comp_contains_cycle.rs]
+    target: "After Effects 2026 (26.5)"
+    cases: [motion.comp.basics/save-reopen, regressions/issue-c8-motion-read-comp-cycle]
+    since: "2026-11-17"
+  - id: motion.keys.basics
+    title: Keyframe and set properties, Easy Ease the keys, add expressions; read the values back
+    dimension: [function, conversion, data-safety]
+    priority: P0
+    status: has
+    commands: [prop.get, prop.set, prop.addKey, prop.setExpression, keys.easyEase]
+    paths: [crates/engine/engine/src/commands/prop.rs, crates/engine/engine/src/commands/anim.rs, crates/engine/keyframe, bindings/wasm/tests/round_trip.rs]
+    target: "After Effects 2026 (26.5)"
+    cases: [motion.keys.basics/save-reopen]
+    since: "2026-11-17"
+  - id: motion.effect.basics
+    title: Apply effects, set their parameters and reorder the stack
+    dimension: [function, conversion, data-safety]
+    priority: P0
+    status: has
+    commands: [effect.apply, effect.reorder]
+    paths: [crates/engine/engine/src/commands/effect.rs, crates/engine/effects, bindings/wasm/tests/round_trip.rs, bindings/wasm/tests/independent_r2_effect_copy.rs, bindings/wasm/tests/independent_r2_effect_reset.rs]
+    target: "After Effects 2026 (26.5)"
+    cases: [motion.effect.basics/save-reopen, regressions/issue-ae-blur-defaults, regressions/issue-c8-motion-read-effect-copy-comp, regressions/issue-c8-motion-read-effect-reset-time]
+    since: "2026-11-17"
+  - id: motion.mask.basics
+    title: Draw a mask from vertices, set its mode, close it and feather it
+    dimension: [function, conversion, data-safety]
+    priority: P0
+    status: has
+    commands: [mask.new, mask.setClosed]
+    paths: [crates/engine/engine/src/commands/mask.rs, bindings/wasm/tests/round_trip.rs]
+    target: "After Effects 2026 (26.5)"
+    cases: [motion.mask.basics/save-reopen]
+    since: "2026-11-17"
+  - id: motion.file.projects
+    title: "Projects: new, open, save, import, export and recovery"
+    dimension: [conversion, function]
+    priority: P1
+    status: partial
+    commands: [file.newProject, file.openDemoProject, file.open, file.save, file.saveAs, file.incrementAndSave, file.revert, file.import, file.projectSettings, file.cycleBitDepth, file.close, file.closeProject, file.saveCopy, file.importMultiple, file.importPlaceholder, file.importSolid, file.newCompFromSelection, file.collectFiles, file.consolidateFootage, file.removeUnusedFootage, file.reduceProject, file.findMissing, file.runScript, file.interpretFootage, file.rememberInterpretation, file.applyInterpretation, file.replaceFootage, file.replaceWithPlaceholder, file.replaceWithSolid, file.reloadFootage, file.revealInFinder, file.relinkFootage, file.exportLottie, file.importLottie, file.importTimeline, file.exportTimeline, file.timelineFormats, file.watchFolder, file.watchFolder.poll, file.importVanishingPoint, file.openRecent, file.clearRecent, file.autoSave, file.recoveryInfo, file.importRecent, file.clearRecentFootage, file.saveCopyAsXml, file.replaceWithLayeredComp, file.executeFile, file.createProxy, file.setProxy, file.setProxyNone, file.useProxy, file.interpretProxy, file.installScript, file.installScriptPanel, file.uninstallScript, file.scripts.list, templates.list, templates.thumbnail, templates.create, templates.saveAs, templates.delete, file.newFromTemplate, file.exportMovie]
+    paths: [bindings/wasm/src/files.rs, crates/engine/engine/src/commands/file_more.rs, crates/engine/engine/src/commands/file.rs, bindings/wasm/src/lib.rs, bindings/wasm/tests/independent_r2_replace_solid.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    cases: [regressions/issue-writes-outside-workspace, regressions/issue-export-command, regressions/issue-c8-motion-read-solid-dimensions]
+    since: "2026-11-17"
+  - id: motion.render.queue
+    title: "Render queue, output modules and previews"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [render.backend, cache.diskStats, renderQueue.add, renderQueue.remove, renderQueue.setRender, renderQueue.setRenderSettings, renderQueue.setOutputModule, renderQueue.setOutput, render.addOutputModule, render.preRender, render.saveCurrentPreview, renderQueue.move, renderQueue.duplicate, renderQueue.render, renderQueue.stop, renderQueue.list, renderQueue.templates, renderQueue.saveTemplate, renderQueue.deleteTemplate, renderQueue.setTemplateDefault, renderQueue.applyTemplate, renderQueue.setLog, renderQueue.setNotify, renderQueue.setOverflowFolders, renderQueue.formats, playback.toggle, playback.cacheWhenIdle, playback.audio, playback.scrubAudio, playback.settings.get, playback.settings.set]
+    paths: [crates/engine/engine/src/commands/render_queue.rs, crates/engine/engine/src/commands/frontend.rs, crates/engine/host/src/lib.rs, bindings/wasm/src/files.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.ai.models
+    title: "Rotoscope Brush and face tracking models"
+    dimension: [function]
+    priority: P2
+    status: partial
+    commands: [roto.models, roto.model.select, roto.model.install, roto.model.download, roto.model.remove, face.models, face.model.select, face.model.install, face.model.download, face.model.remove, roto.stroke, roto.propagate, roto.span, roto.freeze, roto.unfreeze, roto.clearStrokes, roto.cancel, roto.options, roto.status]
+    paths: [crates/engine/engine/src/models.rs, crates/engine/engine/src/commands/roto_cmds.rs, web/src/commandIcons.ts, bindings/wasm/src/files.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.edit.history
+    title: "Undo, redo, cut, copy, paste, duplicate and other Edit menu commands"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [edit.undo, edit.redo, edit.cut, edit.copy, edit.copyWithPropertyLinks, edit.copyWithRelativePropertyLinks, edit.copyExpressionOnly, edit.paste, edit.pasteReversedKeyframes, edit.clear, edit.duplicate, edit.splitLayer, edit.liftWorkArea, edit.extractWorkArea, edit.selectAll, edit.deselectAll, edit.label, edit.selectLabelGroup, edit.purgeUndo, edit.purge, edit.editOriginal, edit.history.list, edit.history.goto, edit.pasteTextMatchFormatting, edit.pasteTextFormattingOnly, edit.history]
+    paths: [crates/engine/engine/src/commands/edit.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/commands/text_edit.rs, crates/engine/engine/src/commands/prop_groups.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.comp.settings
+    title: "Compositions: create, settings, trim, poster time and VR"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [comp.new, comp.setPosterTime, comp.trimToWorkArea, comp.open, comp.close, comp.workArea, comp.setSwitch, comp.renderer, comp.revealInProject, comp.cropToRegionOfInterest, comp.cropToLayerBounds, comp.saveFrameAs, comp.responsiveTime, comp.saveFrameAsPsd, comp.saveFrameAsExr, comp.vr.environments, comp.vr.setView, comp.flowchart, comp.miniFlowchart, comp.vr.createEnvironment, comp.vr.extractCubemap, comp.openInGraphicsTemplates]
+    paths: [crates/engine/engine/src/commands/comp.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/commands/comp_more.rs, crates/engine/host/src/lib.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.layer.styles
+    title: "Layer styles"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [layer.style.convertToEditable, layer.style.showAll, layer.style.removeAll, layer.style.dropShadow, layer.style.innerShadow, layer.style.outerGlow, layer.style.innerGlow, layer.style.bevelEmboss, layer.style.satin, layer.style.colorOverlay, layer.style.gradientOverlay, layer.style.stroke, layer.style.add, layer.style.remove, layer.style.toggle, layer.style.globalLight, layer.style.list, layer.style.options]
+    paths: [crates/engine/engine/src/commands/styles.rs, bindings/wasm/src/design.rs, crates/engine/engine/src/commands/frontend.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.layer.masks
+    title: "Layer masks and mask vertices"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [mask.addVertex, mask.setVertex, mask.selectVertices, mask.moveVertices, mask.deleteVertices, mask.convertVertex, mask.insertVertex, mask.featherPoint.add, mask.featherPoint.set, mask.featherPoint.remove, mask.featherPoint.list, mask.remove, mask.removeAll, layer.mask.motionBlur, layer.mask.featherFalloff, layer.mask.hideLocked, layer.mask.shape, layer.mask.set, layer.mask.reset, layer.mask.remove, layer.mask.removeAll, layer.mask.mode, layer.mask.invert, layer.mask.lock, layer.mask.unlockAll, layer.mask.lockOthers, mask.interpolate, mask.interpolationOptions]
+    paths: [crates/engine/engine/src/commands/mask.rs, crates/engine/engine/src/commands/layer_menu.rs, crates/engine/engine/src/commands/paths.rs, crates/engine/engine/src/menus.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.layer.create
+    title: "Create, arrange, switch, precompose and transform layers"
+    cases: [regressions/issue-c8-motion-read-timestamp-utf8]
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [layer.newAdjustment, layer.settings, layer.addItem, layer.select, layer.selectNext, layer.selectPrevious, layer.setSwitch, layer.setComment, layer.setTrackMatte, layer.slip, layer.slipBack, layer.slipForward, layer.arrange, layer.precompose, layer.addMask, layer.setMask, layer.addShapeItem, layer.setText, layer.transform, layer.autoOrient, layer.newLight, layer.newCamera, layer.cameraSettings, layer.lightSettings, layer.newModel, layer.new3dPrimitive, layer.newPrimitive, layer.environment, layer.addTextAnimator, layer.addTextAnimatorProperty, layer.addTextSelector, layer.enablePerChar3D, layer.applyTextPreset, layer.timeStretch, layer.timeReverse, layer.enableTimeRemap, layer.freezeFrame, layer.freezeOnLastFrame, layer.updateMarkersFromSource, layer.channels, layer.tree, layer.quality, layer.sampling, layer.frameBlending, layer.hideOtherVideo, layer.showAllVideo, layer.unlockAll, layer.expressions, layer.setTransform, layer.centerAnchor, layer.markersLock, layer.deleteAllMarkers, layer.trackMatte, layer.openSource, layer.revealInFinder, layer.revealSource, layer.revealExpressionErrors, layer.sequence, layer.create, layer.openLayer, layer.autoTrace, layer.sceneEditDetection, layer.alignVideoToData, layer.nudge, layer.align, layer.distribute, layer.newContentAwareFill]
+    paths: [crates/engine/engine/src/commands/layer.rs, crates/engine/engine/src/commands/layer_menu.rs, crates/engine/engine/src/learn.rs, crates/engine/script/src/runtime.rs, crates/engine/engine/src/commands/align_data.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.view.3d
+    title: "Views and 3D views"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [view.set3DView, view.3d.activeCamera, view.3d.default, view.3d.front, view.3d.left, view.3d.top, view.3d.back, view.3d.right, view.3d.bottom, view.3d.custom1, view.3d.custom2, view.3d.custom3, view.3d.last, view.lookAtSelected, view.lookAtAll, view.reset3DView, view.set3DViewCamera, view.get3D, view.addGuide, view.clearGuides, view.importGuides, view.exportGuides, view.layout, view.shareViewOptions, view.extendedViewer, view.setRegionOfInterest, view.snapping, view.snappingOptions, view.displayColorManagement, view.simulateOutput, view.customRgb, view.splitLockedViewer, view.closeLockedViewer, view.displayColor, view.channel, view.exposure, view.resetExposure, view.takeSnapshot, view.showSnapshot, view.fastPreviewMode, view.moveGuide, view.removeGuide, view.zoomIn, view.zoomOut, view.res.full, view.res.half, view.res.third, view.res.quarter, view.res.custom, view.rulers, view.panelBackground, view.guides, view.snapToGuides, view.lockGuides, view.grid, view.snapToGrid, view.options, view.layerControls, view.fullScreen, view.newViewer, view.assign3dShortcut]
+    paths: [crates/engine/engine/src/commands/frontend.rs, crates/engine/engine/src/commands/three_d.rs, crates/engine/engine/src/commands/viewer_cmds.rs, crates/engine/engine/src/commands/app_more.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.camera.lights
+    title: "Cameras, lights and 3D materials"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [camera.fromView, camera.orbit, camera.pan, camera.dolly, material.set, material.revealSource, material.reset, material.duplicateAssign, camera.stereoRig, camera.orbitNull, camera.fromModel, light.fromModel, light.controlWithCamera, light.environmentBackground, camera.linkFocusToPoi, camera.linkFocusToLayer, camera.setFocusToLayer, camera.analyze, camera.cancel, camera.solveStatus, camera.points, camera.selectPoints, camera.createFromSolve, camera.create, camera.setGroundPlane, camera.deletePoints]
+    paths: [crates/engine/engine/src/commands/camera_cmds.rs, crates/engine/engine/src/commands/rig3d.rs, crates/engine/engine/src/commands/model3d.rs, crates/engine/engine/src/commands/three_d.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    cases: [regressions/issue-9]
+    since: "2026-11-17"
+  - id: motion.text.animate
+    title: "Text editing and text animators"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [text.animatorFontAxes, text.presets, text.animatorProperties, text.edit, text.endEdit, text.fontFeatures, text.fonts, text.setSelection, text.moveCaret, text.insert, text.delete, text.addSelector, text.removeAllAnimators]
+    paths: [crates/engine/engine/src/commands/text_edit.rs, crates/engine/engine/src/commands/text_anim.rs, bindings/wasm/src/design.rs, crates/engine/engine/src/commands/animation.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    cases: [regressions/issue-6]
+    since: "2026-11-17"
+  - id: motion.keys.properties
+    title: "Properties, keyframes, easing, animation presets and expressions"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [prop.toggleAnimation, prop.toggleKey, keys.toggleTransform, prop.reset, prop.select, prop.deselect, prop.convertExpressionToKeyframes, keys.move, keys.delete, keys.easyEaseIn, keys.easyEaseOut, keys.toggleHold, keys.interpolation, keys.velocity, prop.renameGroup, prop.setGroupEnabled, prop.removeGroup, prop.duplicateGroup, prop.moveGroup, keys.copy, keys.paste, keys.selectAll, keys.nudge, keys.nudgeForward, keys.nudgeBackward, keys.nudgeForward10, keys.nudgeBackward10, keys.set, keys.selectEqual, keys.selectPrevious, keys.selectFollowing, keys.setEase, keys.timeReverse, keys.info, keys.wiggle, keys.smooth, motion.sketch, prop.separateDimensions, prop.pickWhip, anim.savePreset, anim.applyPreset, anim.addKeyframe, keys.exponentialScale, anim.reveal, keys.setLabel, keys.selectLabelGroup, keys.transform, keys.setSpatialTangents, anim.browsePresets, anim.applyRecentPreset, anim.clearRecentPresets, keys.audioToKeyframes, keys.rpfCameraImport, expr.errors, expr.languageMenu]
+    paths: [crates/engine/engine/src/commands/prop.rs, crates/engine/engine/src/commands/anim.rs, crates/engine/engine/src/learn.rs, crates/engine/host/src/lib.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    cases: [regressions/issue-7]
+    since: "2026-11-17"
+  - id: motion.project.items
+    title: "Project panel items, folders, footage and metadata"
+    cases: [regressions/issue-c8-motion-read-rename-explicit]
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [project.select, project.rename, project.move, project.setLabel, project.setComment, project.delete, project.usage, project.duplicate, project.summary, project.newFolder, footage.check, footage.reloadChanged, project.deleteWithoutConfirmation, mediaBrowser.list, mediaBrowser.go, mediaBrowser.addFavorite, mediaBrowser.removeFavorite, mediaBrowser.import, mediaBrowser.action, mediaBrowser.fileInfo, item.metadata, project.setProjectComment, footage.open, footage.info, footage.setTime, footage.setIn, footage.setOut, footage.clearInOut, footage.overlayEdit, footage.rippleInsertEdit]
+    paths: [crates/engine/engine/src/commands/panels_cmds.rs, crates/engine/engine/src/commands/footage_panel.rs, crates/engine/engine/src/commands/project_items.rs, bindings/wasm/src/files.rs, bindings/wasm/tests/independent_r2_project_rename.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.markers.manage
+    title: "Markers"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [markers.nested, markers.set, markers.delete, markers.convert]
+    paths: [crates/engine/engine/src/commands/markers.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.shape.paths
+    title: "Shape layers and paths"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [path.rotoBezier, path.convertToBezier, path.groupShapes, path.ungroupShapes, path.setFirstVertex, path.freeTransform, shape.newPath, shape.fillStroke, shape.dashes.add, shape.dashes.remove, shape.stroke.taper, shape.stroke.wave, shape.newShape, shape.toolOptions, paths.pointsFollowNulls, paths.nullsFollowPoints, paths.tracePath]
+    paths: [crates/engine/engine/src/commands/paths.rs, crates/engine/engine/src/commands/shape_stroke.rs, crates/engine/engine/src/commands/path_nulls.rs, crates/engine/engine/src/commands/shape_tool.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.effect.apply
+    title: "Apply, remove and edit effects"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [effect.pickColor, effect.applyLast, effect.removeAll, effect.remove, effect.toggle, effect.duplicate, effect.copy, effect.paste, effect.reset, effect.warning, effect.plugins.list, effect.plugins.load, effect.manage, effect.editDropdown]
+    paths: [crates/engine/engine/src/commands/effect.rs, crates/engine/engine/src/commands/edit.rs, web/src/HomeTab.tsx, bindings/wasm/src/design.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    cases: [regressions/issue-5]
+    since: "2026-11-17"
+  - id: motion.time.navigate
+    title: "Time navigation and time remapping"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [time.set, time.nextFrame, time.previousFrame, time.forward10, time.back10, time.step, time.start, time.end, time.layerIn, time.layerOut, time.nextKey, time.previousKey, time.go]
+    paths: [crates/engine/engine/src/commands/time.rs, crates/engine/engine/src/learn.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/commands/align.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.track.motion
+    title: "Motion tracking, stabilization and Warp Stabilizer"
+    cases: [regressions/issue-c8-motion-read-track-empty-range, regressions/issue-c8-motion-read-track-premises]
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [track.motion, track.stabilize, track.new, track.property, track.select, track.setType, track.setTarget, track.options, track.setPoint, track.analyze, track.stop, track.apply, track.reset, track.delete, track.editTargetDialog, track.optionsDialog, track.status, track.mask, track.maskMethod, track.extractFaceMeasurements, track.warpStabilizer, warp.analyze, warp.cancel, warp.status, track.camera]
+    paths: [crates/engine/engine/src/commands/track.rs, crates/engine/engine/src/learn.rs, crates/engine/engine/src/commands/warp_cmds.rs, crates/engine/engine/src/commands/mask_interp.rs, bindings/wasm/src/rest_visual.rs, bindings/wasm/tests/independent_r2_visual_guard.rs, bindings/headless/tests/independent_r2_visual.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.paint.distort
+    title: "Paint, puppet pins, liquify and content-aware fill"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [paint.stroke, paint.options, paint.brushPreset, paint.setCloneSource, paint.removeStroke, paint.presets, puppet.addPin, puppet.movePin, puppet.setPin, puppet.removePin, puppet.selectPins, puppet.mesh, puppet.info, puppet.recordPin, puppet.follow, puppet.recordOptions, liquify.stroke, liquify.clear, contentFill.set, contentFill.generate]
+    paths: [crates/engine/engine/src/commands/puppet.rs, crates/engine/engine/src/commands/paint.rs, crates/engine/engine/src/commands/content_fill.rs, crates/engine/engine/src/commands/liquify.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.graphics.templates
+    title: "Graphics templates and template files"
+    dimension: [function]
+    priority: P1
+    status: partial
+    commands: [templateProps.setPrimary, templateProps.setName, templateProps.addProperty, templateProps.addMirror, templateProps.linkProperty, templateProps.unlinkProperty, templateProps.addMedia, templateProps.addGroup, templateProps.addComment, templateProps.rename, templateProps.remove, templateProps.move, templateProps.soloSupported, templateProps.exportTemplate, templateProps.importTemplate, templateProps.set, templateProps.pushToComp, templateProps.revert, templateProps.list, templateProps.canAdd, templateProps.instance, templateProps.templateInfo]
+    paths: [crates/engine/engine/src/commands/template_props.rs, bindings/wasm/src/files.rs, crates/engine/engine/src/templates.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.app.scripting
+    title: "Scripts, script windows and the batch engine"
+    dimension: [function]
+    priority: P2
+    status: partial
+    commands: [command.list, command.describe, engine.batch, script.run, script.settings.get, script.settings.save, scriptWindow.list, scriptWindow.get, scriptWindow.click, scriptWindow.set, scriptWindow.close]
+    paths: [crates/engine/engine/src/commands/scripts.rs, crates/engine/engine/src/script_windows.rs, web/src/commandIcons.ts, crates/engine/engine/src/commands/batch.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    since: "2026-11-17"
+  - id: motion.app.workspace
+    title: "Workspaces, panels, settings, shortcuts, background jobs, storage and help"
+    dimension: [function]
+    priority: P2
+    status: partial
+    commands: [help.docs, help.github, help.inAppTutorials, help.reportIssue, app.capabilities, editor.state, app.about, app.settings, app.gpuInfo, app.hide, app.hideOthers, app.showAll, app.quit, app.commandPalette, app.keyboardShortcuts, app.templates, app.find, window.panel, window.workspace, window.saveWorkspace, window.saveWorkspaceAs, window.editWorkspaces, window.resetWorkspace, prefs.get, prefs.set, prefs.reset, prefs.open, prefs.pages, shortcuts.list, shortcuts.set, shortcuts.reset, shortcuts.preset, shortcuts.export, shortcuts.import, shortcuts.conflicts, window.assignWorkspaceShortcut, help.enableLogging, help.revealLogFile, help.systemReport, help.systemInfo, window.scriptPanel, window.restoreScriptPanels, jobs.list, jobs.cancel, jobs.wait, scopes.analyze, storage.info, storage.persist, storage.clear, learn.list, learn.state, learn.start, learn.step, learn.stop]
+    paths: [crates/engine/engine/src/commands/frontend.rs, crates/engine/engine/src/commands/settings.rs, web/src/commandIcons.ts, crates/engine/engine/src/commands/app_more.rs]
+    target: "After Effects 2026 (26.5)"
+    gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
+    cases: [regressions/issue-wasm-logging-panic]
+    since: "2026-11-17"
+  - id: motion.editor.display-modes
+    title: The editor in each display mode (Menus, Single line, Classic, Focus); Focus shows the composition alone
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/App.tsx, web/src/HomeTab.tsx, web/src/PropertiesPanel.tsx, web/tests/modes.mjs, web/tests/flow.mjs]
+    cases: [regressions/issue-focus-shows-timeline]
+    since: "2026-11-17"

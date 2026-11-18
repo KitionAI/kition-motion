@@ -1,0 +1,27 @@
+format: 1
+id: motion.agent.premises/call-premises
+feature: motion.agent.premises
+intent: >-
+  Each command family whose premise the kit states (bindings/wasm/src/place.rs premise_of) is
+  refused for a colleague's change inside it and applies after one outside it: prop.set of a
+  property with no keys (that property), layer.rename (the name), a key at a time (the property,
+  the layer's start and stretch: refused after a time stretch, and after a change of the key then
+  a key added before it in two saves), prop.set with selected (every field), a layer named by its
+  name (its name and place), a number that is no layer id (a stack position, refused after a layer
+  above), comp markers by at or index (the comp's markers). A key added before or after the key at
+  the time is pinned where the guard is still wrong.
+layer: gate
+source:
+  kind: synthetic
+  from: bindings/headless/tests/premises.rs
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: premises
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

@@ -1,0 +1,23 @@
+format: 1
+id: motion.agent.design/plain-comp
+feature: motion.agent.design
+intent: >-
+  A plain composition (small and close text sizes, low contrast, a flat background, type without
+  depth or motion) gets design advice with commands that fix it, in `_inspect` and in the text
+  commands' answers; a designed one gets none, and every suggested command runs as written.
+layer: gate
+source:
+  kind: probe
+  from: KitionAI/khp-bench generation runs (judges' criticisms of KHP videos)
+  license: owned
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-kit
+      filter: design::tests
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-17"
+timeout_s: 60

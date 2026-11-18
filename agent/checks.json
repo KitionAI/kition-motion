@@ -1,0 +1,104 @@
+[
+  {
+    "code": "motion.missing-footage",
+    "fixture": "check-missing-footage.kmotion",
+    "severity": "error",
+    "summary": "Footage cannot find its file, so the layers that use it show nothing."
+  },
+  {
+    "code": "motion.missing-source",
+    "fixture": "check-missing-source.kmotion",
+    "severity": "error",
+    "summary": "A layer uses a project item that no longer exists, so it shows nothing."
+  },
+  {
+    "code": "motion.missing-parent",
+    "fixture": "check-missing-parent.kmotion",
+    "severity": "error",
+    "summary": "A layer is parented to a layer that no longer exists."
+  },
+  {
+    "code": "motion.missing-matte",
+    "fixture": "check-missing-matte.kmotion",
+    "severity": "error",
+    "summary": "A layer uses a track matte layer that no longer exists."
+  },
+  {
+    "code": "motion.zero-duration",
+    "fixture": "check-zero-duration.kmotion",
+    "severity": "warning",
+    "summary": "A layer ends where it starts, so it never shows."
+  },
+  {
+    "code": "motion.outside-comp",
+    "fixture": "check-outside-comp.kmotion",
+    "severity": "warning",
+    "summary": "A layer lies outside its composition's duration, so it never shows."
+  },
+  {
+    "code": "motion.empty-comp",
+    "fixture": "check-empty-comp.kmotion",
+    "severity": "info",
+    "summary": "A composition has no layers, so it renders only its background."
+  },
+  {
+    "code": "motion.flat-background",
+    "fixture": "check-flat-background.kmotion",
+    "severity": "info",
+    "summary": "The frame is one colour or a linear gradient, with no radial light or vignette, which reads as plain."
+  },
+  {
+    "code": "motion.no-depth",
+    "fixture": "check-no-depth.kmotion",
+    "severity": "info",
+    "summary": "No text or shape has a glow or a shadow, so everything sits flat on the background."
+  },
+  {
+    "code": "motion.small-title",
+    "fixture": "check-small-title.kmotion",
+    "severity": "info",
+    "summary": "The largest text is under 7% of the frame height, small for a title in motion graphics."
+  },
+  {
+    "code": "motion.weak-hierarchy",
+    "fixture": "check-weak-hierarchy.kmotion",
+    "severity": "info",
+    "summary": "The two largest texts are too close in size to read as title and subtitle."
+  },
+  {
+    "code": "motion.thin-type",
+    "fixture": "check-thin-type.kmotion",
+    "severity": "info",
+    "summary": "A text is set in a light or regular weight, which reads faint on video."
+  },
+  {
+    "code": "motion.low-contrast",
+    "fixture": "check-low-contrast.kmotion",
+    "severity": "info",
+    "summary": "A text has less than 4.5:1 contrast with what is behind it (3:1 for large text: 24 px, or 18.66 px bold)."
+  },
+  {
+    "code": "motion.small-text",
+    "fixture": "check-small-text.kmotion",
+    "severity": "info",
+    "summary": "A text is under 3% of the frame height, hard to read in a video."
+  },
+  {
+    "code": "motion.missing-font",
+    "fixture": "check-missing-font.kmotion",
+    "severity": "info",
+    "summary": "A text asks for a font that is not installed, so it is drawn with a fallback."
+  },
+  {
+    "code": "motion.static-text",
+    "fixture": "check-static-text.kmotion",
+    "severity": "info",
+    "summary": "A text never moves."
+  },
+  {
+    "code": "motion.truncated",
+    "fixture": "check-truncated.kmotion",
+    "severity": "info",
+    "summary": "One code was found more often than the check lists; the rest are counted in one diagnostic."
+  }
+]

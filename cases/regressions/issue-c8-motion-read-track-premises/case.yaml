@@ -1,0 +1,24 @@
+format: 1
+id: regressions/issue-c8-motion-read-track-premises
+feature: motion.track.motion
+intent: >-
+  Tracker creation holds source dimensions used to place default regions, and tracker options
+  hold assigned settings while allowing independent edits to unrelated layer content.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-read independent handler reading
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-kit
+      test: independent_r2_visual_guard
+  - cargo-test:
+      package: kition-motion
+      test: independent_r2_visual
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

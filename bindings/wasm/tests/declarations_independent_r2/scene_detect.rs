@@ -1,0 +1,53 @@
+use super::Row;
+
+pub(super) const ROWS: &[Row] = &[
+    Row {
+        command: "layer.sceneEditDetection",
+        path: "markers; wait=true or asynchronous completion",
+        resolves: &["comp:id|numeric-string|name|active", "layer:id|numeric-string|numeric-index-fallback|#index|name|first-selected"],
+        reads: &[
+            "layer.source",
+            "layer.in_point",
+            "layer.out_point",
+            "comp.frame_rate",
+            "comp.duration",
+            "source frames through tracking::source_frame",
+            "layer.start_time",
+            "layer.stretch",
+            "layer.markers at each cut time",
+        ],
+        checks: &["has_layers", "source.item exists", "at least two frames", "target still exists at apply"],
+        writes: &["layer.markers[time=layer.layer_time(cut)]"],
+        state: &["part", "selection"],
+        source: "commands/scene_detect.rs:82-131; tracking.rs:201-235; jobs.rs:118-177",
+    },
+    Row {
+        command: "layer.sceneEditDetection",
+        path: "split; wait=true or asynchronous completion",
+        resolves: &["comp:id|numeric-string|name|active", "layer:id|numeric-string|numeric-index-fallback|#index|name|first-selected"],
+        reads: &[
+            "layer.source",
+            "layer.in_point",
+            "layer.out_point",
+            "comp.frame_rate",
+            "comp.duration",
+            "source frames through tracking::source_frame",
+            "entire layer cloned at each valid cut",
+            "comp.layers source insertion position",
+        ],
+        checks: &["has_layers", "source.item exists", "at least two frames", "cut within current layer in/out at apply", "target exists"],
+        writes: &["layer.out_point", "comp.layers inserted cloned pieces with fresh ids and in_point", "project.next_id"],
+        state: &["part", "selection", "writes selected_layers"],
+        source: "commands/scene_detect.rs:82-160; tracking.rs:201-235; jobs.rs:118-177",
+    },
+    Row {
+        command: "layer.sceneEditDetection",
+        path: "splitPrecompose; move and adjustDuration",
+        resolves: &["comp:id|numeric-string|name|active", "layer:id|numeric-string|numeric-index-fallback|#index|name|first-selected"],
+        reads: &["split branch facts", "layer.name", "each resulting layer precompose move closure"],
+        checks: &["split branch eligibility", "layer.precompose eligibility for each piece"],
+        writes: &["split branch writes", "new precomps and replacement layers via layer.precompose"],
+        state: &["part", "selection", "writes selected_layers"],
+        source: "commands/scene_detect.rs:135-177; downstream layer.precompose requires separate family row",
+    },
+];

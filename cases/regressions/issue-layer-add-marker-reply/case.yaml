@@ -1,0 +1,18 @@
+format: 1
+id: regressions/issue-layer-add-marker-reply
+feature: motion.markers.layer
+intent: >-
+  layer.addMarker answers with what it added, as comp.addMarker does: the time in comp seconds and
+  each marker's layer and index (the index markers.list and markers.delete use), not null.
+layer: unit
+source:
+  kind: probe
+  from: PROMO-10d (layer.addMarker answered null)
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, filter: "commands::layer_menu::add_marker_reply_tests" }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

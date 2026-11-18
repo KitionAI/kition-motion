@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-deferred-probe
+feature: motion.agent.premises
+dimension: [function, collab]
+layer: gate
+intent: A deferred metadata probe refuses an intervening interpretation change and accepts a renamed footage item.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, filter: deferred_footage_probe_preserves_changed_interpretation }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

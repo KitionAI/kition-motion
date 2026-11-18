@@ -1,0 +1,20 @@
+format: 1
+id: regressions/issue-c8-motion-pin-other-layers
+feature: motion.agent.premises
+intent: Copy naming refuses a sibling name change while accepting and preserving unrelated sibling opacity.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_sibling_inputs
+      filter: duplicate_holds
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

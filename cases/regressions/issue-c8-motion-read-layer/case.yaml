@@ -1,0 +1,13 @@
+format: 1
+id: motion.agent.premises/layer-inputs
+feature: motion.agent.premises
+dimension: [ai, collab, data-safety]
+layer: gate
+intent: Layer writes hold referenced source defaults and accept unrelated saved-file changes.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_layer }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }

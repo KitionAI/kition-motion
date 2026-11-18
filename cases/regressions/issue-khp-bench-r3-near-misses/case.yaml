@@ -1,0 +1,23 @@
+format: 1
+id: regressions/issue-khp-bench-r3-near-misses
+feature: motion.agent.act
+intent: >-
+  A property path written another way names the property meant (`transform/anchorPoint` ->
+  `transform/anchor`), a shape's `size` is never quietly the default, and an unknown layer lists
+  the composition's layers by id and name, since ids are not positions (khp-bench r3, V04 to V06).
+layer: gate
+source:
+  kind: probe
+  from: KitionAI/khp-bench round 3 generation runs, issues (e), (f) and (g)
+  license: owned
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-engine
+      filter: near_misses_are_named_and_sizes_read_both_ways
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-17"
+timeout_s: 60

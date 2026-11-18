@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-undeclared-time
+feature: motion.agent.premises
+intent: Commands whose code reads the current time declare it, so a person moving only the current time refuses an agent's edit.selectAll that gives its part but not its time as changed on time, while no change or a given time lets it apply.
+layer: gate
+source:
+  kind: synthetic
+  from: motion-state-members
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_undeclared_time
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

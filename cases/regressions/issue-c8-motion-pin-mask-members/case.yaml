@@ -1,0 +1,21 @@
+format: 1
+id: regressions/issue-c8-motion-pin-mask-members
+feature: motion.agent.premises
+intent: >-
+  All-mask assignments hold membership through outside and other-agent deletions, keep private
+  facts out of receipts, and allow independent geometry changes and member reordering.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: independent_masks
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

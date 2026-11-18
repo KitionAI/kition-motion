@@ -1,0 +1,7 @@
+asset:        legacy-masks.json
+title:        Lottie fixture: legacy (e-value) keyframes, add/subtract masks and an unsupported layer type
+author:       upstream contributors (see NOTICE)
+source:       upstream project credited in NOTICE (original work of its contributors)
+license:      MIT (the upstream license, see NOTICE)
+added:        2026-11-17 upstream
+notes:        Hand-written Lottie JSON for import tests, written from the public Lottie format description; not exported from any Adobe product or third-party file.

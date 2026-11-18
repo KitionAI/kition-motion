@@ -1,0 +1,193 @@
+[workspace]
+resolver = "3"
+members = ["crates/*/*", "bindings/headless", "tools/xtask"]
+default-members = ["crates/*/*", "bindings/headless", "tools/xtask"]
+
+[workspace.package]
+version = "0.7.0"
+edition = "2024"
+license = "Apache-2.0"
+rust-version = "1.95"
+repository = "https://github.com/KitionAI/kition-motion"
+
+[workspace.dependencies]
+# kition-sdk, pinned by commit (one revision for every crate of it)
+kition-convergence = { git = "https://github.com/KitionAI/kition-sdk", rev = "f5ea478430d1e85069b6c6c9fac1de6b8e5c5d57" }
+kition-headless = { git = "https://github.com/KitionAI/kition-sdk", rev = "f5ea478430d1e85069b6c6c9fac1de6b8e5c5d57" }
+kition-kit-server = { git = "https://github.com/KitionAI/kition-sdk", rev = "f5ea478430d1e85069b6c6c9fac1de6b8e5c5d57" }
+kition-kit = { git = "https://github.com/KitionAI/kition-sdk", rev = "f5ea478430d1e85069b6c6c9fac1de6b8e5c5d57" }
+# The kits' MCP server's tools (kition-kits-mcp), for the headless kit's end-to-end tests.
+kition-kits = { git = "https://github.com/KitionAI/kition-sdk", rev = "f5ea478430d1e85069b6c6c9fac1de6b8e5c5d57" }
+
+# internal
+kition-motion-time = { path = "crates/media/time" }
+kition-motion-geom = { path = "crates/support/geom" }
+kition-motion-color = { path = "crates/support/color" }
+kition-motion-raster = { path = "crates/render/raster" }
+kition-motion-path = { path = "crates/engine/path" }
+kition-motion-keyframe = { path = "crates/engine/keyframe" }
+kition-motion-project = { path = "crates/engine/project" }
+kition-motion-text = { path = "crates/support/text" }
+kition-motion-effects = { path = "crates/engine/effects" }
+kition-motion-track = { path = "crates/engine/track" }
+kition-motion-segment = { path = "crates/engine/segment" }
+kition-motion-model = { path = "crates/engine/model" }
+kition-motion-render = { path = "crates/render/render" }
+kition-motion-media = { path = "crates/media/media" }
+kition-motion-export = { path = "crates/formats/export" }
+kition-motion-expr = { path = "crates/engine/expr" }
+kition-motion-lottie = { path = "crates/formats/lottie" }
+kition-motion-interchange = { path = "crates/formats/interchange" }
+kition-motion-pdf = { path = "crates/formats/pdf" }
+kition-motion-psd = { path = "crates/formats/psd" }
+kition-motion-vp9enc = { path = "crates/media/vp9enc" }
+kition-motion-svg = { path = "crates/formats/svg" }
+kition-motion-engine = { path = "crates/engine/engine" }
+kition-motion-host = { path = "crates/engine/host" }
+kition-motion-opusenc = { path = "crates/media/opusenc" }
+kition-motion-script = { path = "crates/engine/script" }
+kition-motion-hevcenc = { path = "crates/media/hevcenc" }
+kition-motion-av1enc = { path = "crates/media/av1enc" }
+kition-motion-plugin = { path = "crates/engine/plugin" }
+kdm-model = { path = "crates/kdm/kdm-model" }
+
+# foundation
+thiserror = "2"
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+log = "0.4"
+rayon = "1"
+# std::time::Instant/SystemTime on native; the browser clock on wasm32 (std's panic there).
+web-time = "1"
+gif = "0.14"
+proptest = "1"
+
+# scripting (expressions)
+boa_engine = { version = "0.22", default-features = false }
+# WebAssembly effect plug-ins (sandboxed interpreter; Apache-2.0, pure Rust)
+wasmi = { version = "2", default-features = false, features = ["std", "validate", "wat", "deterministic", "portable-dispatch"] }
+
+# geometry / fonts
+kurbo = { version = "0.13", features = ["serde"] }
+tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd"] }
+skrifa = { version = "0.44", default-features = false, features = ["std"] }
+harfrust = { version = "0.12", default-features = false, features = ["std"] }
+exr = "1.74"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+# media codecs + containers: Kition Film's pure-Rust crates, pinned to a revision (plan/adr/0001).
+# Only `crates/media/media`, `crates/formats/export` and `crates/formats/interchange` may depend on these.
+kition-film-codecs = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-media = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-frame = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-color = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-time = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+# encoders + muxer (crates/formats/export)
+kition-film-h264enc = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-prores = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-aac = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-isobmff = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+# decoder used as the round-trip oracle of kition-motion-opusenc (crates/formats/export dev-dependency)
+kition-film-opus = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-vp9 = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+# decoders used as the round-trip oracles of kition-motion-hevcenc / kition-motion-av1enc (dev-dependencies only)
+kition-film-hevc = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-av1 = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+# timeline interchange (EDL, FCP7 XML, FCPXML, OTIO) for Premiere Pro interop (crates/formats/interchange only)
+kition-film-interchange = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-project = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-geom = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+
+# Local co-development against a Kition Film checkout next to this repo: uncomment.
+# [patch."https://github.com/KitionAI/kition-film"]
+# kition-film-codecs = { path = "../kition-film/crates/codecs" }
+# kition-film-media = { path = "../kition-film/crates/media" }
+# kition-film-frame = { path = "../kition-film/crates/frame" }
+# kition-film-color = { path = "../kition-film/crates/color" }
+# kition-film-time = { path = "../kition-film/crates/time" }
+# kition-film-h264enc = { path = "../kition-film/crates/h264enc" }
+# kition-film-prores = { path = "../kition-film/crates/prores" }
+# kition-film-aac = { path = "../kition-film/crates/aac" }
+# kition-film-isobmff = { path = "../kition-film/crates/isobmff" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+too_many_arguments = "allow"
+needless_range_loop = "allow"
+type_complexity = "allow"
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev]
+opt-level = 1
+
+# Pixel hot loops: keep debug builds interactive.
+[profile.dev.package.kition-motion-raster]
+opt-level = 3
+
+[profile.dev.package.kition-motion-render]
+opt-level = 3
+
+[profile.dev.package.kition-motion-effects]
+opt-level = 3
+
+[profile.dev.package.kition-motion-track]
+opt-level = 3
+
+[profile.dev.package.kition-motion-path]
+opt-level = 3
+
+[profile.dev.package.kition-motion-media]
+opt-level = 3
+
+[profile.dev.package.kition-motion-opusenc]
+opt-level = 3
+
+[profile.dev.package.kition-motion-export]
+opt-level = 3
+
+[profile.dev.package.kition-motion-vp9enc]
+opt-level = 3
+
+[profile.dev.package.kition-motion-hevcenc]
+opt-level = 3
+
+[profile.dev.package.kition-motion-av1enc]
+opt-level = 3
+
+# Kition Film codec hot loops (same settings as Kition Film's own workspace).
+[profile.dev.package.kition-film-h264]
+opt-level = 3
+
+[profile.dev.package.kition-film-h264enc]
+opt-level = 3
+
+[profile.dev.package.kition-film-hevc]
+opt-level = 3
+
+[profile.dev.package.kition-film-vp9]
+opt-level = 3
+
+[profile.dev.package.kition-film-prores]
+opt-level = 3
+
+[profile.dev.package.kition-film-dnx]
+opt-level = 3
+
+[profile.dev.package.kition-film-av1]
+opt-level = 3
+
+[profile.dev.package.kition-film-aac]
+opt-level = 3
+
+[profile.dev.package.kition-film-opus]
+opt-level = 3
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

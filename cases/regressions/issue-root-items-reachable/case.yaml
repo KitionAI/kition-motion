@@ -1,0 +1,24 @@
+format: 1
+id: regressions/issue-root-items-reachable
+feature: motion.model.objects
+intent: >-
+  An agent reaches the project's objects from the object model's root (KHP A16): model.describe
+  names Project.items, query with follow walks root → items.0 → comp → layers.0 to a layer and its
+  name (a string field), a batch that renames the layer reads back through query and survives save
+  and reopen, deleting an item leaves no dangling entry, and every .kmotion under conformance/ and
+  cases/ opens with each of its items listed. Before, Project had only attrs and renderQueue, so
+  nothing past the root could be found (agent-ready gap report, motion).
+layer: gate
+source:
+  kind: probe
+  from: agent readiness review (effect rows)
+  license: owned
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: object_model }
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-17"
+timeout_s: 60

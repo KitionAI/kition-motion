@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-stack-inputs
+feature: motion.agent.premises
+intent: Bring Forward and Send Backward hold the layer they pass, a matte taken from the stack holds that layer and its video switch, and Hide Other Video holds every other video switch and layer membership; unrelated edits apply.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_stack_inputs
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

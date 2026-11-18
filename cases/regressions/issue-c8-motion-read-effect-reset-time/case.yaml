@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-effect-reset-time
+feature: motion.effect.basics
+dimension: [function, data-safety]
+layer: gate
+intent: Resetting an animated effect in an explicitly addressed composition inserts defaults at that composition's current time and preserves keys at other times.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: independent_r2_effect_reset }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

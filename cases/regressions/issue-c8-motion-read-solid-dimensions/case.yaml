@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-solid-dimensions
+feature: motion.file.projects
+dimension: [function, data-safety]
+layer: gate
+intent: Solid replacement honors each explicitly supplied dimension and defaults each omitted dimension to the replaced item's corresponding dimension.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: independent_r2_replace_solid }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

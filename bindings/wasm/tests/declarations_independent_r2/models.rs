@@ -1,0 +1,12 @@
+use super::Row;
+
+macro_rules! models {
+    ($($prefix:literal),*) => { &[$(
+        Row { command: concat!($prefix,".model.select"), path: "classical or published model preference; optional synchronous activation", resolves: &["id -> static model registry filtered by task, not project object"], reads: &["chosen model preference assigned", "model status active/busy/error", "installed model size/path if available"], checks: &["id classical or known task-specific registry entry", "waited load errors"], writes: &["prefs.roto.model or prefs.face.model", "active model slot/background status, prefs save"], state: &["model preferences/status", "models_dir/config (none in kit)"], source: "crates/engine/engine/src/models.rs:314; crates/engine/engine/src/models.rs:169" },
+        Row { command: concat!($prefix,".model.install"), path: "kit has no settings/models folder: error before filesystem read", resolves: &["path -> external model weights", "id -> task model registry or file checksum"], reads: &["models_dir/config availability", "outside kit: weights size/hash and chosen model/status"], checks: &["path supplied", "models_dir exists; absent in MotionDocument", "published size/SHA256 outside kit"], writes: &["none in kit; desktop installs weights/notice and activates chosen model"], state: &["models_dir/config", "model prefs/status"], source: "crates/engine/engine/src/models.rs:334; bindings/wasm/src/lib.rs:168" },
+        Row { command: concat!($prefix,".model.download"), path: "kit has no model folder: error before download", resolves: &["id static task registry"], reads: &["models_dir availability", "model busy status outside kit"], checks: &["known model", "models_dir available (false in kit)", "not already busy outside kit"], writes: &["none in kit; desktop worker download/checksum/install/activation"], state: &["models_dir/config", "model status"], source: "crates/engine/engine/src/models.rs:361; bindings/wasm/src/lib.rs:168" },
+        Row { command: concat!($prefix,".model.remove"), path: "absent model returns false; desktop deletes installed weights", resolves: &["id static task registry"], reads: &["models_dir/model_path availability", "active model id outside kit"], checks: &["known task model id"], writes: &["none in kit; desktop active slot reset and weights/notice removed"], state: &["models_dir/config", "model status"], source: "crates/engine/engine/src/models.rs:402; bindings/wasm/src/lib.rs:168" },
+    )*] };
+}
+
+pub(super) const ROWS: &[Row] = models!("roto", "face");

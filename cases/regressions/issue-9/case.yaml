@@ -1,0 +1,22 @@
+format: 1
+id: regressions/issue-9
+feature: motion.camera.lights
+intent: >-
+  A 3D primitive's Metallic and Roughness are percents (0 to 100) and its commands say so,
+  roughness visibly spreads the highlight, and a material option no given layer has (Specular
+  Intensity on a primitive) is refused rather than ignored. Turbulent Displace with Pin All leaves
+  no transparent holes at a large amount: the pinned edges keep samples from coming in from
+  outside the layer.
+layer: gate
+source:
+  kind: issue
+  from: Kition Motion regression suite
+  license: owned
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: material_units }
+  - cargo-test: { package: kition-motion-effects, filter: pin_all_leaves_no_holes }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

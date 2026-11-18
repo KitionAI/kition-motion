@@ -1,0 +1,24 @@
+format: 1
+id: regressions/issue-khp-bench-r3-layer-delete
+feature: motion.agent.act
+intent: >-
+  An agent that asks for `layer.delete`, which does not exist, is pointed at `edit.clear`, the
+  command that deletes layers: its keywords say "delete layers" and its description says so
+  (khp-bench r2, V01: the answer offered layer.select, keys.delete and layer.create instead).
+layer: gate
+source:
+  kind: probe
+  from: KitionAI/khp-bench round 2 generation runs, issue (c)
+  license: owned
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: keywords
+      filter: edit_clear_is_found_as_the_command_that_deletes_layers
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-17"
+timeout_s: 60

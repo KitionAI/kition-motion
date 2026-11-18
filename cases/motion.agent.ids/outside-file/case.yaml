@@ -1,0 +1,26 @@
+format: 1
+id: motion.agent.ids/outside-file
+feature: motion.agent.ids
+intent: >-
+  The premise guard when another program changes the .kmotion file between an agent's inspect
+  and its write, and when another agent of the same server does: an unrelated layer's change
+  applies and is named alone in others (transform/opacity); the target's change is refused
+  changed; a layer put above the target or the target shifted in time refuses a write by id as
+  relocated; its deletion as deleted; a comp marker edit after a retime is refused; 50 rounds
+  under premise and epoch; write timings. Writes by stack position and by time are guarded by
+  their place (motion.agent.places).
+layer: gate
+source:
+  kind: synthetic
+  from: bindings/headless/tests/outside.rs
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: outside
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

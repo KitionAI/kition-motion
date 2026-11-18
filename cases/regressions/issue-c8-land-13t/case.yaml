@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-land-13t
+feature: motion.agent.premises
+intent: Reordering holds the destination gap while authored property edits permit independent changes in render consumers.
+layer: gate
+dimension: collab
+source: { kind: synthetic, from: C8-land-13t, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: land13 }
+expected:
+  - { actual: out:exit, compare: exit, value: 0 }
+since: "2026-11-17"

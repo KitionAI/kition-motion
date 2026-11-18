@@ -1,0 +1,25 @@
+format: 1
+id: motion.agent.ids/one-id-space
+feature: motion.agent.ids
+intent: >-
+  The object model, receipts and `others` name items and layers by the ids motion_inspect lists
+  (tool ids, no prefix), which survive save, reopen and another program rewriting the file; a
+  property, keyframe or effect change is told under its layer at a path; commands, `on` and
+  `at.part` take an id as a number and as the string receipts print. Prints receipt sizes for
+  edits in time (a key's value, a key added, an in-point, a shift and a stretch with 5 and 200
+  keys, every key moved, a layer moved to the top of 5 and 200).
+layer: gate
+source:
+  kind: synthetic
+  from: bindings/headless/tests/ids.rs
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: ids
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-hidden-writes
+feature: motion.agent.premises
+dimension: [ai, collab]
+layer: gate
+intent: Batch execution and polling commands advertise that their handlers can apply project edits.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: declarations_independent_r2 }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

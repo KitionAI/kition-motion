@@ -1,0 +1,21 @@
+format: 1
+id: regressions/issue-khp-bench-video-effect-params
+feature: motion.agent.act
+intent: >-
+  `effect.apply` and `layer.style.add` take the effect's or style's settings in the same step
+  (`params`), check every name before changing anything, and answer the settings with their
+  paths; effects that change nothing at After Effects' defaults (Gaussian Blur, Fast Box Blur,
+  Directional Blur, Sharpen, Noise) start visible. In khp-bench's video runs an effect took three
+  calls to set and agents mostly left effects out, or applied a blur of 0.
+layer: unit
+source:
+  kind: probe
+  from: KitionAI/khp-bench video runs V01-V06, judges' flat and no-depth criticisms (video plan P0)
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-engine, test: effect_apply_params }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

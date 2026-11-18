@@ -1,0 +1,20 @@
+format: 1
+id: regressions/issue-wasm-logging-panic
+feature: motion.app.workspace
+intent: >-
+  Help > Enable Logging and Reveal Logging File fail with a message in the page's engine, which has
+  no folder to write a log to, instead of panicking (std::env::temp_dir on wasm32) and leaving the
+  editor's engine dead.
+layer: corpus
+tags: [browser]
+source:
+  kind: probe
+  from: unknown-parameter sweep over the pinned engines (both commands panicked with {})
+  license: Apache-2.0
+input: []
+steps:
+  - exec: { cmd: [sh, -c, "cd web && pnpm -s engine && node --test tests/engine-logging.test.mjs"] }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

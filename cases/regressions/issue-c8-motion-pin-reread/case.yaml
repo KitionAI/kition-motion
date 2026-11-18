@@ -1,0 +1,21 @@
+format: 1
+id: regressions/issue-c8-motion-pin-reread
+feature: motion.agent.context
+intent: >-
+  Outside file rereads preserve agent undo, unrelated outside edits, and property references
+  identified by persistent UIDs.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_reread
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

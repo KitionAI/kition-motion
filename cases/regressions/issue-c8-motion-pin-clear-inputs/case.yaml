@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-clear-inputs
+feature: motion.agent.premises
+intent: Deleting layers holds the children it unparents and compensates and the mattes it drops; an unrelated property edit applies.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_clear_inputs
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

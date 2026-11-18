@@ -1,0 +1,7 @@
+asset:        see-1.png
+title:        README picture: a keyframed Scale in the Transform panel and the timeline's keyframes
+author:       The Kition authors
+source:       Screenshot of Kition Motion's editor, taken by web/scripts/readme-shots.mjs on the showcase sample lumen-studio-logo-reveal (kition-showcase motion/lumen-studio-logo-reveal)
+license:      Apache-2.0
+added:        2026-11-17 by Claude (agent)
+notes:        Kition Motion's own editor in its development host (web/dev.html), Classic mode, light theme, English, 1440 x 900 at device scale 2, shrunk with pngquant --quality 70-90. Shows only Kition Motion and a Kition showcase sample.

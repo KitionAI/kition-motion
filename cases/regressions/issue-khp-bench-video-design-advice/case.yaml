@@ -1,0 +1,20 @@
+format: 1
+id: regressions/issue-khp-bench-video-design-advice
+feature: motion.agent.design
+intent: >-
+  Following the design advice exactly as written gives the frame depth and keeps its colour,
+  and the suggested glow is big enough to see at 1080p. The advice told agents to make a Gradient
+  Ramp radial, which drew a black-to-white ramp from the top edge over the background, and to add
+  a glow at the style's default 5 px. Checked on the rendered pixels.
+layer: unit
+source:
+  kind: probe
+  from: KitionAI/khp-bench video runs (video plan P0)
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, filter: following_the_depth_advice_as_written_gives_depth_and_keeps_the_colour }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

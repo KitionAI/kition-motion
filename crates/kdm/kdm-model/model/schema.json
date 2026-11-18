@@ -1,0 +1,107 @@
+{
+  "kdm": 1,
+  "kit": "kit.motion",
+  "schemaVersion": 3,
+  "root": "Project",
+  "types": {
+    "Project": {
+      "fields": {
+        "attrs": { "kind": "map" },
+        "renderQueue": { "kind": "list", "of": "RenderItem" },
+        "items": { "kind": "list", "of": "Item", "sample": false }
+      }
+    },
+    "Item": {
+      "batchOps": { "create": { "direct": true }, "delete": { "command": "model.itemDelete", "params": { "target": "target" } } },
+      "derived": {
+        "layerOrder": { "premiseOnly": true, "description": "Retained composition layer identities in list order for raw structural recipient checks." },
+        "layerMembers": { "premiseOnly": true, "description": "Sorted composition layer IDs for whole-comp operations whose result is independent of stack order." },
+        "markerList": { "premiseOnly": true, "description": "The composition's markers, for content premises that name one marker by index or stored time." },
+        "maskMembers": { "premiseOnly": true, "description": "Mask UID sets by layer for all-mask assignments, independent of geometry and order." }
+      },
+      "toolId": { "field": "id" },
+      "fields": {
+        "id": { "kind": "integer", "optional": true, "readOnly": true },
+        "kind": { "kind": "enum", "values": ["folder", "comp", "footage", "solid"], "sample": false },
+        "name": { "kind": "string" },
+        "attrs": { "kind": "map" },
+        "data": { "kind": "map" },
+        "parent": { "kind": "ref", "of": "Item", "optional": true },
+        "comp": { "kind": "ref", "of": "Comp", "optional": true, "owns": true }
+      }
+    },
+    "Comp": {
+      "batchOps": { "list.move.layers": { "command": "model.layerMove", "params": { "target": "target", "from": "from", "to": "to" } }, "map.set.attrs": { "command": "model.compAttrs", "params": { "target": "target", "key": "key" } } },
+      "fields": {
+        "attrs": { "kind": "map" },
+        "layers": { "kind": "list", "of": "Layer" }
+      }
+    },
+    "Layer": {
+      "batchOps": { "set.name": { "direct": true }, "map.set.attrs": { "command": "model.layerAttrs", "params": { "target": "target", "key": "key" } } },
+      "derived": {
+        "nodeOrder": { "premiseOnly": true, "description": "Exact compact property-child identities by owning property UID." },
+        "keyOrder": { "premiseOnly": true, "description": "Compact exact key identities by property UID, for structural recipient coverage." },
+        "effectNodes": { "premiseOnly": true, "description": "Each effect's uid, match name, display name and subtree digest, for content premises that name one effect." },
+        "markerList": { "premiseOnly": true, "description": "The layer's markers, for content premises that name one marker by index or stored time." },
+        "dependents": { "premiseOnly": true, "description": "Sorted IDs of the layers in the same composition whose parent or track matte is this layer." },
+        "container": { "premiseOnly": true, "description": "The composition containing this layer, independent of its stack position." },
+        "effectOrder": { "premiseOnly": true, "description": "Retained effect recipient identities in ordinal order." },
+        "keyTimes": { "premiseOnly": true, "description": "Property locators, ordered stored key times and roving membership by property UID, for checking a nearest-key address against its observed inputs." },
+        "resizeInputs": { "premiseOnly": true, "description": "Unparented eligibility and transform position identities, stored values and keyed values used by composition resize; excludes curve interpolation and unrelated layer fields." },
+        "styleLayout": { "premiseOnly": true, "description": "Style eligibility, insertion neighbors and existing style group identities; excludes Transform and other styles' values." }
+      },
+      "toolId": { "field": "id" },
+      "fields": {
+        "id": { "kind": "integer", "optional": true, "readOnly": true },
+        "name": { "kind": "string" },
+        "startTime": { "kind": "string", "position": true, "display": { "kind": "time", "perSecond": 254016000000 } },
+        "inPoint": { "kind": "string", "position": true, "display": { "kind": "time", "perSecond": 254016000000 } },
+        "outPoint": { "kind": "string", "position": true, "display": { "kind": "time", "perSecond": 254016000000 } },
+        "attrs": { "kind": "map" },
+        "sourceItem": { "kind": "ref", "of": "Item", "optional": true },
+        "parent": { "kind": "ref", "of": "Layer", "optional": true },
+        "matte": { "kind": "json", "optional": true },
+        "matteLayer": { "kind": "ref", "of": "Layer", "optional": true },
+        "props": { "kind": "ref", "of": "Node", "owns": true }
+      }
+    },
+    "Node": {
+      "batchOps": {
+        "create": { "command": "model.nodeCreate", "params": { "in": "in", "at": "at", "fields": "fields" } },
+        "list.remove.keys": { "command": "model.keyRemove", "params": { "target": "target", "index": "index" } },
+        "list.insert.keys": { "command": "model.keyInsert", "params": { "target": "target", "index": "index", "item": "item" } },
+        "list.move.keys": { "command": "model.keyMove", "params": { "target": "target", "from": "from", "to": "to" } }
+      },
+      "fields": {
+        "uid": { "kind": "integer", "sample": false },
+        "node": { "kind": "enum", "values": ["prop", "group"], "sample": false },
+        "meta": { "kind": "json", "sample": false },
+        "value": { "kind": "json", "optional": true },
+        "expr": { "kind": "json", "optional": true },
+        "enabled": { "kind": "boolean", "optional": true },
+        "children": { "kind": "list", "of": "Node" },
+        "keys": { "kind": "list", "of": "Key" }
+      },
+      "pathName": "meta.match"
+    },
+    "Key": {
+      "derived": { "rawRecord": { "premiseOnly": true, "onDemand": true, "description": "Stored key content consumed by inserting an existing key." }, "rawValue": { "premiseOnly": true, "onDemand": true, "description": "The assigned value of this retained key, independent of its index and time." } },
+      "batchOps": { "set.value": { "command": "model.keyValue", "params": { "target": "target" } }, "create": { "command": "model.keyCreate", "params": { "in": "in", "at": "at", "fields": "fields" } } },
+      "batchIndependent": true,
+      "fields": {
+        "time": { "kind": "string", "display": { "kind": "time", "perSecond": 254016000000 } },
+        "value": { "kind": "json" },
+        "data": { "kind": "json" }
+      }
+    },
+    "RenderItem": {
+      "toolId": { "field": "id", "prefix": "render:" },
+      "fields": {
+        "id": { "kind": "integer", "optional": true, "readOnly": true, "sample": false },
+        "item": { "kind": "json" },
+        "comp": { "kind": "ref", "of": "Item", "optional": true }
+      }
+    }
+  }
+}

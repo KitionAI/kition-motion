@@ -1,0 +1,13 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-switch
+feature: motion.agent.premises
+dimension: [ai, collab]
+layer: gate
+intent: A switch assignment holds only the field it assigns: a colleague's change of another switch or the comment of the same layer applies, a change of the assigned switch refuses.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: independent_r2_switch }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

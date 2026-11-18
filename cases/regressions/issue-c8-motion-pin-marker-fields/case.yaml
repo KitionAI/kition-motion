@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-marker-fields
+feature: motion.agent.premises
+intent: Bulk marker operations hold their lock and marker fields while accepting unrelated opacity.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_marker_fields
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

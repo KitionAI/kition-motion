@@ -1,0 +1,19 @@
+format: 1
+id: motion.keys.basics/save-reopen
+feature: motion.keys.basics
+intent: >-
+  Opacity and position keyframes, Easy Ease on the opacity keys, a static rotation and a scale expression save to .kmotion and reopen from those bytes describing the project exactly as before
+  (comp, markers, every layer's transform, text, effects and masks), and the reopened project
+  saves as the same project.
+layer: unit
+source:
+  kind: synthetic
+  from: bindings/wasm/tests/round_trip.rs
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: round_trip, filter: keyframes_eases_and_expressions_survive_save_and_reopen }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"

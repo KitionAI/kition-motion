@@ -1,0 +1,72 @@
+use super::Row;
+
+pub(super) const ROWS: &[Row] = &[
+    Row {
+        command: "light.spotlight",
+        path: "new spotlight above topmost named layers or top",
+        resolves: &[
+            "comp:id|name|active",
+            "target:layer id|numeric-index-fallback|#index|name",
+            "layers:array of layer refs; topmost determines insertion gap",
+        ],
+        reads: &[
+            "comp.width/height/pixel_aspect/duration/renderer/frame_rate",
+            "target.name and duplicate-name count decides expression name versus shifted index",
+            "target stack index",
+            "existing layer names for unique spotlight name",
+            "Solids folder by name",
+            "project.next_id",
+            "effect specs defaults",
+        ],
+        checks: &["has_comp", "target and explicit layers exist", "radius valid", "numeric options finite/nonnegative", "effect specs available"],
+        writes: &[
+            "new Solid source item and optionally Solids folder",
+            "comp.layers insert spotlight with opacity keys, circle and blur effects and target expression",
+            "project.next_id",
+        ],
+        state: &["part", "time when start absent", "writes selected_layers/props/keys"],
+        source: "commands/promo_light.rs:34-188; project/build.rs:737-850; commands/layer.rs:69-88; promo_ease.rs:337-363,388-395",
+    },
+    Row {
+        command: "light.sheen",
+        path: "append progress and two sweep effects",
+        resolves: &["comp", "layer:id|numeric-index-fallback|#index|name|selected"],
+        reads: &[
+            "layer.source",
+            "source dimensions or comp.width/height",
+            "layer.start_time/stretch",
+            "comp.frame_rate",
+            "effects children names for unique names",
+            "effect spec defaults",
+            "project.next_id",
+        ],
+        checks: &["has_comp", "effects group exists", "numeric options nonnegative/finite", "effect specs available"],
+        writes: &["effects.children append keyed progress slider and two sweep effects", "project.next_id"],
+        state: &["part", "selection if layer absent", "time if start absent"],
+        source: "commands/promo_light.rs:192-258; render/eval.rs:317-340; promo_ease.rs:337-363,388-395",
+    },
+    Row {
+        command: "layer.liftShadow",
+        path: "static elevation, explicit keys, or to/frames",
+        resolves: &["comp", "layer:id|numeric-index-fallback|#index|name|selected", "keys:comp times converted to layer times"],
+        reads: &[
+            "layer.source",
+            "source dimensions or comp.width/height",
+            "layer.start_time/stretch for keys",
+            "comp.frame_rate for to/frames branch",
+            "effects child names for unique names",
+            "effect spec defaults",
+            "project.next_id",
+        ],
+        checks: &[
+            "has_comp",
+            "effects group exists",
+            "numeric options finite/nonnegative",
+            "keys contain finite time/nonnegative elevation",
+            "effect specs available",
+        ],
+        writes: &["effects.children append elevation slider and two shadow effects", "project.next_id"],
+        state: &["part", "selection if layer absent", "time if start absent (even static branch reads start)"],
+        source: "commands/promo_light.rs:262-325; render/eval.rs:317-340; promo_ease.rs:337-363,388-395",
+    },
+];

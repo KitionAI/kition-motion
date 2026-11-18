@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-effect-source-inputs
+feature: motion.agent.premises
+intent: Effects with point defaults hold the source size (the frame only for a zero-wide source), a camera tool without a layer holds the stack above the active camera, and bringing one layer to the front or back ignores layers added since.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_effect_source_inputs
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

@@ -1,0 +1,21 @@
+format: 1
+id: regressions/issue-c8-motion-read-timestamp-utf8
+feature: motion.layer.create
+intent: >-
+  Align Video to Data rejects malformed Unicode timestamps without panicking, including a day
+  whose second character crosses the fixed ISO date byte boundary.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-read independent handler reading
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-engine
+      filter: malformed_unicode_timestamp_is_an_error_not_a_panic
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

@@ -1,0 +1,16 @@
+format: 1
+id: regressions/issue-c8-motion-read-r2-prop-set-snap
+feature: motion.agent.premises
+dimension: [function, data-safety]
+layer: gate
+intent: >-
+  prop.set premise time equals its actual frame-snapped explicit destination and holds the
+  composition frame rate. Separate waiting_for_sdk assertions remain intentional failures.
+since: "2026-11-17"
+source: { kind: synthetic, from: C8-motion-read, license: owned }
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: independent_r2_key_time }
+  - cargo-test: { package: kition-motion, test: independent_r2_key_time, filter: explicit_ }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

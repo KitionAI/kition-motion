@@ -1,0 +1,19 @@
+format: 1
+id: regressions/issue-c8-motion-pin-project-replacement
+feature: motion.agent.premises
+intent: Project replacement refuses an intervening unread settings change and saves an accepted fresh replacement to the host file.
+layer: gate
+source:
+  kind: synthetic
+  from: C8-motion-pin
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion
+      test: sdk_project_replacement
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-17"

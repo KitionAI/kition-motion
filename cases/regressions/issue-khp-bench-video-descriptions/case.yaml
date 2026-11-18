@@ -1,0 +1,21 @@
+format: 1
+id: regressions/issue-khp-bench-video-descriptions
+feature: motion.agent.act
+intent: >-
+  Every command's description says what that command does. Names that collide in the generator
+  gave 39 commands another command's text (`effect.apply` read "Premultiplied 8-bit RGBA pixels in
+  place.", `time.set` described a bindable's keys, `templates.delete` text deletion) and `prop.set`'s
+  only repeated its own name; agents choosing commands by description in khp-bench's video runs
+  were misled. No two commands share a description unless they run one handler.
+layer: unit
+source:
+  kind: probe
+  from: kit-matrix W1 audit of the command descriptions, khp-bench video plan P0
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion-kit, test: commands_described }
+expected:
+  - actual: out:exit
+    compare: exit
+since: "2026-11-17"
