@@ -62,7 +62,7 @@ something you have since changed is refused instead of written over your work.
 
 <table>
 <tr>
-<td width="25%"><a href="https://github.com/KitionAI/kition-showcase/tree/main/motion/mountain-tea-chinese-title"><img src="assets/readme/made-1.png" alt="A Chinese event title over layered ink mountains and a pale rising sun." /></a></td>
+<td width="25%"><a href="https://github.com/KitionAI/kition-showcase/tree/main/motion/ringed-planet-3d-title"><img src="assets/readme/made-1.png" alt="A documentary title, Outer Worlds, beside a lit 3D planet with a tilted ring on a starry night sky." /></a></td>
 <td width="25%"><a href="https://github.com/KitionAI/kition-showcase/tree/main/motion/neon-sign-flicker"><img src="assets/readme/made-2.png" alt="A pink neon sign for the Night Owl café glowing in a dark frame." /></a></td>
 <td width="25%"><a href="https://github.com/KitionAI/kition-showcase/tree/main/motion/solar-output-bar-chart"><img src="assets/readme/made-3.png" alt="An animated bar chart of solar output in 2026, four quarterly bars with their values." /></a></td>
 <td width="25%"><a href="https://github.com/KitionAI/kition-showcase/tree/main/motion/festival-ticket-card-flip"><img src="assets/readme/made-4.png" alt="A festival ticket for Summer Sounds turned at a slight angle in 3D." /></a></td>

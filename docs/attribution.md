@@ -33,7 +33,7 @@ iconography, images or other Adobe assets; open licenses only; every asset attri
 | `assets/readme/see-2.png` | The Kition authors | Screenshot of Kition Motion's editor, taken by `web/scripts/readme-shots.mjs` on the showcase sample lumen-studio-logo-reveal | Apache-2.0 |
 | `assets/readme/see-3.png` | The Kition authors | Screenshot of Kition Motion's editor, taken by `web/scripts/readme-shots.mjs` on the showcase sample lumen-studio-logo-reveal | Apache-2.0 |
 | `assets/readme/see-4.png` | The Kition authors | Screenshot of Kition Motion's editor, taken by `web/scripts/readme-shots.mjs` on the showcase sample lumen-studio-logo-reveal | Apache-2.0 |
-| `assets/readme/made-1.png` | The Kition authors | Rendered by Kition Motion from the showcase sample mountain-tea-chinese-title (its `thumb.png` in kition-showcase) | Apache-2.0 |
+| `assets/readme/made-1.png` | The Kition authors | Rendered by Kition Motion from the showcase sample ringed-planet-3d-title (its `thumb.png` in kition-showcase) | Apache-2.0 |
 | `assets/readme/made-2.png` | The Kition authors | Rendered by Kition Motion from the showcase sample neon-sign-flicker (its `thumb.png` in kition-showcase) | Apache-2.0 |
 | `assets/readme/made-3.png` | The Kition authors | Rendered by Kition Motion from the showcase sample solar-output-bar-chart (its `thumb.png` in kition-showcase) | Apache-2.0 |
 | `assets/readme/made-4.png` | The Kition authors | Rendered by Kition Motion from the showcase sample festival-ticket-card-flip (its `thumb.png` in kition-showcase) | Apache-2.0 |

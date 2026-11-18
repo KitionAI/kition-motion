@@ -108,7 +108,7 @@ node scripts/readme-shots.mjs see-2      # only the named ones
 Run it with no HTTP proxy set; `CHROME` may name a Chrome or Chromium executable to use instead of
 Playwright's. When `pngquant` is installed the script shrinks each picture with
 `pngquant --quality 70-90`; a README picture is at most 400 KB. `made-1.png` … `made-4.png` are
-copies of showcase samples' `thumb.png` (mountain-tea-chinese-title, neon-sign-flicker,
+copies of showcase samples' `thumb.png` (ringed-planet-3d-title, neon-sign-flicker,
 solar-output-bar-chart, festival-ticket-card-flip). Every picture has its `.attribution` sidecar
 and a row in [attribution.md](attribution.md) (`cargo xtask assets` checks both).
 
