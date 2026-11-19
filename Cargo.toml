@@ -75,7 +75,7 @@ harfrust = { version = "0.12", default-features = false, features = ["std"] }
 exr = "1.74"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
-# media codecs + containers: Kition Film's pure-Rust crates, pinned to a revision (plan/adr/0001).
+# media codecs + containers: Kition Film's pure-Rust crates, pinned to a revision.
 # Only `crates/media/media`, `crates/formats/export` and `crates/formats/interchange` may depend on these.
 kition-film-codecs = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
 kition-film-media = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }

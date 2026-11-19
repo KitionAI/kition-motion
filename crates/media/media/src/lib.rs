@@ -9,7 +9,7 @@
 //!
 //! Video containers (MP4/MOV, Matroska/WebM) and codecs (H.264, HEVC, VP9, AV1, ProRes, DNxHD,
 //! MJPEG; AAC, Opus, PCM, MP3/FLAC/Vorbis) come from Kition Film's pure-Rust crates (git dependency,
-//! pinned; `plan/adr/0001`). Kition Film types never leave this crate. Stills use the `image` crate
+//! pinned). Kition Film types never leave this crate. Stills use the `image` crate
 //! (PNG, JPEG, GIF, WebP, TIFF, BMP, OpenEXR); Photoshop documents (merged image or one layer) come
 //! from `kition-motion-psd` and SVG from `kition-motion-svg` (rasterised at any scale).
 

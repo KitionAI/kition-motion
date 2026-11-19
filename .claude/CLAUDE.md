@@ -20,7 +20,7 @@ Kition Motion is a clean-room, pure-Rust motion graphics and visual effects engi
 **Read [`AGENTS.md`](../AGENTS.md) first; its rules override everything here.** No Adobe assets, every asset licensed + attributed (`cargo xtask assets`).
 - **Never crash** (AGENTS.md "Never crash"; outranks feature work: a crash loses people's work). Non-test code has no `unwrap()`/`expect()`/`panic!`/`unreachable!`/`todo!`/`unimplemented!` and no `unsafe`: return `Result` and use `?`, `ok_or`, `let … else`. Input-derived indices, slices and arithmetic use `get()` and checked/saturating math; recursion is depth-limited; locks handle poisoning. The app's last-resort guard turns an escaped panic into an error and keeps the document. Every crash fix gets a regression test. See `docs/kits.md` in the Kition repository and kition-sdk's `docs/platform/`.
 - **Clean-room.** Behaviour and public docs only. No GPL/LGPL/AGPL code. ffmpeg only as an external test oracle.
-- **Pure Rust.** Media codecs come from Kition Film crates (git deps behind `crates/media/media`, see `plan/adr/0001`).
+- **Pure Rust.** Media codecs come from Kition Film crates (git deps behind `crates/media/media`).
 - **Layering** (`cargo xtask layers`): nothing below L5 depends on egui/eframe/winit/rfd/cpal; L0–L4 build for wasm32.
 - **Exact time:** `kition_motion_time::Tick` (254 016 000 000/s). Keyframe times are **layer time**.
 - **Property tree:** everything animatable is a `Property` in the layer's `PropGroup` tree, addressed by paths (`transform/position`, `effects/#1/blurriness`, `@uid`).
