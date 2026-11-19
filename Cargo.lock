@@ -1357,7 +1357,7 @@ dependencies = [
 [[package]]
 name = "kition-film-aac"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "thiserror 2.0.21",
@@ -1366,7 +1366,7 @@ dependencies = [
 [[package]]
 name = "kition-film-ac3"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "thiserror 2.0.21",
 ]
@@ -1374,7 +1374,7 @@ dependencies = [
 [[package]]
 name = "kition-film-apv"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "rayon",
@@ -1384,7 +1384,7 @@ dependencies = [
 [[package]]
 name = "kition-film-av1"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "rayon",
@@ -1394,17 +1394,17 @@ dependencies = [
 [[package]]
 name = "kition-film-bitstream"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 
 [[package]]
 name = "kition-film-cfb"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 
 [[package]]
 name = "kition-film-codecs"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "image",
  "kition-film-aac",
@@ -1437,7 +1437,7 @@ dependencies = [
 [[package]]
 name = "kition-film-color"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "serde",
 ]
@@ -1445,7 +1445,7 @@ dependencies = [
 [[package]]
 name = "kition-film-dnx"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "rayon",
@@ -1455,7 +1455,7 @@ dependencies = [
 [[package]]
 name = "kition-film-frame"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-color",
  "kition-film-time",
@@ -1466,7 +1466,7 @@ dependencies = [
 [[package]]
 name = "kition-film-geom"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "serde",
 ]
@@ -1474,7 +1474,7 @@ dependencies = [
 [[package]]
 name = "kition-film-h264"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "rayon",
@@ -1484,7 +1484,7 @@ dependencies = [
 [[package]]
 name = "kition-film-h264enc"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "rayon",
@@ -1494,7 +1494,7 @@ dependencies = [
 [[package]]
 name = "kition-film-hevc"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "rayon",
@@ -1504,7 +1504,7 @@ dependencies = [
 [[package]]
 name = "kition-film-interchange"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-cfb",
  "kition-film-color",
@@ -1521,7 +1521,7 @@ dependencies = [
 [[package]]
 name = "kition-film-isobmff"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "thiserror 2.0.21",
@@ -1530,12 +1530,12 @@ dependencies = [
 [[package]]
 name = "kition-film-matroska"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 
 [[package]]
 name = "kition-film-media"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "image",
  "kition-film-color",
@@ -1549,7 +1549,7 @@ dependencies = [
 [[package]]
 name = "kition-film-mpeg2v"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "rayon",
  "thiserror 2.0.21",
@@ -1558,7 +1558,7 @@ dependencies = [
 [[package]]
 name = "kition-film-mpegts"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "thiserror 2.0.21",
 ]
@@ -1566,22 +1566,22 @@ dependencies = [
 [[package]]
 name = "kition-film-mxf"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 
 [[package]]
 name = "kition-film-ogg"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 
 [[package]]
 name = "kition-film-opus"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 
 [[package]]
 name = "kition-film-project"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-color",
  "kition-film-geom",
@@ -1595,7 +1595,7 @@ dependencies = [
 [[package]]
 name = "kition-film-prores"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "rayon",
@@ -1605,7 +1605,7 @@ dependencies = [
 [[package]]
 name = "kition-film-time"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "serde",
 ]
@@ -1613,7 +1613,7 @@ dependencies = [
 [[package]]
 name = "kition-film-vp9"
 version = "0.5.0"
-source = "git+https://github.com/KitionAI/kition-film?rev=5952aeac1dd986be7d3861618cc402e058ab3786#5952aeac1dd986be7d3861618cc402e058ab3786"
+source = "git+https://github.com/KitionAI/kition-film?rev=569e002d8eeec2683754fe953bd3fb4574015e1e#569e002d8eeec2683754fe953bd3fb4574015e1e"
 dependencies = [
  "kition-film-bitstream",
  "rayon",

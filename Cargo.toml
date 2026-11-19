@@ -77,26 +77,26 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg"]
 
 # media codecs + containers: Kition Film's pure-Rust crates, pinned to a revision (plan/adr/0001).
 # Only `crates/media/media`, `crates/formats/export` and `crates/formats/interchange` may depend on these.
-kition-film-codecs = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-media = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-frame = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-color = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-time = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-codecs = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-media = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-frame = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-color = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-time = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
 # encoders + muxer (crates/formats/export)
-kition-film-h264enc = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-prores = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-aac = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-isobmff = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-h264enc = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-prores = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-aac = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-isobmff = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
 # decoder used as the round-trip oracle of kition-motion-opusenc (crates/formats/export dev-dependency)
-kition-film-opus = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-vp9 = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-opus = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-vp9 = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
 # decoders used as the round-trip oracles of kition-motion-hevcenc / kition-motion-av1enc (dev-dependencies only)
-kition-film-hevc = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-av1 = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-hevc = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-av1 = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
 # timeline interchange (EDL, FCP7 XML, FCPXML, OTIO) for Premiere Pro interop (crates/formats/interchange only)
-kition-film-interchange = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-project = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
-kition-film-geom = { git = "https://github.com/KitionAI/kition-film", rev = "5952aeac1dd986be7d3861618cc402e058ab3786" }
+kition-film-interchange = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-project = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
+kition-film-geom = { git = "https://github.com/KitionAI/kition-film", rev = "569e002d8eeec2683754fe953bd3fb4574015e1e" }
 
 # Local co-development against a Kition Film checkout next to this repo: uncomment.
 # [patch."https://github.com/KitionAI/kition-film"]
