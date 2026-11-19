@@ -3,6 +3,15 @@
 Changes to Kition Motion, newest first. A version is the kit package version in `kit.json`;
 each package is published with a `package-v<version>` tag.
 
+## 0.1.1
+
+- The media, export and interchange crates are built on Kition Film's public `main`: its
+  pure-Rust codecs, containers and project model are pinned to a revision on that branch.
+  In the Kition Film project model, a keyframe whose value cannot interpolate (text, a choice,
+  a checkbox) now defaults to Hold instead of Linear; Motion's import and export keep each
+  keyframe's own interpolation.
+- The KHP link points to `github.com/kitharness/kitharness`.
+
 ## 0.1.0
 
 First public release of the source, under the Apache License 2.0. It contains:
