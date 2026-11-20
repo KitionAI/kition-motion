@@ -3,6 +3,14 @@
 Changes to Kition Motion, newest first. A version is the kit package version in `kit.json`;
 each package is published with a `package-v<version>` tag.
 
+## 0.1.2
+
+- `kit.json` declares the engine's editor state as `engine.editorState`, the same list as the
+  engine's `EDITOR_STATE`, so a host that does not run the engine reads `inspect()` without it.
+- The editor announces itself to the host with the kit's version (it still said 0.1.0), and
+  `web/package.json` carries the same version.
+- The README connects an agent with `npm install -g @kition/cli` and `kition agent add`.
+
 ## 0.1.1
 
 - The media, export and interchange crates are built on Kition Film's public `main`: its
