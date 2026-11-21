@@ -141,15 +141,31 @@ async fn a_write_inside_a_precomp_holds_local_state_not_its_consumer() {
 #[tokio::test(flavor = "multi_thread")]
 async fn model_moves_and_creates_have_valid_saved_forms() {
     let f = Fixture::new(3);
-    let (_, comp, _) = f.inspect().await;
+    let (info, comp, _) = f.inspect().await;
+    let start = layer_ids(&info);
     let loaded = f.ok("query", json!({"objects":[comp]})).await;
     let held = loaded["objects"][0]["fields"]["comp"].clone();
     let by_path = f.call("batch", json!({"ops":[{"op":"list.move","target":format!("{comp}.comp"),"field":"layers","from":0,"to":2}]})).await;
     // SDK 34dff06 resolves a list parent by its raw reference, not this held spelling.
     assert_eq!(by_path.unwrap_err()["error"]["code"], "not-found");
-    f.ok("batch", json!({"ops":[{"op":"list.move","target":held,"field":"layers","from":0,"to":2}]})).await;
-    let replay = f.call("batch", json!({"ops":[{"op":"list.move","target":comp,"field":"comp.layers","from":1,"to":0}]})).await;
-    assert_eq!(replay.unwrap_err()["error"]["code"], "invalid-value", "kit-env replays a receipt with the held field as a direct field");
+    let first = f.ok("batch", json!({"ops":[{"op":"list.move","target":held,"field":"layers","from":0,"to":2}]})).await;
+    // `to` is a gap counted before the item leaves: the top layer goes between the other two.
+    let arranged = vec![start[1], start[0], start[2]];
+    assert_eq!(layer_ids(&f.inspect().await.0), arranged, "{first}");
+    // The move's receipt names the list by its place on the comp's item, the saved form kit-env replays.
+    assert_eq!(first["changes"]["moved"].as_array().map(Vec::len), Some(1), "{first}");
+    let place = &first["changes"]["moved"][0]["to"];
+    assert_eq!((&place["parent"], &place["field"]), (&json!(comp), &json!("comp.layers")), "{first}");
+    // Replayed as a raw batch target and field, that place applies (SDK dcf5ca7: a number target, a nested holder path).
+    let replay = f.ok("batch", json!({"ops":[{"op":"list.move","target":place["parent"],"field":place["field"],"from":1,"to":0}]})).await;
+    let from = json!({"parent": comp, "field": "comp.layers", "index": 1});
+    let to = json!({"parent": comp, "field": "comp.layers", "index": 0});
+    assert_eq!(replay["changes"]["moved"], json!([{"id": arranged[1], "type": "Layer", "from": from, "to": to}]), "{replay}");
+    assert_eq!(replay["changes"]["created"], json!([]), "{replay}");
+    assert_eq!(replay["changes"]["deleted"], json!([]), "{replay}");
+    // Moving the middle layer back to the top restores the original order, in memory and in the saved file.
+    assert_eq!(layer_ids(&f.inspect().await.0), start, "{replay}");
+    assert_eq!(layers_on_disk(&f.file()), start, "the replayed move is saved: {replay}");
     f.ok("batch", json!({"ops":[{"op":"create","type":"Item","in":"root.items","at":0,"fields":{"kind":"folder","name":"New folder"}}]})).await;
     f.shutdown().await;
 }
