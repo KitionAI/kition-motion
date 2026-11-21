@@ -3,7 +3,7 @@
 // Effects wait for a selection: the Single line row starts with five enabled buttons (`min: 5`).
 import { chromium, webkit } from 'playwright'
 import { createServer } from 'vite'
-import { runModeSmoke } from '@kition/kit-dev-host/mode-smoke'
+import { runModeSmoke } from '@kition/sdk/dev-host/mode-smoke'
 
 await runModeSmoke({
   kit: 'kit.motion',

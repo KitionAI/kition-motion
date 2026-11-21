@@ -1,5 +1,5 @@
-import { DiamondIcon as Diamond, LayersIcon as Layers, PauseIcon as Pause, PlusIcon as Plus, ScissorsIcon as Scissors, Settings2Icon as Settings2, SparklesIcon as Sparkles, SplineIcon as Spline, SquareIcon as Square, SquareDashedIcon as SquareDashed, SquarePlusIcon as SquarePlus, TypeIcon as Type } from '@kition/tessera-icons/react'
-import { CommandButton, CommandItem, MenuItem, MenuSeparator, RibbonGroup, RibbonMenu, RibbonStack, useKitEditor, useReadOnly } from '@kition/kit-editor'
+import { DiamondIcon as Diamond, LayersIcon as Layers, PauseIcon as Pause, PlusIcon as Plus, ScissorsIcon as Scissors, Settings2Icon as Settings2, SparklesIcon as Sparkles, SplineIcon as Spline, SquareIcon as Square, SquareDashedIcon as SquareDashed, SquarePlusIcon as SquarePlus, TypeIcon as Type } from '@kition/tessera/icons/react'
+import { CommandButton, CommandItem, MenuItem, MenuSeparator, RibbonGroup, RibbonMenu, RibbonStack, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import { NEW_LAYERS } from './Transport'
 
 /** The layers Home's New Layer menu makes: the transport's, then a camera and a light. */

@@ -1,5 +1,5 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react'
-import { useKitEditor } from '@kition/kit-editor'
+import { useKitEditor } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
 
 /** Where a pointer is along the time area, in seconds within the composition. */

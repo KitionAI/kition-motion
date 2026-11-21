@@ -1,10 +1,10 @@
 /**
- * Tessera icons for the Motion engine's commands that kit-editor's rules cannot read (they draw
+ * Tessera icons for the Motion engine's commands that the SDK editor's rules cannot read (they draw
  * the neutral command mark otherwise): its own vocabulary, by command id. Registered once, when the
  * editor loads (`main.tsx`); ribbons and menus built from engine commands draw them.
  */
-import { registerCommandIcons } from '@kition/kit-editor'
-import { ActivityIcon, BrushIcon, CameraIcon, CircleAlertIcon, ClapperboardIcon, ClipboardListIcon, ClockIcon, CpuIcon, DatabaseIcon, DownloadIcon, FileCodeIcon, GraduationCapIcon, HexagonIcon, HourglassIcon, InfoIcon, KeyboardIcon, LayoutTemplateIcon, LightbulbIcon, MessageSquareIcon, MousePointerClickIcon, ScanFaceIcon, SearchIcon, ShapesIcon, SlidersHorizontalIcon, SnowflakeIcon, SplineIcon, SunIcon, TagIcon, TerminalIcon, WaypointsIcon } from '@kition/tessera-icons/react'
+import { registerCommandIcons } from '@kition/sdk/editor'
+import { ActivityIcon, BrushIcon, CameraIcon, CircleAlertIcon, ClapperboardIcon, ClipboardListIcon, ClockIcon, CpuIcon, DatabaseIcon, DownloadIcon, FileCodeIcon, GraduationCapIcon, HexagonIcon, HourglassIcon, InfoIcon, KeyboardIcon, LayoutTemplateIcon, LightbulbIcon, MessageSquareIcon, MousePointerClickIcon, ScanFaceIcon, SearchIcon, ShapesIcon, SlidersHorizontalIcon, SnowflakeIcon, SplineIcon, SunIcon, TagIcon, TerminalIcon, WaypointsIcon } from '@kition/tessera/icons/react'
 
 registerCommandIcons({
   "app.capabilities": InfoIcon,

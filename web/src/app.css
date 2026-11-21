@@ -1,4 +1,4 @@
-/* The Motion editor's own layout; colors and shapes come from @kition/kit-editor's tokens. */
+/* The Motion editor's own layout; colors and shapes come from @kition/sdk/editor's tokens. */
 
 .motion-main {
   display: flex;

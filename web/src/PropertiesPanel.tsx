@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { DiamondIcon as Diamond } from '@kition/tessera-icons/react'
-import { PanelSection, useKitEditor, useReadOnly } from '@kition/kit-editor'
+import { DiamondIcon as Diamond } from '@kition/tessera/icons/react'
+import { PanelSection, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import type { MotionInfo, MotionProperty } from './motion'
 
 const round = (value: number) => Math.round(value * 100) / 100

@@ -30,9 +30,9 @@
 This repository is Kition's `kit.motion` kit. These rules come first; the rules below still apply
 to the engine.
 
-- The kit draws **its own editor**: `web/` is a React app on `@kition/kit-editor` (kition-sdk's
+- The kit draws **its own editor**: `web/` is a React app on `@kition/sdk/editor` (kition-sdk's
   shared kit UI library) with the menu bar, the composition viewer, the transport, the layer timeline, and the Transform properties; a host (Kition, or `web/dev.html` for development) shows it
-  in an iframe and talks to it over the Kit UI protocol (`kition-kit-ui/1`, kition-sdk `docs/platform/reference/ui-protocol.md`). Style it only with the host's theme tokens and kit-editor components;
+  in an iframe and talks to it over the Kit UI protocol (`kition-kit-ui/1`, kition-sdk `docs/platform/reference/ui-protocol.md`). Style it only with the host's theme tokens and the SDK editor's components;
   ribbon labels and command titles are translated by `PHRASES` in `web/src/strings.ts` (the
   editor's own `en-US` and `zh-CN` strings). Files go only through the host.
 - `bindings/wasm` compiles the engine to WebAssembly on the public `KitionAI/kition-sdk`

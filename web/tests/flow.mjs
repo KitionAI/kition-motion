@@ -72,9 +72,9 @@ try {
   // Focus shows the composition alone: the transport and the timeline are the kit's own bars.
   const app = kit.locator('.kui-app')
   await app.focus()
-  // The editor takes Cmd or Ctrl from navigator.platform (kit-editor's isMac), while Playwright's
-  // ControlOrMeta follows the operating system running the test, and the two can disagree (WebKit
-  // on Linux). The shortcut presses the modifier the editor reads.
+  // The editor takes Cmd or Ctrl from navigator.platform (@kition/sdk/editor's isMac), while
+  // Playwright's ControlOrMeta follows the operating system running the test, and the two can
+  // disagree (WebKit on Linux). The shortcut presses the modifier the editor reads.
   const primaryKey = (await page.evaluate(() => /Mac|iPhone|iPad/i.test(navigator.platform))) ? 'Meta' : 'Control'
   await page.keyboard.press(`${primaryKey}+Backslash`)
   await until(async () => (await app.getAttribute('data-mode')) === 'focus')

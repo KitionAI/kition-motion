@@ -1,4 +1,4 @@
-import type { KitEngineInfo } from '@kition/kit-editor'
+import type { KitEngineInfo } from '@kition/sdk/editor'
 
 /** One animated property of a layer and its key times, in composition seconds. */
 type Animated = { path: string; name: string; times: number[] }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { DownloadIcon as Download, LoaderCircleIcon as Loader2 } from '@kition/tessera-icons/react'
+import { DownloadIcon as Download, LoaderCircleIcon as Loader2 } from '@kition/tessera/icons/react'
 import {
   Button,
   EditorFrame,
@@ -18,7 +18,7 @@ import {
   type KitEngine,
   type Phrases,
   type RasterView,
-} from '@kition/kit-editor'
+} from '@kition/sdk/editor'
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { MOTION_PRIMARY, MENU_ORDER, describe } from './motion'

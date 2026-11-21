@@ -1,5 +1,5 @@
-import { PauseIcon as Pause, PlayIcon as Play, PlusIcon as Plus, SkipBackIcon as SkipBack, SkipForwardIcon as SkipForward, StepBackIcon as StepBack, StepForwardIcon as StepForward } from '@kition/tessera-icons/react'
-import { Button, IconButton, MenuButton, MenuItem, useKitEditor, useReadOnly } from '@kition/kit-editor'
+import { PauseIcon as Pause, PlayIcon as Play, PlusIcon as Plus, SkipBackIcon as SkipBack, SkipForwardIcon as SkipForward, StepBackIcon as StepBack, StepForwardIcon as StepForward } from '@kition/tessera/icons/react'
+import { Button, IconButton, MenuButton, MenuItem, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import { timecode, type MotionInfo } from './motion'
 
 /** The layers the add menu makes, as engine commands. */

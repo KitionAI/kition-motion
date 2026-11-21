@@ -6,7 +6,7 @@
 |---|---|
 | `crates/` | The engine (Rust), in groups: `engine/` (the project model, keyframes, paths, effects, expressions, scripting, plug-ins, 3D models, tracking, segmentation, the session builder `host` and the command layer `engine`), `formats/` (export, interchange, Lottie, PDF, PSD, SVG), `media/` (time base, media sources and the encoders), `render/` (raster and the compositor), `support/` (`color`, `geom`, `text`) and `kdm/` (`kdm-model`). The bundled script panel is in `crates/engine/engine/extensions/`, next to the sample scripts in `crates/engine/engine/scripts/` |
 | `bindings/` | `wasm`: `kition-motion-kit`, the engine behind Kition's `KitDocument` contract, compiled to WebAssembly for the editor; `headless`: `kition-motion`, the headless kit executable for Kition's agent |
-| `web/` | The kit's editor (React, on kition-sdk's `@kition/kit-editor`); `web/dev.html` is a host for development |
+| `web/` | The kit's editor (React, on kition-sdk's `@kition/sdk/editor`); `web/dev.html` is a host for development |
 | `kit.json` | The kit manifest (KHP) |
 | `agent/` | The agent guide (`guide.md`) and checks |
 | `conformance/` | The agent conformance fixtures (`.kmotion` projects) that cases and tests refer to |
@@ -57,12 +57,13 @@ and [writing-format.md](writing-format.md) lists every command.
 
 ### The editor's dependencies
 
-By default the editor's dependencies come from npm: `pnpm install` in `web/` installs the published
-`@kition/*` packages at the versions the committed `web/pnpm-lock.yaml` pins, so no other checkout
-is needed. To develop against local checkouts instead, run `KITION_LINK=1 pnpm install` in `web/`:
-`web/.pnpmfile.cjs` then links the packages `web/package.json` depends on from a kition-sdk checkout
-(`@kition/kit-editor`, `@kition/kit-host`, `@kition/kit-ui-protocol`, `@kition/kit-dev-host`) and a
-kition-tessera checkout (`@kition/tessera-icons`), by default `../kition-sdk` and `../kition-tessera`
+By default the editor's dependencies come from npm: `pnpm install` in `web/` installs kition-sdk's
+`@kition/sdk` and Kition Tessera's `@kition/tessera` at the versions the committed
+`web/pnpm-lock.yaml` pins, so no other checkout is needed. To develop against local checkouts
+instead, build the two packages (`pnpm build` in kition-sdk's `packages/sdk` and kition-tessera's
+`packages/tessera`: their exports are the built `dist/`), then run `KITION_LINK=1 pnpm install` in
+`web/`: `web/.pnpmfile.cjs` then links `@kition/sdk` from a kition-sdk checkout and
+`@kition/tessera` from a kition-tessera checkout, by default `../kition-sdk` and `../kition-tessera`
 beside this repository (`KITION_SDK` and `KITION_TESSERA` name others). A package whose folder is
 not there stays on npm. The linked install rewrites `web/pnpm-lock.yaml`; a lockfile changed that
 way must not be committed.
