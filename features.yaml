@@ -1,6 +1,6 @@
 format: 1
 kit: motion
-updated: "2026-11-17"
+updated: "2026-11-20"
 gate_budget_s: 600
 protected: []
 features:
@@ -108,6 +108,14 @@ features:
     paths: [kit.json, bindings/wasm/src/text.rs, bindings/wasm/src/lib.rs]
     cases: [motion.platform.document-text/text-layers]
     since: "2026-11-17"
+  - id: motion.platform.document-identity
+    title: "A host asks the document id a .kmotion carries and forks a copied project (document.identity, document.fork; Kit Process Protocol 5.6): a .kmotion embeds no replica, so it carries none and forks into the same bytes"
+    dimension: [platform, data-safety]
+    priority: P1
+    status: has
+    paths: [bindings/headless/src/main.rs, kit.json]
+    cases: [motion.platform.document-identity/no-replica]
+    since: "2026-11-20"
   - id: motion.effects.list
     title: List the effects and their parameters with defaults in the units prop.set takes
     dimension: [function, ai]

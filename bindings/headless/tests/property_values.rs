@@ -24,7 +24,8 @@ fn the_agent_keys_and_sets_numbers_and_vectors() {
     doc.execute("layer.newSolid", json!({ "name": "Band", "color": "#ff0000" })).unwrap();
     std::fs::write(&file, doc.save(None).unwrap()).unwrap();
 
-    let mut kit = Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], &[]).unwrap());
+    let mut kit =
+        Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], kition_motion_kit::EDITOR_STATE).unwrap());
     let folder = HostFolder::new(&root).unwrap();
     kit.set_host(folder.host());
     let id = kit.open(OpenRequest { file: &folder.file("title.kmotion").unwrap(), read_only: false, create: None }).unwrap().id;
@@ -59,7 +60,8 @@ fn an_animated_path_keys_the_same_property_again() {
     doc.execute("layer.newSolid", json!({ "name": "Band", "color": "#ff0000" })).unwrap();
     std::fs::write(&file, doc.save(None).unwrap()).unwrap();
 
-    let mut kit = Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], &[]).unwrap());
+    let mut kit =
+        Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], kition_motion_kit::EDITOR_STATE).unwrap());
     let folder = HostFolder::new(&root).unwrap();
     kit.set_host(folder.host());
     let id = kit.open(OpenRequest { file: &folder.file("title.kmotion").unwrap(), read_only: false, create: None }).unwrap().id;
@@ -111,7 +113,8 @@ fn the_agent_sets_checkboxes_and_one_number_speeds() {
     doc.execute("layer.newSolid", json!({ "name": "Band", "color": "#ff0000" })).unwrap();
     std::fs::write(&file, doc.save(None).unwrap()).unwrap();
 
-    let mut kit = Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], &[]).unwrap());
+    let mut kit =
+        Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], kition_motion_kit::EDITOR_STATE).unwrap());
     let folder = HostFolder::new(&root).unwrap();
     kit.set_host(folder.host());
     let id = kit.open(OpenRequest { file: &folder.file("title.kmotion").unwrap(), read_only: false, create: None }).unwrap().id;

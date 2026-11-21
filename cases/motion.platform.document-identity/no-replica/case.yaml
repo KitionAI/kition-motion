@@ -1,0 +1,23 @@
+format: 1
+id: motion.platform.document-identity/no-replica
+feature: motion.platform.document-identity
+intent: >-
+  Through the real kition-motion process, which lists the feature document.identity: a .kmotion is the
+  project as JSON and embeds no replica (the kit makes one under a new id on every open), so a
+  saved project, its byte copy and an empty .kmotion carry no identity (docId null); document.fork
+  writes the same bytes with no docId to a new file, which opens as the project, leaves the source
+  unchanged, and never replaces an existing file (file_conflict).
+layer: gate
+source:
+  kind: synthetic
+  from: bindings/headless/tests/identity.rs (a_motion_project_carries_no_identity_and_forks_into_the_same_bytes)
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: identity, filter: a_motion_project_carries_no_identity_and_forks_into_the_same_bytes }
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+tags: [headless]
+since: "2026-11-20"

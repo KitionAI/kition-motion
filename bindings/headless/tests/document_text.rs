@@ -130,7 +130,7 @@ fn the_headless_kit_lists_the_capability_and_answers_document_text() {
     let root = std::fs::canonicalize(root).unwrap();
     let file = root.join("Title.kmotion");
     std::fs::write(&file, titled().save(None).unwrap()).unwrap();
-    let info = KitInfo::from_manifest(include_str!("../../../kit.json"), &["file.import"], &["selected", "transform"]).unwrap();
+    let info = KitInfo::from_manifest(include_str!("../../../kit.json"), &["file.import"], kition_motion_kit::EDITOR_STATE).unwrap();
     let mut kit = Headless::<MotionDocument>::with_replica_port(info);
     assert_eq!(kit.capabilities()["capabilities"], json!([kition_kit::text::CAPABILITY]));
     let folder = HostFolder::new(&root).unwrap();

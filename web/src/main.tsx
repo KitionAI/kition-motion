@@ -17,7 +17,7 @@ const alone = window.setTimeout(() => {
 
 // `replica`: in a host that keeps replicas, a `.kmotion` keeps its KDM replica (identity,
 // collaboration) across saves; elsewhere the editor opens and saves files as before.
-void connectHost({ id: 'kit.motion', version: '0.1.2', capabilities: ['ai', 'replica'], brand: manifest.ui.brand, display: manifest.ui.display }).then(async (host) => {
+void connectHost({ id: 'kit.motion', version: '0.1.3', capabilities: ['ai', 'replica'], brand: manifest.ui.brand, display: manifest.ui.display }).then(async (host) => {
   window.clearTimeout(alone)
   // Kition Motion ships no catalogs of its own; this editor's phrases translate its menus.
   const phrase = withPhrases(await loadPhrases({}, host.init.locale), PHRASES, host.init.locale)

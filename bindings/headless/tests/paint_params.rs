@@ -25,7 +25,8 @@ fn the_agent_paints_shapes_and_text_in_every_form_the_engine_reads() {
     let doc = MotionDocument::create("countdown.kmotion", 64, 36).unwrap();
     std::fs::write(&file, doc.save(None).unwrap()).unwrap();
 
-    let mut kit = Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], &[]).unwrap());
+    let mut kit =
+        Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], kition_motion_kit::EDITOR_STATE).unwrap());
     let folder = HostFolder::new(&root).unwrap();
     kit.set_host(folder.host());
     let id = kit.open(OpenRequest { file: &folder.file("countdown.kmotion").unwrap(), read_only: false, create: None }).unwrap().id;

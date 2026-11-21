@@ -58,7 +58,9 @@ fn act(root: &Path) {
     doc.execute("layer.newSolid", json!({ "name": "Red", "color": "#ff0000" })).unwrap();
     std::fs::write(workspace.join(NAME), doc.save(None).unwrap()).unwrap();
 
-    let mut kit = Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &["file.import"], &[]).unwrap());
+    let mut kit = Headless::<MotionDocument>::with_replica_port(
+        KitInfo::from_manifest(include_str!("../../../kit.json"), &["file.import"], kition_motion_kit::EDITOR_STATE).unwrap(),
+    );
     let folder = HostFolder::new(workspace).unwrap();
     kit.set_host(folder.host());
     let id = kit.open(OpenRequest { file: &folder.file(NAME).unwrap(), read_only: false, create: None }).unwrap().id;

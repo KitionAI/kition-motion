@@ -22,7 +22,7 @@ fn a_value_of_the_wrong_type_is_refused_and_changes_nothing() {
     let root = std::fs::canonicalize(root).unwrap();
     let file = root.join("Title.kmotion");
     std::fs::write(&file, MotionDocument::create("Title.kmotion", 320, 180).unwrap().save(None).unwrap()).unwrap();
-    let info = KitInfo::from_manifest(include_str!("../../../kit.json"), &["file.import"], &["selected", "transform"]).unwrap();
+    let info = KitInfo::from_manifest(include_str!("../../../kit.json"), &["file.import"], kition_motion_kit::EDITOR_STATE).unwrap();
     let mut kit = Headless::<MotionDocument>::with_replica_port(info);
     let folder = HostFolder::new(&root).unwrap();
     kit.set_host(folder.host());

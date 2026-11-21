@@ -37,7 +37,8 @@ fn the_agent_exports_the_active_composition_as_an_mp4() {
     std::fs::write(&file, doc.save(None).unwrap()).unwrap();
 
     // As main.rs serves it (run_manifest_model): the agent's calls go through the replica port as the agent.
-    let mut kit = Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], &[]).unwrap());
+    let mut kit =
+        Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], kition_motion_kit::EDITOR_STATE).unwrap());
     let folder = HostFolder::new(&root).unwrap();
     kit.set_host(folder.host());
     let id = kit.open(OpenRequest { file: &folder.file("title.kmotion").unwrap(), read_only: false, create: None }).unwrap().id;
@@ -64,7 +65,7 @@ fn the_host_exports_the_active_composition_as_a_new_mp4() {
     doc.execute("layer.newSolid", json!({ "name": "Red", "color": "#ff0000" })).unwrap();
     std::fs::write(&file, doc.save(None).unwrap()).unwrap();
 
-    let mut kit = Headless::<MotionDocument>::new(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], &[]).unwrap());
+    let mut kit = Headless::<MotionDocument>::new(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], kition_motion_kit::EDITOR_STATE).unwrap());
     assert_eq!(kit.capabilities()["formats"]["export"], json!(["mp4"]), "the host is told the kit exports MP4");
     let folder = HostFolder::new(&root).unwrap();
     kit.set_host(folder.host());
@@ -95,7 +96,8 @@ fn every_export_entry_runs_the_agent_export_command() {
     let mut doc = MotionDocument::create("title.kmotion", 64, 36).unwrap();
     doc.execute("comp.settings", json!({ "duration": 0.2 })).unwrap();
     std::fs::write(root.join("title.kmotion"), doc.save(None).unwrap()).unwrap();
-    let mut kit = Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], &[]).unwrap());
+    let mut kit =
+        Headless::<MotionDocument>::with_replica_port(KitInfo::from_manifest(include_str!("../../../kit.json"), &[], kition_motion_kit::EDITOR_STATE).unwrap());
     let folder = HostFolder::new(&root).unwrap();
     kit.set_host(folder.host());
     let id = kit.open(OpenRequest { file: &folder.file("title.kmotion").unwrap(), read_only: false, create: None }).unwrap().id;
