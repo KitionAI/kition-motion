@@ -72,7 +72,11 @@ try {
   // Focus shows the composition alone: the transport and the timeline are the kit's own bars.
   const app = kit.locator('.kui-app')
   await app.focus()
-  await page.keyboard.press('ControlOrMeta+Backslash')
+  // The editor takes Cmd or Ctrl from navigator.platform (kit-editor's isMac), while Playwright's
+  // ControlOrMeta follows the operating system running the test, and the two can disagree (WebKit
+  // on Linux). The shortcut presses the modifier the editor reads.
+  const primaryKey = (await page.evaluate(() => /Mac|iPhone|iPad/i.test(navigator.platform))) ? 'Meta' : 'Control'
+  await page.keyboard.press(`${primaryKey}+Backslash`)
   await until(async () => (await app.getAttribute('data-mode')) === 'focus')
   const inFocus = { transport: await kit.getByTestId('motion-transport').count(), timeline: await kit.getByTestId('motion-timeline').count() }
   step('Focus hides the transport and the timeline', (await app.getAttribute('data-mode')) === 'focus' && inFocus.transport === 0 && inFocus.timeline === 0, JSON.stringify(inFocus))

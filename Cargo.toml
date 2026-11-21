@@ -122,11 +122,16 @@ too_many_arguments = "allow"
 needless_range_loop = "allow"
 type_complexity = "allow"
 
+# Debug info: line tables for the kit's crates (backtraces keep file and line) and none for
+# dependencies. Full debug info in every test binary filled a GitHub runner's disk during
+# `cargo test --workspace`.
 [profile.dev.package."*"]
 opt-level = 2
+debug = false
 
 [profile.dev]
 opt-level = 1
+debug = "line-tables-only"
 
 # Pixel hot loops: keep debug builds interactive.
 [profile.dev.package.kition-motion-raster]
