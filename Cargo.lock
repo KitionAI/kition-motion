@@ -1911,7 +1911,6 @@ name = "kition-motion-keyframe"
 version = "0.7.0"
 dependencies = [
  "kition-motion-color",
- "kition-motion-geom",
  "kition-motion-time",
  "proptest",
  "serde",

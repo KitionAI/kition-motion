@@ -229,13 +229,19 @@ fn performance_1080p_single_point() {
     let frames: Vec<Image> = (0..6).map(|f| make(2.3 * f as f64, 1.1 * f as f64)).collect();
     let c0 = [960.0, 540.0];
     let s = PointSpec { center: c0, feature_size: [48.0, 48.0], search_offset: [0.0; 2], search_size: [128.0, 128.0] };
-    let t0 = std::time::Instant::now();
-    let mut tr = Tracker::new(TrackOptions::default(), &[s], &Frame::new(&frames[0]));
-    let mut last = PointResult { center: c0, confidence: 0.0, rotation: 0.0, scale: 1.0, status: Status::Tracked };
-    for f in frames.iter().skip(1) {
-        last = tr.step(&Frame::new(f))[0];
-    }
-    let per = t0.elapsed().as_secs_f64() / 5.0;
+    // The tracker's parallel work runs on a pool of its own: on rayon's global pool it would queue
+    // behind the work of tests running beside it (the bundle adjustments), and the timing would
+    // measure them.
+    let pool = rayon::ThreadPoolBuilder::new().build().unwrap();
+    let (last, per) = pool.install(|| {
+        let t0 = std::time::Instant::now();
+        let mut tr = Tracker::new(TrackOptions::default(), &[s], &Frame::new(&frames[0]));
+        let mut last = PointResult { center: c0, confidence: 0.0, rotation: 0.0, scale: 1.0, status: Status::Tracked };
+        for f in frames.iter().skip(1) {
+            last = tr.step(&Frame::new(f))[0];
+        }
+        (last, t0.elapsed().as_secs_f64() / 5.0)
+    });
     eprintln!("1080p single-point track: {:.2} ms/frame ({:.0} fps)", per * 1e3, 1.0 / per);
     assert!(dist(last.center, [c0[0] + 2.3 * 5.0, c0[1] + 1.1 * 5.0]) < 0.25, "{:?}", last.center);
     assert!(per < 0.1, "{per} s per frame");
