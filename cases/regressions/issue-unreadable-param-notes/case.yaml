@@ -1,0 +1,27 @@
+format: 1
+id: regressions/issue-unreadable-param-notes
+feature: motion.agent.act
+intent: >-
+  Every entry of every command's parameter notation names its key, so the schema has a parameter
+  for it and a call that passes it is not refused as unknown (kition-sdk e1c9598,
+  Conversion::unreadable). Ten commands wrote entries the parser could not read (`hScale? %`,
+  `in?|out?: …`, `red?/green?/blue?/white?: …`, `yaw|dx deg`, `color? #hex|[r,g,b]`, a description
+  with commas after `path?:`), so layer.setText refused hScale, vScale and tsume, camera.orbit
+  yaw and pitch, keys.interpolation in and out, keys.setEase influence, view.customRgb its
+  primaries and white point, and shape.toolOptions fillOpacity, though each handler reads them.
+  check_commands did not see it: the kit types and completes each schema after converting it.
+layer: gate
+source:
+  kind: probe
+  from: kition-sdk schema notation check (Conversion::unreadable) run over the kit's commands
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test:
+      package: kition-motion-kit
+      test: param_notation
+expected:
+  - actual: out:cargo-test
+    compare: exit
+    value: 0
+since: "2026-11-22"

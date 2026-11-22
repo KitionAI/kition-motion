@@ -729,7 +729,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Orbit Camera",
             [],
             None,
-            "{yaw|dx deg, pitch|dy deg, layer?, merge?} — current 3D view (camera layer in Active Camera)",
+            "{yaw?|dx?: deg, pitch?|dy?: deg, layer?, merge?} — current 3D view (camera layer in Active Camera)",
             has_comp,
             orbit
         ),

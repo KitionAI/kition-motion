@@ -18,7 +18,7 @@ features:
     priority: P0
     status: has
     requirements: [AX13]
-    cases: [motion.agent.act/fade-out, regressions/issue-khp-bench-r3-layer-delete, regressions/issue-khp-bench-r3-paint-params, regressions/issue-khp-bench-r3-near-misses, regressions/issue-khp-bench-formal-checkbox, regressions/issue-file-open-description, regressions/issue-khp-bench-video-descriptions, regressions/issue-khp-bench-video-effect-params, regressions/issue-khp-bench-video-shape-gradient, regressions/issue-schema-additional-properties]
+    cases: [motion.agent.act/fade-out, regressions/issue-khp-bench-r3-layer-delete, regressions/issue-khp-bench-r3-paint-params, regressions/issue-khp-bench-r3-near-misses, regressions/issue-khp-bench-formal-checkbox, regressions/issue-file-open-description, regressions/issue-khp-bench-video-descriptions, regressions/issue-khp-bench-video-effect-params, regressions/issue-khp-bench-video-shape-gradient, regressions/issue-schema-additional-properties, regressions/issue-unreadable-param-notes]
     since: "2026-11-17"
   - id: motion.agent.design
     title: An agent is told what a designer would change, with the commands that change it

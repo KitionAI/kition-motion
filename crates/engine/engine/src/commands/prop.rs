@@ -1292,7 +1292,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Keyframe Interpolation...",
             ["Animation"],
             Some("Cmd+Alt+K"),
-            "{interpolation?: linear|bezier|continuousBezier|autoBezier|hold, in?|out?: linear|bezier|hold, autoBezier?, continuous?, spatial?: linear|bezier|continuousBezier|autoBezier, roving?}",
+            "{interpolation?: linear|bezier|continuousBezier|autoBezier|hold, in?: linear|bezier|hold, out?: linear|bezier|hold, autoBezier?, continuous?, spatial?: linear|bezier|continuousBezier|autoBezier, roving?}",
             has_keys,
             interpolation
         ),
@@ -1301,7 +1301,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Keyframe Velocity...",
             ["Animation"],
             Some("Cmd+Shift+K"),
-            "{inSpeed?, inInfluence? %, outSpeed?, outInfluence? % (numbers or per-dimension arrays), continuous?}",
+            "{inSpeed?, inInfluence?: %, outSpeed?, outInfluence?: % (numbers or per-dimension arrays), continuous?}",
             has_keys,
             velocity
         ),

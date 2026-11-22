@@ -406,7 +406,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "3D Model Layer",
             [],
             None,
-            "{item?: id or name of a 3D model footage item, path?: a .gltf, .glb or .obj file to import, name?, time? (s), index? (1-based stack position), position? ([x, y] comp px)}; switches a Classic 3D comp to Advanced 3D",
+            "{item?: id or name of a 3D model footage item, path?: file (a .gltf, .glb or .obj file to import), name?, time? (s), index? (1-based stack position), position? ([x, y] comp px)}; switches a Classic 3D comp to Advanced 3D",
             has_comp,
             new_model
         ),

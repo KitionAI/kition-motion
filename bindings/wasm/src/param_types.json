@@ -1486,6 +1486,20 @@
   "continuous": {
    "type": "boolean"
   },
+  "inInfluence": {
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     }
+    }
+   ],
+   "description": "percent: a number, or one per dimension"
+  },
   "inSpeed": {
    "oneOf": [
     {
@@ -1499,6 +1513,20 @@
     }
    ],
    "description": "a number, or one per dimension"
+  },
+  "outInfluence": {
+   "oneOf": [
+    {
+     "type": "number"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     }
+    }
+   ],
+   "description": "percent: a number, or one per dimension"
   },
   "outSpeed": {
    "oneOf": [
@@ -2325,6 +2353,22 @@
   }
  },
  "layer.newSolid": {
+  "color": {
+   "oneOf": [
+    {
+     "type": "string",
+     "description": "#rrggbb"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "number"
+     },
+     "description": "[r, g, b], 0 to 1"
+    }
+   ],
+   "description": "a colour, \"#rrggbb\" or [r, g, b] (0 to 1)"
+  },
   "pixelAspect": {
    "type": "number"
   }

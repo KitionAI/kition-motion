@@ -470,7 +470,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Set Keyframe Ease",
             [],
             None,
-            "{layer?, path|prop, time (layer s), side: in|out, dim?, speed?, influence? %, merge?}",
+            "{layer?, path|prop, time (layer s), side: in|out, dim?, speed?, influence?: %, merge?}",
             has_comp,
             set_ease
         ),

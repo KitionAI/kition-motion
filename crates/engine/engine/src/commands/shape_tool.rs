@@ -404,7 +404,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Shape Tool Options",
             [],
             None,
-            "{createsMask?: bool (Tool Creates Mask with a shape layer selected), fill?: [r,g,b]|#hex|false, fillType?: none|solid|linear|radial, fillBlend?: blend mode, fillOpacity? %, fillGradient?: [#hex…], fillAngle? (deg), stroke?, strokeType?, strokeBlend?, strokeOpacity?, strokeGradient?, strokeAngle?, strokeWidth?: px, reset?} → the options",
+            "{createsMask?: bool (Tool Creates Mask with a shape layer selected), fill?: [r,g,b]|#hex|false, fillType?: none|solid|linear|radial, fillBlend?: blend mode, fillOpacity?: %, fillGradient?: [#hex…], fillAngle? (deg), stroke?, strokeType?, strokeBlend?, strokeOpacity?, strokeGradient?, strokeAngle?, strokeWidth?: px, reset?} → the options",
             always,
             tool_options
         ),
