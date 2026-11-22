@@ -1,0 +1,15 @@
+format: 1
+id: regressions/issue-acts-under-declared-reads
+feature: motion.agent.premises
+dimension: [ai, collab]
+layer: gate
+intent: Commands whose code reads editor state their declarations missed declare it (learn.step reads the active composition; mediaBrowser.import the layer selection and the current time; the script window and script panel commands what their JavaScript reads), so a person opening another composition refuses an agent's Show Me that does not give its own; and the declarations differ from the source scan only by the reviewed, listed differences.
+since: "2026-11-21"
+source: { kind: synthetic, from: acts-known-differences, license: Apache-2.0 }
+input: []
+steps:
+  - cargo-test: { package: kition-motion, test: sdk_under_declared_reads }
+  - cargo-test: { package: kition-motion-engine, test: media_browser_reads }
+  - cargo-test: { package: kition-motion-kit, test: acts }
+expected:
+  - { actual: "out:exit", compare: exit, value: 0 }

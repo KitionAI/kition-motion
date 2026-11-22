@@ -43,12 +43,12 @@ pub fn reads(id: &str) -> &'static [EditorState] {
 /// An explicit form would need keyframe ids (or `{layer, path, time}` triples) that `inspect`
 /// lists and `on` may carry.
 const KEY_SELECTION: &[&str] = &[
-    "contentFill.generate",
     "edit.clear",
     "edit.copy",
     "edit.cut",
     "edit.label",
     "engine.batch",
+    "file.runScript",
     "keys.copy",
     "keys.delete",
     "keys.easyEase",
@@ -75,15 +75,12 @@ const KEY_SELECTION: &[&str] = &[
     "keys.smooth",
     "keys.timeReverse",
     "keys.toggleHold",
-    "keys.toggleTransform",
     "keys.transform",
     "keys.velocity",
     "keys.wiggle",
-    "layer.newContentAwareFill",
+    "learn.step",
     "mask.interpolate",
     "motion.sketch",
-    "prop.addKey",
-    "prop.toggleKey",
     "puppet.recordPin",
 ];
 

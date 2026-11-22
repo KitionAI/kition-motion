@@ -6,8 +6,12 @@
 //! active composition (`part`) and its current time (`time`). A command that reaches one and does
 //! not declare it, or declares what it never reads, fails here; so does the kit's own table of the
 //! commands that read the keyframe selection, which `on` (layer ids) cannot set (task card
-//! C4-motion). To see how the scan reached a reading, set `ACTS_DEBUG=<command id>` or
-//! `ACTS_FN=<engine function>`; `ACTS_PRINT=1` prints what the scan derives for every command.
+//! C4-motion). Where the scan cannot tell (`mode`, `active`, `area`; a function pointer; a path a
+//! command does not take), the difference is reviewed and listed, with its reason, in
+//! `acts_known_differences.txt` beside this file, which the tests hold strictly: a difference not
+//! listed, or a listed one that no longer differs, fails. To see how the scan reached a reading,
+//! set `ACTS_DEBUG=<command id>` or `ACTS_FN=<engine function>`; `ACTS_PRINT=1` prints what the
+//! scan derives for every command and each difference (`difference <command> | <difference>`).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -819,11 +823,120 @@ fn engine_ids(doc: &MotionDocument) -> Vec<String> {
     doc.commands().into_iter().map(|command| command.id).filter(|id| !BINDING.contains(&id.as_str())).collect()
 }
 
+/// The reviewed differences between the declarations and the scan (`acts_known_differences.txt`
+/// beside this file): every difference must be in it, word for word, and every entry must still
+/// differ, so the file only shrinks as the audit after launch removes them.
+const KNOWN: &str = include_str!("acts_known_differences.txt");
+/// Why a difference is known: the scan does not look for `mode`, `active` and `area`; the code
+/// reads what is declared through a path the scan does not follow (a function pointer, a stored
+/// closure, a method of another type); the code reads less than is declared; the scan finds a read
+/// the command does not make (a path it does not take, state it set itself, pruning).
+const CATEGORIES: &[&str] = &["scanner-blind-kind", "scanner-cannot-follow", "over-declared", "scanner-false-read"];
+/// The declared kinds the scan does not look for.
+const BLIND: &[&str] = &["mode", "active", "area"];
+
+/// A difference of command `.0` in direction `.1` (`declared-wider`, `scan-wider`,
+/// `key-table-missing`, `key-table-extra`), written as the file writes it.
+type Differences = BTreeMap<(String, String), String>;
+
+fn listed(kinds: &BTreeSet<&str>) -> String {
+    kinds.iter().copied().collect::<Vec<_>>().join(", ")
+}
+
+/// Checks `found` against the file's entries in `directions` and returns how many there are by
+/// category, or what is wrong: a difference not in the file (or written otherwise), an entry that
+/// no longer differs, an entry whose category does not fit its difference.
+fn check_known(found: &Differences, directions: &[&str]) -> Result<BTreeMap<String, usize>, Vec<String>> {
+    let mut wrong = Vec::new();
+    let mut entries: BTreeMap<(String, String), (usize, String, String)> = BTreeMap::new();
+    for (number, line) in KNOWN.lines().enumerate().map(|(at, line)| (at + 1, line.trim())) {
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let fields: Vec<&str> = line.split(" | ").map(str::trim).collect();
+        let [command, difference, category, reason] = fields[..] else {
+            wrong.push(format!("line {number}: not `command | difference | category | reason`: {line}"));
+            continue;
+        };
+        let direction = difference.split(':').next().unwrap_or("").trim().to_owned();
+        if !CATEGORIES.contains(&category) {
+            wrong.push(format!("line {number}: unknown category `{category}`"));
+        }
+        let kinds: Vec<&str> = difference.split_once(':').map(|(_, kinds)| kinds.split(',').map(str::trim).collect()).unwrap_or_default();
+        let fits = match (direction.as_str(), category) {
+            ("declared-wider", "scanner-blind-kind") => kinds.iter().all(|kind| BLIND.contains(kind)),
+            ("declared-wider", "scanner-cannot-follow" | "over-declared") => kinds.iter().all(|kind| !BLIND.contains(kind)),
+            // The code reading more than is declared is never known: it is declared.
+            ("scan-wider" | "key-table-missing", "scanner-false-read") => true,
+            ("key-table-extra", "over-declared") => true,
+            _ => false,
+        };
+        if !fits {
+            wrong.push(format!("line {number}: `{category}` does not fit `{difference}`"));
+        }
+        let located = reason.split_whitespace().any(|word| word.contains(".rs:"));
+        if matches!(category, "scanner-cannot-follow" | "scanner-false-read") && !located {
+            wrong.push(format!("line {number}: a `{category}` reason names the code (`file.rs:line`): {reason}"));
+        }
+        if reason.is_empty() {
+            wrong.push(format!("line {number}: no reason"));
+        }
+        if entries.insert((command.to_owned(), direction.clone()), (number, difference.to_owned(), category.to_owned())).is_some() {
+            wrong.push(format!("line {number}: {command} has two `{direction}` entries"));
+        }
+    }
+    let mut counts = BTreeMap::new();
+    for ((command, direction), difference) in found {
+        match entries.get(&(command.clone(), direction.clone())) {
+            Some((_, known, category)) if known == difference => *counts.entry(category.clone()).or_insert(0) += 1,
+            Some((number, known, _)) => wrong.push(format!("line {number}: {command} now differs as `{difference}`, the file says `{known}`")),
+            None => wrong.push(format!("{command} | {difference}: not in the file (declare what the code reads, or review and add it)")),
+        }
+    }
+    for ((command, direction), (number, difference, _)) in &entries {
+        if directions.contains(&direction.as_str()) && !found.contains_key(&(command.clone(), direction.clone())) {
+            wrong.push(format!("line {number}: {command} | {difference} no longer differs: remove the entry"));
+        }
+    }
+    if wrong.is_empty() { Ok(counts) } else { Err(wrong) }
+}
+
+#[test]
+fn known_differences_are_checked_strictly() {
+    // A difference not in the file fails.
+    let found = Differences::from([(("a.b".to_owned(), "scan-wider".to_owned()), "scan-wider: time".to_owned())]);
+    let wrong = check_known(&found, &["scan-wider"]).unwrap_err();
+    assert!(wrong.iter().any(|line| line.starts_with("a.b | scan-wider: time: not in the file")), "{wrong:?}");
+    // An entry that no longer differs fails.
+    let wrong = check_known(&Differences::new(), &["key-table-missing"]).unwrap_err();
+    assert!(wrong.iter().any(|line| line.contains("edit.paste | key-table-missing no longer differs")), "{wrong:?}");
+    // A difference written otherwise than the file says fails.
+    let found = Differences::from([(("view.lookAtAll".to_owned(), "scan-wider".to_owned()), "scan-wider: selection, time".to_owned())]);
+    let wrong = check_known(&found, &[]).unwrap_err();
+    assert!(wrong.iter().any(|line| line.contains("view.lookAtAll now differs as `scan-wider: selection, time`")), "{wrong:?}");
+}
+
 #[test]
 fn every_command_declares_the_editor_state_its_code_reads() {
     let doc = MotionDocument::create("a.kmotion", 64, 36).unwrap();
     let ids = engine_ids(&doc);
     let derived = derived(&ids);
+    let mut found = Differences::new();
+    for command in doc.commands() {
+        let declared: BTreeSet<&str> = command.reads.iter().map(|state| state.as_str()).collect();
+        let expected = match command.id.as_str() {
+            "file.exportMovie" => BTreeSet::from(["part"]),
+            id => derived.get(id).map(declared_kinds).unwrap_or_default(),
+        };
+        let wider: BTreeSet<&str> = declared.difference(&expected).copied().collect();
+        let narrower: BTreeSet<&str> = expected.difference(&declared).copied().collect();
+        if !wider.is_empty() {
+            found.insert((command.id.clone(), "declared-wider".into()), format!("declared-wider: {}", listed(&wider)));
+        }
+        if !narrower.is_empty() {
+            found.insert((command.id.clone(), "scan-wider".into()), format!("scan-wider: {}", listed(&narrower)));
+        }
+    }
     if std::env::var("ACTS_PRINT").is_ok() {
         let table: BTreeMap<&String, Vec<&str>> = derived
             .iter()
@@ -835,19 +948,14 @@ fn every_command_declares_the_editor_state_its_code_reads() {
         println!("keys {}", serde_json::to_string(&keys).unwrap());
         let project: Vec<&String> = derived.iter().filter(|(_, reads)| reads.contains("project")).map(|(id, _)| id).collect();
         println!("project {} {}", project.len(), serde_json::to_string(&project).unwrap());
-    }
-    let mut wrong = Vec::new();
-    for command in doc.commands() {
-        let declared: BTreeSet<&str> = command.reads.iter().map(|state| state.as_str()).collect();
-        let expected = match command.id.as_str() {
-            "file.exportMovie" => BTreeSet::from(["part"]),
-            id => derived.get(id).map(declared_kinds).unwrap_or_default(),
-        };
-        if declared != expected {
-            wrong.push(format!("{}: declares {declared:?}, its code reads {expected:?}", command.id));
+        for ((command, _), difference) in &found {
+            println!("difference {command} | {difference}");
         }
     }
-    assert!(wrong.is_empty(), "{} commands declare other editor state than they read:\n{}", wrong.len(), wrong.join("\n"));
+    match check_known(&found, &["declared-wider", "scan-wider"]) {
+        Ok(counts) => println!("{} known differences between the declared reads and the scan: {counts:?}", counts.values().sum::<usize>()),
+        Err(wrong) => panic!("{} differences between the declared reads and the scan are wrong:\n{}", wrong.len(), wrong.join("\n")),
+    }
 }
 
 /// The commands that read the keyframe selection are exactly the kit's table of them: they read
@@ -860,9 +968,22 @@ fn the_key_selection_table_is_what_the_code_reads() {
     let derived = derived(&ids);
     let read: BTreeSet<&str> = derived.iter().filter(|(_, reads)| reads.contains("keys")).map(|(id, _)| id.as_str()).collect();
     let table: BTreeSet<&str> = ids.iter().map(String::as_str).filter(|id| kition_motion_kit::acts::reads_key_selection(id)).collect();
-    let missing: Vec<&&str> = read.difference(&table).collect();
-    let extra: Vec<&&str> = table.difference(&read).collect();
-    assert!(missing.is_empty() && extra.is_empty(), "read the key selection but not in the table: {missing:?}; in the table but read none: {extra:?}");
+    let mut found = Differences::new();
+    for id in read.difference(&table) {
+        found.insert(((*id).to_owned(), "key-table-missing".into()), "key-table-missing".into());
+    }
+    for id in table.difference(&read) {
+        found.insert(((*id).to_owned(), "key-table-extra".into()), "key-table-extra".into());
+    }
+    if std::env::var("ACTS_PRINT").is_ok() {
+        for ((command, _), difference) in &found {
+            println!("difference {command} | {difference}");
+        }
+    }
+    match check_known(&found, &["key-table-missing", "key-table-extra"]) {
+        Ok(counts) => println!("{} known differences between the key-selection table and the scan: {counts:?}", counts.values().sum::<usize>()),
+        Err(wrong) => panic!("the key-selection table and the scan differ:\n{}", wrong.join("\n")),
+    }
 }
 
 /// A command's `targets` is the `layers` (else `layer`) parameter its notation names, an id or a
