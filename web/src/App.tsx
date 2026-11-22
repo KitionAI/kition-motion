@@ -21,7 +21,7 @@ import {
 } from '@kition/sdk/editor'
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
-import { MOTION_PRIMARY, MENU_ORDER, describe } from './motion'
+import { MOTION_PRIMARY, MENU_ORDER, describe, picturePanBounds } from './motion'
 import { HomeTab } from './HomeTab'
 import { Timeline } from './Timeline'
 import { Transport } from './Transport'
@@ -107,6 +107,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const canvas = useRef<KitCanvasHandle>(null)
   const viewMemory = useRef<RasterView | null>(null)
   const [zoom, setZoom] = useState<number | null>(null)
+  // Scrolling stops a margin past the picture: the view never leaves it for empty canvas.
+  const picture = state?.picture
+  const panBounds = useMemo(() => picturePanBounds(picture?.width ?? 0, picture?.height ?? 0, zoom), [picture?.width, picture?.height, zoom])
+  const workspace = useRef<HTMLDivElement>(null)
   // Moving through time is not an edit: it goes to the engine without the editor's notices.
   const runQuietly = session.run
   const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0)
@@ -156,9 +160,19 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         }
         panels={state ? <PropertiesPanel info={state} /> : null}
       >
-        <div className="kui-row">
+        <div className="kui-row" ref={workspace} data-testid="motion-workspace" data-picture={picture ? `${picture.width} ${picture.height}` : undefined}>
           <div className="motion-main">
-            <KitDocumentCanvas canvas={canvas} viewMemory={viewMemory} tool={HAND_TOOL} onView={(view) => setZoom(view.zoom)} />
+            <KitDocumentCanvas
+              canvas={canvas}
+              viewMemory={viewMemory}
+              panBounds={panBounds}
+              tool={HAND_TOOL}
+              onView={(view) => {
+                setZoom(view.zoom)
+                // The view, for the scroll test's checks (zoom and the document point at the top left).
+                workspace.current?.setAttribute('data-view', `${view.zoom} ${view.x} ${view.y}`)
+              }}
+            />
             {/* The transport and the timeline are the kit's own bars: Focus shows the composition alone. */}
             {state ? (
               <FrameChrome>

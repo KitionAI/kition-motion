@@ -1,4 +1,4 @@
-import type { KitEngineInfo } from '@kition/sdk/editor'
+import type { KitEngineInfo, RasterRect } from '@kition/sdk/editor'
 
 /** One animated property of a layer and its key times, in composition seconds. */
 type Animated = { path: string; name: string; times: number[] }
@@ -11,6 +11,8 @@ export type MotionProperty = { path: string; name: string; type: 'scalar' | 'vec
 
 /** What the editor reads from the engine's `inspect()`. */
 export type MotionInfo = {
+  /** The picture the canvas shows, in document pixels. Scrolling stops a margin past it. */
+  picture: { width: number; height: number }
   comp: { id: number; name: string; width: number; height: number; fps: number; duration: number } | null
   time: number
   /** One frame, in seconds. */
@@ -34,6 +36,7 @@ export function describe(info: KitEngineInfo): MotionInfo {
   const comp = inspected.comp
   const fps = comp?.frameRate || 30
   return {
+    picture: { width: info.width, height: info.height },
     comp: comp ? { id: comp.id ?? 0, name: comp.name ?? '', width: comp.width ?? info.width, height: comp.height ?? info.height, fps, duration: comp.duration ?? 0 } : null,
     time: inspected.time ?? 0,
     frame: 1 / fps,
@@ -49,6 +52,19 @@ export function describe(info: KitEngineInfo): MotionInfo {
     })),
     transform: inspected.info?.transform?.layer != null ? { layer: inspected.info.transform.layer, properties: inspected.info.transform.properties ?? [] } : null,
   }
+}
+
+/** How far past the picture's edge the view scrolls, in screen pixels: the margin a fitted picture has, so a fitted picture does not scroll. */
+export const SCROLL_MARGIN = 32
+
+/**
+ * Where scrolling stops: the picture and `SCROLL_MARGIN` screen pixels of canvas around it, in
+ * document pixels at `zoom`. A view larger than that keeps the picture centred.
+ */
+export function picturePanBounds(width: number, height: number, zoom: number | null): RasterRect | null {
+  if (!zoom || !(width > 0) || !(height > 0)) return null
+  const margin = SCROLL_MARGIN / zoom
+  return { x0: -margin, y0: -margin, x1: width + margin, y1: height + margin }
 }
 
 /** `seconds` as `0:00:01:12` at `fps` frames per second. */

@@ -431,3 +431,12 @@ features:
     paths: [web/src/App.tsx, web/src/HomeTab.tsx, web/src/PropertiesPanel.tsx, web/tests/modes.mjs, web/tests/flow.mjs]
     cases: [regressions/issue-focus-shows-timeline]
     since: "2026-11-17"
+  - id: motion.editor.canvas-scroll
+    title: "Scrolling the canvas stops a margin past the composition; a view larger than the composition and its margin keeps it centred, so a fitted composition does not scroll"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/App.tsx, web/src/motion.ts, web/tests/scroll.mjs]
+    gap: "The margin is 32 screen pixels on every side; there are no scrollbars."
+    cases: [regressions/issue-scroll-past-composition]
+    since: "2026-11-22"

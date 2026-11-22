@@ -1,0 +1,25 @@
+format: 1
+id: regressions/issue-scroll-past-composition
+feature: motion.editor.canvas-scroll
+intent: >-
+  The wheel and the hand scroll the canvas only a margin (32 screen pixels, the margin a fitted composition has)
+  past the composition: on every side the view stops there, at the opening zoom and zoomed in, and a view larger
+  than the composition and its margin keeps it centred. Before, the editor gave the canvas no scroll limits, so
+  the view moved any distance past the composition and showed only empty canvas (owner report, 2026-11-22).
+layer: gate
+source:
+  kind: probe
+  from: web/tests/scroll.mjs
+  license: Apache-2.0
+input: []
+steps:
+  - exec:
+      cmd: [node, web/tests/scroll.mjs, chromium]
+expected:
+  - actual: out:exec
+    compare: exit
+    value: 0
+tags: [browser]
+requires: [chromium]
+timeout_s: 120
+since: "2026-11-22"
