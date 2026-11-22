@@ -238,8 +238,11 @@ fn wasm() -> Result<(), String> {
 fn ci() -> Result<(), String> {
     let cargo = env!("CARGO");
     run(Command::new(cargo).args(["fmt", "--check"]))?;
-    run(Command::new(cargo).args(["clippy", "--workspace", "--all-targets", "--release", "--", "-D", "warnings"]))?;
-    run(Command::new(cargo).args(["test", "--workspace", "--release"]))?;
+    // The dev profile, as Kition's kit CI builds clippy and the tests before this runs (the pixel
+    // crates at opt-level 3), so this reuses that build: the release profile's second build of
+    // the whole workspace did not finish within the CI job's 90 minutes.
+    run(Command::new(cargo).args(["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]))?;
+    run(Command::new(cargo).args(["test", "--workspace"]))?;
     layers()?;
     assets()?;
     wasm()
