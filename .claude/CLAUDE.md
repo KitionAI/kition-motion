@@ -26,11 +26,12 @@ Kition Motion is a clean-room, pure-Rust motion graphics and visual effects engi
 - **Property tree:** everything animatable is a `Property` in the layer's `PropGroup` tree, addressed by paths (`transform/position`, `effects/#1/blurriness`, `@uid`).
 - **Everything is a command** (`crates/engine/engine`): id, label, menu path, shortcut, params, enabled(), run(). UI, CLI, control channel and MCP dispatch by id.
 - **Everything is agent-drivable:** every interactive widget registers an automation id; UI state is serde.
-- **Quality gates** before every commit: `cargo xtask ci` (fmt, clippy -D warnings, tests, layers, assets, wasm).
-- **Commits:** one task id per commit (`M6.3: trim paths`). Only green states.
+- **Local checks:** on this machine run only the fast checks: `cargo fmt --all -- --check`, `cargo check -p <touched crates> --all-targets`, the wasm `cargo check --target wasm32-unknown-unknown -p <touched crates>`, and `pnpm typecheck` in `web/`.
+- **Full checks** run in the kit's CI run on GitHub (`.github/workflows/ci.yml`, which calls Kition's reusable kit CI): clippy, `cargo test --workspace`, `cargo xtask ci` (fmt, clippy -D warnings, tests, layers, assets, wasm) and every `test:*` script of `web/`. A task is done when the CI run of HEAD is green and HEAD is on `origin/main` (Kition's `scripts/kit-ci.sh push`, `wait`, `land`). Do not add other workflows or start the Package workflow: releasing is the owner's step.
+- **Commits:** one task id per commit (`M6.3: trim paths`). Only commits with a green CI run land on `origin/main`.
 
 ## Running and looking at the app
-- For engine or SDK work, build and test the crates directly: `cargo build -p kition-motion-kit -p kition-motion`, `cargo test --workspace`.
+- For engine or SDK work, build and check the crates directly: `cargo build -p kition-motion-kit -p kition-motion`, `cargo check -p <crate> --all-targets`; `cargo test --workspace` runs in the kit's CI run.
 - For the kit's own editor, run `web/` (see its README) and look at the result there; Kition's agent drives the engine headless through `bindings/headless`.
 - After Effects reference: drive AE via ExtendScript (`osascript -e 'tell application "Adobe After Effects 2026" to DoScriptFile "x.jsx"'`) and capture only AE's window (`screencapture -l <windowid>`); keep captures in `plan/aftereffects/ref/` (gitignored), never commit them, never capture the Home screen.
 - Parallel agents: separate git worktrees and `CARGO_TARGET_DIR=target/agent-<name>`; keep every `Cargo.toml` valid (the `crates/*` glob).

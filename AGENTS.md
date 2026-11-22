@@ -149,7 +149,9 @@ reproduce an image (for example, point lists traced from someone else's icon).
 ## 3. Engineering rules
 
 See `.claude/CLAUDE.md`: pure Rust, dependency layering (`cargo xtask layers`), exact `Tick` time, everything is
-a command, everything is agent-drivable, and the quality gates (`cargo xtask ci`) before every commit.
+a command, everything is agent-drivable, and the quality gates: only the fast checks on a developer's machine,
+the full checks (`cargo xtask ci` among them) in the kit's CI run on GitHub, and a task is done when the CI run
+of HEAD is green and HEAD is on `origin/main`.
 
 ## See also
 

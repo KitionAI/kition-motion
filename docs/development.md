@@ -25,6 +25,13 @@ cd web && pnpm install && pnpm engine && pnpm test:flow   # the editor
 cargo xtask ci                                            # fmt, clippy -D warnings, tests, layers, assets, wasm
 ```
 
+The full checks (clippy, `cargo test --workspace`, `cargo xtask ci` and every `test:*` script of
+`web/`) run on GitHub in the kit's CI run: `.github/workflows/ci.yml` calls Kition's reusable kit
+CI on every push to a `ci/**` branch and every pull request. On a maintainer's machine run only the
+fast checks (`cargo fmt --all -- --check`, `cargo check -p <touched crates> --all-targets`, the
+wasm `cargo check`, `pnpm typecheck`); a change is done when the CI run of HEAD is green and HEAD
+is on `origin/main`.
+
 `pnpm engine` builds the engine into `web/public/engine/` and copies a fallback font for Chinese
 text from a [kition-fonts](https://github.com/KitionAI/kition-fonts) checkout next to this
 repository (or the one `KITION_FONTS_DIR` names); without it, Chinese text shows as boxes.
@@ -122,4 +129,5 @@ machine: the Package workflow (`.github/workflows/package.yml`, which calls Kiti
 KitionAI/kition-motion`, and publishes the Release with the package's lock entry,
 `kition-motion-<version>.json`. Kition pins it with `node scripts/pin-kits.mjs motion` (see
 `docs/kits.md` there). A version is published once: bump `version` in `kit.json` to publish a
-change.
+change. Releasing is the owner's step: only the owner bumps the version and starts the Package
+workflow; a change is done when it is green on `main`.
