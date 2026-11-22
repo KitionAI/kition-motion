@@ -42,9 +42,9 @@ and [writing-format.md](writing-format.md) lists every command.
 - **Effects** (`crates/engine/effects`): each effect has a determinism test and at least one behaviour
   test (identity at neutral settings, known pixel results, or simulations giving the same frame
   whether you seek straight to it or play up to it). A registry-wide test checks that effects
-  which read the clock are declared time-dependent. `crates/engine/effects/tests/sim_golden.rs` pins
+  which read the clock are declared time-dependent. `crates/engine/effects/tests/sim_expected.rs` pins
   exact pixel hashes of the simulation effects (CC Rainfall … Card Wipe) at several settings,
-  times, bit depths and resolutions, so any change to their output fails (re-pin with `SIM_GOLDEN_PRINT=1` after an intended change; pinned for aarch64 macOS,
+  times, bit depths and resolutions, so any change to their output fails (re-pin with `SIM_EXPECTED_PRINT=1` after an intended change; pinned for aarch64 macOS,
   with the hashes another macOS release's libm gives for unchanged code in `LIBM_VARIANTS`).
 - **Export** (`crates/formats/export/tests`): every format is encoded and decoded back, checking frame
   count, size and pixels. When `ffmpeg`/`ffprobe` are installed they are used as an outside

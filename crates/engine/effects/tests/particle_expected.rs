@@ -1,10 +1,10 @@
-//! Golden hashes of the CPU particle effects (M13.29).
+//! Expected hashes of the CPU particle effects (M13.29).
 //!
-//! The sibling of `sim_golden.rs` for the particle systems and the per-pixel "particle" effects
+//! The sibling of `sim_expected.rs` for the particle systems and the per-pixel "particle" effects
 //! that the GPU compositor draws from a shared per-frame plan: CC Particle World, CC Particle
 //! Systems II, Particle Playground (cannon, grid, text, layer exploder, layer map, property
 //! mappers, repel), CC Ball Action, CC Pixel Polly, CC Scatterize and Curl Noise. Same set-up,
-//! hashing and re-pinning (`SIM_GOLDEN_PRINT=1`, `SIM_GOLDEN_OUT=<dir>`) as `sim_golden.rs`: any
+//! hashing and re-pinning (`SIM_EXPECTED_PRINT=1`, `SIM_EXPECTED_OUT=<dir>`) as `sim_expected.rs`: any
 //! change to the CPU output of these effects, however small, fails the test.
 
 use kition_motion_effects::{Buf, EffectCtx, EffectEnv, EffectHost, LayerPixels, Params, apply, default_value, find};
@@ -283,7 +283,7 @@ fn render(id: &str, set: &Set, time: f64, bpc8: bool, half: bool) -> Image {
 
 /// Every case's name and hash, in a fixed order.
 fn hashes() -> Vec<(String, u64)> {
-    let out_dir = std::env::var_os("SIM_GOLDEN_OUT").map(std::path::PathBuf::from);
+    let out_dir = std::env::var_os("SIM_EXPECTED_OUT").map(std::path::PathBuf::from);
     if let Some(d) = &out_dir {
         std::fs::create_dir_all(d).unwrap();
     }
@@ -311,9 +311,9 @@ fn hashes() -> Vec<(String, u64)> {
 }
 
 #[test]
-fn particle_effects_golden_hashes() {
+fn particle_effects_expected_hashes() {
     let got = hashes();
-    if std::env::var_os("SIM_GOLDEN_PRINT").is_some() {
+    if std::env::var_os("SIM_EXPECTED_PRINT").is_some() {
         for (name, h) in &got {
             println!("    (\"{name}\", 0x{h:016x}),");
         }
@@ -323,17 +323,17 @@ fn particle_effects_golden_hashes() {
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         let bad: Vec<String> = got
             .iter()
-            .zip(GOLDEN)
+            .zip(EXPECTED)
             .filter(|((n, h), (gn, gh))| n != gn || h != gh)
             .map(|((n, h), (_, gh))| format!("{n}: 0x{h:016x} (pinned 0x{gh:016x})"))
             .collect();
-        assert_eq!(got.len(), GOLDEN.len(), "case count");
+        assert_eq!(got.len(), EXPECTED.len(), "case count");
         assert!(bad.is_empty(), "CPU output changed:\n{}", bad.join("\n"));
     }
 }
 
 /// Pinned hashes (aarch64 macOS).
-const GOLDEN: &[(&str, u64)] = &[
+const EXPECTED: &[(&str, u64)] = &[
     ("ec.sim.ccparticleworld/0/8bpc/t0.5", 0x263d8f88e7ae651b),
     ("ec.sim.ccparticleworld/0/8bpc/t1.5", 0xb7697683e3cc6d43),
     ("ec.sim.ccparticleworld/0/8bpc/t0.8", 0xb5065326c8bd674a),

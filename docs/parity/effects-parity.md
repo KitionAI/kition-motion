@@ -14,7 +14,7 @@ does the preset library exist. The per-effect catalogue is the generated
 | Effects present | **306** registered, 3,014 parameters; all of After Effects' effects by name (298 at the M9.11 count) plus Obsolete and our own | Measured: registry, [effects.md](../features/effects.md). After Effects 26.5's `Plug-ins/Effects` holds 306 `.plugin` bundles in 231 entries (one bundle can hold several effects, so this is a cross-check, not a match) |
 | Parameter names, order, popups, units, defaults | aligned in M9.12 | Agent-checked against After Effects' documentation, not against a live dump |
 | 32-bit float, no clamping | 306 | Measured: registry flags |
-| **Rendered output matches After Effects** | **unmeasured** | No effect is compared with an After Effects render yet. `kition_motion_effects::fidelity::compare_frames` exists for the corpus ([fidelity/README.md](fidelity/README.md)); simulation effects are pinned by golden hashes of our own output (M13.27) |
+| **Rendered output matches After Effects** | **unmeasured** | No effect is compared with an After Effects render yet. `kition_motion_effects::fidelity::compare_frames` exists for the corpus ([fidelity/README.md](fidelity/README.md)); simulation effects are pinned by expected hashes of our own output (M13.27) |
 | Animation presets | **8** original text-animator presets against After Effects' **621** `.ffx` presets | Measured: `crates/engine/engine/presets/text_animators.json`; the After Effects `Presets` folder |
 | 26.x additions | Curl Noise (26.3) present (#463 open); effect colour labels and the rebuilt Effect Controls (26.5) missing | Release notes |
 

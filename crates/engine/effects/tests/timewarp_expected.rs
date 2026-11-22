@@ -1,9 +1,9 @@
-//! Golden hashes of the CPU Timewarp (M13.29), with and without a Matte Layer.
+//! Expected hashes of the CPU Timewarp (M13.29), with and without a Matte Layer.
 //!
 //! Timewarp's frame building is shared with the GPU compositor as a plan
 //! (`kition_motion_effects::timewarp_plan`); this pins the CPU output of every method / Show /
 //! Matte Channel combination, with motion blur and a Warp Layer, so refactoring the plan keeps
-//! it bit-identical. Same hashing and re-pinning (`SIM_GOLDEN_PRINT=1`) as `sim_golden.rs`;
+//! it bit-identical. Same hashing and re-pinning (`SIM_EXPECTED_PRINT=1`) as `sim_expected.rs`;
 //! pinned for aarch64 macOS.
 
 use kition_motion_effects::{Buf, EffectCtx, EffectEnv, EffectHost, LayerPixels, Params, apply, default_value, find};
@@ -145,9 +145,9 @@ fn hashes() -> Vec<(String, u64)> {
 }
 
 #[test]
-fn timewarp_golden_hashes() {
+fn timewarp_expected_hashes() {
     let got = hashes();
-    if std::env::var_os("SIM_GOLDEN_PRINT").is_some() {
+    if std::env::var_os("SIM_EXPECTED_PRINT").is_some() {
         for (name, h) in &got {
             println!("    (\"{name}\", 0x{h:016x}),");
         }
@@ -156,17 +156,17 @@ fn timewarp_golden_hashes() {
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         let bad: Vec<String> = got
             .iter()
-            .zip(GOLDEN)
+            .zip(EXPECTED)
             .filter(|((n, h), (gn, gh))| n != gn || h != gh)
             .map(|((n, h), (_, gh))| format!("{n}: 0x{h:016x} (pinned 0x{gh:016x})"))
             .collect();
-        assert_eq!(got.len(), GOLDEN.len(), "case count");
+        assert_eq!(got.len(), EXPECTED.len(), "case count");
         assert!(bad.is_empty(), "CPU output changed:\n{}", bad.join("\n"));
     }
 }
 
 /// Pinned hashes (aarch64 macOS).
-const GOLDEN: &[(&str, u64)] = &[
+const EXPECTED: &[(&str, u64)] = &[
     ("timewarp/0/t0.55", 0x85905ea4083d5052),
     ("timewarp/0/t1.23", 0x6499c6f962fed8e7),
     ("timewarp/0/t0.8", 0x48493cd23ed32a5f),

@@ -1,4 +1,4 @@
-//! Golden hashes of the CPU effects that draw through a shared per-frame plan (M13.28).
+//! Expected hashes of the CPU effects that draw through a shared per-frame plan (M13.28).
 //!
 //! The GPU compositor rasterises these effects from geometry the CPU computes (bolts, strokes,
 //! glyphs, audio marks, wave lists, flood-fill regions, sampled colours); the CPU effects were
@@ -12,7 +12,7 @@
 //! pinned for aarch64 macOS (where the gates run). Elsewhere the test only checks that every
 //! case renders deterministically.
 //!
-//! `GEN_GOLDEN_PRINT=1` prints the table (to re-pin after an intended change).
+//! `GEN_EXPECTED_PRINT=1` prints the table (to re-pin after an intended change).
 
 use kition_motion_effects::{Buf, EffectCtx, EffectEnv, EffectHost, LayerPixels, MaskShape, Params, apply, default_value, find};
 use kition_motion_keyframe::Value;
@@ -324,9 +324,9 @@ fn hashes() -> Vec<(String, u64)> {
 }
 
 #[test]
-fn plan_effects_golden_hashes() {
+fn plan_effects_expected_hashes() {
     let got = hashes();
-    if std::env::var_os("GEN_GOLDEN_PRINT").is_some() {
+    if std::env::var_os("GEN_EXPECTED_PRINT").is_some() {
         for (name, h) in &got {
             println!("    (\"{name}\", 0x{h:016x}),");
         }
@@ -335,17 +335,17 @@ fn plan_effects_golden_hashes() {
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         let bad: Vec<String> = got
             .iter()
-            .zip(GOLDEN)
+            .zip(EXPECTED)
             .filter(|((n, h), (gn, gh))| n != gn || h != gh)
             .map(|((n, h), (_, gh))| format!("{n}: 0x{h:016x} (pinned 0x{gh:016x})"))
             .collect();
-        assert_eq!(got.len(), GOLDEN.len(), "case count");
+        assert_eq!(got.len(), EXPECTED.len(), "case count");
         assert!(bad.is_empty(), "CPU output changed:\n{}", bad.join("\n"));
     }
 }
 
 /// Pinned hashes (aarch64 macOS).
-const GOLDEN: &[(&str, u64)] = &[
+const EXPECTED: &[(&str, u64)] = &[
     ("ec.obsolete.lightning/0/8bpc/t0.4", 0xd829bb3a79ec2d61),
     ("ec.obsolete.lightning/0/8bpc/t1.3", 0xb2221364c0defe9b),
     ("ec.obsolete.lightning/0/32bpc/t0.4", 0x828cc4e53d579af7),

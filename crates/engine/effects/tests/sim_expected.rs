@@ -1,4 +1,4 @@
-//! Golden hashes of the CPU simulation effects (M13.27).
+//! Expected hashes of the CPU simulation effects (M13.27).
 //!
 //! Renders each simulation effect whose CPU path draws through a shared per-frame plan (the
 //! sprite plans of CC Rainfall / Snowfall / Star Burst / Hair, Wave World and Foam; the piece
@@ -15,9 +15,9 @@
 //! checks that every case renders deterministically. A case whose frame differs between macOS
 //! releases only through libm also accepts that release's hash ([`LIBM_VARIANTS`]).
 //!
-//! `SIM_GOLDEN_PRINT=1` prints the table (to re-pin after an intended change);
-//! `SIM_GOLDEN_OUT=<dir>` also writes every frame's raw pixels (`f32` little-endian RGBA) there.
-//! To tell a libm difference from a change in the code, render the cases with `SIM_GOLDEN_OUT`
+//! `SIM_EXPECTED_PRINT=1` prints the table (to re-pin after an intended change);
+//! `SIM_EXPECTED_OUT=<dir>` also writes every frame's raw pixels (`f32` little-endian RGBA) there.
+//! To tell a libm difference from a change in the code, render the cases with `SIM_EXPECTED_OUT`
 //! here and at the commit that pinned the hash, and compare the frames: identical frames mean
 //! the code didn't change, and the new hash goes into [`LIBM_VARIANTS`].
 
@@ -282,7 +282,7 @@ fn render(id: &str, set: &Set, time: f64, bpc8: bool, half: bool) -> Image {
 
 /// Every case's name and hash, in a fixed order.
 fn hashes() -> Vec<(String, u64)> {
-    let out_dir = std::env::var_os("SIM_GOLDEN_OUT").map(std::path::PathBuf::from);
+    let out_dir = std::env::var_os("SIM_EXPECTED_OUT").map(std::path::PathBuf::from);
     if let Some(d) = &out_dir {
         std::fs::create_dir_all(d).unwrap();
     }
@@ -310,9 +310,9 @@ fn hashes() -> Vec<(String, u64)> {
 }
 
 #[test]
-fn sim_effects_golden_hashes() {
+fn sim_effects_expected_hashes() {
     let got = hashes();
-    if std::env::var_os("SIM_GOLDEN_PRINT").is_some() {
+    if std::env::var_os("SIM_EXPECTED_PRINT").is_some() {
         for (name, h) in &got {
             println!("    (\"{name}\", 0x{h:016x}),");
         }
@@ -320,16 +320,16 @@ fn sim_effects_golden_hashes() {
     // Deterministic: a second pass (warm simulation caches) renders the same frames.
     assert_eq!(got, hashes(), "simulation effects render deterministically");
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        assert_eq!(got.len(), GOLDEN.len(), "case count");
-        let bad = mismatches(&got, GOLDEN, LIBM_VARIANTS);
+        assert_eq!(got.len(), EXPECTED.len(), "case count");
+        let bad = mismatches(&got, EXPECTED, LIBM_VARIANTS);
         assert!(bad.is_empty(), "CPU output changed (if it may be libm, see the module docs):\n{}", bad.join("\n"));
     }
 }
 
 /// The cases whose hash is neither the pinned one nor one of the case's [`LIBM_VARIANTS`].
-fn mismatches(got: &[(String, u64)], golden: &[(&str, u64)], variants: &[(&str, u64, &str)]) -> Vec<String> {
+fn mismatches(got: &[(String, u64)], expected: &[(&str, u64)], variants: &[(&str, u64, &str)]) -> Vec<String> {
     got.iter()
-        .zip(golden)
+        .zip(expected)
         .filter(|((n, h), (gn, gh))| n != gn || (h != gh && !variants.iter().any(|(vn, vh, _)| vn == n && vh == h)))
         .map(|((n, h), (_, gh))| format!("{n}: 0x{h:016x} (pinned 0x{gh:016x})"))
         .collect()
@@ -338,14 +338,14 @@ fn mismatches(got: &[(String, u64)], golden: &[(&str, u64)], variants: &[(&str, 
 /// A libm variant passes for its own case only (#232).
 #[test]
 fn libm_variants_are_accepted_for_their_case_only() {
-    let golden = [("a", 1), ("b", 2)];
+    let expected = [("a", 1), ("b", 2)];
     let variants = [("a", 9, "another libm")];
     let got = |a: u64, b: u64| vec![("a".to_string(), a), ("b".to_string(), b)];
-    assert!(mismatches(&got(1, 2), &golden, &variants).is_empty());
-    assert!(mismatches(&got(9, 2), &golden, &variants).is_empty(), "the variant");
-    assert_eq!(mismatches(&got(9, 9), &golden, &variants), ["b: 0x0000000000000009 (pinned 0x0000000000000002)"], "not another case's");
-    assert_eq!(mismatches(&got(3, 2), &golden, &variants).len(), 1);
-    assert!(LIBM_VARIANTS.iter().all(|(n, ..)| GOLDEN.iter().any(|(g, _)| g == n)), "every variant names a pinned case");
+    assert!(mismatches(&got(1, 2), &expected, &variants).is_empty());
+    assert!(mismatches(&got(9, 2), &expected, &variants).is_empty(), "the variant");
+    assert_eq!(mismatches(&got(9, 9), &expected, &variants), ["b: 0x0000000000000009 (pinned 0x0000000000000002)"], "not another case's");
+    assert_eq!(mismatches(&got(3, 2), &expected, &variants).len(), 1);
+    assert!(LIBM_VARIANTS.iter().all(|(n, ..)| EXPECTED.iter().any(|(g, _)| g == n)), "every variant names a pinned case");
 }
 
 /// Hashes also accepted for a case: the same frame rendered by the same code with another macOS
@@ -356,7 +356,7 @@ const LIBM_VARIANTS: &[(&str, u64, &str)] = &[
 ];
 
 /// Pinned hashes (aarch64 macOS).
-const GOLDEN: &[(&str, u64)] = &[
+const EXPECTED: &[(&str, u64)] = &[
     ("ec.sim.ccrainfall/0/8bpc/t0.5", 0xc9f1eb02dd83841c),
     ("ec.sim.ccrainfall/0/8bpc/t1.5", 0xa0c1cb9f7863ab73),
     ("ec.sim.ccrainfall/0/8bpc/t0.8", 0x76a8457047798c0b),
