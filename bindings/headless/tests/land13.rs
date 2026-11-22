@@ -3,7 +3,7 @@
 mod common;
 use common::*;
 use kition_kit::KitDocument;
-use serde_json::json;
+use serde_json::{Value, json};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn layer_arrange_holds_its_destination_gap() {
@@ -170,16 +170,52 @@ async fn model_moves_and_creates_have_valid_saved_forms() {
     f.shutdown().await;
 }
 
+/// A batch a model recorded against one opening of the file, replayed on the file opened again by
+/// another manager. The kit builds its replica from the file on every open, so the raw object id
+/// of the composition's `Comp` does not survive the reopen (kition-sdk dcf5ca7,
+/// `docs/platform/data-model.md`, "Ids of a file opened again": "an `ObjectId` does not survive a
+/// reopen; tool ids read from the file do"; `docs/platform/kits/call-context.md`: "reobserve after
+/// restart/eviction"). The replay first proves the old id is refused, then re-observes the
+/// composition by its place, the project's first item, as an agent does, and replays the move
+/// against the id it reads there.
 #[tokio::test(flavor = "multi_thread")]
-async fn a_composition_reference_survives_reopening_for_model_replay() {
+async fn a_composition_reference_is_reobserved_after_reopening_for_model_replay() {
     let bytes = project(3);
     let source = Fixture::from_bytes(&bytes, Default::default());
-    let (_, comp, _) = source.inspect().await;
+    let (info, comp, _) = source.inspect().await;
+    let start = layer_ids(&info);
     let loaded = source.ok("query", json!({"objects":[comp]})).await;
     let held = loaded["objects"][0]["fields"]["comp"].clone();
-    let replay = Fixture::from_bytes(&bytes, Default::default());
-    replay.ok("batch", json!({"ops":[{"op":"list.move","target":held,"field":"layers","from":0,"to":2}]})).await;
+    assert!(held.is_string(), "the composition's Comp is a raw object reference: {loaded}");
     source.shutdown().await;
+
+    let replay = Fixture::from_bytes(&bytes, Default::default());
+    // The contract, pinned: the id from the other opening names nothing here, and nothing changes.
+    let stale = replay.call("batch", json!({"ops":[{"op":"list.move","target":held,"field":"layers","from":0,"to":2}]})).await;
+    let stale = stale.expect_err("an object id from another opening of the file must be refused");
+    assert_eq!(stale["error"]["code"], "not-found", "{stale}");
+    assert_eq!(std::fs::read(replay.file()).unwrap(), bytes, "a refused replay leaves the file as it was: {stale}");
+    // Re-observe: the composition item keeps its tool id across the reopen, and its place (the
+    // project's first item) gives the Comp object's id in this opening.
+    let (info, again, _) = replay.inspect().await;
+    assert_eq!((again, layer_ids(&info)), (comp, start.clone()), "tool ids survive the reopen");
+    let followed = replay.ok("query", json!({"follow":"items.0"})).await;
+    assert_eq!(followed["objects"].as_array().map(Vec::len), Some(1), "{followed}");
+    assert_eq!(id_text(&followed["objects"][0]["id"]), Some(comp.to_string()), "items.0 is the composition: {followed}");
+    let reobserved = followed["objects"][0]["fields"]["comp"].clone();
+    assert!(reobserved.is_string() && reobserved != held, "this opening names the Comp by a fresh id: {reobserved} (held {held})");
+    // The replay against the re-observed id: `to` is a gap counted before the item leaves, so the
+    // top layer goes between the other two, in the running kit and in the saved file.
+    let moved = replay.ok("batch", json!({"ops":[{"op":"list.move","target":reobserved,"field":"layers","from":0,"to":2}]})).await;
+    let arranged = vec![start[1], start[0], start[2]];
+    assert_eq!(layer_ids(&replay.inspect().await.0), arranged, "{moved}");
+    assert_eq!(layers_on_disk(&replay.file()), arranged, "the replayed move is saved: {moved}");
+    // The receipt tells the same order as the one move that makes it: the middle layer to the top.
+    let from = json!({"parent": comp, "field": "comp.layers", "index": 1});
+    let to = json!({"parent": comp, "field": "comp.layers", "index": 0});
+    assert_eq!(moved["changes"]["moved"], json!([{"id": start[1], "type": "Layer", "from": from, "to": to}]), "{moved}");
+    assert_eq!(moved["changes"]["created"], json!([]), "{moved}");
+    assert_eq!(moved["changes"]["deleted"], json!([]), "{moved}");
     replay.shutdown().await;
 }
 
@@ -208,6 +244,11 @@ async fn a_folder_creation_receipts_the_defaults_saved_by_the_engine() {
     reopened.shutdown().await;
 }
 
+/// A property-tree creation a model recorded against one opening of the file, replayed on the file
+/// opened again by another manager. The layer's property tree root is a raw object, minted afresh
+/// on every open (kition-sdk dcf5ca7, `docs/platform/data-model.md`, "Ids of a file opened
+/// again"): the replay proves the old id is refused, re-observes the root through the layer, whose
+/// tool id survives, and creates the group there.
 #[tokio::test(flavor = "multi_thread")]
 async fn property_tree_creations_replay_on_a_reopened_document() {
     let bytes = project(1);
@@ -216,15 +257,59 @@ async fn property_tree_creations_replay_on_a_reopened_document() {
     let layer = layer_ids(&info)[0];
     let loaded = source.ok("query", json!({"objects":[layer]})).await;
     let held = loaded["objects"][0]["fields"]["props"].clone();
+    assert!(held.is_string(), "a layer's property tree root is a raw object reference: {loaded}");
     let props = source.ok("query", json!({"objects":[held]})).await;
+    let children = props["objects"][0]["fields"]["children"].as_array().map(Vec::len).unwrap();
     let mut meta = props["objects"][0]["fields"]["meta"].clone();
     meta["name"] = json!("Extra");
     meta["match"] = json!("extra");
-    let replay = Fixture::from_bytes(&bytes, Default::default());
-    replay.ok("batch", json!({"ops":[{"op":"create","type":"Node","in":format!("{}.children",held.as_str().unwrap()),"at":0,"fields":{"uid":999999,"node":"group","meta":meta,"enabled":true}}]})).await;
-    assert!(std::fs::read_to_string(replay.file()).unwrap().contains("Extra"));
     source.shutdown().await;
+    let create = |root: &Value| json!({"ops":[{"op":"create","type":"Node","in":format!("{}.children",root.as_str().unwrap()),"at":0,"fields":{"uid":999999,"node":"group","meta":meta,"enabled":true}}]});
+
+    let replay = Fixture::from_bytes(&bytes, Default::default());
+    // The contract, pinned: the root's id from the other opening names nothing here, and nothing
+    // changes.
+    let stale = replay.call("batch", create(&held)).await.expect_err("an object id from another opening of the file must be refused");
+    assert_eq!(stale["error"]["code"], "not-found", "{stale}");
+    assert_eq!(std::fs::read(replay.file()).unwrap(), bytes, "a refused replay leaves the file as it was: {stale}");
+    // Re-observe: the layer keeps its tool id, and names its property tree root by this opening's id.
+    let (info, _, _) = replay.inspect().await;
+    assert_eq!(layer_ids(&info), vec![layer], "tool ids survive the reopen");
+    let reloaded = replay.ok("query", json!({"objects":[layer]})).await;
+    let root = reloaded["objects"][0]["fields"]["props"].clone();
+    assert!(root.is_string() && root != held, "this opening names the root by a fresh id: {root} (held {held})");
+    let created = replay.ok("batch", create(&root)).await;
+    // A node has no tool id of its own: the receipt tells the creation as an edit of the layer
+    // holding it, at the node's place in the tree.
+    assert_eq!((&created["changes"]["created"], &created["changes"]["deleted"]), (&json!([]), &json!([])), "{created}");
+    let changed = created["changes"]["changed"].as_array().cloned().unwrap();
+    assert_eq!(changed.len(), 1, "{created}");
+    assert_eq!(id_text(&changed[0]["id"]), Some(layer.to_string()), "{created}");
+    let edit = &changed[0]["edits"][0];
+    assert_eq!((&edit["field"], &edit["named"], &edit["before"]), (&json!("props.children.0"), &json!("extra"), &Value::Null), "{created}");
+    assert_eq!(
+        (&edit["after"]["node"], &edit["after"]["meta"]["name"], &edit["after"]["uid"]),
+        (&json!("group"), &json!("Extra"), &json!(999999)),
+        "{created}"
+    );
+    // The group is the root's first child in the running kit, and in the saved file as a new
+    // engine reads it.
+    let tree = replay.ok("query", json!({"objects":[root]})).await;
+    let kids = tree["objects"][0]["fields"]["children"].as_array().cloned().unwrap();
+    assert_eq!(kids.len(), children + 1, "{tree}");
+    let first = replay.ok("query", json!({"objects":[kids[0].clone()]})).await;
+    let fields = &first["objects"][0]["fields"];
+    assert_eq!((&fields["node"], &fields["meta"]["name"], &fields["meta"]["match"]), (&json!("group"), &json!("Extra"), &json!("extra")), "{first}");
+    let reopened = Fixture::from_bytes(&std::fs::read(replay.file()).unwrap(), Default::default());
+    let reread = reopened.ok("query", json!({"objects":[layer]})).await;
+    let saved_root = reopened.ok("query", json!({"objects":[reread["objects"][0]["fields"]["props"].clone()]})).await;
+    let saved_kids = saved_root["objects"][0]["fields"]["children"].as_array().cloned().unwrap();
+    assert_eq!(saved_kids.len(), children + 1, "{saved_root}");
+    let saved_first = reopened.ok("query", json!({"objects":[saved_kids[0].clone()]})).await;
+    let fields = &saved_first["objects"][0]["fields"];
+    assert_eq!((&fields["node"], &fields["meta"]["name"], &fields["meta"]["match"]), (&json!("group"), &json!("Extra"), &json!("extra")), "{saved_first}");
     replay.shutdown().await;
+    reopened.shutdown().await;
 }
 
 #[tokio::test(flavor = "multi_thread")]

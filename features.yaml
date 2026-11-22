@@ -96,7 +96,7 @@ features:
     priority: P0
     status: partial
     paths: [crates/kdm/kdm-model/model/schema.json, crates/kdm/kdm-model/src/settle.rs, crates/kdm/kdm-model/src/write.rs, crates/kdm/kdm-model/src/read.rs, crates/kdm/kdm-model/src/validate.rs, bindings/wasm/src/collab.rs, bindings/wasm/tests/convergence.rs, kit.json]
-    gap: "Raw assignments, key-list edits, item creation/deletion, owned property creation and layer reordering have guarded contracts. Remaining structural classes and private outside-created receipt fields remain under review."
+    gap: "Raw assignments, key-list edits, item creation/deletion, owned property creation and layer reordering have guarded contracts. Remaining structural classes and private outside-created receipt fields remain under review. Raw object ids are not stable across a reopen: the kit builds its replica from the plain-JSON file on every open, so an id held from one opening is refused not-found in the next, and an agent re-observes it (tool ids survive, as kition-sdk data-model.md says for such kits); ids stable across reopen are after the launch."
     requirements: [A4, AX4, M1, M2]
     cases: [regressions/issue-root-items-reachable, regressions/issue-root-items-converge, regressions/issue-platform-convergence, regressions/issue-c8-motion-pin-raw-batch, regressions/issue-c8-motion-pin-raw-key, regressions/issue-c8-motion-pin-key-structure, regressions/issue-c8-motion-pin-item-delete, regressions/issue-c8-motion-pin-raw-containers]
     since: "2026-11-17"
