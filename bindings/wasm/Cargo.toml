@@ -22,7 +22,7 @@ kition-motion-media = { workspace = true }
 kition-motion-export = { workspace = true }
 kition-motion-time = { workspace = true }
 kition-motion-text = { workspace = true }
-# PNG pictures of `file.render` (and the conformance fixtures' golden previews).
+# PNG pictures of `file.render` (and the conformance fixtures' expected previews).
 image = { workspace = true }
 serde_json = { workspace = true }
 
