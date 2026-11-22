@@ -4,7 +4,7 @@ feature: motion.editor.canvas-scroll
 intent: >-
   The wheel and the hand scroll the canvas only a margin (32 screen pixels, the margin a fitted composition has)
   past the composition: on every side the view stops there, at the opening zoom and zoomed in, and a view larger
-  than the composition and its margin keeps it centred. Before, the editor gave the canvas no scroll limits, so
+  than the composition and its margin keeps it centred. A scrollbar is over the canvas's right or bottom edge only while the composition and its margin are longer than the view there, at the view's position, and moves the view (Home, End). Before, the editor gave the canvas no scroll limits, so
   the view moved any distance past the composition and showed only empty canvas (owner report, 2026-11-22).
 layer: gate
 source:
