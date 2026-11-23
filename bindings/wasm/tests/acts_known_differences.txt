@@ -49,10 +49,10 @@ window.scriptPanel | declared-wider: part, selection, time | scanner-cannot-foll
 # Declared reads the code does not make (over-declared: safe, trimmed in the audit).
 camera.deletePoints | declared-wider: time | over-declared | deletes the selected track points and solves again (camera_cmds.rs:538); no time
 camera.move | declared-wider: selection | over-declared | takes its targets from its parameters and only sets the selection (promo_camera.rs:311)
-edit.history | declared-wider: part, time | over-declared | undoes or redoes n steps (app_more.rs:55): project swaps only
-edit.history.goto | declared-wider: part, time | over-declared | undoes or redoes to a step (edit.rs:881): project swaps only
-edit.redo | declared-wider: part, time | over-declared | swaps in the next project (lib.rs:758); its only use of the active comp is pruning the editor state
-edit.undo | declared-wider: part, time | over-declared | swaps in the previous project (lib.rs:738); its only use of the active comp is pruning the editor state (`sanitize_state`)
+edit.history | declared-wider: time | over-declared | undoes or redoes n steps (app_more.rs:55): project swaps only
+edit.history.goto | declared-wider: time | over-declared | undoes or redoes to a step (edit.rs:881): project swaps only
+edit.redo | declared-wider: time | over-declared | swaps in the next project (lib.rs:758); its only use of the active comp is pruning the editor state
+edit.undo | declared-wider: time | over-declared | swaps in the previous project (lib.rs:738); its only use of the active comp is pruning the editor state (`sanitize_state`)
 file.autoSave | declared-wider: part, selection, time | over-declared | writes the project's JSON (settings.rs:246); no editor state
 file.consolidateFootage | declared-wider: part, time | over-declared | a project-wide edit of footage items (file_more.rs:275), then pruning
 file.importRecent | declared-wider: time | over-declared | imports without `addToComp` (app_more.rs:82), the only path that reads the time
