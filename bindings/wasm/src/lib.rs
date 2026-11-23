@@ -16,6 +16,7 @@ pub mod descriptions;
 mod design;
 mod field_holds;
 mod files;
+mod movie;
 mod param_keys;
 mod params;
 pub mod place;
@@ -280,7 +281,8 @@ impl MotionDocument {
         info
     }
 
-    /// The active composition rendered as a movie (`format`: `h264` by default) named `path`, from
+    /// The active composition rendered as a movie (`format`: `h264` by default, or the Export
+    /// dialog's settings, [`movie::queue_params`]) named `path`, from
     /// a copy of the project, so the document and its Render Queue are left as they are. Returns
     /// the file's bytes; the host saves it as a new file.
     pub fn render_movie(&self, path: &str, format: &str) -> Result<Vec<u8>, String> {
@@ -293,9 +295,7 @@ impl MotionDocument {
             project.render_queue.clear();
             project
         });
-        scratch
-            .execute("renderQueue.add", json!({ "comp": comp.0, "format": if format.is_empty() { "h264" } else { format }, "output": path }))
-            .map_err(|error| error.to_string())?;
+        scratch.execute("renderQueue.add", movie::queue_params(comp.0, path, format)?).map_err(|error| error.to_string())?;
         let report = scratch.execute("renderQueue.render", json!({ "wait": true })).map_err(|error| error.to_string())?;
         let failed = report["items"].as_array().and_then(|items| items.iter().find(|item| item["status"] != "Done"));
         if let Some(item) = failed {
