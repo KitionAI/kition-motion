@@ -31,6 +31,7 @@ export const KIT = {
   arrangeForward: 'kit:arrange-forward',
   arrangeBackward: 'kit:arrange-backward',
   arrangeBack: 'kit:arrange-back',
+  saveFrame: 'kit:save-frame',
   projectPanel: 'kit:project-panel',
 } as const
 
@@ -48,7 +49,8 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
     [
       ['Import…', 'file.import', 'Cmd+I'],
       SEPARATOR,
-      ['Render Movie (MP4)', 'file.exportMovie'],
+      ['Export…', 'file.exportMovie'],
+      ['Save Frame As PNG…', KIT.saveFrame],
     ],
   ],
   [
@@ -181,7 +183,7 @@ export const VIEW_MENUS = ['View']
 
 /** The rows each menu tab shows in Single line's row, by menu. */
 export const MOTION_PRIMARY: Record<string, readonly string[]> = {
-  File: ['file.import', 'file.exportMovie'],
+  File: ['file.import', 'file.exportMovie', KIT.saveFrame],
   Edit: ['edit.undo', 'edit.redo', 'edit.cut', 'edit.copy', 'edit.paste', 'edit.duplicate', 'edit.splitLayer', 'edit.clear'],
   Composition: ['comp.new', 'comp.settings', 'playback.toggle', 'comp.trimToWorkArea'],
   Layer: ['layer.newText', 'layer.newSolid', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment', 'layer.precompose', 'layer.addMask'],

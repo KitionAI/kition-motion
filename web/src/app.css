@@ -916,3 +916,10 @@
   display: inline-flex;
   align-items: center;
 }
+
+.motion-export-busy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}

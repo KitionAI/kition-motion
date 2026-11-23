@@ -224,6 +224,14 @@ async function finishDialog(ctx, leaf, state) {
     if ((await revision()) === startRevision) throw new Error('no effect applied')
     return 'found 高斯模糊 by typing and applied it'
   }
+  if (await field('motion-export-dialog').count()) {
+    const movies = async () => (await page.evaluate(() => [...window.devHost.files.keys()])).filter((name) => name.endsWith('.mp4'))
+    await field('motion-export-dialog-ok').click()
+    for (let i = 0; i < 300 && !(await movies()).length; i += 1) await page.waitForTimeout(100)
+    if (!(await movies()).length) throw new Error('Export wrote no MP4')
+    if (await dialogOpen(kit)) throw new Error('the Export dialog stayed open after rendering')
+    return `exported ${(await movies())[0]}`
+  }
   throw new Error('an unknown dialog opened')
 }
 

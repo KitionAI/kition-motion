@@ -60,7 +60,9 @@ try {
   await kit.getByTestId('motion-new-text').click()
   await until(async () => (await details()).info.layers.length === 4)
   step('adds a text layer', (await details()).info.layers.length === 4)
+  // Export opens its dialog; Render with its settings (the whole composition, MP4) writes the movie.
   await kit.getByTestId('motion-render').click()
+  await kit.getByTestId('motion-export-dialog-ok').click()
   await until(async () => (await page.evaluate(() => [...window.devHost.files.keys()])).some((name) => name.endsWith('.mp4')), 600)
   const movie = await page.evaluate(() => {
     const name = [...window.devHost.files.keys()].find((key) => key.endsWith('.mp4'))

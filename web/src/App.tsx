@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
-import { DownloadIcon as Download, LoaderCircleIcon as Loader2, PanelLeftIcon } from '@kition/tessera/icons/react'
+import { DownloadIcon as Download, PanelLeftIcon } from '@kition/tessera/icons/react'
 import {
   Button,
   EditorFrame,
@@ -19,13 +19,12 @@ import {
   type FrameTab,
   type HostConnection,
   type KitCanvasHandle,
-  type KitEngine,
   type Phrases,
   type RasterView,
 } from '@kition/sdk/editor'
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
-import { describe, picturePanBounds } from './motion'
+import { describe, picturePanBounds, timecode } from './motion'
 import { ARRANGE, KIT, MOTION_PRIMARY, VIEW_MENUS, hiddenRow, menuRows } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
@@ -38,6 +37,7 @@ import { Splitter, useTimelineHeight } from './Splitter'
 import { PropertiesPanel } from './properties/PropertiesPanel'
 import { EffectCatalog } from './properties/catalog'
 import { ProjectPanel, useProjectPanel } from './ProjectPanel'
+import { ExportDialog } from './ExportDialog'
 import { ITEM_MIME, parseAnswer, useFootage } from './footage'
 
 /** Plays the composition from the current time against the wall clock; frames the engine cannot render in time are skipped, as a preview does. */
@@ -83,27 +83,6 @@ function usePlayback(run: (command: string, params: Record<string, unknown>) => 
     }
   }, [playing, run, stop])
   return { playing, toggle, stop }
-}
-
-/** Renders the composition as an H.264 MP4 beside the project (the host picks an unused name). */
-function useMovieRender(doc: KitEngine | null, host: HostConnection, t: (key: string, values?: Record<string, string | number>) => string) {
-  const [rendering, setRendering] = useState(false)
-  const start = useCallback(async () => {
-    if (!doc || rendering) return
-    setRendering(true)
-    try {
-      const path = host.init.document.path.replace(/\.[^./]+$/, '') + '.mp4'
-      const name = path.split('/').pop() ?? path
-      const bytes = await doc.invoke<Uint8Array>('renderMovie', name, 'h264')
-      const written = await host.exportFile(path, bytes)
-      toast('success', t('rendered', { name: written.split('/').pop() ?? written }))
-    } catch (error) {
-      toast('error', t('renderFailed'), error instanceof Error ? error.message : String(error))
-    } finally {
-      setRendering(false)
-    }
-  }, [doc, host, rendering, t])
-  return { rendering, start }
 }
 
 /** One step of View ▸ Zoom In or Zoom Out, as the frame's Cmd+= and Cmd+-. */
@@ -204,8 +183,11 @@ function codeOf(key: string) {
   return CODES[key] ?? ''
 }
 
+/** A time as a file name can have it: `0-00-01-12`. */
+const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).replace(/:/g, '-')
+
 /** Commands the editor asks values for in its own dialogs. */
-const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import']
+const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie']
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -298,7 +280,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const runQuietly = session.run
   const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0)
   useSpaceTap(playback.toggle)
-  const movie = useMovieRender(session.doc, host, t)
+  const [exporting, setExporting] = useState(false)
   const project = useProjectPanel()
   const seek = useCallback((seconds: number) => void runQuietly('time.set', { time: Math.max(0, seconds) }).catch(() => undefined), [runQuietly])
   const step = (frames: number) => void runQuietly('time.step', { frames }).catch(() => undefined)
@@ -337,6 +319,23 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     if (made?.layer == null) return
     const layer = made.layer
     toast.success(t('precomposed'), { action: { label: t('precomposed.open'), onClick: () => openPrecomp(layer) } })
+  }
+  /** The composition's current frame as a PNG beside the project. */
+  const saveFrame = async () => {
+    const doc = session.doc
+    const comp = state?.comp
+    if (!doc || !comp) return
+    const folder = host.init.document.path.split('/').slice(0, -1).join('/')
+    const name = `${comp.name.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'Composition'} ${timecodeName(state.time, comp.fps)}.png`
+    try {
+      if ((await run('comp.saveFrameAs', { path: name })) === null) return
+      const bytes = await doc.invoke<Uint8Array | undefined>('takeFile', name)
+      if (!bytes) throw new Error('the engine wrote no picture')
+      const written = await host.exportFile([folder, name].filter(Boolean).join('/'), bytes)
+      toast.success(t('frameSaved', { name: written.split('/').pop() ?? written }))
+    } catch (error) {
+      toast.error(t('frameFailed'), { description: error instanceof Error ? error.message : String(error) })
+    }
   }
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
   const [findEffect, setFindEffect] = useState(false)
@@ -381,9 +380,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   /** Commands the editor answers itself (the rest go to the engine as they are). */
   const own: Record<string, () => void> = {
     'playback.toggle': playback.toggle,
-    'file.exportMovie': () => void movie.start(),
+    'file.exportMovie': () => state?.comp && setExporting(true),
     'file.import': () => void footage.importPicked(),
     'layer.precompose': () => void precompose(),
+    [KIT.saveFrame]: () => void saveFrame(),
     [KIT.projectPanel]: project.toggle,
     'time.start': () => seek(0),
     'time.end': end,
@@ -498,9 +498,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               <PanelLeftIcon size={14} aria-hidden="true" />
               {t('project.title')}
             </Button>
-            <Button variant="ghost" disabled={!state?.comp || movie.rendering} onClick={() => void movie.start()} data-testid="motion-render">
-              {movie.rendering ? <Loader2 size={14} className="kui-spin" aria-hidden="true" /> : <Download size={14} aria-hidden="true" />}
-              {movie.rendering ? t('rendering') : t('renderMovie')}
+            <Button variant="ghost" disabled={!state?.comp} onClick={() => setExporting(true)} data-testid="motion-render">
+              <Download size={14} aria-hidden="true" />
+              {t('renderMovie')}
             </Button>
           </>
         }
@@ -521,6 +521,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         panels={state ? <PropertiesPanel info={state} onAddEffect={() => setFindEffect(true)} typingOnCanvas={tools.active === 'text' || tools.wantsText} /> : null}
       >
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
+        {exporting && state ? <ExportDialog info={state} doc={session.doc} onClose={() => setExporting(false)} /> : null}
         {findEffect ? <FindEffectDialog effects={effects} onApply={(effect) => applyEffect(effect.id)} onClose={() => setFindEffect(false)} /> : null}
         <div className="kui-row" ref={workspace} data-testid="motion-workspace" data-picture={picture ? `${picture.width} ${picture.height}` : undefined}>
           <div
