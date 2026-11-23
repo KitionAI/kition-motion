@@ -304,6 +304,30 @@ impl MotionDocument {
         self.take_file(path).ok_or_else(|| "the render produced no file".to_owned())
     }
 
+    /// The keyframed values of one property of a layer in the active composition (`path` as
+    /// `prop.*` take it) at `count` evenly spaced composition times from `from` to `to` seconds,
+    /// as JSON (an array of values): the curves a graph editor draws, without an expression.
+    /// `count` is capped at [`MAX_SAMPLES`]; an unknown layer or path answers an error.
+    pub fn curve_samples(&self, layer: u64, path: &str, from: f64, to: f64, count: u32) -> Result<String, String> {
+        let comp = self.session.active_comp().ok_or("no composition is open")?;
+        let layer = comp.layers.iter().find(|candidate| candidate.id.0 == layer).ok_or("no such layer")?;
+        let mut found = None;
+        layer.props.walk("", &mut |_, prop| {
+            if found.is_none() && prop_path(&layer.props, prop.uid).as_deref() == Some(path) {
+                found = Some(prop);
+            }
+        });
+        let prop = found.ok_or("no such property")?;
+        if !from.is_finite() || !to.is_finite() {
+            return Err("the times must be numbers".to_owned());
+        }
+        let count = count.clamp(2, MAX_SAMPLES);
+        let step = (to - from) / f64::from(count - 1);
+        let values: Vec<Value> =
+            (0..count).map(|index| prop.value_at(layer.layer_time(Tick::from_seconds_f64(from + step * f64::from(index)))).to_json()).collect();
+        serde_json::to_string(&values).map_err(|error| error.to_string())
+    }
+
     /// Takes a file the engine wrote (an export) out of memory; the host saves it.
     pub fn take_file(&self, path: &str) -> Option<Vec<u8>> {
         if path == self.name {
@@ -323,6 +347,9 @@ impl MotionDocument {
 /// document, while keyframe times and the animated properties' paths, which are the document's,
 /// stay. `kition-motion` passes them to kition-headless as its volatile keys.
 pub const EDITOR_STATE: &[&str] = &["/time", "/info/transform", "selected"];
+
+/// The most samples [`MotionDocument::curve_samples`] takes per call.
+pub const MAX_SAMPLES: u32 = 2000;
 
 /// The command the agent's `<prefix>_export` runs (KHP A41, kition-kits `KitExport`): the active
 /// composition as an MP4, its bytes in the answer (base64 `data`), so no path reaches the engine
@@ -985,6 +1012,15 @@ pub mod web {
         #[wasm_bindgen(js_name = takeFile)]
         pub fn take_file(&self, path: &str) -> Option<Vec<u8>> {
             self.0.take_file(path)
+        }
+
+        /// One property's values over a stretch of time, as JSON (see [`MotionDocument::curve_samples`]).
+        #[wasm_bindgen(js_name = curveSamples)]
+        pub fn curve_samples(&self, layer: f64, path: &str, from: f64, to: f64, count: u32) -> Result<String, JsError> {
+            if !(layer >= 0.0 && layer.fract() == 0.0 && layer < 9.0e15) {
+                return Err(JsError::new("the layer must be a layer id"));
+            }
+            self.0.curve_samples(layer as u64, path, from, to, count).map_err(|message| JsError::new(&message))
         }
 
         /// The active composition rendered as a movie named `path` (see [`MotionDocument::render_movie`]).

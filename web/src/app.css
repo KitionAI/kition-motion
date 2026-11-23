@@ -257,6 +257,54 @@
   touch-action: none;
 }
 
+/* A property's keyframe, one half per side: a diamond's half (linear), an hourglass's (Bezier), a square's (hold). */
+.motion-key[data-shape='halves']::before,
+.motion-key[data-shape='halves']::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 5px;
+  background: var(--kit-text-muted);
+}
+
+.motion-key[data-shape='halves']::before {
+  left: 1.5px;
+}
+
+.motion-key[data-shape='halves']::after {
+  right: 1.5px;
+}
+
+.motion-key[data-shape='halves'][aria-selected='true']::before,
+.motion-key[data-shape='halves'][aria-selected='true']::after {
+  background: var(--kit-primary);
+}
+
+.motion-key[data-in='linear']::before {
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.motion-key[data-in='bezier']::before {
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.motion-key[data-in='hold']::before {
+  clip-path: inset(1px 0 1px 1px);
+}
+
+.motion-key[data-out='linear']::after {
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.motion-key[data-out='bezier']::after {
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.motion-key[data-out='hold']::after {
+  clip-path: inset(1px 1px 1px 0);
+}
+
 /* A marquee being dragged over the tracks: the keyframes inside it are selected on release. */
 .motion-marquee {
   position: absolute;
@@ -966,4 +1014,141 @@
   align-items: center;
   gap: 8px;
   margin: 0;
+}
+
+/* The timeline's Graph button, beside "Layers" in its head. */
+.motion-graph-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 1px solid var(--kit-border);
+  border-radius: var(--kit-radius-control);
+  background: transparent;
+  color: var(--kit-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.motion-graph-toggle[aria-pressed='true'] {
+  border-color: var(--kit-primary);
+  background: var(--kit-primary-soft);
+  color: var(--kit-text);
+}
+
+/* The graph editor, in place of the layer rows: the curves' names on the left, the plot over the tracks. */
+.motion-graph {
+  display: flex;
+  height: calc(100% - 28px);
+  min-height: 120px;
+}
+
+.motion-graph-names {
+  align-items: flex-start;
+  padding-top: 6px;
+  overflow-y: auto;
+  border-right: 1px solid var(--kit-border);
+}
+
+.motion-graph-empty {
+  margin: 12px;
+}
+
+.motion-graph-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.motion-graph-legend li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.motion-graph-legend-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.motion-graph-chip {
+  flex: none;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+}
+
+.motion-graph-plot {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.motion-graph-plot svg {
+  display: block;
+  touch-action: none;
+}
+
+.motion-graph-grid line {
+  stroke: var(--kit-border);
+}
+
+.motion-graph-grid text {
+  fill: var(--kit-text-muted);
+  font-size: 10px;
+}
+
+.motion-graph-playhead {
+  stroke: var(--kit-primary);
+}
+
+.motion-graph-curve polyline {
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.motion-graph-curve[data-dim='x'] { --motion-dim: #e5534b; }
+.motion-graph-curve[data-dim='y'] { --motion-dim: #3fb950; }
+.motion-graph-curve[data-dim='z'] { --motion-dim: #4c8eda; }
+.motion-graph-curve[data-dim='one'] { --motion-dim: var(--kit-primary); }
+.motion-graph-chip[data-dim='x'] { background: #e5534b; }
+.motion-graph-chip[data-dim='y'] { background: #3fb950; }
+.motion-graph-chip[data-dim='z'] { background: #4c8eda; }
+.motion-graph-chip[data-dim='one'] { background: var(--kit-primary); }
+
+.motion-graph-curve polyline {
+  stroke: var(--motion-dim);
+}
+
+.motion-graph-key {
+  fill: var(--kit-surface);
+  stroke: var(--motion-dim);
+  stroke-width: 1.5;
+  cursor: move;
+}
+
+.motion-graph-key[aria-selected='true'] {
+  fill: var(--motion-dim);
+}
+
+.motion-graph-handle line {
+  stroke: var(--kit-text-muted);
+}
+
+.motion-graph-handle circle {
+  fill: var(--kit-surface);
+  stroke: var(--kit-text);
+  cursor: pointer;
 }

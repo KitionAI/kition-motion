@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { Button, Dialog, Field, Select, TextInput, formatTimecode, parseHex, parseTimecode, rgbToHex, useKitEditor } from '@kition/sdk/editor'
+import { Button, Checkbox, Dialog, Field, Select, TextInput, formatTimecode, parseHex, parseTimecode, rgbToHex, useKitEditor } from '@kition/sdk/editor'
 import { ColorSwatch } from './properties/ColorSwatch'
 
 /** A colour as the engine gives it: [r, g, b] from 0 to 1. */
@@ -19,6 +19,11 @@ export type MotionDialog =
   | { kind: 'solid'; mode: 'new' | 'settings'; layer?: number; values: SolidValues }
   | { kind: 'time'; time: number; fps: number; duration: number }
   | { kind: 'rename'; layer: number; name: string }
+  | { kind: 'interpolation'; spatial: boolean }
+  | { kind: 'velocity'; values: VelocityValues; units: string }
+
+/** The first selected keyframe's speed (units per second) and influence (%) on each side, for Keyframe Velocity. */
+export type VelocityValues = { inSpeed: number; inInfluence: number; outSpeed: number; outInfluence: number }
 
 /** Frame sizes a composition is often made at: [label key, width, height]. */
 const SIZE_PRESETS: ReadonlyArray<readonly [string, number, number]> = [
@@ -281,6 +286,82 @@ function RenameDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind
   )
 }
 
+/** Keyframe Interpolation's choices for each kind (`keys.interpolation`): '' keeps the keys' own. */
+const TEMPORAL = ['', 'linear', 'bezier', 'continuousBezier', 'autoBezier', 'hold'] as const
+const SPATIAL = ['', 'linear', 'bezier', 'continuousBezier', 'autoBezier'] as const
+
+/** Keyframe Interpolation: the selected keyframes' temporal and (on a moving property) spatial interpolation. */
+function InterpolationDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'interpolation' }>; onDone: () => void }) {
+  const { run, t } = useKitEditor()
+  const [temporal, setTemporal] = useState<string>('')
+  const [spatial, setSpatial] = useState<string>('')
+  const choices = (list: readonly string[], value: string, set: (next: string) => void, testId: string) => (
+    <Select value={value} onChange={(event) => set(event.target.value)} data-testid={testId}>
+      {list.map((choice) => (
+        <option key={choice} value={choice}>
+          {t(choice ? `interp.${choice}` : 'interp.current')}
+        </option>
+      ))}
+    </Select>
+  )
+  return (
+    <FormDialog
+      title={t('dialog.interpolation')}
+      testId="motion-interp-dialog"
+      onSubmit={() => {
+        const params = { ...(temporal ? { interpolation: temporal } : {}), ...(spatial ? { spatial } : {}) }
+        if (Object.keys(params).length) void run('keys.interpolation', params)
+        onDone()
+      }}
+      onClose={onDone}
+      valid
+    >
+      <Field label={t('interp.temporal')}>{choices(TEMPORAL, temporal, setTemporal, 'motion-interp-temporal')}</Field>
+      {dialog.spatial ? <Field label={t('interp.spatial')}>{choices(SPATIAL, spatial, setSpatial, 'motion-interp-spatial')}</Field> : null}
+    </FormDialog>
+  )
+}
+
+/** Keyframe Velocity: the selected keyframes' incoming and outgoing speed and influence (`keys.velocity`). */
+function VelocityDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'velocity' }>; onDone: () => void }) {
+  const { run, t, phrase } = useKitEditor()
+  const units = phrase(dialog.units)
+  const round = (value: number) => String(Math.round(value * 1000) / 1000)
+  const [inSpeed, setInSpeed] = useState(round(dialog.values.inSpeed))
+  const [inInfluence, setInInfluence] = useState(round(dialog.values.inInfluence))
+  const [outSpeed, setOutSpeed] = useState(round(dialog.values.outSpeed))
+  const [outInfluence, setOutInfluence] = useState(round(dialog.values.outInfluence))
+  const [continuous, setContinuous] = useState(false)
+  const numbers = { inSpeed: numberIn(inSpeed, -1e9, 1e9), inInfluence: numberIn(inInfluence, 0.1, 100), outSpeed: numberIn(continuous ? inSpeed : outSpeed, -1e9, 1e9), outInfluence: numberIn(outInfluence, 0.1, 100) }
+  const valid = Object.values(numbers).every((value) => value !== null)
+  const invalid = t('dialog.badNumber')
+  return (
+    <FormDialog
+      title={t('dialog.velocity')}
+      testId="motion-velocity-dialog"
+      onSubmit={() => {
+        if (!valid) return
+        void run('keys.velocity', { ...numbers, ...(continuous ? { continuous: true } : {}) })
+        onDone()
+      }}
+      onClose={onDone}
+      valid={valid}
+    >
+      <p className="kui-muted">{t('velocity.incoming')}</p>
+      <div className="motion-form-pair">
+        <TextRow label={t('velocity.speed')} value={inSpeed} onChange={setInSpeed} error={numbers.inSpeed === null ? invalid : null} testId="motion-velocity-in-speed" unit={units} autoFocus />
+        <TextRow label={t('velocity.influence')} value={inInfluence} onChange={setInInfluence} error={numbers.inInfluence === null ? invalid : null} testId="motion-velocity-in-influence" unit="%" />
+      </div>
+      <p className="kui-muted">{t('velocity.outgoing')}</p>
+      <div className="motion-form-pair">
+        <TextRow label={t('velocity.speed')} value={continuous ? inSpeed : outSpeed} onChange={setOutSpeed} error={numbers.outSpeed === null ? invalid : null} testId="motion-velocity-out-speed" unit={units} />
+        <TextRow label={t('velocity.influence')} value={outInfluence} onChange={setOutInfluence} error={numbers.outInfluence === null ? invalid : null} testId="motion-velocity-out-influence" unit="%" />
+      </div>
+      <Checkbox label={t('velocity.continuous')} checked={continuous} onChange={setContinuous} testId="motion-velocity-continuous" />
+    </FormDialog>
+  )
+}
+
 /** The open dialog, if any; each runs one engine command (one undo step) when confirmed. */
 export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialog | null; onClose: () => void; onSeek: (seconds: number) => void }) {
   // A new dialog (even of the same kind) starts from its own values.
@@ -308,5 +389,9 @@ export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialo
       return <TimeDialog key={key} dialog={dialog} onSeek={onSeek} onDone={onClose} />
     case 'rename':
       return <RenameDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'interpolation':
+      return <InterpolationDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'velocity':
+      return <VelocityDialog key={key} dialog={dialog} onDone={onClose} />
   }
 }

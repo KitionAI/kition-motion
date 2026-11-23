@@ -1,6 +1,7 @@
 import type { MenuRow } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
 import { EFFECT_PREFIX, effectRows, type MotionEffect } from './effects'
+import { INTERPOLATIONS } from './timeline/interp'
 
 /**
  * The editor's menus: the commands each menu shows, in order, with separators and submenus. A
@@ -146,6 +147,9 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
   [
     'Animation',
     [
+      ['Keyframe Interpolation', [...INTERPOLATIONS.map((row) => [row.label, row.command] as const), SEPARATOR, ['Keyframe Interpolation…', 'keys.interpolation']]],
+      ['Keyframe Velocity…', 'keys.velocity'],
+      SEPARATOR,
       ['Easy Ease', 'keys.easyEase'],
       ['Easy Ease In', 'keys.easyEaseIn'],
       ['Easy Ease Out', 'keys.easyEaseOut'],
@@ -201,9 +205,9 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
  * Video with none hidden, Unlock All with none locked, Trim to Work Area while the work area is
  * the whole composition, Solid Settings unless the selected layer is a solid, effects without a
  * selection, Last Effect until one was applied here, Fit in Window while the view is fitted and
- * Zoom 100% at 100%.
+ * Zoom 100% at 100%, and the Keyframe Interpolation rows without selected keyframes.
  */
-export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean }) {
+export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean }, keysSelected: boolean) {
   const layers = info?.layers ?? []
   const selected = layers.some((layer) => layer.selected)
   const comp = info?.comp
@@ -217,6 +221,7 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { 
   if (!selected || !lastEffect) hidden.add('effect.applyLast')
   if (view.fitted) hidden.add(KIT.zoomFit)
   if (view.actual) hidden.add(KIT.zoom100)
+  if (!keysSelected) for (const row of INTERPOLATIONS) hidden.add(row.command)
   const key = [...hidden].sort().join(' ') + (selected ? '' : ' effects')
   return { key, hidden: (row: MenuRow) => hidden.has(row.command) || (!selected && row.command.startsWith(EFFECT_PREFIX)) }
 }

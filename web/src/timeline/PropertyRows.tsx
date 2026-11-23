@@ -8,9 +8,23 @@ import { propMeta } from '../properties/meta'
 import { PropertyValue } from '../properties/PropertyValue'
 import { useTimeline } from './context'
 import { KeyMark } from './KeyMark'
+import { sideOf, type PropRead } from './interp'
 import { keyTimes } from './keys'
 import { effectOf, parentsOf, propertyRows, type TreeNode, type Twirl } from './tree'
 import { leftOf } from './view'
+
+/** An animated property's keyframes on its track, each shaped by its interpolation (`prop.get`). */
+function PropertyKeys({ layer, path, times, selected, name, row }: { layer: number; path: string; times: number[]; selected: ReadonlySet<string>; name: string; row: string }) {
+  const read = useEngineQuery<PropRead>('prop.get', { layer, path })
+  const interps = new Map((read?.keys ?? []).map((key) => [Math.round(key.compTime * 1e6), { in: sideOf(key.in), out: sideOf(key.out) }]))
+  return (
+    <>
+      {times.map((time) => (
+        <KeyMark key={time} time={time} keys={[{ layer, path, time }]} selected={selected} label={name} row={row} interp={interps.get(Math.round(time * 1e6))} />
+      ))}
+    </>
+  )
+}
 
 /** How deep the timeline reads a layer's property tree (shape groups nest). */
 const TREE_DEPTH = 8
@@ -61,9 +75,7 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
               <PropertyValue layer={layer} node={node} meta={meta} time={info.time} name={name} testId={`motion-row-value-${id}`} readOnly={readOnly} compact />
             </div>
             <div className="motion-row-track">
-              {times.map((time) => (
-                <KeyMark key={time} time={time} keys={[{ layer: layer.id, path: node.path, time }]} selected={selected} label={name} row={id} />
-              ))}
+              {times.length ? <PropertyKeys layer={layer.id} path={node.path} times={times} selected={selected} name={name} row={id} /> : null}
               <span className="motion-playhead" style={{ left: leftOf(view, info.time) }} aria-hidden="true" />
             </div>
           </div>

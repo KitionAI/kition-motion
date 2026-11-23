@@ -39,6 +39,8 @@ import { EffectCatalog } from './properties/catalog'
 import { ProjectPanel, useProjectPanel } from './ProjectPanel'
 import { ExportDialog } from './ExportDialog'
 import { ITEM_MIME, parseAnswer, useFootage } from './footage'
+import { INTERPOLATIONS } from './timeline/interp'
+import { SamplerContext, type CurveSampler } from './timeline/samples'
 
 /** Plays the composition from the current time against the wall clock; frames the engine cannot render in time are skipped, as a preview does. */
 function usePlayback(run: (command: string, params: Record<string, unknown>) => Promise<unknown>, time: number, duration: number) {
@@ -187,7 +189,7 @@ function codeOf(key: string) {
 const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).replace(/:/g, '-')
 
 /** Commands the editor asks values for in its own dialogs. */
-const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie']
+const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity']
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -340,6 +342,12 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     }
   }
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
+  // The graph editor's curves: a property's values over time, sampled by the engine.
+  const doc = session.doc
+  const sampler = useCallback<CurveSampler>(
+    async (layer, path, from, to, count) => (doc ? (JSON.parse(await doc.invoke<string>('curveSamples', layer, path, from, to, count)) as unknown[]) : null),
+    [doc],
+  )
   const [findEffect, setFindEffect] = useState(false)
   // Every effect the engine has, for the Effect menu; and whether one was applied here (Last Effect).
   const [effects, setEffects] = useState<MotionEffect[]>([])
@@ -379,6 +387,23 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     setDialog({ kind: 'solid', mode, layer: layer.id, values: { name: item?.name ?? layer.name, width: item?.width ?? comp.width, height: item?.height ?? comp.height, color: toHex(item?.color ?? [0.5, 0.5, 0.5]), comp } })
   }
   const end = () => seek((state?.comp?.duration ?? 0) - (state?.frame ?? 0))
+  /** What `keys.info` answers for the selected keyframes (the fields the dialogs read). */
+  type SelectedKeyInfo = { dims?: number; spatial?: string; units?: string; inEase?: Array<{ speed: number; influence: number } | null>; outEase?: Array<{ speed: number; influence: number } | null> }
+  /** Keyframe Interpolation, with Spatial when a selected keyframe is on a moving property (Position, Anchor Point). */
+  const openInterpolation = async () => {
+    const keys = await query<SelectedKeyInfo[]>('keys.info', {})
+    if (!Array.isArray(keys) || !keys.length) return
+    setDialog({ kind: 'interpolation', spatial: keys.some((key) => typeof key.spatial === 'string') })
+  }
+  /** Keyframe Velocity, starting from the first selected keyframe's first dimension. */
+  const openVelocity = async () => {
+    const keys = await query<SelectedKeyInfo[]>('keys.info', {})
+    const first = Array.isArray(keys) ? keys[0] : undefined
+    if (!first) return
+    const side = (ease: SelectedKeyInfo['inEase']) => ease?.find((one) => one != null) ?? { speed: 0, influence: 33.33 }
+    const [inside, outside] = [side(first.inEase), side(first.outEase)]
+    setDialog({ kind: 'velocity', units: first.units ?? '', values: { inSpeed: inside.speed, inInfluence: inside.influence, outSpeed: outside.speed, outInfluence: outside.influence } })
+  }
   /** Commands the editor answers itself (the rest go to the engine as they are). */
   const own: Record<string, () => void> = {
     'playback.toggle': playback.toggle,
@@ -398,6 +423,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [KIT.zoomFit]: fit,
     [KIT.zoom100]: () => canvas.current?.zoomTo(1),
     'comp.new': () => void openComp('new'),
+    'keys.interpolation': () => void openInterpolation(),
+    'keys.velocity': () => void openVelocity(),
+    ...Object.fromEntries(INTERPOLATIONS.map((row) => [row.command, () => void run('keys.interpolation', { interpolation: row.interpolation })])),
     'comp.settings': () => void openComp('settings'),
     'layer.newSolid': () => void openSolid('new'),
     'layer.settings': () => void openSolid('settings'),
@@ -423,7 +451,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [run],
   )
   // Rows with nothing to act on are hidden; the predicate changes only when that does.
-  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1 })
+  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1 }, editor.enabled('keys.interpolation'))
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(() => menuRows(effects), [effects])
   const wholeWorkArea = hiding.key.includes('comp.trimToWorkArea')
@@ -497,6 +525,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   return (
     <KitEditorProvider editor={editor} tools={tools}>
       <EffectCatalog.Provider value={effects}>
+      <SamplerContext.Provider value={sampler}>
       <EditorFrame
         tabs={tabs}
         defaultTab="home"
@@ -604,12 +633,14 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
                   keys={timelineKeys}
                   onOpenPrecomp={openPrecomp}
                   onPrecompose={() => void precompose()}
+                  onCommand={dispatch}
                 />
               </FrameChrome>
             ) : null}
           </div>
         </div>
       </EditorFrame>
+      </SamplerContext.Provider>
       </EffectCatalog.Provider>
     </KitEditorProvider>
   )

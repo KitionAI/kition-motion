@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react'
+import { SplineIcon as Spline } from '@kition/tessera/icons/react'
 import { Scrollbar } from '@kition/tessera/ui'
 import { Button, Dialog, TextInput, useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
 import { TimelineContext, type TimelineFrame } from './context'
 import { LayerBar } from './LayerBar'
 import { LayerMenu, type LayerMenuTarget } from './LayerMenu'
+import { GraphEditor, type GraphTarget } from './GraphEditor'
 import { KeyMark } from './KeyMark'
-import { keyId, layerKeyMarks, type SelectedKey } from './keys'
+import { KeyMenu } from './KeyMenu'
+import { keyId, keysOf, layerKeyMarks, type SelectedKey } from './keys'
 import { LayerNames } from './LayerNames'
 import { MarkerFlags, markerParams, type MarkerRef } from './Markers'
 import { PropertyRows } from './PropertyRows'
@@ -42,8 +45,8 @@ function useWidth() {
  * (useKeyGestures); a click on empty timeline deselects. The timeline zooms and scrolls in time
  * (useTimeView), and the ruler sets the work area.
  */
-export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys; onOpenPrecomp: (layer: number) => void; onPrecompose: () => void }) {
-  const { run, t } = useKitEditor()
+export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose, onCommand }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys; onOpenPrecomp: (layer: number) => void; onPrecompose: () => void; onCommand: (command: string) => void }) {
+  const { run, t, phrase } = useKitEditor()
   const readOnly = useReadOnly()
   const duration = Math.max(info.comp?.duration ?? 0, info.frame)
   const [width, rulerRef] = useWidth()
@@ -70,6 +73,16 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
   // The marker clicked last (Delete removes it), and the one being renamed.
   const [marker, setMarker] = useState<MarkerRef | null>(null)
   const [naming, setNaming] = useState<{ marker: MarkerRef; comment: string } | null>(null)
+  // The graph editor in place of the layer rows (Shift+F3), and a keyframe's right-click menu.
+  const [graph, setGraph] = useState(false)
+  const [keyMenu, setKeyMenu] = useState<{ x: number; y: number } | null>(null)
+  // The graph shows the selected layers' animated properties; it reads them again when their keys or the selected keys change.
+  const targetsKey = JSON.stringify(info.layers.filter((layer) => layer.selected).map((layer) => [layer.id, layer.name, layer.switches.threeD, layer.animated.map((property) => [property.path, property.name])]))
+  const graphTargets = useMemo<GraphTarget[]>(
+    () => info.layers.filter((layer) => layer.selected).flatMap((layer) => layer.animated.map((property) => ({ layer, path: property.path, name: phrase(property.name) }))),
+    [targetsKey, phrase], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const graphRevision = JSON.stringify([info.layers.map((layer) => [layer.id, layer.in, layer.start, layer.animated]), selection])
   const markerFlags = (layer: number | null) => <MarkerFlags layer={layer} selected={marker} onSelect={setMarker} onRename={(target, comment) => setNaming({ marker: target, comment })} />
 
   const twirl = (layer: number) =>
@@ -128,13 +141,14 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
       void run('keys.paste', { time: info.time })
       return true
     }
-    // J and K: the previous and next keyframe; F9: Easy Ease on the selected keyframes.
+    // J and K: the previous and next keyframe (F9, Easy Ease, is the engine's shortcut, run by the frame).
     if (plain && (event.code === 'KeyJ' || event.code === 'KeyK')) {
       void run(event.code === 'KeyJ' ? 'time.previousKey' : 'time.nextKey', {})
       return true
     }
-    if (plain && event.key === 'F9') {
-      if (!readOnly && selectedKeys.size) void run('keys.easyEase', {})
+    // Shift+F3: the graph editor in place of the layer rows, and back.
+    if (!command && !event.altKey && event.shiftKey && event.key === 'F3') {
+      setGraph((open) => !open)
       return true
     }
     // = and -: zoom the timeline in and out (Cmd or Ctrl with them zoom the composition).
@@ -179,15 +193,32 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
           ref={rows}
           className="motion-timeline-rows"
           {...gestures.handlers}
+          // A right-click on a keyframe: its menu, on the selection (the keyframe joins it first unless it is in it).
+          onContextMenu={(event) => {
+            const mark = event.target instanceof Element ? event.target.closest<HTMLElement>('.motion-key') : null
+            if (!mark) return
+            event.preventDefault()
+            const marked = keysOf(mark)
+            if (!marked.every((key) => selectedKeys.has(keyId(key)))) void run('keys.select', { keys: marked, timeBase: 'comp', selectProperties: true })
+            setKeyMenu({ x: event.clientX, y: event.clientY })
+          }}
           data-testid="motion-timeline-rows"
         >
           <div className="motion-timeline-head">
-            <div className="motion-timeline-names kui-muted">{t('layers')}</div>
+            <div className="motion-timeline-names kui-muted">
+              <span>{t('layers')}</span>
+              <button type="button" className="motion-graph-toggle" aria-pressed={graph} title={t('graph.toggleHint')} onClick={() => setGraph((open) => !open)} data-testid="motion-graph-toggle">
+                <Spline size={12} aria-hidden="true" />
+                {t('graph.toggle')}
+              </button>
+            </div>
             <Ruler onSeek={onSeek} rulerRef={rulerRef} onWorkArea={(start, end) => void run('comp.workArea', { start, end })}>
               {markerFlags(null)}
             </Ruler>
           </div>
-          {info.layers.length ? (
+          {graph ? (
+            <GraphEditor targets={graphTargets} selected={selectedKeys} revision={graphRevision} />
+          ) : info.layers.length ? (
             info.layers.map((layer) => (
               <div key={layer.id} className="motion-layer-block" data-layer-block={layer.id} data-testid={`motion-layer-block-${layer.id}`}>
                 <div className="motion-row" data-selected={layer.selected} data-testid={`motion-layer-${layer.id}`}>
@@ -252,6 +283,7 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
             <Scrollbar label={t('horizontalScroll')} orientation="horizontal" value={view.start} max={Math.max(0, duration - view.span)} page={view.span} onChange={time.scrollTo} />
           </div>
         ) : null}
+        <KeyMenu at={keyMenu} onClose={() => setKeyMenu(null)} onCommand={onCommand} />
         <LayerMenu target={menu} onClose={() => setMenu(null)} onRename={(layer) => setRenaming(layer)} onOpen={onOpenPrecomp} onPrecompose={onPrecompose} />
         {naming ? (
           <Dialog
