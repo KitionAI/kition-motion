@@ -152,6 +152,11 @@ try {
   step('the rectangle is the size dragged (300 × 200)', nearAll(rectSize, [300, 200], 2), JSON.stringify(rectSize))
   const rectPos = await value(rect.id, 'transform/position')
   step('and centred where it was dragged (850, 200)', nearAll(rectPos, [850, 200], 2), JSON.stringify(rectPos))
+  // Where the drag put it, as the engine holds it: WebKit reports whole page pixels for the pointer,
+  // so at the canvas's zoom the drawn rectangle sits up to a composition pixel off (850, 200), and
+  // the moves below are measured from there.
+  const home = rectPos.slice(0, 2)
+  const from = (dx, dy) => [home[0] + dx, home[1] + dy]
   step('the new layer is selected', same(await selection(), [rect.id]), JSON.stringify(await selection()))
   step('the tool goes back to Selection', await until(async () => (await active()) === 'selection'), await active())
   if (shots) await page.screenshot({ path: `${shots}phase2-selected.png` })
@@ -169,25 +174,25 @@ try {
   const v = await view()
   await drag([850, 200], [910, 240], { held: [primary] })
   let moved = await value(rect.id, 'transform/position')
-  step(`a drag moves the layer by the composition pixels dragged (zoom ${Math.round(v.zoom * 100)}%)`, nearAll(moved, [910, 240], 1.5), JSON.stringify(moved))
+  step(`a drag moves the layer by the composition pixels dragged (zoom ${Math.round(v.zoom * 100)}%)`, nearAll(moved, from(60, 40), 1.5), JSON.stringify(moved))
   await undo()
-  await until(async () => nearAll(await value(rect.id, 'transform/position'), [850, 200], 1e-3))
-  step('one undo puts it back', nearAll(await value(rect.id, 'transform/position'), [850, 200], 1e-3), JSON.stringify(await value(rect.id, 'transform/position')))
+  await until(async () => nearAll(await value(rect.id, 'transform/position'), home, 1e-3))
+  step('one undo puts it back', nearAll(await value(rect.id, 'transform/position'), home, 1e-3), JSON.stringify(await value(rect.id, 'transform/position')))
   await drag([850, 200], [950, 215], { held: ['Shift', primary] })
   moved = await value(rect.id, 'transform/position')
-  step('Shift holds the move to one axis', near(moved[1], 200) && nearAll(moved, [950, 200], 1.5), JSON.stringify(moved))
+  step('Shift holds the move to one axis', near(moved[1], home[1]) && nearAll(moved, from(100, 0), 1.5), JSON.stringify(moved))
   await undo()
-  await until(async () => nearAll(await value(rect.id, 'transform/position'), [850, 200]))
+  await until(async () => nearAll(await value(rect.id, 'transform/position'), home))
   // The arrow keys nudge: 1 pixel, 10 with Shift.
   await focusEditor()
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('Shift+ArrowDown')
-  await until(async () => nearAll(await value(rect.id, 'transform/position'), [851, 210]))
-  step('arrow keys nudge 1 pixel, Shift 10', nearAll(await value(rect.id, 'transform/position'), [851, 210]), JSON.stringify(await value(rect.id, 'transform/position')))
+  await until(async () => nearAll(await value(rect.id, 'transform/position'), from(1, 10)))
+  step('arrow keys nudge 1 pixel, Shift 10', nearAll(await value(rect.id, 'transform/position'), from(1, 10)), JSON.stringify(await value(rect.id, 'transform/position')))
   await undo()
   await undo()
-  await until(async () => nearAll(await value(rect.id, 'transform/position'), [850, 200]))
-  step('each nudge is one undo step', nearAll(await value(rect.id, 'transform/position'), [850, 200]), JSON.stringify(await value(rect.id, 'transform/position')))
+  await until(async () => nearAll(await value(rect.id, 'transform/position'), home))
+  step('each nudge is one undo step', nearAll(await value(rect.id, 'transform/position'), home), JSON.stringify(await value(rect.id, 'transform/position')))
 
   // 5. Scaling by a handle: the bottom right corner scales each axis freely, and with Shift keeps
   // the proportions; the top left corner stays.
@@ -209,7 +214,7 @@ try {
   }
   await undo()
   await until(async () => nearAll(await value(rect.id, 'transform/scale'), [100, 100]))
-  step('one undo puts the scale back', nearAll(await value(rect.id, 'transform/scale'), [100, 100]) && nearAll(await value(rect.id, 'transform/position'), [850, 200]))
+  step('one undo puts the scale back', nearAll(await value(rect.id, 'transform/scale'), [100, 100]) && nearAll(await value(rect.id, 'transform/position'), home))
   await drag([1000, 200], [1060, 200], { held: [primary] })
   const wide = await value(rect.id, 'transform/scale')
   step('a side handle scales one axis', near(wide[0], 120, 1.5) && near(wide[1], 100), JSON.stringify(wide))
