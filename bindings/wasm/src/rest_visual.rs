@@ -113,7 +113,7 @@ fn create(session: &Session, command: &str, params: &Value) -> Option<Under> {
     };
     let layer = comp.layer(id)?;
     source_size(session, &mut reads, cid, layer);
-    reads.field(id.0, "attrs.switches.video");
+    reads.field(id.0, "switches.video");
     if let Some(root) = layer.motion_trackers() {
         let index = layer.props.children.iter().position(|node| node.uid() == root.uid)?;
         let prefix = format!("props.children.{index}");

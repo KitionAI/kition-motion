@@ -28,7 +28,7 @@ pub(crate) fn matrix(session: &Session, cid: ItemId, comp: &Comp, start: LayerId
                     "attrs.source",
                     "sourceItem",
                     "attrs.stretch",
-                    "attrs.switches.three_d",
+                    "switches.three_d",
                     "attrs.auto_orient",
                     "parent",
                     "transform/anchor",
@@ -105,7 +105,7 @@ pub(crate) fn pixels(session: &Session, source: ItemId, answer: &mut Under) -> R
                             .fields([
                                 "attrs.source",
                                 "sourceItem",
-                                "attrs.switches",
+                                "switches",
                                 "attrs.stretch",
                                 "attrs.auto_orient",
                                 "parent",

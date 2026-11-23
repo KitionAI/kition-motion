@@ -6,7 +6,8 @@
 //! deleted one leaves it in the same transaction); item folders; layers (deleted, created —
 //! their property trees and keys first — or diffed; then each changed composition's layer list,
 //! then the references of every layer written: source item, parent, track matte); the Render
-//! Queue last.
+//! Queue last. A composition's markers, guides and Graphics Templates controls, and a layer's
+//! markers, are written with their composition or layer.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -15,11 +16,12 @@ use kition_kit::kdm::{ObjectId, Tx};
 use kition_motion_keyframe::Keyframe;
 use kition_motion_project::props::PropGroup;
 use kition_motion_project::render_queue::RenderQueueItem;
-use kition_motion_project::{Comp, Item, ItemId, ItemKind, Layer, LayerId, Project};
+use kition_motion_project::template_props::EgControl;
+use kition_motion_project::{Comp, Guide, Item, ItemId, ItemKind, Layer, LayerId, Marker, Project};
 use serde_json::{Map, Value, json};
 
 use crate::fields::{self, Fields};
-use crate::ids::{self, Flat, Ids, LayerIds, LayerKey, NodeKey, NodeRef};
+use crate::ids::{self, CompParts, ControlKey, Flat, FlatControl, Ids, LayerIds, LayerKey, NodeKey, NodeRef};
 use crate::{KdmResult, kdm_err, list, project_id, tick};
 
 fn obj(value: Value) -> Map<String, Value> {
@@ -49,6 +51,78 @@ pub(crate) fn diff_map(tx: &mut Tx<'_>, object: &ObjectId, field: &str, before: 
         }
     }
     Ok(wrote)
+}
+
+/// One object of a list whose objects the engine gives no id (a marker, a guide): its registers
+/// and, for a marker, its comment (a `text` field).
+#[derive(Clone, Debug, PartialEq)]
+struct Record {
+    fields: Fields,
+    text: Option<String>,
+}
+
+fn marker_records(markers: &[Marker]) -> KdmResult<Vec<Record>> {
+    markers
+        .iter()
+        .map(|m| {
+            let (fields, comment) = fields::marker_parts(m)?;
+            Ok(Record { fields, text: Some(comment) })
+        })
+        .collect()
+}
+
+fn guide_records(guides: &[Guide]) -> Vec<Record> {
+    guides.iter().map(|g| Record { fields: fields::guide_parts(g), text: None }).collect()
+}
+
+/// What of a composition is written as lists of objects of its own.
+#[derive(Clone, Copy)]
+struct Parts<'a> {
+    markers: &'a [Marker],
+    guides: &'a [Guide],
+    controls: &'a [EgControl],
+}
+
+impl<'a> Parts<'a> {
+    const NONE: Parts<'static> = Parts { markers: &[], guides: &[], controls: &[] };
+
+    fn of(comp: &'a Comp) -> Self {
+        Parts { markers: &comp.markers, guides: &comp.guides, controls: comp.graphics_template.as_ref().map_or(&[], |t| t.controls.as_slice()) }
+    }
+}
+
+/// Makes text field `field` of `object` read `after` where it read `before`, with one deletion
+/// and one insertion (the common prefix and suffix kept), so a concurrent edit elsewhere in the
+/// text keeps its place. When the field does not hold `before` (never expected) it is rewritten
+/// whole.
+fn splice_text(tx: &mut Tx<'_>, object: &ObjectId, field: &str, before: &str, after: &str) -> KdmResult<bool> {
+    if before == after {
+        return Ok(false);
+    }
+    let b: Vec<char> = before.chars().collect();
+    let a: Vec<char> = after.chars().collect();
+    if tx.text_len(object, field)? != b.len() {
+        let len = tx.text_len(object, field)?;
+        if len > 0 {
+            tx.text_delete(object, field, 0, len)?;
+        }
+        if !after.is_empty() {
+            tx.text_insert(object, field, 0, after)?;
+        }
+        return Ok(true);
+    }
+    let prefix = b.iter().zip(&a).take_while(|(x, y)| x == y).count();
+    let room = b.len().min(a.len()).saturating_sub(prefix);
+    let suffix = b.iter().rev().zip(a.iter().rev()).take(room).take_while(|(x, y)| x == y).count();
+    let removed = b.len().saturating_sub(prefix).saturating_sub(suffix);
+    if removed > 0 {
+        tx.text_delete(object, field, prefix, removed)?;
+    }
+    let inserted: String = a.get(prefix..a.len().saturating_sub(suffix)).unwrap_or_default().iter().collect();
+    if !inserted.is_empty() {
+        tx.text_insert(object, field, prefix, &inserted)?;
+    }
+    Ok(true)
 }
 
 /// Writes a whole project into a fresh replica's creating transaction (import, or any other bulk
@@ -105,6 +179,9 @@ impl Writer<'_, '_> {
             if let Some(comp) = self.ids.comps.remove(id) {
                 self.delete(&comp)?;
             }
+            if let Some(parts) = self.ids.parts.remove(id) {
+                self.delete_parts(&parts)?;
+            }
         }
         let mut created = HashSet::new();
         for (id, item) in &a.items {
@@ -130,18 +207,70 @@ impl Writer<'_, '_> {
         diff_map(self.tx, &object, "attrs", None, &fields::item_attrs(item)?)?;
         diff_map(self.tx, &object, "data", None, &data)?;
         if let ItemKind::Comp(comp) = &item.kind {
-            let comp_object = self.create_comp(comp)?;
+            let comp_object = self.create_comp(id, comp)?;
             self.tx.set(&object, "comp", ref_value(Some(&comp_object)))?;
-            self.ids.comps.insert(id, comp_object);
         }
         self.ids.items.insert(id, object);
         Ok(())
     }
 
-    fn create_comp(&mut self, comp: &Comp) -> KdmResult<ObjectId> {
+    /// Creates composition `id`'s `Comp` object with its markers, guides and template controls
+    /// (deleting any it had), and records them in the ids.
+    fn create_comp(&mut self, id: ItemId, comp: &Comp) -> KdmResult<ObjectId> {
+        if let Some(stale) = self.ids.parts.remove(&id) {
+            self.delete_parts(&stale)?;
+        }
         let object = self.tx.create("Comp", Map::new())?;
         diff_map(self.tx, &object, "attrs", None, &fields::comp_attrs(comp)?)?;
+        let (_, parts) = self.diff_parts(&object, Parts::NONE, &CompParts::default(), Parts::of(comp))?;
+        self.ids.parts.insert(id, parts);
+        self.ids.comps.insert(id, object.clone());
         Ok(object)
+    }
+
+    /// Writes a composition's markers, guides and template controls over `before`'s (`objects`
+    /// their objects). Answers whether it wrote anything, and the objects of `after`'s.
+    fn diff_parts(&mut self, comp: &ObjectId, before: Parts<'_>, objects: &CompParts, after: Parts<'_>) -> KdmResult<(bool, CompParts)> {
+        let mut wrote = false;
+        let mut parts = CompParts::default();
+        let (w, markers) = if before.markers == after.markers && objects.markers.len() == before.markers.len() {
+            (false, objects.markers.clone())
+        } else {
+            self.diff_records(
+                comp,
+                "markers",
+                "Marker",
+                Some("comment"),
+                &["time"],
+                &marker_records(before.markers)?,
+                &objects.markers,
+                &marker_records(after.markers)?,
+            )?
+        };
+        wrote |= w;
+        parts.markers = markers;
+        let (w, guides) = if before.guides == after.guides && objects.guides.len() == before.guides.len() {
+            (false, objects.guides.clone())
+        } else {
+            self.diff_records(comp, "guides", "Guide", None, &["position"], &guide_records(before.guides), &objects.guides, &guide_records(after.guides))?
+        };
+        wrote |= w;
+        parts.guides = guides;
+        let (w, controls) = if before.controls == after.controls && ids::flatten_controls(before.controls)?.0.len() == objects.controls.len() {
+            (false, objects.controls.clone())
+        } else {
+            self.diff_controls(comp, before.controls, &objects.controls, after.controls)?
+        };
+        wrote |= w;
+        parts.controls = controls;
+        Ok((wrote, parts))
+    }
+
+    fn delete_parts(&mut self, parts: &CompParts) -> KdmResult<()> {
+        for object in parts.markers.iter().chain(&parts.guides).chain(parts.controls.values()) {
+            self.delete(object)?;
+        }
+        Ok(())
     }
 
     fn diff_item(&mut self, object: &ObjectId, id: ItemId, old: &Item, new: &Item) -> KdmResult<bool> {
@@ -173,12 +302,15 @@ impl Writer<'_, '_> {
                     Some(comp) => {
                         if !Arc::ptr_eq(x, y) {
                             wrote |= diff_map(self.tx, &comp, "attrs", Some(&fields::comp_attrs(x)?), &fields::comp_attrs(y)?)?;
+                            let objects = self.ids.parts.remove(&id).unwrap_or_default();
+                            let (parts_wrote, parts) = self.diff_parts(&comp, Parts::of(x), &objects, Parts::of(y))?;
+                            wrote |= parts_wrote;
+                            self.ids.parts.insert(id, parts);
                         }
                     }
                     None => {
-                        let comp = self.create_comp(y)?;
+                        let comp = self.create_comp(id, y)?;
                         self.tx.set(object, "comp", ref_value(Some(&comp)))?;
-                        self.ids.comps.insert(id, comp);
                         wrote = true;
                     }
                 }
@@ -187,13 +319,15 @@ impl Writer<'_, '_> {
                 if let Some(comp) = self.ids.comps.remove(&id) {
                     self.delete(&comp)?;
                 }
+                if let Some(parts) = self.ids.parts.remove(&id) {
+                    self.delete_parts(&parts)?;
+                }
                 self.tx.set(object, "comp", Value::Null)?;
                 wrote = true;
             }
             (_, ItemKind::Comp(y)) => {
-                let comp = self.create_comp(y)?;
+                let comp = self.create_comp(id, y)?;
                 self.tx.set(object, "comp", ref_value(Some(&comp)))?;
-                self.ids.comps.insert(id, comp);
                 wrote = true;
             }
             _ => {}
@@ -348,7 +482,12 @@ impl Writer<'_, '_> {
     }
 
     fn create_layer(&mut self, key: LayerKey, layer: &Layer) -> KdmResult<LayerIds> {
-        let mut lids = LayerIds { object: ObjectId::from_string(format!("layer:{}:{}", key.id.0, key.nth)), nodes: HashMap::new(), keys: HashMap::new() };
+        let mut lids = LayerIds {
+            object: ObjectId::from_string(format!("layer:{}:{}", key.id.0, key.nth)),
+            nodes: HashMap::new(),
+            keys: HashMap::new(),
+            markers: Vec::new(),
+        };
         let root = self.diff_tree(&mut lids, None, &layer.props)?.1;
         let object = self.tx.create(
             "Layer",
@@ -362,6 +501,8 @@ impl Writer<'_, '_> {
             })),
         )?;
         diff_map(self.tx, &object, "attrs", None, &fields::layer_attrs(layer)?)?;
+        diff_map(self.tx, &object, "switches", None, &fields::switch_fields(&layer.switches)?)?;
+        lids.markers = self.diff_records(&object, "markers", "Marker", Some("comment"), &["time"], &[], &[], &marker_records(&layer.markers)?)?.1;
         lids.object = object;
         Ok(lids)
     }
@@ -388,6 +529,24 @@ impl Writer<'_, '_> {
         if fields::layer_header(before) != fields::layer_header(after) {
             wrote |= diff_map(self.tx, &object, "attrs", Some(&fields::layer_attrs(before)?), &fields::layer_attrs(after)?)?;
         }
+        if before.switches != after.switches {
+            wrote |= diff_map(self.tx, &object, "switches", Some(&fields::switch_fields(&before.switches)?), &fields::switch_fields(&after.switches)?)?;
+        }
+        if before.markers != after.markers || lids.markers.len() != before.markers.len() {
+            let objects = std::mem::take(&mut lids.markers);
+            let (markers_wrote, markers) = self.diff_records(
+                &object,
+                "markers",
+                "Marker",
+                Some("comment"),
+                &["time"],
+                &marker_records(&before.markers)?,
+                &objects,
+                &marker_records(&after.markers)?,
+            )?;
+            wrote |= markers_wrote;
+            lids.markers = markers;
+        }
         if before.props != after.props {
             let (tree_wrote, root) = self.diff_tree(lids, Some(&before.props), &after.props)?;
             wrote |= tree_wrote;
@@ -401,6 +560,9 @@ impl Writer<'_, '_> {
 
     fn delete_layer(&mut self, lids: &LayerIds) -> KdmResult<()> {
         self.delete(&lids.object)?;
+        for marker in &lids.markers {
+            self.delete(marker)?;
+        }
         for node in lids.nodes.values() {
             self.delete(node)?;
         }
@@ -417,6 +579,195 @@ impl Writer<'_, '_> {
             self.tx.delete(object)?;
         }
         Ok(())
+    }
+
+    // --- markers and guides ---------------------------------------------------------------
+
+    /// Aligns a list of id-less objects (markers, guides) so that an edited, moved or untouched
+    /// one keeps its object and only a real insert or delete creates or deletes one, as
+    /// [`Writer::diff_keys`] aligns keys: identical records first (a longest common
+    /// subsequence), then records at the same `place` (an edited one), then records equal but for
+    /// their place (a moved one), then, when exactly as many are left on both sides, the rest in
+    /// order. Answers whether it wrote anything, and the objects in `after`'s order.
+    #[allow(clippy::too_many_arguments)]
+    fn diff_records(
+        &mut self,
+        owner: &ObjectId,
+        field: &str,
+        ty: &str,
+        text: Option<&str>,
+        place: &[&str],
+        before: &[Record],
+        objects: &[ObjectId],
+        after: &[Record],
+    ) -> KdmResult<(bool, Vec<ObjectId>)> {
+        if before == after && objects.len() == before.len() {
+            return Ok((false, objects.to_vec()));
+        }
+        if objects.len() != before.len() {
+            // The view does not match its own objects (never expected): rewrite the list.
+            for object in objects {
+                self.delete(object)?;
+            }
+            let mut created = Vec::with_capacity(after.len());
+            for record in after {
+                created.push(self.create_record(ty, text, record)?);
+            }
+            list::align(self.tx, owner, field, &created)?;
+            return Ok((true, created));
+        }
+        let mut match_b: Vec<Option<usize>> = vec![None; before.len()];
+        let mut match_a: Vec<Option<usize>> = vec![None; after.len()];
+        for (i, j) in list::lcs(before, after, |x, y| x == y) {
+            match_b[i] = Some(j);
+            match_a[j] = Some(i);
+        }
+        let rest = |r: &Record| -> (Vec<(String, Value)>, Option<String>) {
+            (r.fields.iter().filter(|(k, _)| !place.contains(&k.as_str())).map(|(k, v)| (k.clone(), v.clone())).collect(), r.text.clone())
+        };
+        let same_place = |x: &Record, y: &Record| place.iter().all(|k| x.fields.get(*k) == y.fields.get(*k));
+        let pair_by = |match_b: &mut Vec<Option<usize>>, match_a: &mut Vec<Option<usize>>, same: &dyn Fn(&Record, &Record) -> bool| {
+            for j in 0..after.len() {
+                if match_a[j].is_some() {
+                    continue;
+                }
+                if let Some(i) = (0..before.len()).find(|i| match_b[*i].is_none() && same(&before[*i], &after[j])) {
+                    match_b[i] = Some(j);
+                    match_a[j] = Some(i);
+                }
+            }
+        };
+        pair_by(&mut match_b, &mut match_a, &same_place);
+        pair_by(&mut match_b, &mut match_a, &|x, y| rest(x) == rest(y));
+        let left_b: Vec<usize> = (0..before.len()).filter(|i| match_b[*i].is_none()).collect();
+        let left_a: Vec<usize> = (0..after.len()).filter(|j| match_a[*j].is_none()).collect();
+        if left_b.len() == left_a.len() {
+            for (i, j) in left_b.into_iter().zip(left_a) {
+                match_b[i] = Some(j);
+                match_a[j] = Some(i);
+            }
+        }
+        let mut wrote = false;
+        for (i, object) in objects.iter().enumerate() {
+            if match_b[i].is_none() {
+                self.delete(object)?;
+                wrote = true;
+            }
+        }
+        let mut target = Vec::with_capacity(after.len());
+        for (j, record) in after.iter().enumerate() {
+            match match_a[j].and_then(|i| objects.get(i).map(|o| (i, o.clone()))) {
+                Some((i, object)) => {
+                    wrote |= self.update_record(&object, text, &before[i], record)?;
+                    target.push(object);
+                }
+                None => {
+                    target.push(self.create_record(ty, text, record)?);
+                    wrote = true;
+                }
+            }
+        }
+        wrote |= list::align(self.tx, owner, field, &target)? > 0;
+        Ok((wrote, target))
+    }
+
+    fn create_record(&mut self, ty: &str, text: Option<&str>, record: &Record) -> KdmResult<ObjectId> {
+        let object = self.tx.create(ty, record.fields.clone())?;
+        if let (Some(field), Some(content)) = (text, &record.text)
+            && !content.is_empty()
+        {
+            self.tx.text_insert(&object, field, 0, content)?;
+        }
+        Ok(object)
+    }
+
+    fn update_record(&mut self, object: &ObjectId, text: Option<&str>, before: &Record, after: &Record) -> KdmResult<bool> {
+        let mut wrote = false;
+        for key in before.fields.keys().chain(after.fields.keys().filter(|k| !before.fields.contains_key(*k))) {
+            let new = after.fields.get(key);
+            if before.fields.get(key) != new {
+                self.tx.set(object, key, new.cloned().unwrap_or(Value::Null))?;
+                wrote = true;
+            }
+        }
+        if let Some(field) = text {
+            wrote |= splice_text(self.tx, object, field, before.text.as_deref().unwrap_or_default(), after.text.as_deref().unwrap_or_default())?;
+        }
+        Ok(wrote)
+    }
+
+    // --- Graphics Templates controls -------------------------------------------------------
+
+    /// Writes a composition's template controls over `before`'s (`objects` their objects by
+    /// key), keeping every control whose key survives; a group's children are a list of its
+    /// own. Answers whether it wrote anything, and the objects of `after`'s controls.
+    fn diff_controls(
+        &mut self,
+        comp: &ObjectId,
+        before: &[EgControl],
+        objects: &HashMap<ControlKey, ObjectId>,
+        after: &[EgControl],
+    ) -> KdmResult<(bool, HashMap<ControlKey, ObjectId>)> {
+        let (before_flat, _) = ids::flatten_controls(before)?;
+        let (after_flat, top) = ids::flatten_controls(after)?;
+        let before_map: HashMap<ControlKey, &FlatControl<'_>> = before_flat.iter().map(|f| (f.key, f)).collect();
+        let after_keys: HashSet<ControlKey> = after_flat.iter().map(|f| f.key).collect();
+        let mut old = objects.clone();
+        let mut wrote = false;
+        for f in &before_flat {
+            if !after_keys.contains(&f.key)
+                && let Some(object) = old.remove(&f.key)
+            {
+                self.delete(&object)?;
+                wrote = true;
+            }
+        }
+        let mut nodes: HashMap<ControlKey, ObjectId> = HashMap::with_capacity(after_flat.len());
+        let mut created: HashSet<ControlKey> = HashSet::new();
+        for f in &after_flat {
+            let parts = fields::control_parts(f.control)?;
+            let known = old.remove(&f.key).filter(|o| self.tx.exists(o));
+            match (before_map.get(&f.key), known) {
+                (Some(b), Some(object)) => {
+                    let old_parts = fields::control_parts(b.control)?;
+                    for (key, value) in &parts {
+                        if old_parts.get(key) != Some(value) {
+                            self.tx.set(&object, key, value.clone())?;
+                            wrote = true;
+                        }
+                    }
+                    nodes.insert(f.key, object);
+                }
+                (_, stale) => {
+                    if let Some(stale) = stale {
+                        self.delete(&stale)?;
+                    }
+                    let mut values = parts;
+                    if values.get("asType").is_some_and(Value::is_null) {
+                        values.remove("asType");
+                    }
+                    nodes.insert(f.key, self.tx.create("Control", values)?);
+                    created.insert(f.key);
+                    wrote = true;
+                }
+            }
+        }
+        // Leftovers name no control of `before` (a stale view): nothing lists them any more.
+        for object in old.values() {
+            self.delete(object)?;
+        }
+        for f in &after_flat {
+            let same = before_map.get(&f.key).is_some_and(|b| b.children == f.children) && !created.contains(&f.key);
+            if same && !f.children.iter().any(|k| created.contains(k)) {
+                continue;
+            }
+            let Some(object) = nodes.get(&f.key).cloned() else { continue };
+            let target: Vec<ObjectId> = f.children.iter().filter_map(|k| nodes.get(k).cloned()).collect();
+            wrote |= list::align(self.tx, &object, "children", &target)? > 0;
+        }
+        let target: Vec<ObjectId> = top.iter().filter_map(|k| nodes.get(k).cloned()).collect();
+        wrote |= list::align(self.tx, comp, "controls", &target)? > 0;
+        Ok((wrote, nodes))
     }
 
     // --- property trees -------------------------------------------------------------------
@@ -702,10 +1053,13 @@ impl Writer<'_, '_> {
         let mut target = Vec::with_capacity(a.render_queue.len());
         for (key, item) in keyed(&a.render_queue).into_iter().zip(&a.render_queue) {
             let comp = ref_value(self.ids.items.get(&item.comp));
+            let definition = fields::render_item(item)?;
             match old.remove(&key).filter(|(o, _)| self.tx.exists(o)) {
                 Some((object, previous)) => {
-                    if previous != item {
-                        self.tx.set(&object, "item", serde_json::to_value(item).map_err(kdm_err)?)?;
+                    // A change of what one machine's render left on the item (its status) is no
+                    // change of the document.
+                    if fields::render_item(previous)? != definition {
+                        self.tx.set(&object, "item", definition)?;
                         if previous.comp != item.comp {
                             self.tx.set(&object, "comp", comp)?;
                         }
@@ -714,7 +1068,7 @@ impl Writer<'_, '_> {
                     target.push(object);
                 }
                 None => {
-                    let mut fields = obj(json!({ "id": item.id, "item": serde_json::to_value(item).map_err(kdm_err)? }));
+                    let mut fields = obj(json!({ "id": item.id, "item": definition }));
                     if !comp.is_null() {
                         fields.insert("comp".into(), comp);
                     }

@@ -53,21 +53,35 @@ fn reachable(replica: &Replica) -> Vec<(ObjectId, String)> {
     out
 }
 
-/// A demo project with a Render Queue entry, so every type of the schema has an object.
+/// A demo project with a Render Queue entry, a marker, a guide and a Graphics Templates control,
+/// so every type of the schema has an object.
 fn full_demo() -> common::Demo {
     let mut d = demo();
     d.project.render_queue.push(RenderQueueItem::new(1, d.main));
+    if let Some(c) = d.project.comp_mut(d.main) {
+        c.markers.push(kition_motion_project::Marker { comment: "start".into(), ..Default::default() });
+        c.guides.push(kition_motion_project::Guide { vertical: true, position: 10.0 });
+        c.graphics_template = Some(kition_motion_project::template_props::GraphicsTemplate {
+            name: "Main".into(),
+            controls: vec![kition_motion_project::template_props::EgControl {
+                id: 9001,
+                name: "Note".into(),
+                kind: kition_motion_project::template_props::EgKind::Comment { text: "hi".into() },
+                as_type: None,
+            }],
+        });
+    }
     d
 }
 
 #[test]
-fn the_schema_is_version_3_and_the_root_lists_items() {
+fn the_schema_is_version_1_and_the_root_lists_items() {
     let schema = MotionModel::schema();
-    assert_eq!(schema.schema_version, 3);
+    assert_eq!(schema.schema_version, 1);
     let field = &schema.types["Project"].fields["items"];
     assert_eq!((field.kind, field.of.as_deref()), (FieldKind::List, Some("Item")));
     let kit: serde_json::Value = serde_json::from_str(include_str!("../../../../kit.json")).unwrap();
-    assert_eq!(kit["model"]["schemaVersion"], 3, "kit.json names the schema's version");
+    assert_eq!(kit["model"]["schemaVersion"], 1, "kit.json names the schema's version");
 }
 
 #[test]
@@ -218,12 +232,13 @@ fn the_repair_lists_unlisted_items_and_drops_second_and_dead_listings() {
     }
 }
 
-/// No migration: a replica made on schema 1 (no `Project.items`) is refused with an error that
-/// says what to do, never read as an empty project. Its room is re-imported from the `.kmotion`.
+/// No migration: a replica made on an earlier schema (here a version 0 without `Project.items`)
+/// is refused with an error that says what to do, never read as an empty project. Its room is
+/// re-imported from the `.kmotion`.
 #[test]
-fn a_schema_1_replica_is_refused_not_read_empty() {
+fn an_earlier_schema_replica_is_refused_not_read_empty() {
     let text = include_str!("../model/schema.json")
-        .replace("\"schemaVersion\": 3", "\"schemaVersion\": 1")
+        .replace("\"schemaVersion\": 1", "\"schemaVersion\": 0")
         .replace(",\n        \"items\": { \"kind\": \"list\", \"of\": \"Item\", \"sample\": false }", "")
         .replace("\n        \"name\": { \"kind\": \"string\" },", "");
     let old = std::sync::Arc::new(Schema::parse(&text).unwrap());
@@ -236,7 +251,7 @@ fn a_schema_1_replica_is_refused_not_read_empty() {
     })
     .unwrap();
     let error = MotionSession::open_snapshot(&replica.snapshot().unwrap()).unwrap_err().to_string();
-    assert!(error.contains("schema 1") && error.contains(".kmotion"), "{error}");
+    assert!(error.contains("schema 0") && error.contains(".kmotion"), "{error}");
 }
 
 #[test]

@@ -177,7 +177,7 @@ fn environment(session: &Session, params: &Value) -> Option<Under> {
         reads.field(id.0, "attrs.source");
         reads.field(id.0, "attrs.environment");
         if on {
-            reads.field(id.0, "attrs.switches.three_d");
+            reads.field(id.0, "switches.three_d");
         }
     }
     Some(reads.finish())
@@ -321,7 +321,7 @@ fn marker_fields(session: &Session, command: &str, params: &Value) -> Option<Und
     for id in layers(session, params, cid, comp, &mut reads)? {
         reads.field(id.0, "attrs.markers_locked");
         if command == "layer.deleteAllMarkers" && !comp.layer(id)?.markers_locked {
-            reads.field(id.0, "attrs.markers");
+            reads.field(id.0, "markers");
         }
         reads.all_positions.insert(id.0);
     }

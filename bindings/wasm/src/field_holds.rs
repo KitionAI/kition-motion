@@ -130,7 +130,7 @@ pub(crate) fn premise(_session: &Session, layer: &Layer, command: &str, params: 
         // layer.rs:1333-1380: a locked layer is left alone; a flip reads and assigns Scale at the
         // layer time. The comp and source sizes are read only by reset, center and fit.
         "layer.transform" if matches!(params.get("op").and_then(Value::as_str), Some("flipH" | "flipV")) => {
-            Some(held(layer, ["attrs.switches.locked", "transform/scale"], true))
+            Some(held(layer, ["switches.locked", "transform/scale"], true))
         }
         // prop.rs:681-745: editor state only; the node (a mask's kind and Path at the layer time,
         // a property's keys) is read.

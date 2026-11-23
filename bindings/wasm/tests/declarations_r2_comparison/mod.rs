@@ -91,18 +91,18 @@ fn probe(row: &Row, comp: u64, layer: u64) -> Option<Probe> {
         "project.setProjectComment" => (json!({"comment":"replacement"}), premise(json!("project"), &["attrs.settings.comment"])),
         "renderQueue.setNotify" => (json!({"notify":true}), premise(json!("project"), &["attrs.render_prefs.notify"])),
         "renderQueue.setOverflowFolders" => (json!({"folders":null}), premise(json!("project"), &["attrs.render_prefs.overflow_folders"])),
-        "view.clearGuides" => (json!({"comp":comp}), premise(json!(comp), &["comp.attrs.guides"])),
-        "view.moveGuide" => (json!({"comp":comp,"index":0,"position":24}), premise(json!(comp), &["comp.attrs.guides.0"])),
-        "view.removeGuide" => (json!({"comp":comp,"index":0}), premise(json!(comp), &["comp.attrs.guides.0"])),
+        "view.clearGuides" => (json!({"comp":comp}), premise(json!(comp), &["comp.guides"])),
+        "view.moveGuide" => (json!({"comp":comp,"index":0,"position":24}), premise(json!(comp), &["comp.guides.0"])),
+        "view.removeGuide" => (json!({"comp":comp,"index":0}), premise(json!(comp), &["comp.guides.0"])),
         "layer.rename" => (json!({"layer":layer,"name":"replacement"}), premise(json!(layer), &["name"])),
         "layer.setComment" => (json!({"layer":layer,"comment":"replacement"}), premise(json!(layer), &["attrs.comment"])),
         "layer.setBlendMode" => (
             if row.path == "step" { json!({"layer":layer,"step":1}) } else { json!({"layer":layer,"mode":"normal"}) },
             premise(json!(layer), &["attrs.blend_mode"]),
         ),
-        "layer.quality" => (json!({"layer":layer,"quality":"best"}), premise(json!(layer), &["attrs.switches.quality"])),
-        "layer.sampling" => (json!({"layer":layer,"sampling":"bilinear"}), premise(json!(layer), &["attrs.switches.sampling"])),
-        "layer.frameBlending" => (json!({"layer":layer,"mode":"off"}), premise(json!(layer), &["attrs.switches.frame_blend"])),
+        "layer.quality" => (json!({"layer":layer,"quality":"best"}), premise(json!(layer), &["switches.quality"])),
+        "layer.sampling" => (json!({"layer":layer,"sampling":"bilinear"}), premise(json!(layer), &["switches.sampling"])),
+        "layer.frameBlending" => (json!({"layer":layer,"mode":"off"}), premise(json!(layer), &["switches.frame_blend"])),
         "comp.workArea" => (
             match row.path {
                 "set begin at CTI" => json!({"comp":comp,"set":"begin"}),
@@ -218,11 +218,11 @@ fn relative_order_content_and_external_inputs_are_not_invisible_to_the_compariso
     let under = json!({
         "objects":[],
         "orders":[{"parent":1,"field":"comp.layers","objects":[3,2]}],
-        "content":[{"id":1,"field":"comp.attrs.guides","region":{"gap":0}}],
+        "content":[{"id":1,"field":"comp.guides","region":{"gap":0}}],
         "inputs":["footage:2"]
     });
     let actual = extended_facts(&under);
     assert!(actual.contains("order:{\"field\":\"comp.layers\",\"objects\":[2,3],\"parent\":1}"), "{actual:?}");
-    assert!(actual.contains("content:{\"field\":\"comp.attrs.guides\",\"id\":1,\"region\":{\"gap\":0}}"), "{actual:?}");
+    assert!(actual.contains("content:{\"field\":\"comp.guides\",\"id\":1,\"region\":{\"gap\":0}}"), "{actual:?}");
     assert!(actual.contains("input:footage:2"), "{actual:?}");
 }

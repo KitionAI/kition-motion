@@ -1734,7 +1734,7 @@
   "note": "",
   "fields": {
    "target": [
-    "attrs.switches.locked",
+    "switches.locked",
     "attrs.stretch",
     "transform/scale"
    ]

@@ -15,6 +15,19 @@ pub fn check_model_edits(before: &Replica, after: &Replica) -> KdmResult<()> {
     if surviving != wanted {
         return Err(kdm_err("Project.items has no manual order; create or delete items, or use project.move to change their folder"));
     }
+    // What schema 1 keeps in a field of its own is never an `attrs` key as well: a write there
+    // would be read by no one.
+    for (ty, keys, instead) in [
+        ("Layer", &["markers", "switches"][..], "the layer's `markers` list or `switches` map"),
+        ("Comp", &["markers", "guides"][..], "the composition's `markers` or `guides` list"),
+        ("Project", &["render_prefs"][..], "nothing: Render Queue preferences stay on each machine"),
+    ] {
+        for object in after.objects_of_type(ty) {
+            if let Some(key) = keys.iter().find(|key| !after.map_get(&object, "attrs", key).is_ok_and(|value| value.is_null())) {
+                return Err(kdm_err(format!("`{key}` is not a key of {ty}.attrs; use {instead}")));
+            }
+        }
+    }
     for node in after.objects_of_type("Node") {
         if after.get(&node, "node")?.as_str() != Some("prop") {
             continue;

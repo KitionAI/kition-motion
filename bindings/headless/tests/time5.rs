@@ -560,9 +560,12 @@ async fn model_time_matrix_waiting_for_sdk() {
     for (row, pinned) in FORMS {
         assert_eq!(pinned.len(), CHANGES.len() + EXTRA.len() + 1);
         for (column, edit) in std::iter::once("none").chain(CHANGES).chain(EXTRA).enumerate() {
+            // A marker is an object of its own (schema 1): a raw write of one of its fields holds
+            // that marker and that field. Another marker added before or after it, or another field
+            // of it changed (its comment), applies; the layer holding it moved elsewhere relocates it,
+            // as it does a key.
             let want = if row.ends_with("markers") {
                 match edit {
-                    "marker-before" | "marker-at" | "marker-after" => 'C',
                     "precomp" if row.starts_with("layer") => 'R',
                     _ => 'A',
                 }
@@ -594,14 +597,8 @@ async fn model_time_matrix_waiting_for_sdk() {
             let data = loaded["objects"][0]["fields"]["data"].clone();
             let (_, _, basis) = f.inspect().await;
             let fields = json!({"time":(SECOND*9/2).to_string(),"value":{"t":"Scalar","v":77},"data":data});
-            let original: Value = serde_json::from_slice(&bytes).unwrap();
-            let c = &original["items"][comp.to_string()]["kind"];
-            let mut markers = if row == "comp-markers" {
-                c["markers"].clone()
-            } else {
-                c["layers"].as_array().unwrap().iter().find(|l| l["id"] == layer).unwrap()["markers"].clone()
-            };
-            markers[1]["comment"] = json!("Mine");
+            let marker_owner = if row == "comp-markers" { comp_owner.clone() } else { json!(layer) };
+            let marker = f.ok("query", json!({"objects":[marker_owner]})).await["objects"][0]["fields"]["markers"][1].clone();
             let base_row = row.strip_suffix("-current-parent").unwrap_or(row);
             let mut ops = match base_row {
                 "key-id" => json!([{"op":"set","target":key,"field":"value","value":{"t":"Scalar","v":77}}]),
@@ -611,8 +608,7 @@ async fn model_time_matrix_waiting_for_sdk() {
                     json!([{"op":"create","type":"Key","ref":"$new","fields":fields},{"op":"list.insert","target":owner,"field":"keys","index":2,"item":"$new"}])
                 }
                 "key-move" => json!([{"op":"list.move","target":owner,"field":"keys","from":1,"to":3}]),
-                "comp-markers" => json!([{"op":"map.set","target":comp_owner,"field":"attrs","key":"markers","value":markers}]),
-                _ => json!([{"op":"map.set","target":layer,"field":"attrs","key":"markers","value":markers}]),
+                _ => json!([{"op":"set","target":marker,"field":"chapter","value":"Mine"}]),
             };
             if edit != "none" {
                 change(&f, comp, layer, &effects, if row.starts_with("key-") { "key-time" } else { row }, edit);

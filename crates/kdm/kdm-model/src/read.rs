@@ -12,12 +12,12 @@ use kition_kit::kdm::{ObjectId, Replica};
 use kition_motion_keyframe::Keyframe;
 use kition_motion_project::props::{Node, PropGroup, Uid};
 use kition_motion_project::render_queue::RenderQueueItem;
-use kition_motion_project::template_props::{EgControl, EgKind};
-use kition_motion_project::{Item, ItemId, ItemKind, LayerId, LayerSource, MatteKind, Project, TrackMatte};
+use kition_motion_project::template_props::{EgControl, EgKind, GraphicsTemplate};
+use kition_motion_project::{Guide, Item, ItemId, ItemKind, LayerId, LayerSource, Marker, MatteKind, Project, TrackMatte};
 use serde_json::{Map, Value, json};
 
 use crate::fields::{self, Fields};
-use crate::ids::{self, Ids, LayerIds};
+use crate::ids::{self, CompParts, ControlKey, Ids, LayerIds};
 use crate::session::SLOT_SIZE;
 use crate::validate::{REPAIR_BASE, repair_id, stored_id};
 use crate::{KdmResult, MAX_DEPTH, kdm_err, project_id, tick};
@@ -32,6 +32,84 @@ fn as_u64(value: &Value, what: &str) -> KdmResult<u64> {
 
 fn map_fields(replica: &Replica, object: &ObjectId, field: &str) -> KdmResult<Fields> {
     Ok(replica.map_entries(object, field)?.into_iter().collect::<Map<String, Value>>())
+}
+
+/// The registers `names` of `object` that hold a value.
+fn registers(replica: &Replica, object: &ObjectId, names: &[&str]) -> KdmResult<Fields> {
+    let mut fields = Fields::new();
+    for name in names {
+        let value = replica.get(object, name)?;
+        if !value.is_null() {
+            fields.insert((*name).to_owned(), value);
+        }
+    }
+    Ok(fields)
+}
+
+const MARKER_REGISTERS: [&str; 8] = ["time", "duration", "label", "chapter", "url", "protected", "frameTarget", "cuePoint"];
+const GUIDE_REGISTERS: [&str; 2] = ["vertical", "position"];
+const CONTROL_REGISTERS: [&str; 4] = ["id", "name", "kind", "asType"];
+
+/// The live objects `owner.field` lists, each once, in list order.
+fn listed(replica: &Replica, owner: &ObjectId, field: &str) -> KdmResult<Vec<ObjectId>> {
+    let mut seen = HashSet::new();
+    Ok(replica.list(owner, field)?.into_iter().filter(|o| replica.exists(o) && seen.insert(o.clone())).collect())
+}
+
+/// The markers `owner` lists, in time order as the engine keeps them (markers at one time in
+/// list order), with their objects.
+fn read_markers(replica: &Replica, owner: &ObjectId) -> KdmResult<(Vec<Marker>, Vec<ObjectId>)> {
+    let mut read = Vec::new();
+    for object in listed(replica, owner, "markers")? {
+        let marker = fields::marker_from(&registers(replica, &object, &MARKER_REGISTERS)?, replica.text(&object, "comment")?)?;
+        read.push((marker, object));
+    }
+    read.sort_by_key(|(m, _)| m.time);
+    Ok(read.into_iter().unzip())
+}
+
+/// The guides a composition lists, with their objects.
+fn read_guides(replica: &Replica, comp: &ObjectId) -> KdmResult<(Vec<Guide>, Vec<ObjectId>)> {
+    let mut guides = Vec::new();
+    let mut objects = Vec::new();
+    for object in listed(replica, comp, "guides")? {
+        guides.push(fields::guide_from(&registers(replica, &object, &GUIDE_REGISTERS)?)?);
+        objects.push(object);
+    }
+    Ok((guides, objects))
+}
+
+/// Reads Graphics Templates controls, recording each one's object by key in pre-order (the order
+/// [`ids::flatten_controls`] gives).
+struct Controls<'r> {
+    replica: &'r Replica,
+    objects: HashMap<ControlKey, ObjectId>,
+    counts: HashMap<u64, u32>,
+    /// Controls already read: one listed twice, or under its own descendant, is read once.
+    seen: HashSet<ObjectId>,
+}
+
+impl Controls<'_> {
+    fn list(&mut self, owner: &ObjectId, field: &str, depth: usize) -> KdmResult<Vec<EgControl>> {
+        if depth > MAX_DEPTH {
+            return Err(kdm_err("Graphics Templates controls are nested too deep to read"));
+        }
+        let mut out = Vec::new();
+        for object in self.replica.list(owner, field)? {
+            if !self.replica.exists(&object) || !self.seen.insert(object.clone()) {
+                continue;
+            }
+            let mut control = fields::control_from(&registers(self.replica, &object, &CONTROL_REGISTERS)?)?;
+            let nth = self.counts.entry(control.id).or_insert(0);
+            self.objects.insert(ControlKey { id: control.id, nth: *nth }, object.clone());
+            *nth = nth.saturating_add(1);
+            if let EgKind::Group { children } = &mut control.kind {
+                *children = self.list(&object, "children", depth + 1)?;
+            }
+            out.push(control);
+        }
+        Ok(out)
+    }
 }
 
 /// One composition's layers as read, before their keys are known: (layer, its ids).
@@ -99,6 +177,19 @@ pub fn read_document(replica: &Replica) -> KdmResult<(Project, Ids)> {
             let comp_object =
                 as_ref(&replica.get(object, "comp")?).filter(|c| replica.exists(c)).ok_or_else(|| kdm_err("a composition item has no composition"))?;
             let mut comp = fields::comp_from(map_fields(replica, &comp_object, "attrs")?)?;
+            let mut parts = CompParts::default();
+            (comp.markers, parts.markers) = read_markers(replica, &comp_object)?;
+            (comp.guides, parts.guides) = read_guides(replica, &comp_object)?;
+            let mut controls = Controls { replica, objects: HashMap::new(), counts: HashMap::new(), seen: HashSet::new() };
+            let read_controls = controls.list(&comp_object, "controls", 0)?;
+            parts.controls = controls.objects;
+            match &mut comp.graphics_template {
+                Some(template) => template.controls = read_controls,
+                // Controls a collaborator added while another's template was not there yet.
+                None if !read_controls.is_empty() => comp.graphics_template = Some(GraphicsTemplate { name: String::new(), controls: read_controls }),
+                None => {}
+            }
+            ids.parts.insert(id, parts);
             let mut read: ReadLayers = Vec::new();
             let in_comp: HashSet<ObjectId> = replica.list(&comp_object, "layers")?.into_iter().filter(|l| replica.exists(l)).collect();
             for layer_object in replica.list(&comp_object, "layers")? {
@@ -139,7 +230,7 @@ pub fn read_document(replica: &Replica) -> KdmResult<(Project, Ids)> {
         if !replica.exists(&object) {
             continue;
         }
-        let mut item: RenderQueueItem = serde_json::from_value(replica.get(&object, "item")?).map_err(kdm_err)?;
+        let mut item: RenderQueueItem = fields::render_item_from(replica.get(&object, "item")?)?;
         if let Some(comp) = as_ref(&replica.get(&object, "comp")?).and_then(|c| item_of.get(&c).copied()) {
             item.comp = comp;
         }
@@ -182,8 +273,11 @@ fn read_layer(
             ("parent", json!(parent.map(|p| p.0))),
             ("track_matte", serde_json::to_value(matte).map_err(kdm_err)?),
             ("props", fields::empty_group_json()),
+            ("switches", fields::switches_from(map_fields(replica, object, "switches")?)?),
         ],
     )?;
+    let (markers, marker_objects) = read_markers(replica, object)?;
+    layer.markers = markers;
     if let Some(item) = as_ref(&replica.get(object, "sourceItem")?).and_then(|i| item_of.get(&i).copied()) {
         match &mut layer.source {
             LayerSource::Footage { item: slot } | LayerSource::Comp { item: slot } | LayerSource::Solid { item: slot } | LayerSource::Model { item: slot } => {
@@ -198,7 +292,7 @@ fn read_layer(
     layer.props = props;
     // Node keys follow `flatten`'s pre-order, which is the order read.
     let flat = ids::flatten(&layer.props)?;
-    let mut lids = LayerIds { object: object.clone(), nodes: HashMap::with_capacity(flat.len()), keys: HashMap::new() };
+    let mut lids = LayerIds { object: object.clone(), nodes: HashMap::with_capacity(flat.len()), keys: HashMap::new(), markers: marker_objects };
     for ((f, node), keys) in flat.iter().zip(tree.preorder).zip(tree.keys) {
         lids.nodes.insert(f.key, node);
         if !keys.is_empty() {

@@ -1384,7 +1384,7 @@ fn geometry_null_matrix_premise(id: u64) -> kition_kit::Premise {
         .fields([
             "attrs.source",
             "attrs.stretch",
-            "attrs.switches.three_d",
+            "switches.three_d",
             "attrs.auto_orient",
             "parent",
             "transform/positionX",

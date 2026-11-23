@@ -22,7 +22,7 @@ fn bulk_layer_markers_have_field_comparisons_after_their_classes_match() {
             let params = if row.command == "layer.markersLock" { json!({"layers":[layer],"value":false}) } else { json!({"layers":[layer]}) };
             let mut required = BTreeSet::from([format!("exists:{layer}"), format!("positions:{layer}:*"), format!("field:{layer}:attrs.markers_locked")]);
             if row.command == "layer.deleteAllMarkers" {
-                required.insert(format!("field:{layer}:attrs.markers"));
+                required.insert(format!("field:{layer}:markers"));
             }
             assert_eq!(facts(document.under(row.command, &params).unwrap()), required, "{} {}", row.command, row.path);
             compared.insert(row.command);

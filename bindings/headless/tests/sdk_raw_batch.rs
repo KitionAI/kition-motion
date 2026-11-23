@@ -71,46 +71,60 @@ async fn raw_assignment_refuses_the_same_field_and_accepts_an_unrelated_outside_
     }
 }
 
+/// A composition marker is an object of its own (schema 1): a raw write of one of its fields
+/// holds that marker's field. Another field of it, or another marker added before or after it,
+/// changed by a colleague, applies; the same field refuses.
 #[tokio::test]
-async fn raw_comp_marker_replacement_holds_the_array_and_preserves_an_unrelated_edit() {
+async fn raw_comp_marker_field_holds_its_field_and_preserves_other_edits() {
     let mut document = kition_motion_kit::MotionDocument::open(FILE, &project(1)).unwrap();
     for time in [1, 4, 8] {
         document.execute("comp.addMarker", json!({"time":time,"comment":format!("C{time}")})).unwrap();
     }
     let bytes = document.save(None).unwrap();
-    for change in ["before", "same", "after", "unrelated"] {
+    for change in ["before", "same", "other-field", "after", "unrelated"] {
         let fixture = Fixture::from_bytes(&bytes, Default::default());
         let (info, comp, _) = fixture.inspect().await;
         let layer = layer_ids(&info)[0];
         let item = fixture.ok("query", json!({"objects":[comp]})).await;
         let owner = item["objects"][0]["fields"]["comp"].clone();
         let loaded = fixture.ok("query", json!({"objects":[owner]})).await;
-        let mut markers = loaded["objects"][0]["fields"]["attrs"]["markers"].clone();
-        markers[1]["comment"] = json!("Mine");
+        let marker = loaded["objects"][0]["fields"]["markers"][1].clone();
         let (_, _, basis) = fixture.inspect().await;
         fixture.colleague(&[match change {
             "before" => ("comp.addMarker", json!({"time":0.5,"comment":"Before"})),
-            "same" => ("markers.set", json!({"index":1,"comment":"Colleague"})),
+            "same" => ("markers.set", json!({"index":1,"chapter":"Colleague"})),
+            "other-field" => ("markers.set", json!({"index":1,"comment":"Colleague"})),
             "after" => ("comp.addMarker", json!({"time":9,"comment":"After"})),
             _ => opacity(layer, 23.0),
         }]);
         let saved = std::fs::read(fixture.file()).unwrap();
-        let answer =
-            fixture.call("batch", json!({"basis":basis,"ops":[{"op":"map.set","target":owner,"field":"attrs","key":"markers","value":markers}]})).await;
-        if change == "unrelated" {
-            assert!(answer.is_ok(), "{answer:?}");
-            assert_eq!(opacity_on_disk(&fixture.file(), layer), 23.0);
-        } else {
+        let answer = fixture.call("batch", json!({"basis":basis,"ops":[{"op":"set","target":marker,"field":"chapter","value":"Mine"}]})).await;
+        if change == "same" {
             assert_eq!(answer.as_ref().err().unwrap()["error"]["code"], "conflict", "{answer:?}");
             assert!(answer.unwrap_err()["conflicts"].as_array().unwrap().iter().any(|conflict| conflict["reason"] == "changed"));
             assert_eq!(std::fs::read(fixture.file()).unwrap(), saved);
+        } else {
+            assert!(answer.is_ok(), "{change}: {answer:?}");
+            let markers = on_disk(&fixture.file()).execute("markers.list", json!({})).unwrap();
+            let markers = markers.as_array().unwrap();
+            assert!(markers.iter().any(|m| m["time"] == json!(4.0) && m["chapter"] == "Mine"), "{change}: {markers:?}");
+            if change == "other-field" {
+                assert!(markers.iter().any(|m| m["time"] == json!(4.0) && m["comment"] == "Colleague"), "both fields: {markers:?}");
+            }
+            if change == "before" || change == "after" {
+                assert_eq!(markers.len(), 4, "{markers:?}");
+            }
+            if change == "unrelated" {
+                assert_eq!(opacity_on_disk(&fixture.file(), layer), 23.0);
+            }
         }
         fixture.shutdown().await;
     }
 }
 
+/// A layer marker likewise; the layer moved into another composition relocates it.
 #[tokio::test]
-async fn raw_layer_markers_hold_the_array_and_the_owning_composition() {
+async fn raw_layer_marker_field_holds_its_field_and_its_layer() {
     let mut document = kition_motion_kit::MotionDocument::open(FILE, &project(1)).unwrap();
     let layer = layer_ids(&document.inspect().unwrap()["info"])[0];
     for time in [1, 4, 8] {
@@ -121,25 +135,34 @@ async fn raw_layer_markers_hold_the_array_and_the_owning_composition() {
         let fixture = Fixture::from_bytes(&bytes, Default::default());
         fixture.inspect().await;
         let loaded = fixture.ok("query", json!({"objects":[layer]})).await;
-        let mut markers = loaded["objects"][0]["fields"]["attrs"]["markers"].clone();
-        markers[1]["comment"] = json!("Mine");
+        let marker = loaded["objects"][0]["fields"]["markers"][1].clone();
         let (_, _, basis) = fixture.inspect().await;
         fixture.colleague(&[match change {
-            "same" => ("markers.set", json!({"layer":layer,"index":1,"comment":"Colleague"})),
+            "same" => ("markers.set", json!({"layer":layer,"index":1,"chapter":"Colleague"})),
             "before" => ("layer.addMarker", json!({"layer":layer,"time":0.5,"comment":"Before"})),
             "after" => ("layer.addMarker", json!({"layer":layer,"time":9,"comment":"After"})),
             "precomp" => ("layer.precompose", json!({"layers":[layer],"name":"Moved","mode":"move"})),
             _ => opacity(layer, 23.0),
         }]);
         let saved = std::fs::read(fixture.file()).unwrap();
-        let answer =
-            fixture.call("batch", json!({"basis":basis,"ops":[{"op":"map.set","target":layer,"field":"attrs","key":"markers","value":markers}]})).await;
-        if change == "unrelated" {
-            assert!(answer.is_ok(), "{answer:?}");
-            assert_eq!(opacity_on_disk(&fixture.file(), layer), 23.0);
-        } else {
-            assert_conflict(&answer.unwrap_err(), &layer.to_string(), if change == "precomp" { "relocated" } else { "changed" });
-            assert_eq!(std::fs::read(fixture.file()).unwrap(), saved);
+        let answer = fixture.call("batch", json!({"basis":basis,"ops":[{"op":"set","target":marker,"field":"chapter","value":"Mine"}]})).await;
+        match change {
+            "same" | "precomp" => {
+                let refused = answer.unwrap_err();
+                assert_eq!(refused["error"]["code"], "conflict", "{refused}");
+                let reason = if change == "precomp" { "relocated" } else { "changed" };
+                assert!(refused["conflicts"].as_array().unwrap().iter().any(|conflict| conflict["reason"] == reason), "{refused}");
+                assert_eq!(std::fs::read(fixture.file()).unwrap(), saved);
+            }
+            _ => {
+                assert!(answer.is_ok(), "{change}: {answer:?}");
+                let markers = on_disk(&fixture.file()).execute("markers.list", json!({"layer":layer})).unwrap();
+                let markers = markers.as_array().unwrap();
+                assert!(markers.iter().any(|m| m["chapter"] == "Mine"), "{change}: {markers:?}");
+                if change == "unrelated" {
+                    assert_eq!(opacity_on_disk(&fixture.file(), layer), 23.0);
+                }
+            }
         }
         fixture.shutdown().await;
     }

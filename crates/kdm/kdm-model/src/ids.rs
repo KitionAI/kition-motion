@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 use kition_kit::kdm::ObjectId;
 use kition_motion_project::props::{Node, PropGroup, Property, Uid};
+use kition_motion_project::template_props::{EgControl, EgKind};
 use kition_motion_project::{ItemId, LayerId, Project};
 
 use crate::{KdmResult, MAX_DEPTH, kdm_err};
@@ -30,13 +31,33 @@ pub struct NodeKey {
     pub nth: u32,
 }
 
-/// One layer's object and the objects of its property tree.
+/// One layer's object and the objects of its property tree and markers.
 #[derive(Clone, Debug)]
 pub struct LayerIds {
     pub object: ObjectId,
     pub nodes: HashMap<NodeKey, ObjectId>,
     /// Each property's keyframe objects, in the property's key order.
     pub keys: HashMap<NodeKey, Vec<ObjectId>>,
+    /// The layer's `Marker` objects, in the layer's marker order.
+    pub markers: Vec<ObjectId>,
+}
+
+/// A Graphics Templates control of one composition: its id and which occurrence of that id it
+/// is in the controls' pre-order (a group, then its children).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ControlKey {
+    pub id: u64,
+    pub nth: u32,
+}
+
+/// The objects of a composition's markers, guides and Graphics Templates controls.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct CompParts {
+    /// `Marker` objects, in the composition's marker order.
+    pub markers: Vec<ObjectId>,
+    /// `Guide` objects, in the composition's guide order.
+    pub guides: Vec<ObjectId>,
+    pub controls: HashMap<ControlKey, ObjectId>,
 }
 
 /// Every object a loaded view knows, by the engine id it holds.
@@ -45,6 +66,8 @@ pub struct Ids {
     pub items: HashMap<ItemId, ObjectId>,
     /// The `Comp` object of each composition item.
     pub comps: HashMap<ItemId, ObjectId>,
+    /// The markers, guides and template controls of each composition item.
+    pub parts: HashMap<ItemId, CompParts>,
     pub layers: HashMap<LayerKey, LayerIds>,
     /// The Render Queue's objects, in queue order.
     pub render: Vec<ObjectId>,
@@ -140,4 +163,44 @@ fn visit<'a>(group: &'a PropGroup, out: &mut Vec<Flat<'a>>, seen: &mut HashMap<U
         flat.children = children;
     }
     Ok(key)
+}
+
+/// One control of a flattened Graphics Templates control list.
+#[derive(Debug)]
+pub(crate) struct FlatControl<'a> {
+    pub key: ControlKey,
+    pub control: &'a EgControl,
+    /// A group's children's keys, in order (empty for any other control).
+    pub children: Vec<ControlKey>,
+}
+
+/// `controls` in pre-order (a control, then a group's own children before the next control),
+/// and the keys of the top-level ones in order.
+pub(crate) fn flatten_controls(controls: &[EgControl]) -> KdmResult<(Vec<FlatControl<'_>>, Vec<ControlKey>)> {
+    let mut out = Vec::new();
+    let mut seen = HashMap::new();
+    let top = visit_controls(controls, &mut out, &mut seen, 0)?;
+    Ok((out, top))
+}
+
+fn visit_controls<'a>(controls: &'a [EgControl], out: &mut Vec<FlatControl<'a>>, seen: &mut HashMap<u64, u32>, depth: usize) -> KdmResult<Vec<ControlKey>> {
+    if depth > MAX_DEPTH {
+        return Err(kdm_err("Graphics Templates controls are nested too deep to replicate"));
+    }
+    let mut keys = Vec::with_capacity(controls.len());
+    for control in controls {
+        let nth = seen.entry(control.id).or_insert(0);
+        let key = ControlKey { id: control.id, nth: *nth };
+        *nth = nth.saturating_add(1);
+        let index = out.len();
+        out.push(FlatControl { key, control, children: Vec::new() });
+        if let EgKind::Group { children } = &control.kind {
+            let child_keys = visit_controls(children, out, seen, depth + 1)?;
+            if let Some(flat) = out.get_mut(index) {
+                flat.children = child_keys;
+            }
+        }
+        keys.push(key);
+    }
+    Ok(keys)
 }

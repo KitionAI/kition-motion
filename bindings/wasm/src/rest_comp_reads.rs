@@ -102,7 +102,7 @@ fn reads(command: &str, params: &Value) -> Option<&'static [&'static str]> {
         // Work-area edits consume the span even when each affected layer is explicit.
         "edit.liftWorkArea" | "edit.extractWorkArea" => &["comp.attrs.work_area"],
         // responsive_time.rs marks a frame-snapped duration or the current work-area span.
-        "comp.responsiveTime" => &["comp.attrs.frame_rate", "comp.attrs.duration", "comp.attrs.work_area", "comp.attrs.markers"],
+        "comp.responsiveTime" => &["comp.attrs.frame_rate", "comp.attrs.duration", "comp.attrs.work_area", "comp.markers"],
         // promo_camera/0: the move spans the comp and frames its size.
         "camera.move" => &["comp.attrs.frame_rate", "comp.attrs.duration", "comp.attrs.width", "comp.attrs.height"],
         _ => return None,

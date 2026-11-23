@@ -99,7 +99,7 @@ pub(crate) fn extend(session: &Session, command: &str, params: &Value, answer: &
         let answer = answer.get_or_insert_with(Under::default);
         for layer in targets.iter().filter_map(|id| comp.layer(*id)) {
             if let kition_motion_project::LayerSource::Comp { item } = layer.source {
-                answer.premises.push(fields(json!(item.0), ["kind", "comp.attrs.markers"]));
+                answer.premises.push(fields(json!(item.0), ["kind", "comp.markers"]));
             }
         }
     }
@@ -250,7 +250,7 @@ fn stack_inputs(session: &Session, command: &str, params: &Value, answer: &mut O
     let hold = |index: usize, answer: &mut Under, video: bool| {
         let Some(id) = order.get(index) else { return };
         answer.within.push(kition_kit::Within { parent: json!(cid.0), field: "comp.layers".to_owned(), from: index, to: index + 1, ..Default::default() });
-        answer.premises.push(fields(json!(id.0), if video { vec!["attrs.switches.video"] } else { Vec::new() }));
+        answer.premises.push(fields(json!(id.0), if video { vec!["switches.video"] } else { Vec::new() }));
     };
     match command {
         "layer.arrange" if how == "forward" => {
@@ -272,7 +272,7 @@ fn stack_inputs(session: &Session, command: &str, params: &Value, answer: &mut O
                 let Some(index) = order.iter().position(|id| id == target) else { continue };
                 let existing = comp.layer(*target).and_then(|layer| layer.track_matte).filter(|_| !matches!(op, "above" | "below"));
                 if let Some(matte) = existing {
-                    answer.premises.push(fields(json!(matte.layer.0), ["attrs.switches.video"]));
+                    answer.premises.push(fields(json!(matte.layer.0), ["switches.video"]));
                 } else if op == "below" {
                     hold(index + 1, answer, true);
                 } else if let Some(above) = index.checked_sub(1) {
@@ -283,7 +283,7 @@ fn stack_inputs(session: &Session, command: &str, params: &Value, answer: &mut O
         _ => {
             answer.premises.push(fields(json!(cid.0), ["~layerMembers"]));
             for layer in comp.layers.iter().filter(|layer| !targets.contains(&layer.id)) {
-                answer.premises.push(fields(json!(layer.id.0), ["attrs.source", "attrs.switches.video"]));
+                answer.premises.push(fields(json!(layer.id.0), ["attrs.source", "switches.video"]));
             }
         }
     }
@@ -313,7 +313,7 @@ fn twin_inputs(session: &Session, command: &str, params: &Value, answer: &mut Op
     let answer = answer.get_or_insert_with(Under::default);
     for twin in session.state.selected_layers.iter().filter(|id| **id != layer.id).filter_map(|id| comp.layer(*id)) {
         if twin.props.prop(&path).is_some() {
-            answer.premises.push(fields(json!(twin.id.0), ["attrs.switches.locked".to_owned(), path.clone()]));
+            answer.premises.push(fields(json!(twin.id.0), ["switches.locked".to_owned(), path.clone()]));
         }
     }
 }

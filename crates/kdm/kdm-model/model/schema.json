@@ -1,7 +1,7 @@
 {
   "kdm": 1,
   "kit": "kit.motion",
-  "schemaVersion": 3,
+  "schemaVersion": 1,
   "root": "Project",
   "types": {
     "Project": {
@@ -31,14 +31,30 @@
       }
     },
     "Comp": {
-      "batchOps": { "list.move.layers": { "command": "model.layerMove", "params": { "target": "target", "from": "from", "to": "to" } }, "map.set.attrs": { "command": "model.compAttrs", "params": { "target": "target", "key": "key" } } },
+      "batchOps": {
+        "list.move.layers": { "command": "model.layerMove", "params": { "target": "target", "from": "from", "to": "to" } },
+        "map.set.attrs": { "command": "model.compAttrs", "params": { "target": "target", "key": "key" } },
+        "list.insert.markers": { "direct": true },
+        "list.remove.markers": { "direct": true },
+        "list.insert.guides": { "direct": true },
+        "list.remove.guides": { "direct": true }
+      },
       "fields": {
         "attrs": { "kind": "map" },
-        "layers": { "kind": "list", "of": "Layer" }
+        "layers": { "kind": "list", "of": "Layer" },
+        "markers": { "kind": "list", "of": "Marker" },
+        "guides": { "kind": "list", "of": "Guide" },
+        "controls": { "kind": "list", "of": "Control" }
       }
     },
     "Layer": {
-      "batchOps": { "set.name": { "direct": true }, "map.set.attrs": { "command": "model.layerAttrs", "params": { "target": "target", "key": "key" } } },
+      "batchOps": {
+        "set.name": { "direct": true },
+        "map.set.attrs": { "command": "model.layerAttrs", "params": { "target": "target", "key": "key" } },
+        "map.set.switches": { "direct": true },
+        "list.insert.markers": { "direct": true },
+        "list.remove.markers": { "direct": true }
+      },
       "derived": {
         "nodeOrder": { "premiseOnly": true, "description": "Exact compact property-child identities by owning property UID." },
         "keyOrder": { "premiseOnly": true, "description": "Compact exact key identities by property UID, for structural recipient coverage." },
@@ -59,6 +75,8 @@
         "inPoint": { "kind": "string", "position": true, "display": { "kind": "time", "perSecond": 254016000000 } },
         "outPoint": { "kind": "string", "position": true, "display": { "kind": "time", "perSecond": 254016000000 } },
         "attrs": { "kind": "map" },
+        "switches": { "kind": "map" },
+        "markers": { "kind": "list", "of": "Marker" },
         "sourceItem": { "kind": "ref", "of": "Item", "optional": true },
         "parent": { "kind": "ref", "of": "Layer", "optional": true },
         "matte": { "kind": "json", "optional": true },
@@ -93,6 +111,39 @@
         "time": { "kind": "string", "display": { "kind": "time", "perSecond": 254016000000 } },
         "value": { "kind": "json" },
         "data": { "kind": "json" }
+      }
+    },
+    "Marker": {
+      "batchOps": { "*": { "direct": true } },
+      "batchIndependent": true,
+      "text": "comment",
+      "fields": {
+        "time": { "kind": "string", "display": { "kind": "time", "perSecond": 254016000000 } },
+        "duration": { "kind": "string", "display": { "kind": "time", "perSecond": 254016000000 } },
+        "comment": { "kind": "text" },
+        "label": { "kind": "enum", "values": ["None", "Red", "Yellow", "Aqua", "Pink", "Lavender", "Peach", "SeaFoam", "Blue", "Green", "Purple", "Orange", "Brown", "Fuchsia", "Cyan", "Sandstone", "DarkGreen"] },
+        "chapter": { "kind": "string" },
+        "url": { "kind": "string" },
+        "protected": { "kind": "boolean" },
+        "frameTarget": { "kind": "string", "optional": true },
+        "cuePoint": { "kind": "json", "optional": true }
+      }
+    },
+    "Guide": {
+      "batchOps": { "*": { "direct": true } },
+      "batchIndependent": true,
+      "fields": {
+        "vertical": { "kind": "boolean" },
+        "position": { "kind": "number" }
+      }
+    },
+    "Control": {
+      "fields": {
+        "id": { "kind": "integer", "readOnly": true },
+        "name": { "kind": "string" },
+        "kind": { "kind": "json" },
+        "asType": { "kind": "enum", "values": ["text", "color", "slider", "checkbox", "point", "angle", "dropdown", "media", "font", "scale"], "optional": true },
+        "children": { "kind": "list", "of": "Control" }
       }
     },
     "RenderItem": {

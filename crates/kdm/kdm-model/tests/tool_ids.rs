@@ -24,7 +24,7 @@ fn the_schema_declares_tool_ids_and_what_items_and_layers_own() {
     assert_eq!(schema["types"]["Layer"]["fields"]["props"]["owns"], true);
     assert!(schema["types"]["Node"].get("toolId").is_none(), "properties are told under their layer");
     let parsed = <kdm_model::MotionModel as kition_kit::session::KitModel>::schema();
-    assert_eq!(parsed.schema_version, 3, "project membership is a query view without manual order in schema 3");
+    assert_eq!(parsed.schema_version, 1, "project membership is a query view without manual order in schema 1");
 }
 
 /// A layer a collaborator's batch created without an id is given one by the repair, the same on

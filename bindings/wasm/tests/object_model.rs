@@ -57,7 +57,7 @@ fn layer_names(doc: &MotionDocument) -> Vec<String> {
 fn describe_names_the_root_items_list() {
     let mut doc = MotionDocument::open("basic.kmotion", BASIC).unwrap();
     let described = Exchange::new().describe(&mut doc).unwrap();
-    assert_eq!(described["schemaVersion"], 3);
+    assert_eq!(described["schemaVersion"], 1);
     assert_eq!(described["root"], "Project");
     let items = &described["types"]["Project"]["fields"]["items"];
     assert_eq!(items["kind"], "list", "{items}");

@@ -159,7 +159,7 @@ fn active_camera_scan(comp: &Comp, cid: ItemId, camera: LayerId, answer: &mut Un
     let Some(index) = comp.layers.iter().position(|layer| layer.id == camera) else { return };
     answer.within.push(kition_kit::Within { parent: json!(cid.0), field: "comp.layers".to_owned(), from: 0, to: index, ..Default::default() });
     for layer in comp.layers.iter().take(index.saturating_add(1)) {
-        answer.premises.push(Premise::on(json!(layer.id.0)).fields(["attrs.source", "attrs.switches.video"]).positions(["inPoint", "outPoint"]));
+        answer.premises.push(Premise::on(json!(layer.id.0)).fields(["attrs.source", "switches.video"]).positions(["inPoint", "outPoint"]));
     }
 }
 
@@ -680,7 +680,7 @@ fn expression_inputs(session: &Session, command: &str, params: &Value, comp: &Co
             // and duration, footage's timing.
             for layer in layers_of(session, comp, params).iter().filter_map(|id| comp.layer(*id)) {
                 match &layer.source {
-                    LayerSource::Comp { item } => answer.premises.push(field(json!(item.0), ["kind", "comp.attrs.markers", "comp.attrs.duration"])),
+                    LayerSource::Comp { item } => answer.premises.push(field(json!(item.0), ["kind", "comp.markers", "comp.attrs.duration"])),
                     LayerSource::Footage { item } => answer.premises.push(field(json!(item.0), ["kind", "data"])),
                     _ => {}
                 }
@@ -1192,9 +1192,7 @@ fn geometry_inputs(session: &Session, command: &str, params: &Value, cid: ItemId
                     crate::rest_geometry::matrix(session, cid, comp, id, answer);
                 }
             }
-            answer
-                .premises
-                .push(field(json!(cid.0), ["comp.attrs.width", "comp.attrs.height", "comp.attrs.pixel_aspect", "comp.attrs.guides", "~layerMembers"]));
+            answer.premises.push(field(json!(cid.0), ["comp.attrs.width", "comp.attrs.height", "comp.attrs.pixel_aspect", "comp.guides", "~layerMembers"]));
             for layer in &comp.layers {
                 answer.premises.push(field(json!(layer.id.0), ["~resizeInputs"]));
             }
@@ -1230,7 +1228,7 @@ fn geometry_inputs(session: &Session, command: &str, params: &Value, cid: ItemId
                 None => {
                     answer.premises.push(field(json!(cid.0), ["~layerMembers"]));
                     for layer in &comp.layers {
-                        answer.premises.push(field(json!(layer.id.0), ["attrs.source", "sourceItem", "attrs.switches.video"]));
+                        answer.premises.push(field(json!(layer.id.0), ["attrs.source", "sourceItem", "switches.video"]));
                     }
                     None
                 }
@@ -1420,7 +1418,7 @@ pub(crate) fn narrow(command: &str, answer: &mut Option<Under>) {
                     }
                 }
                 "markers.set" => {
-                    let rest = field.strip_prefix("comp.attrs.markers").or_else(|| field.strip_prefix("attrs.markers"));
+                    let rest = field.strip_prefix("comp.markers").or_else(|| field.strip_prefix("markers"));
                     match rest {
                         Some(rest) if rest.starts_with('.') => rest[1..].parse::<u64>().ok().map(|index| ("~markerList", json!({"index":index}))),
                         // A marker named by its stored time keeps its selector premise: a marker

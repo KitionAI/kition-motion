@@ -1055,11 +1055,8 @@ impl Session {
 
 /// Bring effect instances saved by earlier versions up to date with the effect registry
 /// (renamed / regrouped / added parameters, reordered popups; see
-/// [`kition_motion_effects::migrate`]), and a project from before
-/// [`kition_motion_project::SCHEMA_EFFECT_SPACE`] into effect space
-/// ([`kition_motion_effects::migrate::to_effect_space`]). Stamps the current schema.
+/// [`kition_motion_effects::migrate`]). Stamps the current schema.
 pub fn upgrade_effects(p: &mut Project) {
-    let to_effect_space = p.schema < kition_motion_project::SCHEMA_EFFECT_SPACE;
     // Effect bounds per layer: (size, top-left in layer coordinates).
     let mut bounds = std::collections::HashMap::new();
     for (cid, c) in p.comps() {
@@ -1071,24 +1068,13 @@ pub fn upgrade_effects(p: &mut Project) {
     for (cid, it) in p.items.iter_mut() {
         let kition_motion_project::ItemKind::Comp(c) = &mut it.kind else { continue };
         for l in &mut std::sync::Arc::make_mut(c).layers {
-            let (size, origin) = bounds.get(&(*cid, l.id)).copied().unwrap_or(([100.0, 100.0], [0.0; 2]));
-            // Effect space starts at the bounds' top-left: positions move by minus that corner.
-            // Adjustment layers run their effects on the comp below as it is: nothing moves.
-            let shift = |o: [f64; 2]| [-o[0], -o[1]];
-            let d = if l.switches.adjustment { [0.0; 2] } else { shift(origin) };
-            let clone_d = |src: Option<u64>| match src {
-                Some(id) => bounds.get(&(*cid, kition_motion_project::LayerId(id))).map_or([0.0; 2], |b| shift(b.1)),
-                None => d,
-            };
+            let (size, _) = bounds.get(&(*cid, l.id)).copied().unwrap_or(([100.0, 100.0], [0.0; 2]));
             let Some(fx) = l.props.sub_mut("effects") else { continue };
             for n in &mut fx.children {
                 let kition_motion_project::Node::Group(g) = n else { continue };
                 let kition_motion_project::GroupKind::Effect { effect } = &g.kind else { continue };
                 if let Some(spec) = kition_motion_effects::find(effect) {
                     kition_motion_effects::migrate::upgrade_instance(spec, g, &mut kition_motion_project::build::Ids(&mut next), size);
-                    if to_effect_space {
-                        kition_motion_effects::migrate::to_effect_space(spec, g, size, d, &clone_d);
-                    }
                 }
             }
         }

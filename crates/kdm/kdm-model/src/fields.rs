@@ -8,7 +8,9 @@
 
 use kition_motion_keyframe::{Keyframe, Value as PropValue};
 use kition_motion_project::props::{PropGroup, Property};
-use kition_motion_project::{Comp, Item, ItemKind, Layer, Project};
+use kition_motion_project::render_queue::{RenderQueueItem, RenderStatus};
+use kition_motion_project::template_props::{EgControl, EgKind, GraphicsTemplate};
+use kition_motion_project::{Comp, Guide, Item, ItemKind, Layer, Marker, Project, Switches};
 use kition_motion_time::Tick;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -44,9 +46,10 @@ pub(crate) fn rebuild<T: DeserializeOwned>(mut fields: Fields, extra: Vec<(&str,
 // --- Project ------------------------------------------------------------------------------
 
 /// The project's own fields: everything but its items, its id counter (each replica keeps its
-/// own, see `crate::slot_base`) and its Render Queue (a list of objects).
+/// own, see `crate::slot_base`), its Render Queue (a list of objects) and its Render Queue
+/// preferences (this machine's own: notification, overflow folders; see [`crate::local`]).
 pub(crate) fn project_attrs(p: &Project) -> KdmResult<Fields> {
-    let Project { schema, settings, items: _, next_id: _, render_queue: _, render_templates, render_prefs } = p;
+    let Project { schema, settings, items: _, next_id: _, render_queue: _, render_templates, render_prefs: _ } = p;
     let header = Project {
         schema: *schema,
         settings: settings.clone(),
@@ -54,9 +57,50 @@ pub(crate) fn project_attrs(p: &Project) -> KdmResult<Fields> {
         next_id: 0,
         render_queue: Vec::new(),
         render_templates: render_templates.clone(),
-        render_prefs: render_prefs.clone(),
+        render_prefs: Default::default(),
     };
-    Ok(without(object_of(&header)?, &["items", "next_id", "render_queue"]))
+    Ok(without(object_of(&header)?, &["items", "next_id", "render_queue", "render_prefs"]))
+}
+
+// --- Render Queue -------------------------------------------------------------------------
+
+/// A Render Queue item as its `item` register: what to render and how (composition, Render
+/// checkbox, Render Settings, Output Modules, post-render action, log), without what one
+/// machine's render left on it (status, start time, duration, last output; see
+/// [`crate::local`]).
+pub(crate) fn render_item(r: &RenderQueueItem) -> KdmResult<Value> {
+    let RenderQueueItem { id, comp, render, status: _, settings, output, started: _, render_time: _, last_output: _, extra_outputs, post_render, log } = r;
+    let definition = RenderQueueItem {
+        id: *id,
+        comp: *comp,
+        render: *render,
+        status: RenderStatus::default(),
+        settings: settings.clone(),
+        output: output.clone(),
+        started: None,
+        render_time: None,
+        last_output: None,
+        extra_outputs: extra_outputs.clone(),
+        post_render: *post_render,
+        log: *log,
+    };
+    Ok(Value::Object(without(object_of(&definition)?, &["status", "started", "render_time", "last_output"])))
+}
+
+/// A Render Queue item from its `item` register, with the status a machine that has not rendered
+/// it gives it: queued when its Render box is checked, else unqueued.
+pub(crate) fn render_item_from(item: Value) -> KdmResult<RenderQueueItem> {
+    let mut item: RenderQueueItem = serde_json::from_value(item).map_err(kdm_err)?;
+    item.status = unrendered(item.render);
+    item.started = None;
+    item.render_time = None;
+    item.last_output = None;
+    Ok(item)
+}
+
+/// The status of an item no render on this machine has touched.
+pub(crate) fn unrendered(render: bool) -> RenderStatus {
+    if render { RenderStatus::Queued } else { RenderStatus::Unqueued }
 }
 
 // --- Items --------------------------------------------------------------------------------
@@ -95,7 +139,8 @@ pub(crate) fn kind_from(kind: &str, data: Fields) -> KdmResult<ItemKind> {
 
 // --- Compositions -------------------------------------------------------------------------
 
-/// A composition without its layers.
+/// A composition without its layers, markers, guides and Graphics Templates controls (each a
+/// list of objects; the template keeps its name here).
 pub(crate) fn comp_header(c: &Comp) -> Comp {
     let Comp {
         width,
@@ -107,7 +152,7 @@ pub(crate) fn comp_header(c: &Comp) -> Comp {
         background,
         work_area,
         layers: _,
-        markers,
+        markers: _,
         shutter_angle,
         shutter_phase,
         motion_blur_samples,
@@ -121,7 +166,7 @@ pub(crate) fn comp_header(c: &Comp) -> Comp {
         preserve_resolution,
         poster_time,
         global_light,
-        guides,
+        guides: _,
         graphics_template,
     } = c;
     Comp {
@@ -134,7 +179,7 @@ pub(crate) fn comp_header(c: &Comp) -> Comp {
         background: *background,
         work_area: *work_area,
         layers: Vec::new(),
-        markers: markers.clone(),
+        markers: Vec::new(),
         shutter_angle: *shutter_angle,
         shutter_phase: *shutter_phase,
         motion_blur_samples: *motion_blur_samples,
@@ -148,26 +193,146 @@ pub(crate) fn comp_header(c: &Comp) -> Comp {
         preserve_resolution: *preserve_resolution,
         poster_time: *poster_time,
         global_light: global_light.clone(),
-        guides: guides.clone(),
-        graphics_template: graphics_template.clone(),
+        guides: Vec::new(),
+        graphics_template: graphics_template.as_ref().map(|t| GraphicsTemplate { name: t.name.clone(), controls: Vec::new() }),
     }
 }
 
-/// The composition's own fields: everything but its layers (a list of objects).
+/// The composition's own fields: everything but its layers, markers, guides and template
+/// controls (lists of objects). A Graphics Templates definition is its name alone.
 pub(crate) fn comp_attrs(c: &Comp) -> KdmResult<Fields> {
-    Ok(without(object_of(&comp_header(c))?, &["layers"]))
+    let mut attrs = without(object_of(&comp_header(c))?, &["layers", "markers", "guides"]);
+    if let Some(Value::Object(template)) = attrs.get_mut("graphics_template") {
+        template.remove("controls");
+    }
+    Ok(attrs)
 }
 
+/// A composition from its `attrs` (layers, markers, guides and template controls added by the
+/// caller).
 pub(crate) fn comp_from(attrs: Fields) -> KdmResult<Comp> {
-    rebuild(attrs, vec![("layers", json!([]))])
+    rebuild(attrs, vec![("layers", json!([])), ("markers", json!([])), ("guides", json!([]))])
+}
+
+// --- Markers, guides, template controls -----------------------------------------------------
+
+/// A marker as its registers (everything but its comment) and its comment (a `text` field).
+pub(crate) fn marker_parts(m: &Marker) -> KdmResult<(Fields, String)> {
+    let Marker { time, duration, comment, label, chapter, url, protected, frame_target, cue_point } = m;
+    let mut fields = Fields::new();
+    fields.insert("time".into(), crate::tick::to_value(*time));
+    fields.insert("duration".into(), crate::tick::to_value(*duration));
+    fields.insert("label".into(), serde_json::to_value(label).map_err(kdm_err)?);
+    fields.insert("chapter".into(), json!(chapter));
+    fields.insert("url".into(), json!(url));
+    fields.insert("protected".into(), json!(protected));
+    if !frame_target.is_empty() {
+        fields.insert("frameTarget".into(), json!(frame_target));
+    }
+    if let Some(cue) = cue_point {
+        fields.insert("cuePoint".into(), serde_json::to_value(cue).map_err(kdm_err)?);
+    }
+    Ok((fields, comment.clone()))
+}
+
+/// A marker from its registers and comment.
+pub(crate) fn marker_from(fields: &Fields, comment: String) -> KdmResult<Marker> {
+    let get = |key: &str| fields.get(key).cloned().unwrap_or(Value::Null);
+    let text = |key: &str| get(key).as_str().map(str::to_owned).unwrap_or_default();
+    Ok(Marker {
+        time: crate::tick::from_value(&get("time"))?,
+        duration: crate::tick::from_value(&get("duration"))?,
+        comment,
+        label: serde_json::from_value(get("label")).map_err(kdm_err)?,
+        chapter: text("chapter"),
+        url: text("url"),
+        protected: get("protected").as_bool().unwrap_or(false),
+        frame_target: text("frameTarget"),
+        cue_point: match get("cuePoint") {
+            Value::Null => None,
+            cue => Some(serde_json::from_value(cue).map_err(kdm_err)?),
+        },
+    })
+}
+
+/// A guide as its registers.
+pub(crate) fn guide_parts(g: &Guide) -> Fields {
+    let Guide { vertical, position } = g;
+    let mut fields = Fields::new();
+    fields.insert("vertical".into(), json!(vertical));
+    fields.insert("position".into(), json!(position));
+    fields
+}
+
+pub(crate) fn guide_from(fields: &Fields) -> KdmResult<Guide> {
+    Ok(Guide {
+        vertical: fields.get("vertical").and_then(Value::as_bool).ok_or_else(|| kdm_err("a guide's `vertical` is not a boolean"))?,
+        position: fields.get("position").and_then(Value::as_f64).ok_or_else(|| kdm_err("a guide's `position` is not a number"))?,
+    })
+}
+
+/// A Graphics Templates control as its registers: its id, name, kind (a group's without its
+/// children, which are a list of objects) and the control it shows as.
+pub(crate) fn control_parts(c: &EgControl) -> KdmResult<Fields> {
+    let EgControl { id, name, kind, as_type } = c;
+    let kind = match kind {
+        EgKind::Group { .. } => json!({ "type": "Group" }),
+        other => serde_json::to_value(other).map_err(kdm_err)?,
+    };
+    let mut fields = Fields::new();
+    fields.insert("id".into(), json!(id));
+    fields.insert("name".into(), json!(name));
+    fields.insert("kind".into(), kind);
+    fields.insert(
+        "asType".into(),
+        match as_type {
+            Some(t) => serde_json::to_value(t).map_err(kdm_err)?,
+            None => Value::Null,
+        },
+    );
+    Ok(fields)
+}
+
+/// A control from its registers (a group's children added by the caller).
+pub(crate) fn control_from(fields: &Fields) -> KdmResult<EgControl> {
+    let id = fields.get("id").and_then(Value::as_u64).ok_or_else(|| kdm_err("a template control's id is not a whole number"))?;
+    let name = fields.get("name").and_then(Value::as_str).unwrap_or_default().to_owned();
+    let mut kind = fields.get("kind").cloned().unwrap_or(Value::Null);
+    if kind.get("type").and_then(Value::as_str) == Some("Group")
+        && let Value::Object(group) = &mut kind
+    {
+        group.insert("children".into(), json!([]));
+    }
+    let kind: EgKind = serde_json::from_value(kind).map_err(kdm_err)?;
+    let as_type = match fields.get("asType") {
+        None | Some(Value::Null) => None,
+        Some(t) => Some(serde_json::from_value(t.clone()).map_err(kdm_err)?),
+    };
+    Ok(EgControl { id, name, kind, as_type })
+}
+
+/// A layer's switches as one register each.
+pub(crate) fn switch_fields(s: &Switches) -> KdmResult<Fields> {
+    object_of(s)
+}
+
+/// A layer's switches from its `switches` map: a switch the map lacks (a layer a batch created
+/// without it) is at its default.
+pub(crate) fn switches_from(fields: Fields) -> KdmResult<Value> {
+    let mut all = switch_fields(&Switches::default())?;
+    all.extend(fields);
+    let switches: Switches = serde_json::from_value(Value::Object(all)).map_err(kdm_err)?;
+    serde_json::to_value(switches).map_err(kdm_err)
 }
 
 // --- Layers -------------------------------------------------------------------------------
 
-/// The layer fields that are registers or references of their own rather than `attrs` keys.
-const LAYER_OWN: [&str; 8] = ["id", "name", "start_time", "in_point", "out_point", "parent", "track_matte", "props"];
+/// The layer fields that are registers, references, maps or lists of their own rather than
+/// `attrs` keys.
+const LAYER_OWN: [&str; 10] = ["id", "name", "start_time", "in_point", "out_point", "parent", "track_matte", "props", "switches", "markers"];
 
-/// A layer without its property tree.
+/// A layer without its property tree, switches (a map of their own) and markers (a list of
+/// objects).
 pub(crate) fn layer_header(l: &Layer) -> Layer {
     let Layer {
         id,
@@ -179,12 +344,12 @@ pub(crate) fn layer_header(l: &Layer) -> Layer {
         in_point,
         out_point,
         stretch,
-        switches,
+        switches: _,
         blend_mode,
         preserve_transparency,
         track_matte,
         parent,
-        markers,
+        markers: _,
         markers_locked,
         auto_orient,
         environment,
@@ -201,12 +366,12 @@ pub(crate) fn layer_header(l: &Layer) -> Layer {
         in_point: *in_point,
         out_point: *out_point,
         stretch: *stretch,
-        switches: switches.clone(),
+        switches: Switches::default(),
         blend_mode: *blend_mode,
         preserve_transparency: *preserve_transparency,
         track_matte: *track_matte,
         parent: *parent,
-        markers: markers.clone(),
+        markers: Vec::new(),
         markers_locked: *markers_locked,
         auto_orient: *auto_orient,
         environment: *environment,
@@ -215,7 +380,7 @@ pub(crate) fn layer_header(l: &Layer) -> Layer {
     }
 }
 
-/// The layer's own fields that live in its `attrs` map (source, switches, markers…).
+/// The layer's own fields that live in its `attrs` map (source, label, blend mode…).
 pub(crate) fn layer_attrs(l: &Layer) -> KdmResult<Fields> {
     Ok(without(object_of(&layer_header(l))?, &LAYER_OWN))
 }

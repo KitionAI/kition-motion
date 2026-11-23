@@ -24,8 +24,10 @@
 //! sorts folders then names and stores no manual order; moving these listings is refused.
 //! The folder tree is each item's `parent` reference;
 //! an item's `comp` names its composition, a composition's `layers` its layers, a layer's
-//! `props` its property tree, a property's `keys` its keyframes, and `Project.renderQueue` the
-//! Render Queue. The writer lists and unlists items in the same transaction;
+//! `props` its property tree, a property's `keys` its keyframes, a composition's and a layer's
+//! `markers` their markers, a composition's `guides` its guides and `controls` its Graphics
+//! Templates controls (a group's `children` its own), and `Project.renderQueue` the Render
+//! Queue. The writer lists and unlists items in the same transaction;
 //! the repair keeps one listing per live item. A replica of an earlier schema is refused (there is
 //! no migration; its room is opened again from the `.kmotion` file).
 //!
@@ -33,13 +35,17 @@
 //! register per field: two people changing a composition's duration and its background colour
 //! both keep their change), except the fields that are objects, lists or references of their
 //! own, and an item's and a layer's `name`, a `string` field of its own an agent renames with one
-//! `set`. Footage is referenced by path, never embedded (no blobs). Keyframes are a list per
+//! `set`. A layer's switches are a map of their own (one register per switch). Markers, guides
+//! and template controls are objects of their own, so two people adding one each keep both; a
+//! marker's comment is a `text` field, merged by character. Footage is referenced by path, never
+//! embedded (no blobs). What one machine's renders leave on the Render Queue (statuses) and its
+//! Render Queue preferences are not replicated (`local`). Keyframes are a list per
 //! property; they have no ids in the engine, so a write aligns the old and new key lists (by
 //! content, then time, then value) and only a real insert or delete creates or deletes an object.
 //!
-//! **Tick range.** A layer's start, in and out points and every keyframe's time are decimal
-//! strings, exact at any `Tick`. Other ticks inside a register (markers, a composition's duration
-//! and work area) stay the engine's own JSON numbers: a KDM value cannot hold an integer past
+//! **Tick range.** A layer's start, in and out points, every keyframe's time and every marker's
+//! time and duration are decimal strings, exact at any `Tick`. Other ticks inside a register (a
+//! composition's duration and work area) stay the engine's own JSON numbers: a KDM value cannot hold an integer past
 //! ±2^53, about 9.85 hours at `kition_motion_time::TICKS_PER_SECOND`; such a project fails to
 //! replicate with an error (never a panic or silent corruption), the same residual limit Kition
 //! Film documents.
@@ -51,6 +57,7 @@ mod edits;
 mod fields;
 mod ids;
 mod list;
+mod local;
 mod read;
 mod session;
 mod settle;
@@ -67,7 +74,7 @@ use kition_motion_project::Project;
 
 pub use compare::{normalize, same_content};
 pub use edits::check_model_edits;
-pub use ids::{Ids, LayerIds, LayerKey, NodeKey, layer_keys};
+pub use ids::{CompParts, ControlKey, Ids, LayerIds, LayerKey, NodeKey, layer_keys};
 pub use read::read_document;
 pub use session::{MotionSession, slot_base};
 pub use settle::settle_batch;
@@ -159,11 +166,14 @@ impl KitModel for MotionModel {
     /// simple fallback the `KitModel` contract allows. Ids are data, so a reload keeps every
     /// surviving object's engine id (and with it a session's selection) as it was.
     ///
+    /// This machine's render state ([`local`]: not in the replica) stays as it was.
+    ///
     /// The id counter never goes down: an id this replica handed out may be gone from the view
     /// (deleted by a peer, or undone) yet still live on a peer or in an undo step, so minting it
     /// again would give two objects one id.
     fn apply(&mut self, replica: &Replica, _changed: &BTreeSet<ObjectId>, _blobs: &dyn BlobSource) -> Result<Damage> {
         let (mut project, ids) = read::read_document(replica).map_err(kit_err)?;
+        local::keep(&self.project, &mut project);
         let slot = slot_base(replica.actor());
         if (slot..slot.saturating_add(session::SLOT_SIZE)).contains(&self.project.next_id) {
             project.next_id = project.next_id.max(self.project.next_id);

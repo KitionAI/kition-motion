@@ -13,6 +13,9 @@
 //! - `Project.items` lists every live item once, repairing missing, stale or duplicate listings;
 //! - a property's keys are put back in time order, two keys at one time (added concurrently)
 //!   keep one;
+//! - a marker, guide or Graphics Templates control listed twice keeps its first listing, and one
+//!   nothing live lists any more (its composition or layer, or its control group, deleted while
+//!   someone added it) is deleted;
 //! - an id two actors minted alike (only possible if they share an id slot, see
 //!   [`crate::slot_base`]) is given a repair id of its own; so is a Render Queue id two people
 //!   added at once.
@@ -57,7 +60,53 @@ pub(crate) fn validate(tx: &mut Tx<'_>, changed: &BTreeSet<ObjectId>) -> KdmResu
     if trees {
         wrote |= nodes(tx)?;
     }
+    if ["Comp", "Layer", "Marker", "Guide", "Control"].iter().any(|ty| touched(tx, ty)) {
+        wrote |= parts(tx)?;
+    }
     wrote |= render_queue(tx)?;
+    Ok(wrote)
+}
+
+/// Compositions' and layers' markers, compositions' guides and Graphics Templates controls: each
+/// listed once, by a live owner; whatever nothing live lists is deleted.
+fn parts(tx: &mut Tx<'_>) -> KdmResult<bool> {
+    let mut wrote = false;
+    let mut listed: HashSet<ObjectId> = HashSet::new();
+    let mut owners = comps(tx)?;
+    let comp_count = owners.len();
+    for comp in comps(tx)? {
+        for layer in tx.list_items(&comp, "layers")? {
+            if tx.exists(&layer) {
+                owners.push(layer);
+            }
+        }
+    }
+    for (index, owner) in owners.iter().enumerate() {
+        wrote |= clean_list(tx, owner, "markers", &mut listed)?.0;
+        if index < comp_count {
+            wrote |= clean_list(tx, owner, "guides", &mut listed)?.0;
+            let (cleaned, mut pending) = clean_list(tx, owner, "controls", &mut listed)?;
+            wrote |= cleaned;
+            let mut steps = 0usize;
+            while let Some(control) = pending.pop() {
+                steps += 1;
+                if steps > 1_000_000 {
+                    return Err(kdm_err("Graphics Templates controls are nested too deep to repair"));
+                }
+                let (cleaned, children) = clean_list(tx, &control, "children", &mut listed)?;
+                wrote |= cleaned;
+                pending.extend(children);
+            }
+        }
+    }
+    for ty in ["Marker", "Guide", "Control"] {
+        for object in tx.objects_of_type(ty) {
+            if !listed.contains(&object) && tx.exists(&object) {
+                tx.delete(&object)?;
+                wrote = true;
+            }
+        }
+    }
     Ok(wrote)
 }
 

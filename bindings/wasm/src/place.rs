@@ -13,11 +13,11 @@
 //! - A time that names nothing ([`names_nothing`]: moving the current time, the view, playback,
 //!   undo, files, settings, renders, frames saved): no object, no window.
 //! - A comp marker command (`markers.*` without `layer`) naming its marker by `at` or `index`: no
-//!   object, no window, and the comp's markers as premise (`comp.attrs.markers` of the comp's item,
+//!   object, no window, and the comp's markers as premise (`comp.markers` of the comp's item,
 //!   C8-time-3): markers have no ids, and the comp's own fields hold them. A new one at the current
 //!   time (`comp.addMarker`, `markers.set` with `new`) has the same marker premise. An existing
-//!   marker set by `markers.set` holds that marker alone (C8-time-policy): `comp.attrs.markers.<i>`
-//!   by `index`, `comp.attrs.markers[time=<ticks>]` by `at`.
+//!   marker set by `markers.set` holds that marker alone (C8-time-policy): `comp.markers.<i>`
+//!   by `index`, `comp.markers[time=<ticks>]` by `at`.
 //! - A command that acts on layers (declares `layer`/`layers` as its target) given none: the
 //!   layers it acts on, the selection, each with its window `[i, i+1)`.
 //! - Any other command at a time (a layer created, a camera, a track, a comp-wide edit at the
@@ -206,8 +206,8 @@ fn index_number(session: &Session, comp: &Comp, value: &Value) -> Option<usize> 
 /// |---|---|---|
 /// | `layer.rename` | `name` | none |
 /// | `layer.timing` | none | `startTime`, `inPoint`, `outPoint` (not its stack place) |
-/// | layer `markers.set` by `index` | that marker (`attrs.markers.<i>`), `attrs.markers_locked` | none |
-/// | layer `markers.set` by `at` (or setting `time`) | that marker (`attrs.markers[time=<layer ticks>]`), `attrs.markers_locked`, `attrs.stretch` | `startTime` |
+/// | layer `markers.set` by `index` | that marker (`markers.<i>`), `attrs.markers_locked` | none |
+/// | layer `markers.set` by `at` (or setting `time`) | that marker (`markers[time=<layer ticks>]`), `attrs.markers_locked`, `attrs.stretch` | `startTime` |
 /// | `prop.set` of a property with no keys | the property (its named path, `transform/rotation`) | none |
 /// | `prop.set` of a property with keys, `prop.addKey`, `keys.set` | the key it writes, by its layer time (`transform/opacity.keys[time=<ticks>]`; the property where the time cannot be computed), `attrs.stretch` | `startTime` |
 ///
@@ -221,9 +221,9 @@ fn premise_of(session: &Session, layer: &Layer, command: &str, params: &Value) -
     let assigned_field = match command {
         "layer.setComment" => Some("attrs.comment"),
         "layer.setBlendMode" => Some("attrs.blend_mode"),
-        "layer.quality" => Some("attrs.switches.quality"),
-        "layer.sampling" => Some("attrs.switches.sampling"),
-        "layer.frameBlending" => Some("attrs.switches.frame_blend"),
+        "layer.quality" => Some("switches.quality"),
+        "layer.sampling" => Some("switches.sampling"),
+        "layer.frameBlending" => Some("switches.frame_blend"),
         _ => None,
     };
     if let Some(field) = assigned_field {
@@ -234,18 +234,18 @@ fn premise_of(session: &Session, layer: &Layer, command: &str, params: &Value) -
         // a toggle reads it on the first target in stack order, so a toggle of several layers keeps
         // its general premise. 3D also rewrites transform values (`drop_3d_values`).
         let field = match params.get("switch")?.as_str()? {
-            "video" | "eye" => "attrs.switches.video",
-            "audio" => "attrs.switches.audio",
-            "solo" => "attrs.switches.solo",
-            "lock" | "locked" => "attrs.switches.locked",
-            "shy" => "attrs.switches.shy",
-            "collapse" => "attrs.switches.collapse",
-            "quality" => "attrs.switches.quality",
-            "fx" | "effects" => "attrs.switches.effects",
-            "frameBlend" => "attrs.switches.frame_blend",
-            "motionBlur" => "attrs.switches.motion_blur",
-            "adjustment" => "attrs.switches.adjustment",
-            "guide" => "attrs.switches.guide",
+            "video" | "eye" => "switches.video",
+            "audio" => "switches.audio",
+            "solo" => "switches.solo",
+            "lock" | "locked" => "switches.locked",
+            "shy" => "switches.shy",
+            "collapse" => "switches.collapse",
+            "quality" => "switches.quality",
+            "fx" | "effects" => "switches.effects",
+            "frameBlend" => "switches.frame_blend",
+            "motionBlur" => "switches.motion_blur",
+            "adjustment" => "switches.adjustment",
+            "guide" => "switches.guide",
             "preserveTransparency" => "attrs.preserve_transparency",
             _ => return None,
         };
@@ -308,7 +308,7 @@ fn premise_of(session: &Session, layer: &Layer, command: &str, params: &Value) -
         // So the marker it lands on, by its index or by its stored time, and only what it reads.
         let by_time = params.get("index").is_none_or(Value::is_null);
         let timed = by_time || params.get("time").is_some_and(|time| !time.is_null());
-        let marker = if by_time { format!("attrs.markers[time={}]", time.0) } else { format!("attrs.markers.{index}") };
+        let marker = if by_time { format!("markers[time={}]", time.0) } else { format!("markers.{index}") };
         let mut fields = vec![marker, "attrs.markers_locked".to_owned()];
         if timed {
             fields.push("attrs.stretch".to_owned());
@@ -317,7 +317,7 @@ fn premise_of(session: &Session, layer: &Layer, command: &str, params: &Value) -
     }
     if command == "layer.addMarker" || command.starts_with("markers.") && params.get("layer").is_some_and(|layer| !layer.is_null()) {
         // Markers are stored in layer time; stack position and In/Out points do not affect it.
-        return Some(Premise::on(id).fields(["attrs.markers", "attrs.markers_locked", "attrs.stretch"]).positions(["startTime"]));
+        return Some(Premise::on(id).fields(["markers", "attrs.markers_locked", "attrs.stretch"]).positions(["startTime"]));
     }
     if command == "layer.rename" {
         return Some(Premise::on(id).fields(["name"]).positions(Vec::<String>::new()));
@@ -386,9 +386,9 @@ fn by_name(premise: Premise) -> Premise {
 
 /// The comp markers a call reads or writes when it names a comp marker by `at` or `index`
 /// (`markers.set`, `markers.delete`, `markers.convert` without `layer`): the comp item's
-/// `comp.attrs.markers`.
+/// `comp.markers`.
 fn comp_markers(comp_id: ItemId) -> Premise {
-    Premise::on(json!(comp_id.0)).fields(["comp.attrs.markers"]).positions(Vec::<String>::new())
+    Premise::on(json!(comp_id.0)).fields(["comp.markers"]).positions(Vec::<String>::new())
 }
 
 /// What command `command` given `params` depends on now (see the module): the layers a place
@@ -604,7 +604,7 @@ pub fn under(session: &Session, command: &str, params: &Value) -> Result<Option<
             }
             let Some(layer) = comp.layer(id) else { continue };
             let mut fields =
-                vec!["parent".to_owned(), "attrs.stretch".to_owned(), "attrs.switches".to_owned(), "attrs.auto_orient".to_owned(), "sourceItem".to_owned()];
+                vec!["parent".to_owned(), "attrs.stretch".to_owned(), "switches".to_owned(), "attrs.auto_orient".to_owned(), "sourceItem".to_owned()];
             if let Some(transform) = layer.transform() {
                 for property in [
                     "anchor",
@@ -671,7 +671,7 @@ pub fn under(session: &Session, command: &str, params: &Value) -> Result<Option<
                 let mut fields = vec![
                     "parent".to_owned(),
                     "attrs.stretch".to_owned(),
-                    "attrs.switches.three_d".to_owned(),
+                    "switches.three_d".to_owned(),
                     "attrs.source".to_owned(),
                     "attrs.auto_orient".to_owned(),
                 ];
@@ -843,11 +843,8 @@ fn under_targets(session: &Session, command: &str, params: &Value) -> Result<Opt
             && params.get("new").and_then(Value::as_bool) != Some(true)
             && let Some((None, index, time)) = kition_motion_engine::commands::markers::addressed_marker(session, params)
         {
-            let marker = if params.get("index").is_none_or(Value::is_null) {
-                format!("comp.attrs.markers[time={}]", time.0)
-            } else {
-                format!("comp.attrs.markers.{index}")
-            };
+            let marker =
+                if params.get("index").is_none_or(Value::is_null) { format!("comp.markers[time={}]", time.0) } else { format!("comp.markers.{index}") };
             return Ok(Some(Under { premises: vec![Premise::on(json!(id.0)).fields([marker]).positions(Vec::<String>::new())], ..Default::default() }));
         }
         return Ok(Some(Under { premises: vec![comp_markers(id)], ..Default::default() }));

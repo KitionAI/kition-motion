@@ -1,5 +1,5 @@
 {
-  "schema": 2,
+  "schema": 1,
   "settings": {
     "bit_depth": "Bpc8",
     "linearize": false,

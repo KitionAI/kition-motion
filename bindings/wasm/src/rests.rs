@@ -73,12 +73,12 @@ pub(crate) fn under(session: &Session, command: &str, params: &Value) -> Option<
     if matches!(command, "view.addGuide" | "view.clearGuides" | "view.importGuides" | "view.moveGuide" | "view.removeGuide") {
         let (id, comp) = composition(session, params)?;
         let mut names = match command {
-            "view.moveGuide" => vec![format!("comp.attrs.guides.{}", params.get("index")?.as_u64()?)],
-            "view.removeGuide" => vec![format!("comp.attrs.guides.{}", params.get("index")?.as_u64()?)],
+            "view.moveGuide" => vec![format!("comp.guides.{}", params.get("index")?.as_u64()?)],
+            "view.removeGuide" => vec![format!("comp.guides.{}", params.get("index")?.as_u64()?)],
             // `commands/view.rs` `add_guide` pushes after the last guide and reads none of them:
             // the insertion names the gap at the end of the list as it was observed.
-            "view.addGuide" => vec![format!("comp.attrs.guides.{}", comp.guides.len())],
-            _ => vec!["comp.attrs.guides".to_owned()],
+            "view.addGuide" => vec![format!("comp.guides.{}", comp.guides.len())],
+            _ => vec!["comp.guides".to_owned()],
         };
         if command == "view.addGuide" && params.get("position").and_then(Value::as_f64).is_none() {
             let horizontal = matches!(params.get("orientation").and_then(Value::as_str), Some("horizontal" | "h"));

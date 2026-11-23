@@ -283,7 +283,7 @@ async fn a_number_that_is_the_comps_item_id_is_a_stack_position() {
 }
 
 /// A comp marker has no tool id: a marker edit by `at` or `index` needs the comp's markers
-/// (`comp.attrs.markers` of the comp's item), with no `at.part` too (where kition-sdk's premise
+/// (`comp.markers` of the comp's item), with no `at.part` too (where kition-sdk's premise
 /// on the part needs one). After the colleague changed the marker's comment it is refused as
 /// `changed`; after the colleague renamed a project item that is no comp, it applies.
 #[tokio::test(flavor = "multi_thread")]

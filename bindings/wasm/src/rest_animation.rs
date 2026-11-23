@@ -226,7 +226,7 @@ fn dimensions(reads: &mut Reads, target: &Address<'_>) {
         reads.field(target.layer.id.0, format!("{}.meta.shown_dims", target.path));
         if target.property.shown_dims == 2 {
             reads.field(target.layer.id.0, "attrs.source");
-            reads.field(target.layer.id.0, "attrs.switches.three_d");
+            reads.field(target.layer.id.0, "switches.three_d");
         }
     }
 }

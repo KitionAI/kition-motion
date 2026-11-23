@@ -27,13 +27,11 @@ use serde::{Deserialize, Serialize};
 pub use kition_motion_keyframe as keyframe;
 pub use kition_motion_keyframe::{Keyframe, Value};
 
-/// The project file schema. 2: effects on layers without a source rectangle (shape, text)
-/// measure positions from the top-left of their comp-sized bounds (effect space), not from
-/// the layer's origin; projects from schema 1 are converted when opened (#227).
-pub const SCHEMA_VERSION: u32 = 2;
-
-/// The first schema in which effect positions are in effect space (see [`SCHEMA_VERSION`]).
-pub const SCHEMA_EFFECT_SPACE: u32 = 2;
+/// The project file format's version (`.kmotion`). Effects on layers without a source
+/// rectangle (shape, text) measure positions from the top-left of their comp-sized bounds
+/// (effect space), not from the layer's origin (#227). A file of a newer version is refused;
+/// there is no older one.
+pub const SCHEMA_VERSION: u32 = 1;
 
 /// The Kition Motion version, written into project files as `savedBy`.
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");

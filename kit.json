@@ -129,7 +129,7 @@
   },
   "model": {
     "schema": "crates/kdm/kdm-model/model/schema.json",
-    "schemaVersion": 3
+    "schemaVersion": 1
   },
   "collaboration": {
     "merge": [

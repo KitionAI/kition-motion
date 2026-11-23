@@ -52,7 +52,7 @@ fn a_time_names_what_the_command_acts_on_there() {
     // A time that names nothing: moving the current time.
     assert_eq!(under(&mut doc, main, 2.0, &[], "time.set", json!({ "time": 3 })), Some(Under::default()));
     // A comp marker holds only the comp markers, through the owning ref.
-    let markers = Some(Under { premises: vec![Premise::on(json!(main)).fields(["comp.attrs.markers"]).positions(Vec::<String>::new())], ..Default::default() });
+    let markers = Some(Under { premises: vec![Premise::on(json!(main)).fields(["comp.markers"]).positions(Vec::<String>::new())], ..Default::default() });
     assert_eq!(under(&mut doc, main, 2.0, &[], "comp.addMarker", json!({ "comment": "m" })), markers);
     assert_eq!(under(&mut doc, main, 2.0, &[], "markers.set", json!({ "new": true })), markers);
     // A layer command given no layer: the selected layers it acts on.
