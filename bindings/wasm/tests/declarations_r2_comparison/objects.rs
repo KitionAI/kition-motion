@@ -18,8 +18,8 @@ use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) const COMP: u64 = 1;
-const COMP2: u64 = 218;
-const ITEMS: &[u64] = &[2, 3, 194, COMP2];
+const COMP2: u64 = 219;
+const ITEMS: &[u64] = &[2, 3, 195, COMP2];
 
 fn id(answer: &Value, key: &str) -> u64 {
     answer[key].as_u64().unwrap_or_else(|| panic!("{key} in {answer}"))
@@ -45,8 +45,8 @@ pub(super) fn fixture() -> Vec<u8> {
     let render = id(&d.execute("renderQueue.add", json!({"comp":COMP})).unwrap(), "id");
     let inner = id(&d.execute("layer.newSolid", json!({"name":"Inner"})).unwrap(), "layer");
     let pre = d.execute("layer.precompose", json!({"layers":[inner],"name":"Pre","mode":"move"})).unwrap();
-    assert_eq!((a, effect, mask, b, n, s, k, g, render), (4, 27, 31, 36, 75, 87, 133, 165, 1));
-    assert_eq!((pre["comp"].as_u64(), pre["layer"].as_u64()), (Some(COMP2), Some(219)));
+    assert_eq!((a, effect, mask, b, n, s, k, g, render), (4, 27, 31, 36, 75, 87, 133, 165, 194));
+    assert_eq!((pre["comp"].as_u64(), pre["layer"].as_u64()), (Some(COMP2), Some(220)));
     let bytes = d.save(None).unwrap();
     let saved: Value = serde_json::from_slice(&bytes).unwrap();
     // Solid A's Masks, Effects and Transform groups by uid and place, and the title's Animators
@@ -80,12 +80,12 @@ const PLACEHOLDERS: &[(&str, u64)] = &[
     ("{S}", 87),
     ("{K}", 133),
     ("{G}", 165),
-    ("{P}", 219),
+    ("{P}", 220),
     ("{effect}", 27),
     ("{mask}", 31),
     ("{opacity}", 15),
     ("{position}", 9),
-    ("{render}", 1),
+    ("{render}", 194),
     ("{masks}", MASKS),
     ("{effects}", EFFECTS),
     ("{animators}", ANIMATORS),

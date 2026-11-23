@@ -1389,7 +1389,42 @@ impl PostRenderAction {
     }
 }
 
+/// A Render Queue item as a content file holds it ([`crate::Project::to_content_json`]): what to
+/// render and how, without what a render on one machine left on it (status, start, duration,
+/// last output).
+#[derive(Serialize)]
+pub struct RenderDefinition<'a> {
+    pub id: u64,
+    pub comp: ItemId,
+    pub render: bool,
+    pub settings: &'a RenderSettings,
+    pub output: &'a OutputModule,
+    #[serde(skip_serializing_if = "no_outputs")]
+    pub extra_outputs: &'a [OutputModule],
+    #[serde(skip_serializing_if = "PostRenderAction::is_none")]
+    pub post_render: PostRenderAction,
+    #[serde(skip_serializing_if = "RenderLog::is_default")]
+    pub log: RenderLog,
+}
+
+fn no_outputs(outputs: &&[OutputModule]) -> bool {
+    outputs.is_empty()
+}
+
 impl RenderQueueItem {
+    /// The item's definition, as a content file holds it.
+    pub fn definition(&self) -> RenderDefinition<'_> {
+        RenderDefinition {
+            id: self.id,
+            comp: self.comp,
+            render: self.render,
+            settings: &self.settings,
+            output: &self.output,
+            extra_outputs: &self.extra_outputs,
+            post_render: self.post_render,
+            log: self.log,
+        }
+    }
     pub fn new(id: u64, comp: ItemId) -> RenderQueueItem {
         RenderQueueItem {
             id,

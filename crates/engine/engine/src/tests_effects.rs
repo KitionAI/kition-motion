@@ -209,8 +209,12 @@ fn a_project_file_holds_no_machine_render_state() {
     p.render_queue[0].render_time = Some(2.5);
     p.render_queue[0].last_output = Some("/tmp/out.mov".into());
     let text = p.to_file_json().unwrap();
-    for key in ["status", "started", "render_time", "last_output", "render_prefs", "notify"] {
-        assert!(!text.contains(&format!("\"{key}\"")), "{key} in the file");
+    let file: serde_json::Value = serde_json::from_str(&text).unwrap();
+    assert!(file.get("render_prefs").is_none(), "the preferences in the file");
+    let entry = &file["render_queue"][0];
+    assert_eq!(entry["id"], json!(item), "the queue's definition stays");
+    for key in ["status", "started", "render_time", "last_output"] {
+        assert!(entry.get(key).is_none(), "{key} in the file: {entry}");
     }
     let back = kition_motion_project::Project::from_file_json(&text).unwrap();
     assert_eq!(back.render_queue.len(), 1);

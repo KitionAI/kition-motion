@@ -1332,12 +1332,41 @@ impl Project {
             item.forget_render();
         }
     }
-    /// The project as a content file holds it: content only, without this machine's state
-    /// ([`Project::forget_machine_state`]).
-    pub fn content(&self) -> Project {
-        let mut out = self.clone();
-        out.forget_machine_state();
-        out
+    /// The project as a content file holds it, `savedBy` (the version that wrote it) first when
+    /// given: content only, without this machine's state ([`Project::forget_machine_state`]: the
+    /// Render Queue preferences, and each queue item's render state).
+    fn content_text(&self, saved_by: Option<&str>) -> Result<String, serde_json::Error> {
+        fn default_templates(t: &&render_templates::RenderTemplates) -> bool {
+            t.is_default()
+        }
+        #[derive(Serialize)]
+        struct Content<'a> {
+            #[serde(rename = "savedBy", skip_serializing_if = "Option::is_none")]
+            saved_by: Option<&'a str>,
+            schema: u32,
+            settings: &'a ProjectSettings,
+            items: &'a BTreeMap<ItemId, Item>,
+            next_id: u64,
+            #[serde(skip_serializing_if = "Vec::is_empty")]
+            render_queue: Vec<render_queue::RenderDefinition<'a>>,
+            #[serde(skip_serializing_if = "default_templates")]
+            render_templates: &'a render_templates::RenderTemplates,
+        }
+        let Project { schema, settings, items, next_id, render_queue, render_templates, render_prefs: _ } = self;
+        serde_json::to_string_pretty(&Content {
+            saved_by,
+            schema: *schema,
+            settings,
+            items,
+            next_id: *next_id,
+            render_queue: render_queue.iter().map(render_queue::RenderQueueItem::definition).collect(),
+            render_templates,
+        })
+    }
+    /// The project as a content file holds it, without `savedBy`: content only. For the
+    /// kit's save, Collect Files, templates.
+    pub fn to_content_json(&self) -> String {
+        self.content_text(None).unwrap_or_default()
     }
     /// A project file's project ([`Project::from_json`]): a file holds content only, so no
     /// machine state is read from it.
@@ -1350,16 +1379,7 @@ impl Project {
     /// that wrote it (`savedBy`), checked to read back, so a save never writes a file that can't
     /// be opened (JSON has no NaN or infinity: such a value would be written as `null`).
     pub fn to_file_json(&self) -> Result<String, ProjectError> {
-        #[derive(Serialize)]
-        struct File<'a> {
-            #[serde(rename = "savedBy")]
-            saved_by: &'a str,
-            #[serde(flatten)]
-            project: &'a Project,
-        }
-        let content = self.content();
-        let text = serde_json::to_string_pretty(&File { saved_by: APP_VERSION, project: &content })
-            .map_err(|e| ProjectError::Invalid(format!("the project can't be saved: {e}")))?;
+        let text = self.content_text(Some(APP_VERSION)).map_err(|e| ProjectError::Invalid(format!("the project can't be saved: {e}")))?;
         Project::from_json(&text)
             .map_err(|e| ProjectError::Invalid(format!("the project can't be saved: it holds a value a project file can't store ({e})")))?;
         Ok(text)

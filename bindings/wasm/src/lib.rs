@@ -844,7 +844,7 @@ impl KitDocument for MotionDocument {
     }
 
     fn save(&self, _name: Option<&str>) -> Result<Vec<u8>, String> {
-        Ok(self.session.project.content().to_json().into_bytes())
+        Ok(self.session.project.to_content_json().into_bytes())
     }
 
     fn mark_saved(&mut self) {
