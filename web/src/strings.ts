@@ -41,6 +41,8 @@ const enUS: Catalog = {
   "switch.solo": "Solo",
   "switch.lock": "Lock",
   "twirl": "Show or hide the properties of {name}",
+  "workAreaStart": "Work area start: drag to set",
+  "workAreaEnd": "Work area end: drag to set",
 }
 
 const zhCN: Catalog = {
@@ -83,6 +85,8 @@ const zhCN: Catalog = {
   "switch.solo": "独奏",
   "switch.lock": "锁定",
   "twirl": "显示或隐藏“{name}”的属性",
+  "workAreaStart": "工作区开头：拖动以设置",
+  "workAreaEnd": "工作区结尾：拖动以设置",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }

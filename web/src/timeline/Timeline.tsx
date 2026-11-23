@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react'
+import { Scrollbar } from '@kition/tessera/ui'
 import { useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
 import { TimelineContext, type TimelineFrame } from './context'
@@ -12,7 +13,8 @@ import { Ruler } from './Ruler'
 import { SOLO_PATHS, type Twirl } from './tree'
 import { useKeyGestures } from './useKeyGestures'
 import { useRowDrag } from './useRowDrag'
-import { leftOf, type TimeView } from './view'
+import { useTimeView } from './useTimeView'
+import { leftOf } from './view'
 
 /** A key handler the editor asks first; true when the timeline took the key. */
 export type TimelineKeys = MutableRefObject<((event: KeyboardEvent<HTMLDivElement>) => boolean) | null>
@@ -36,18 +38,20 @@ function useWidth() {
  * name, bar from in to out point, and keyframes; the ruler scrubs the current time. A bar drags
  * the layer in time and its ends trim it; a row drags to a new place in the stack; a double-click
  * renames; a right-click opens the layer menu. Keyframes select, drag and marquee-select
- * (useKeyGestures); a click on empty timeline deselects.
+ * (useKeyGestures); a click on empty timeline deselects. The timeline zooms and scrolls in time
+ * (useTimeView), and the ruler sets the work area.
  */
 export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys }) {
   const { run, t } = useKitEditor()
   const readOnly = useReadOnly()
   const duration = Math.max(info.comp?.duration ?? 0, info.frame)
-  const view = useMemo<TimeView>(() => ({ start: 0, span: duration }), [duration])
   const [width, rulerRef] = useWidth()
+  const rows = useRef<HTMLDivElement>(null)
+  const time = useTimeView(rows, duration, info.frame, info.time, width)
+  const { view } = time
   const [shift, setShift] = useState<{ layers: number[]; delta: number } | null>(null)
   const [renaming, setRenaming] = useState<number | null>(null)
   const [menu, setMenu] = useState<LayerMenuTarget | null>(null)
-  const rows = useRef<HTMLDivElement>(null)
   const order = useMemo(() => info.layers.map((layer) => layer.id), [info.layers])
   const rowDrag = useRowDrag(rows, order)
   const frame = useMemo<TimelineFrame>(() => ({ info, view, width, readOnly }), [info, view, width, readOnly])
@@ -123,6 +127,12 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
       if (!readOnly && selectedKeys.size) void run('keys.easyEase', {})
       return true
     }
+    // = and -: zoom the timeline in and out (Cmd or Ctrl with them zoom the composition).
+    if (!command && !event.altKey && (event.code === 'Equal' || event.code === 'Minus')) {
+      if (event.code === 'Equal') time.zoomIn()
+      else time.zoomOut()
+      return true
+    }
     if (plain && event.code === 'KeyU') {
       solo('KeyU', { kind: 'only', key: 'KeyU', paths: 'animated' })
       return true
@@ -146,7 +156,7 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
 
   return (
     <TimelineContext.Provider value={frame}>
-      <div className="motion-timeline" data-testid="motion-timeline">
+      <div className="motion-timeline" data-view={`${view.start} ${view.span}`} data-testid="motion-timeline">
         <div
           ref={rows}
           className="motion-timeline-rows"
@@ -155,7 +165,7 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
         >
           <div className="motion-timeline-head">
             <div className="motion-timeline-names kui-muted">{t('layers')}</div>
-            <Ruler onSeek={onSeek} rulerRef={rulerRef} />
+            <Ruler onSeek={onSeek} rulerRef={rulerRef} onWorkArea={(start, end) => void run('comp.workArea', { start, end })} />
           </div>
           {info.layers.length ? (
             info.layers.map((layer) => (
@@ -206,6 +216,12 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
           {gestures.marquee ? <div className="motion-marquee" style={gestures.marquee} data-testid="motion-marquee" /> : null}
           {rowDrag.drop ? <div className="motion-drop-line" style={{ top: rowDrag.drop.top }} data-testid="motion-drop-line" /> : null}
         </div>
+        {time.zoomed ? (
+          <div className="motion-timeline-foot" data-testid="motion-timeline-scroll">
+            <div className="motion-timeline-names" />
+            <Scrollbar label={t('horizontalScroll')} orientation="horizontal" value={view.start} max={Math.max(0, duration - view.span)} page={view.span} onChange={time.scrollTo} />
+          </div>
+        ) : null}
         <LayerMenu target={menu} onClose={() => setMenu(null)} onRename={(layer) => setRenaming(layer)} />
       </div>
     </TimelineContext.Provider>

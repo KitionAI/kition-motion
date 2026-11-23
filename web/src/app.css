@@ -98,6 +98,44 @@
   user-select: none;
 }
 
+/* The work area: a band along the ruler's top whose ends drag. */
+.motion-work-area {
+  position: absolute;
+  top: 0;
+  height: 6px;
+  background: var(--kit-primary-soft);
+  pointer-events: none;
+}
+
+.motion-work-handle {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--kit-primary);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+/* Each end sits inside the band, so the composition's last frame keeps its handle in view. */
+.motion-work-handle[data-edge='end'] {
+  margin-left: -8px;
+}
+
+/* The timeline's scrollbar in time, under the tracks, while zoomed in. */
+.motion-timeline-foot {
+  display: flex;
+  flex: none;
+  border-top: 1px solid var(--kit-border);
+}
+
+.motion-timeline-foot > .kui-scrollbar {
+  flex: 1;
+  min-width: 0;
+}
+
 .motion-ruler-mark {
   position: absolute;
   top: 0;
