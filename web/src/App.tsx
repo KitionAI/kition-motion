@@ -7,7 +7,7 @@ import {
   KitDocumentCanvas,
   KitEditorProvider,
   HAND_TOOL,
-  commandMenuTabs,
+  catalogTabs,
   createKitStrings,
   toast,
   useKitEditorState,
@@ -21,17 +21,13 @@ import {
 } from '@kition/sdk/editor'
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
-import { MOTION_PRIMARY, MENU_ORDER, describe, picturePanBounds } from './motion'
+import { describe, picturePanBounds } from './motion'
+import { ARRANGE, MENU_ROWS, MOTION_PRIMARY, VIEW_MENUS, hiddenRow } from './menus'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
 import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
 import { PropertiesPanel } from './PropertiesPanel'
-
-/** File commands the host's own Save, Open, and Close already cover. */
-const HOST_FILE_COMMANDS = ['file.new', 'file.open', 'file.close', 'file.save', 'file.saveAs']
-/** Menus kept in a read-only document. */
-const VIEW_MENUS = ['View', 'Window', 'Help']
 
 /** Plays the composition from the current time against the wall clock; frames the engine cannot render in time are skipped, as a preview does. */
 function usePlayback(run: (command: string, params: Record<string, unknown>) => Promise<unknown>, time: number, duration: number) {
@@ -119,11 +115,40 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const movie = useMovieRender(session.doc, host, t)
   const seek = useCallback((seconds: number) => void runQuietly('time.set', { time: Math.max(0, seconds) }).catch(() => undefined), [runQuietly])
   const step = (frames: number) => void runQuietly('time.step', { frames }).catch(() => undefined)
-  const { commands } = editor
-  // Home first (its own ribbon; a drop-down panel in Menus), then the engine's menus.
+  const { run } = editor
+  const end = () => seek((state?.comp?.duration ?? 0) - (state?.frame ?? 0))
+  /** Commands the editor answers itself (the rest go to the engine as they are). */
+  const own: Record<string, () => void> = {
+    'playback.toggle': playback.toggle,
+    'file.exportMovie': () => void movie.start(),
+    'time.start': () => seek(0),
+    'time.end': end,
+    'time.previousFrame': () => step(-1),
+    'time.nextFrame': () => step(1),
+  }
+  const latestOwn = useRef(own)
+  latestOwn.current = own
+  /** A menu row, a ribbon button, or a shortcut: the editor's own handling first, else the engine. */
+  const dispatch = useCallback(
+    (command: string) => {
+      const handler = latestOwn.current[command]
+      if (handler) handler()
+      else if (ARRANGE[command]) void run('layer.arrange', { to: ARRANGE[command] })
+      else void run(command, {})
+    },
+    [run],
+  )
+  // Rows with nothing to act on are hidden; the predicate changes only when that does.
+  const hiding = hiddenRow(state)
+  const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  const wholeWorkArea = hiding.key.includes('comp.trimToWorkArea')
+  // Home first (its own ribbon; a drop-down panel in Menus), then the editor's menus.
   const tabs = useMemo<FrameTab[]>(
-    () => [{ id: 'home', label: t('homeTab'), ribbon: <HomeTab /> }, ...commandMenuTabs(commands, { order: MENU_ORDER, exclude: HOST_FILE_COMMANDS, phrase, view: VIEW_MENUS, primary: MOTION_PRIMARY })],
-    [commands, phrase, t],
+    () => [
+      { id: 'home', label: t('homeTab'), ribbon: <HomeTab onCommand={dispatch} wholeWorkArea={wholeWorkArea} /> },
+      ...catalogTabs(MENU_ROWS, { phrase, view: VIEW_MENUS, primary: MOTION_PRIMARY, hidden, onCommand: dispatch, onKitCommand: dispatch }),
+    ],
+    [dispatch, hidden, phrase, t, wholeWorkArea],
   )
 
   // The timeline's own keys (Delete, Cmd+D, …) come first.
@@ -139,7 +164,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     else if (command && !host.readOnly && (event.key === ']' || event.key === '}')) void editor.run('layer.arrange', { to: event.shiftKey ? 'front' : 'forward' })
     else if (command && !host.readOnly && (event.key === '[' || event.key === '{')) void editor.run('layer.arrange', { to: event.shiftKey ? 'back' : 'backward' })
     else if (event.key === 'Home') seek(0)
-    else if (event.key === 'End') seek((state.comp?.duration ?? 0) - state.frame)
+    else if (event.key === 'End') end()
     else return false
     return true
   }

@@ -102,16 +102,3 @@ export function timecode(seconds: number, fps: number) {
   const total = Math.floor(frames / rate)
   return `${Math.floor(total / 3600)}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}:${pad(frames % rate)}`
 }
-
-export const MENU_ORDER = ['File', 'Edit', 'Composition', 'Layer', 'Effect', 'Animation', 'View', 'Window', 'Help']
-
-/** The engine commands each menu tab shows in Single line's row (After Effects' most-used), by menu. */
-export const MOTION_PRIMARY: Record<string, readonly string[]> = {
-  File: ['file.exportLottie', 'file.projectSettings', 'file.newCompFromSelection'],
-  Edit: ['edit.undo', 'edit.redo', 'edit.cut', 'edit.copy', 'edit.paste', 'edit.duplicate', 'edit.splitLayer', 'edit.clear'],
-  Composition: ['comp.new', 'comp.settings', 'renderQueue.add', 'comp.trimToWorkArea', 'playback.toggle'],
-  Layer: ['layer.newText', 'layer.newSolid', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment', 'layer.precompose', 'layer.addMask', 'layer.settings'],
-  Effect: ['effect.manage', 'effect.applyLast', 'effect.removeAll'],
-  Animation: ['anim.addKeyframe', 'keys.easyEase', 'keys.toggleHold', 'anim.applyPreset', 'track.motion', 'prop.setExpression'],
-  View: ['view.zoomIn', 'view.zoomOut', 'view.grid', 'view.guides', 'view.rulers', 'view.res.full', 'view.res.half'],
-}

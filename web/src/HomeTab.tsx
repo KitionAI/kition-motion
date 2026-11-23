@@ -12,7 +12,7 @@ const EFFECTS = ['Gaussian Blur', 'Glow', 'Drop Shadow', 'Fill', 'Tint', 'Hue/Sa
  * Motion's Home tab: the motion tasks done most, in every display mode (a drop-down panel in
  * Menus): new layers, keyframes, effects, and the composition. Render stays in the top bar.
  */
-export function HomeTab() {
+export function HomeTab({ onCommand, wholeWorkArea }: { onCommand: (command: string) => void; wholeWorkArea: boolean }) {
   const { run, enabled, phrase: p, t } = useKitEditor()
   const readOnly = useReadOnly()
   return (
@@ -50,7 +50,8 @@ export function HomeTab() {
         <CommandButton command="comp.new" icon={SquarePlus} primary />
         <CommandButton command="comp.settings" icon={Settings2} primary />
         <RibbonStack>
-          <CommandButton command="comp.trimToWorkArea" icon={Scissors} />
+          {/* Trimming to a work area that is the whole composition would change nothing. */}
+          <CommandButton command="comp.trimToWorkArea" icon={Scissors} onRun={onCommand} disabled={wholeWorkArea} />
         </RibbonStack>
       </RibbonGroup>
     </>
