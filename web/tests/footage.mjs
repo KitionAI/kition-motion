@@ -74,6 +74,49 @@ function png(width, height, [r, g, b]) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(rows)), chunk('IEND', Buffer.alloc(0))])
 }
 
+/** A tiny WebM with one VP8 video track (a codec the build names but cannot decode). */
+function vp8Webm(width = 64, height = 48) {
+  const size = (n) => { // EBML variable-size integer, 8 bytes
+    const out = [0x01]; for (let i = 6; i >= 0; i -= 1) out.push(Math.floor(n / 2 ** (8 * i)) & 0xff); return out }
+  const uint = (n, bytes = 4) => Array.from({ length: bytes }, (_, i) => Math.floor(n / 2 ** (8 * (bytes - 1 - i))) & 0xff)
+  const el = (id, body) => [...id, ...size(body.length), ...body]
+  const str = (s) => [...Buffer.from(s, 'ascii')]
+  const frame = (key) => {
+    // VP8 key frame: a 3-byte frame tag, the start code, then 14-bit width and height.
+    const tag = [0x10, 0x02, 0x00]
+    return [...tag, 0x9d, 0x01, 0x2a, width & 0xff, width >> 8, height & 0xff, height >> 8, ...new Array(20).fill(0)]
+  }
+  const block = (time) => el([0xa3], [0x81, ...uint(time, 2), 0x80, ...frame(true)])
+  const header = el([0x1a, 0x45, 0xdf, 0xa3], [...el([0x42, 0x86], [1]), ...el([0x42, 0xf7], [1]), ...el([0x42, 0xf2], [4]), ...el([0x42, 0xf3], [8]), ...el([0x42, 0x82], str('webm')), ...el([0x42, 0x87], [2]), ...el([0x42, 0x85], [2])])
+  const info = el([0x15, 0x49, 0xa9, 0x66], [...el([0x2a, 0xd7, 0xb1], uint(1000000)), ...el([0x44, 0x89], [0x40, 0x8f, 0x40, 0, 0, 0, 0, 0])])
+  const video = el([0xe0], [...el([0xb0], uint(width, 2)), ...el([0xba], uint(height, 2))])
+  const track = el([0xae], [...el([0xd7], [1]), ...el([0x73, 0xc5], [1]), ...el([0x83], [1]), ...el([0x86], str('V_VP8')), ...el([0x23, 0xe3, 0x83], uint(100000000)), ...video])
+  const tracks = el([0x16, 0x54, 0xae, 0x6b], track)
+  const cluster = el([0x1f, 0x43, 0xb6, 0x75], [...el([0xe7], [0]), ...block(0), ...block(100), ...block(200), ...block(300), ...block(400), ...block(500), ...block(600), ...block(700), ...block(800), ...block(900)])
+  const segment = el([0x18, 0x53, 0x80, 0x67], [...info, ...tracks, ...cluster])
+  return Buffer.from([...header, ...segment])
+}
+
+/** A mono 16-bit WAV of a 440 Hz tone, `seconds` long. */
+function toneWav(seconds = 1, rate = 48000) {
+  const frames = Math.round(seconds * rate)
+  const out = Buffer.alloc(44 + frames * 2)
+  out.write('RIFF', 0, 'ascii')
+  out.writeUInt32LE(36 + frames * 2, 4)
+  out.write('WAVEfmt ', 8, 'ascii')
+  out.writeUInt32LE(16, 16)
+  out.writeUInt16LE(1, 20)
+  out.writeUInt16LE(1, 22)
+  out.writeUInt32LE(rate, 24)
+  out.writeUInt32LE(rate * 2, 28)
+  out.writeUInt16LE(2, 32)
+  out.writeUInt16LE(16, 34)
+  out.write('data', 36, 'ascii')
+  out.writeUInt32LE(frames * 2, 40)
+  for (let i = 0; i < frames; i += 1) out.writeInt16LE(Math.round(Math.sin((2 * Math.PI * 440 * i) / rate) * 12000), 44 + i * 2)
+  return out
+}
+
 /** Puts a file in the host's workspace, where its picker finds it (the first picture there). */
 const putFile = (name, bytes) => page.evaluate(([path, data]) => window.devHost.files.set(path, { bytes: new Uint8Array(data).buffer, version: 1 }), [name, [...bytes]])
 const removeFile = (name) => page.evaluate((path) => window.devHost.files.delete(path), name)
@@ -390,6 +433,25 @@ try {
   })
   await until(async () => (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('notes.txt')))
   step('a dropped file of another type says it cannot be imported', (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('无法导入 notes.txt')) && (await items()).length === count)
+  // A VP8 movie: refused with a message in Chinese, not imported to draw black.
+  await kit.getByTestId('motion-workspace').evaluate((target, bytes) => {
+    const data = new DataTransfer()
+    data.items.add(new File([new Uint8Array(bytes)], 'clip.webm', { type: 'video/webm' }))
+    const canvas = target.querySelector('[data-testid="kit-canvas-surface"]')
+    canvas.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: data }))
+    canvas.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data }))
+  }, [...vp8Webm()])
+  await until(async () => (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('clip.webm')))
+  step('a VP8 movie is refused, saying so in Chinese', (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('未导入 clip.webm') && text.includes('VP8')) && (await items()).length === count, (await kit.locator('.kui-toast').allTextContents()).join(' | '))
+  // A sound placed at the start plays with the preview: the engine mixes it and the page schedules it.
+  await putFile('tone.wav', toneWav(2))
+  const tone = (await query('file.import', { paths: ['tone.wav'] })).items?.[0]
+  await page.evaluate(async (item) => window.devHost.connection().ai.run([{ command: 'layer.addItem', params: { item, time: 0 } }], false), tone)
+  await kit.getByTestId('motion-workspace').evaluate((element) => element.removeAttribute('data-audio'))
+  await kit.getByTestId('motion-play').click()
+  await until(async () => Number(await kit.getByTestId('motion-workspace').getAttribute('data-audio')) >= 1, 60)
+  await kit.getByTestId('motion-play').click()
+  step('a placed sound plays during preview', Number(await kit.getByTestId('motion-workspace').getAttribute('data-audio')) >= 1, String(await kit.getByTestId('motion-workspace').getAttribute('data-audio')))
   // A picture dropped from the computer: written beside the project through the host, imported and placed.
   before = await layers()
   await kit.getByTestId('motion-workspace').evaluate((target, bytes) => {

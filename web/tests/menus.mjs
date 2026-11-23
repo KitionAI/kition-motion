@@ -338,7 +338,9 @@ try {
     const { kit, page, primary } = ctx
     await kit.getByTestId('motion-timeline-rows').click({ position: { x: 600, y: 200 } })
     await kit.getByTestId(`motion-layer-${ctx.shape.id}`).click()
-    for (const [keys, testId] of [[`${primary}+k`, 'motion-comp-dialog'], [`${primary}+y`, 'motion-solid-dialog'], ['Alt+Shift+J', 'motion-time-dialog']]) {
+    const items = async () => (await page.evaluate(async () => window.devHost.connection().ai.run([{ command: 'project.summary', params: {} }], false))).completed[0].result.items.length
+    const itemCount = await items()
+    for (const [keys, testId] of [[`${primary}+k`, 'motion-comp-dialog'], [`${primary}+y`, 'motion-solid-dialog'], ['Alt+Shift+J', 'motion-time-dialog'], [`${primary}+Alt+KeyN`, 'motion-comp-dialog']]) {
       await page.keyboard.press(keys)
       await page.waitForTimeout(400)
       step(`${keys} opens its dialog`, (await kit.getByTestId(testId).count()) === 1)
@@ -346,14 +348,42 @@ try {
       await page.waitForTimeout(300)
       step(`Escape closes it`, (await dialogOpen(kit)) === 0)
     }
-    // Cmd+N is the host's (its init.shortcuts): the kit forwards it, so New Composition runs from its menu row and Home.
-    const forwarded = await page.evaluate(() => window.devHost.connection().init?.shortcuts ?? null).catch(() => null)
-    console.log(`NOTE ${primary}+N belongs to the host ${forwarded ? `(${forwarded.join(', ')})` : ''}; New Composition is on the Composition menu and Home`)
+    // Cmd+N is the host's and the browser's: New Composition is Cmd+Alt+N, and that key no longer replaces the project (the engine's New Project).
+    step(`${primary}+Alt+N left the project as it was`, (await items()) === itemCount && (await ctx.details()).info.layers.length > 0)
+    await kit.getByTestId('motion-menu-Composition').click()
+    const newComp = kit.locator('[role=menu] [data-testid="motion-cmd-comp.new"]')
+    step('New Composition shows the shortcut that runs it', (await newComp.locator('kbd').textContent()).replace(/\s/g, '').includes('Alt+N'), await newComp.locator('kbd').textContent())
+    await page.keyboard.press('Escape')
     // Backspace deletes the selected layer as Delete does.
     const count = (await ctx.details()).info.layers.length
     await page.keyboard.press('Backspace')
     await page.waitForTimeout(500)
     step('Backspace deletes the selected layer', (await ctx.details()).info.layers.length === count - 1)
+    await ctx.context.close()
+  }
+
+  // With three layers selected: Sequence Layers puts them one after another, Distribute spaces them (each one undo step).
+  {
+    const ctx = await open('none')
+    const { kit, page, primary } = ctx
+    const all = (await ctx.details()).info.layers
+    await kit.getByTestId(`motion-layer-${all[0].id}`).click()
+    for (const layer of all.slice(1)) await kit.getByTestId(`motion-layer-${layer.id}`).click({ modifiers: [primary] })
+    await page.waitForTimeout(600)
+    for (const [menu, sub, testid, what] of [['Animation', null, 'motion-control-sequence', 'Sequence Layers'], ['Layer', 'menu:Layer/Align', 'motion-control-distribute-hcenter', 'Distribute Horizontal Centers']]) {
+      const before = (await page.evaluate(async () => window.devHost.connection().ai.inspect())).revision
+      await kit.getByTestId(`motion-menu-${menu}`).click()
+      if (sub) await kit.locator(`[data-kit-ui-id="${sub}"]`).hover()
+      const row = kit.locator(`[role=menu] [data-testid="${testid}"]`).first()
+      const shown = (await row.count()) === 1
+      if (shown) await row.click()
+      else await page.keyboard.press('Escape')
+      await page.waitForTimeout(600)
+      const after = (await page.evaluate(async () => window.devHost.connection().ai.inspect())).revision
+      step(`three layers: ${what} is shown and changes the composition`, shown && after !== before && (await errorToasts(kit)) === 0)
+      await undo(ctx)
+      step(`and one undo takes it back`, (await page.evaluate(async () => window.devHost.connection().ai.inspect())).revision !== after)
+    }
     await ctx.context.close()
   }
 

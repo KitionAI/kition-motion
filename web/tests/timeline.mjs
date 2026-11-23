@@ -151,9 +151,11 @@ try {
   step('Backspace deletes the selected layer', !(await layer(SHAPE)))
   await page.keyboard.press(`${primary}+KeyZ`)
   await until(async () => !!(await layer(SHAPE)))
+  await until(async () => (await layer(SHAPE)).selected && (await kit.getByTestId(`motion-layer-${SHAPE}`).getAttribute('data-selected')) === 'true', 20)
   const restored = await layer(SHAPE)
   const shownSelected = (await kit.getByTestId(`motion-layer-${SHAPE}`).getAttribute('data-selected')) === 'true'
   step('undo brings the deleted layer back, and its row shows its selection as the engine reports it', !!restored && shownSelected === restored.selected, `selected ${restored?.selected}, row ${shownSelected}`)
+  step('the layer undo brings back is selected again', restored?.selected === true && shownSelected, `selected ${restored?.selected}, row ${shownSelected}`)
   await kit.getByTestId(`motion-name-${SHAPE}`).click()
   await until(async () => (await layer(SHAPE)).selected)
   const before = (await layers()).length
