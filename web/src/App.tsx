@@ -25,7 +25,7 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, KIT, MOTION_PRIMARY, SHORTCUT_OVERRIDES, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
+import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, SHORTCUT_OVERRIDES, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -85,6 +85,30 @@ function usePlayback(run: (command: string, params: Record<string, unknown>) => 
     }
   }, [playing, run, stop])
   return { playing, toggle, stop, origin }
+}
+
+/**
+ * The `KIT_RUNS` and `TRIED_ROWS` rows that would change nothing now (the engine tries each on a
+ * copy, `wouldChange`), asked again a moment after the document, the selection or the time
+ * changes, but not during playback.
+ */
+function useIdleRows(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, state: unknown, playing: boolean) {
+  const [idle, setIdle] = useState<ReadonlySet<string>>(() => new Set([...Object.keys(KIT_RUNS), ...Object.keys(TRIED_ROWS)]))
+  useEffect(() => {
+    if (!doc || playing) return undefined
+    let current = true
+    const timer = window.setTimeout(async () => {
+      const tries: Array<[string, string, Record<string, unknown>]> = [...Object.entries(KIT_RUNS).map(([row, [command, params]]) => [row, command, params] as [string, string, Record<string, unknown>]), ...Object.entries(TRIED_ROWS).map(([command, params]) => [command, command, params] as [string, string, Record<string, unknown>])]
+      const next = new Set<string>()
+      for (const [row, command, params] of tries) if (!(await doc.invoke<boolean>('wouldChange', command, JSON.stringify(params)).catch(() => false))) next.add(row)
+      if (current) setIdle((before) => ([...before].sort().join() === [...next].sort().join() ? before : next))
+    }, 120)
+    return () => {
+      current = false
+      window.clearTimeout(timer)
+    }
+  }, [doc, state, playing])
+  return idle
 }
 
 /** How much sound (seconds) preview playback asks the engine for at a time, and how far ahead it keeps. */
@@ -508,12 +532,14 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       if (handler) handler()
       else if (command.startsWith(EFFECT_PREFIX)) latestApply.current(command.slice(EFFECT_PREFIX.length))
       else if (ARRANGE[command]) void run('layer.arrange', { to: ARRANGE[command] })
+      else if (KIT_RUNS[command]) void run(KIT_RUNS[command][0], { ...KIT_RUNS[command][1] })
       else void run(command, {})
     },
     [run],
   )
   // Rows with nothing to act on are hidden; the predicate changes only when that does.
-  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1 }, editor.enabled('keys.interpolation'))
+  const idle = useIdleRows(session.doc, state, playback.playing)
+  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1 }, editor.enabled('keys.interpolation'), idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(() => menuRows(effects), [effects])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
@@ -556,6 +582,12 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         if (!host.readOnly || id === 'time.set') dispatch(id)
         return true
       }
+    }
+    // The Transform, Time and Align rows' own shortcuts ([ and ] move the in and out points, Alt with them trims, Cmd+Alt+F fits).
+    for (const row of rows) {
+      if (!KIT_RUNS[row.command] || !row.shortcut || !shortcutMatches(row.shortcut, event)) continue
+      if (!host.readOnly && !idle.has(row.command)) dispatch(row.command)
+      return true
     }
     // * (on the keypad, or Shift+8): a marker at the current time.
     if (event.key === '*' && !command && !event.altKey && !host.readOnly) {

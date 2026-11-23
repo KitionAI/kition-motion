@@ -360,6 +360,26 @@ impl MotionDocument {
         ))
     }
 
+    /// Whether running `command` with `params` (JSON) now would change the project, tried on a copy
+    /// so nothing changes: the editor hides a menu row that would do nothing (Center Anchor Point
+    /// on a layer whose anchor is already there, Trim In Point at the in point). Only the commands
+    /// in [`TRIED_COMMANDS`] are tried; any other, a refused one, or bad JSON answers false.
+    pub fn would_change(&self, command: &str, params: &str) -> bool {
+        if !TRIED_COMMANDS.contains(&command) {
+            return false;
+        }
+        let Ok(params) = serde_json::from_str::<Value>(params) else { return false };
+        let mut scratch = Session {
+            project: self.session.project.clone(),
+            state: self.session.state.clone(),
+            services: self.session.services.clone(),
+            footage: self.session.footage.clone(),
+            ..Session::default()
+        };
+        let before = scratch.project.clone();
+        scratch.execute(command, params).is_ok() && !scratch.project.same_content(&before)
+    }
+
     /// Takes a file the engine wrote (an export) out of memory; the host saves it.
     pub fn take_file(&self, path: &str) -> Option<Vec<u8>> {
         if path == self.name {
@@ -382,6 +402,11 @@ pub const EDITOR_STATE: &[&str] = &["/time", "/info/transform", "selected"];
 
 /// The most samples [`MotionDocument::curve_samples`] takes per call.
 pub const MAX_SAMPLES: u32 = 2000;
+
+/// The commands [`MotionDocument::would_change`] tries: layer and keyframe edits that change
+/// only the project, never a file or the history beyond the copy.
+pub const TRIED_COMMANDS: &[&str] =
+    &["layer.centerAnchor", "layer.transform", "layer.timing", "layer.freezeFrame", "layer.align", "layer.distribute", "layer.sequence", "keys.timeReverse"];
 
 /// The longest stretch of sound [`MotionDocument::mix_audio`] mixes per call, in seconds.
 pub const MAX_AUDIO_SECONDS: f64 = 10.0;
@@ -1056,6 +1081,12 @@ pub mod web {
                 return Err(JsError::new("the layer must be a layer id"));
             }
             self.0.curve_samples(layer as u64, path, from, to, count).map_err(|message| JsError::new(&message))
+        }
+
+        /// Whether a command would change the project now (see [`MotionDocument::would_change`]).
+        #[wasm_bindgen(js_name = wouldChange)]
+        pub fn would_change(&self, command: &str, params: &str) -> bool {
+            self.0.would_change(command, params)
         }
 
         /// The active composition's sound over a stretch of time (see [`MotionDocument::mix_audio`]).

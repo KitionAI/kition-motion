@@ -66,6 +66,43 @@ export const KIT = {
   projectPanel: 'kit:project-panel',
 } as const
 
+/**
+ * Rows the editor runs as one engine command with fixed parameters (Layer ▸ Transform, Time and
+ * Align, Animation ▸ Sequence Layers). Each is shown only where it would change something
+ * (`wouldChange`), so a shown row always does.
+ */
+export const KIT_RUNS: Readonly<Record<string, readonly [command: string, params: Record<string, unknown>]>> = {
+  'kit:transform-reset': ['layer.transform', { op: 'reset' }],
+  'kit:fit': ['layer.transform', { op: 'fit' }],
+  'kit:fit-width': ['layer.transform', { op: 'fitWidth' }],
+  'kit:fit-height': ['layer.transform', { op: 'fitHeight' }],
+  'kit:flip-h': ['layer.transform', { op: 'flipH' }],
+  'kit:flip-v': ['layer.transform', { op: 'flipV' }],
+  'kit:move-in': ['layer.timing', { op: 'moveInToTime' }],
+  'kit:move-out': ['layer.timing', { op: 'moveOutToTime' }],
+  'kit:trim-in': ['layer.timing', { op: 'trimInToTime' }],
+  'kit:trim-out': ['layer.timing', { op: 'trimOutToTime' }],
+  'kit:align-left': ['layer.align', { edge: 'left' }],
+  'kit:align-hcenter': ['layer.align', { edge: 'hcenter' }],
+  'kit:align-right': ['layer.align', { edge: 'right' }],
+  'kit:align-top': ['layer.align', { edge: 'top' }],
+  'kit:align-vcenter': ['layer.align', { edge: 'vcenter' }],
+  'kit:align-bottom': ['layer.align', { edge: 'bottom' }],
+  'kit:distribute-left': ['layer.distribute', { mode: 'left' }],
+  'kit:distribute-hcenter': ['layer.distribute', { mode: 'hcenter' }],
+  'kit:distribute-right': ['layer.distribute', { mode: 'right' }],
+  'kit:distribute-top': ['layer.distribute', { mode: 'top' }],
+  'kit:distribute-vcenter': ['layer.distribute', { mode: 'vcenter' }],
+  'kit:distribute-bottom': ['layer.distribute', { mode: 'bottom' }],
+  'kit:sequence': ['layer.sequence', {}],
+}
+
+/** Engine rows that are hidden, like `KIT_RUNS`, where they would change nothing. */
+export const TRIED_ROWS: Readonly<Record<string, Record<string, unknown>>> = {
+  'layer.centerAnchor': {},
+  'layer.freezeFrame': {},
+}
+
 /** Layer ▸ Arrange's rows and where each moves the selected layers (`layer.arrange`'s `to`). */
 export const ARRANGE: Record<string, 'front' | 'forward' | 'backward' | 'back'> = {
   [KIT.arrangeFront]: 'front',
@@ -153,7 +190,50 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
           ['Stroke', 'layer.style.stroke'],
         ],
       ],
-      ['Time', [['Time-Reverse Layer', 'layer.timeReverse']]],
+      [
+        'Transform',
+        [
+          ['Reset', 'kit:transform-reset'],
+          ['Center Anchor Point in Layer Content', 'layer.centerAnchor'],
+          SEPARATOR,
+          ['Fit to Comp', 'kit:fit', 'Cmd+Alt+F'],
+          ['Fit to Comp Width', 'kit:fit-width'],
+          ['Fit to Comp Height', 'kit:fit-height'],
+          SEPARATOR,
+          ['Flip Horizontal', 'kit:flip-h'],
+          ['Flip Vertical', 'kit:flip-v'],
+        ],
+      ],
+      [
+        'Time',
+        [
+          ['Time-Reverse Layer', 'layer.timeReverse'],
+          ['Freeze Frame', 'layer.freezeFrame'],
+          SEPARATOR,
+          ['Move In Point to Current Time', 'kit:move-in', '['],
+          ['Move Out Point to Current Time', 'kit:move-out', ']'],
+          ['Trim In Point to Current Time', 'kit:trim-in', 'Alt+['],
+          ['Trim Out Point to Current Time', 'kit:trim-out', 'Alt+]'],
+        ],
+      ],
+      [
+        'Align',
+        [
+          ['Align Left', 'kit:align-left'],
+          ['Align Horizontal Centers', 'kit:align-hcenter'],
+          ['Align Right', 'kit:align-right'],
+          ['Align Top', 'kit:align-top'],
+          ['Align Vertical Centers', 'kit:align-vcenter'],
+          ['Align Bottom', 'kit:align-bottom'],
+          SEPARATOR,
+          ['Distribute Left Edges', 'kit:distribute-left'],
+          ['Distribute Horizontal Centers', 'kit:distribute-hcenter'],
+          ['Distribute Right Edges', 'kit:distribute-right'],
+          ['Distribute Top Edges', 'kit:distribute-top'],
+          ['Distribute Vertical Centers', 'kit:distribute-vcenter'],
+          ['Distribute Bottom Edges', 'kit:distribute-bottom'],
+        ],
+      ],
       [
         'Arrange',
         [
@@ -184,6 +264,7 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
       ['Easy Ease Out', 'keys.easyEaseOut'],
       ['Toggle Hold Keyframe', 'keys.toggleHold'],
       ['Time-Reverse Keyframes', 'keys.timeReverse'],
+      ['Sequence Layers', 'kit:sequence'],
       SEPARATOR,
       ['Separate Dimensions', 'prop.separateDimensions'],
     ],
@@ -234,9 +315,10 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
  * Video with none hidden, Unlock All with none locked, Trim to Work Area while the work area is
  * the whole composition, Solid Settings unless the selected layer is a solid, effects without a
  * selection, Last Effect until one was applied here, Fit in Window while the view is fitted and
- * Zoom 100% at 100%, and the Keyframe Interpolation rows without selected keyframes.
+ * Zoom 100% at 100%, the Keyframe Interpolation rows without selected keyframes, and the
+ * `KIT_RUNS` and `TRIED_ROWS` rows that would change nothing now (`idle`).
  */
-export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean }, keysSelected: boolean) {
+export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean }, keysSelected: boolean, idle: ReadonlySet<string>) {
   const layers = info?.layers ?? []
   const selected = layers.some((layer) => layer.selected)
   const comp = info?.comp
@@ -251,6 +333,7 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { 
   if (view.fitted) hidden.add(KIT.zoomFit)
   if (view.actual) hidden.add(KIT.zoom100)
   if (!keysSelected) for (const row of INTERPOLATIONS) hidden.add(row.command)
+  for (const command of idle) hidden.add(command)
   const key = [...hidden].sort().join(' ') + (selected ? '' : ' effects')
   return { key, hidden: (row: MenuRow) => hidden.has(row.command) || (!selected && row.command.startsWith(EFFECT_PREFIX)) }
 }
