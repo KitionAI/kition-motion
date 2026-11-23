@@ -10,7 +10,7 @@ import { createServer } from 'vite'
 /** The editor's scroll margin, in screen pixels (src/motion.ts: SCROLL_MARGIN, the margin a fitted picture has). */
 const MARGIN = 32
 const which = process.argv[2] ?? 'chromium'
-const server = await createServer({ configFile: new URL('../vite.config.ts', import.meta.url).pathname, server: { port: 0, host: '127.0.0.1' }, logLevel: 'error' })
+const server = await createServer({ configFile: new URL('../vite.config.ts', import.meta.url).pathname, server: { port: 0, host: '127.0.0.1', watch: null }, logLevel: 'error' })
 await server.listen()
 const browser = await (which === 'webkit' ? webkit : chromium).launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
