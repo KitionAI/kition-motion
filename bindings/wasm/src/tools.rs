@@ -392,8 +392,8 @@ impl KitTools for MotionDocument {
                     None
                 }
                 PointerAction::DoubleClick => {
-                    if st.tool == Tool::Selection {
-                        text::double_click(self, st, p);
+                    if st.tool == Tool::Selection && !text::double_click(self, st, p) {
+                        select::open_precomp(self, st, p);
                     }
                     None
                 }

@@ -125,13 +125,15 @@ pub(super) fn drag_select(doc: &mut MotionDocument, anchor: usize, p: Pt) {
     }
 }
 
-/// A double-click with the Selection tool on a text layer edits it, its whole text selected.
-pub(super) fn double_click(doc: &mut MotionDocument, st: &mut ToolState, p: Pt) {
+/// A double-click with the Selection tool on a text layer edits it, its whole text selected;
+/// false when no text layer is under the pointer.
+pub(super) fn double_click(doc: &mut MotionDocument, st: &mut ToolState, p: Pt) -> bool {
     let hit = with_ctx(&doc.session, |ctx| geometry::pick(ctx, p, &is_text)).flatten();
-    let Some(id) = hit else { return };
+    let Some(id) = hit else { return false };
     let n = text_edit::layer_doc(&doc.session, id).map_or(0, |d| d.char_len());
     st.gesture = Gesture::Idle;
     begin(doc, st, json!({ "layer": id.0, "select": [0, n] }));
+    true
 }
 
 /// Typed text replaces the selection.

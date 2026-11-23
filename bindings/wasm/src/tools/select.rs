@@ -4,7 +4,7 @@
 
 use kition_kit::tools::ToolMods;
 use kition_motion_engine::geom::Mat3;
-use kition_motion_engine::project::LayerId;
+use kition_motion_engine::project::{LayerId, LayerSource};
 use kition_motion_engine::viewer::{self, SnapOptions};
 use serde_json::json;
 
@@ -337,4 +337,16 @@ impl MotionDocument {
             let _ = self.tool_run("layer.select", json!({ "layers": ids }));
         }
     }
+}
+
+/// A double-click with the Selection tool on a precomp layer (the topmost layer under the
+/// pointer) opens its composition (`layer.openSource`), as a double-click on its bar does.
+pub(super) fn open_precomp(doc: &mut MotionDocument, st: &mut ToolState, p: Pt) {
+    let hit = with_ctx(&doc.session, |ctx| {
+        geometry::pick(ctx, p, &|_| true).filter(|id| ctx.comp.layer(*id).is_some_and(|l| matches!(l.source, LayerSource::Comp { .. })))
+    })
+    .flatten();
+    let Some(id) = hit else { return };
+    st.gesture = Gesture::Idle;
+    let _ = doc.tool_run("layer.openSource", json!({ "layer": id.0 }));
 }

@@ -230,3 +230,18 @@ fn tools_refuse_hostile_events_without_a_panic() {
     let _ = doc.key("Escape", ToolMods::default(), -1.0).unwrap();
     let _ = KitTools::text(&mut doc, "x", 1.0).unwrap();
 }
+
+#[test]
+fn a_double_click_on_a_precomp_layer_opens_its_composition() {
+    let mut doc = doc();
+    let outer = doc.session.active_comp_id().unwrap();
+    let layer = solid(&mut doc, "Inside");
+    let made = doc.execute("layer.precompose", json!({ "layers": [layer], "name": "Nested" })).unwrap();
+    assert_eq!(doc.session.active_comp_id(), Some(outer), "pre-composing stays in the outer composition");
+    // Outside the precomp layer's box (the nested composition's frame) nothing opens; on it, its
+    // composition does.
+    doc.pointer(&event(PointerAction::DoubleClick, -40.0, -40.0, ToolMods::default())).unwrap();
+    assert_eq!(doc.session.active_comp_id(), Some(outer));
+    doc.pointer(&event(PointerAction::DoubleClick, 960.0, 540.0, ToolMods::default())).unwrap();
+    assert_eq!(doc.session.active_comp_id().map(|c| c.0), made["comp"].as_u64());
+}
