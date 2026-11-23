@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
 import type { TreeNode } from '../timeline/tree'
@@ -5,7 +6,8 @@ import { EffectsSection } from './EffectsSection'
 import { LayerHeader } from './LayerHeader'
 import { PanelEdge, usePanelWidth } from './PanelEdge'
 import { PanelContext, PropertyChildren, PropertyGroup, hasRows, visible } from './PropertyTree'
-import { Section } from './Section'
+import { Section, remember } from './Section'
+import { TextControls } from './TextSection'
 
 /** How deep the panel reads a layer's property tree (shape groups nest). */
 const TREE_DEPTH = 10
@@ -17,14 +19,16 @@ const PLACED = new Set(['effects', 'transform', 'masks'])
 const TEXT_MORE = new Set(['text/pathOptions', 'text/moreOptions'])
 
 /** The layer type's own section (Text, Contents, Camera Options…) from its top-level group. */
-function TypeSection({ node, layer }: { node: TreeNode; layer: MotionLayer }) {
+function TypeSection({ node, layer, focusText, onFocused }: { node: TreeNode; layer: MotionLayer; focusText: boolean; onFocused: () => void }) {
   const { phrase, t } = useKitEditor()
   const scope = layer.type
   if (node.match === 'text') {
-    const main = { ...node, children: (node.children ?? []).filter((child) => !TEXT_MORE.has(child.path)) }
+    // The content box and the character settings first; Source Text is the box.
+    const main = { ...node, children: (node.children ?? []).filter((child) => !TEXT_MORE.has(child.path) && child.match !== 'sourceText') }
     const more = (node.children ?? []).filter((child) => TEXT_MORE.has(child.path))
     return (
       <Section scope={scope} id={node.path} title={phrase(node.name)} testId={`motion-section-${node.match}`}>
+        <TextControls node={node} focusNow={focusText} onFocused={onFocused} />
         <PropertyChildren node={main} scope={scope} depth={0} />
         {more.length ? <PropertyGroup node={{ name: 'More', path: 'text/more', children: more }} label={t('props.more')} scope={scope} depth={0} /> : null}
       </Section>
@@ -56,6 +60,19 @@ export function PropertiesPanel({ info }: { info: MotionInfo }) {
   const group = (match: string) => top.find((node) => node.match === match)
   const masks = group('masks')
   const transform = group('transform')
+  // A text layer made just now: its content box takes the focus with its text selected, so typing replaces it.
+  const known = useRef<Set<number> | null>(null)
+  const [fresh, setFresh] = useState<number | null>(null)
+  useEffect(() => {
+    const ids = new Set(info.layers.map((item) => item.id))
+    const before = known.current
+    known.current = ids
+    if (before && layer && layer.type === 'Text' && !before.has(layer.id)) {
+      remember('Text:text', true)
+      setFresh(layer.id)
+    }
+  }, [info.layers, layer])
+  const focused = useCallback(() => setFresh(null), [])
   return (
     <aside className="kui-panel motion-side" data-side="right" style={{ width }} data-testid="motion-properties-panel">
       <PanelEdge width={width} onWidth={setWidth} />
@@ -66,7 +83,7 @@ export function PropertiesPanel({ info }: { info: MotionInfo }) {
             {top
               .filter((node) => node.children && !PLACED.has(node.match ?? '') && visible(node, layer) && hasRows(node, layer))
               .map((node) => (
-                <TypeSection key={node.path} node={node} layer={layer} />
+                <TypeSection key={node.path} node={node} layer={layer} focusText={fresh === layer.id} onFocused={focused} />
               ))}
             <EffectsSection layer={layer} group={group('effects')} />
             {transform ? (

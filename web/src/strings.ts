@@ -102,6 +102,19 @@ const enUS: Catalog = {
   "props.masks": "Masks",
   "props.effects": "Effects",
   "props.resize": "Properties panel width: drag left or right",
+  "text.content": "Text",
+  "text.font": "Font",
+  "text.style": "Style",
+  "text.size": "Size",
+  "text.fill": "Fill",
+  "text.stroke": "Stroke",
+  "text.strokeWidth": "Stroke width",
+  "text.tracking": "Tracking",
+  "text.leading": "Leading",
+  "text.align": "Alignment",
+  "text.left": "Align left",
+  "text.center": "Centre",
+  "text.right": "Align right",
 }
 
 const zhCN: Catalog = {
@@ -205,6 +218,19 @@ const zhCN: Catalog = {
   "props.masks": "蒙版",
   "props.effects": "效果",
   "props.resize": "属性面板宽度：左右拖动",
+  "text.content": "文字",
+  "text.font": "字体",
+  "text.style": "字形",
+  "text.size": "字号",
+  "text.fill": "填充",
+  "text.stroke": "描边",
+  "text.strokeWidth": "描边宽度",
+  "text.tracking": "字距",
+  "text.leading": "行距",
+  "text.align": "对齐",
+  "text.left": "左对齐",
+  "text.center": "居中",
+  "text.right": "右对齐",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }

@@ -2,32 +2,35 @@ import { useCallback, useRef } from 'react'
 import { useKitEditor } from '@kition/sdk/editor'
 
 /**
- * Setting one property of a layer at a composition time. `set(value)` is one undo step;
- * `set(value, gesture)` during a drag sends only the latest value while the engine is busy, and
- * every value of one gesture folds into one undo step (`prop.set`'s `merge`).
+ * Running `command` with changing parameters: `send(params)` is one undo step; `send(params,
+ * gesture)` during a drag or while typing sends only the latest parameters while the engine is
+ * busy, and every call of one gesture folds into one undo step (the command's `merge`).
  */
-export function useSetProp(layer: number, path: string, time: number) {
+export function useSender(command: string) {
   const { run } = useKitEditor()
-  const latest = useRef({ layer, path, time })
-  latest.current = { layer, path, time }
   const busy = useRef(false)
-  const pending = useRef<{ value: unknown; gesture?: string } | null>(null)
+  const pending = useRef<{ params: Record<string, unknown>; gesture?: string } | null>(null)
   const flush = useCallback(async () => {
     if (busy.current) return
     busy.current = true
     while (pending.current) {
-      const { value, gesture } = pending.current
+      const { params, gesture } = pending.current
       pending.current = null
-      const { layer: id, path: at, time: when } = latest.current
-      await run('prop.set', { layer: id, path: at, value, time: when, timeBase: 'comp', ...(gesture ? { merge: gesture } : {}) }).catch(() => null)
+      await run(command, { ...params, ...(gesture ? { merge: gesture } : {}) }).catch(() => null)
     }
     busy.current = false
-  }, [run])
+  }, [command, run])
   return useCallback(
-    (value: unknown, gesture?: string) => {
-      pending.current = { value, gesture }
+    (params: Record<string, unknown>, gesture?: string) => {
+      pending.current = { params, gesture }
       void flush()
     },
     [flush],
   )
+}
+
+/** Setting one property of a layer at a composition time (`prop.set`), as `useSender` sends. */
+export function useSetProp(layer: number, path: string, time: number) {
+  const send = useSender('prop.set')
+  return useCallback((value: unknown, gesture?: string) => send({ layer, path, value, time, timeBase: 'comp' }, gesture), [layer, path, send, time])
 }
