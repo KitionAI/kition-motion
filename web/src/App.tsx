@@ -37,6 +37,7 @@ import { Transport } from './Transport'
 import { Splitter, useTimelineHeight } from './Splitter'
 import { PropertiesPanel } from './properties/PropertiesPanel'
 import { EffectCatalog } from './properties/catalog'
+import { useFootage } from './footage'
 
 /** Plays the composition from the current time against the wall clock; frames the engine cannot render in time are skipped, as a preview does. */
 function usePlayback(run: (command: string, params: Record<string, unknown>) => Promise<unknown>, time: number, duration: number) {
@@ -203,7 +204,7 @@ function codeOf(key: string) {
 }
 
 /** Commands the editor asks values for in its own dialogs. */
-const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set']
+const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import']
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -252,6 +253,15 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const canvas = useRef<KitCanvasHandle>(null)
   const viewMemory = useRef<RasterView | null>(null)
   const [zoom, setZoom] = useState<number | null>(null)
+  const [dropping, setDropping] = useState(false)
+  /** The composition point under a page point, from the canvas's view; null off the canvas. */
+  const compPoint = (clientX: number, clientY: number): [number, number] | undefined => {
+    const view = canvas.current?.view()
+    const element = workspace.current?.querySelector('[data-testid="kit-canvas-surface"]')
+    if (!view || !element) return undefined
+    const rect = element.getBoundingClientRect()
+    return [Math.round(view.x + (clientX - rect.left) / view.zoom), Math.round(view.y + (clientY - rect.top) / view.zoom)]
+  }
   // Scrolling stops a margin past the picture: the view never leaves it for empty canvas.
   const picture = state?.picture
   const panBounds = useMemo(() => picturePanBounds(picture?.width ?? 0, picture?.height ?? 0, zoom), [picture?.width, picture?.height, zoom])
@@ -291,6 +301,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const seek = useCallback((seconds: number) => void runQuietly('time.set', { time: Math.max(0, seconds) }).catch(() => undefined), [runQuietly])
   const step = (frames: number) => void runQuietly('time.step', { frames }).catch(() => undefined)
   const { run, query } = editor
+  const footage = useFootage({ host, run, t })
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
   const [findEffect, setFindEffect] = useState(false)
   // Every effect the engine has, for the Effect menu; and whether one was applied here (Last Effect).
@@ -335,6 +346,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const own: Record<string, () => void> = {
     'playback.toggle': playback.toggle,
     'file.exportMovie': () => void movie.start(),
+    'file.import': () => void footage.importPicked(),
     'time.start': () => seek(0),
     'time.end': end,
     'time.previousFrame': () => step(-1),
@@ -462,7 +474,34 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
         {findEffect ? <FindEffectDialog effects={effects} onApply={(effect) => applyEffect(effect.id)} onClose={() => setFindEffect(false)} /> : null}
         <div className="kui-row" ref={workspace} data-testid="motion-workspace" data-picture={picture ? `${picture.width} ${picture.height}` : undefined}>
-          <div className="motion-main" ref={main} style={{ '--motion-timeline-height': `${timelineHeight}px` } as CSSProperties} onKeyDown={keepTypedKeys}>
+          <div
+            className="motion-main"
+            ref={main}
+            style={{ '--motion-timeline-height': `${timelineHeight}px` } as CSSProperties}
+            onKeyDown={keepTypedKeys}
+            data-drop={dropping || undefined}
+            onDragOver={(event) => {
+              const types = event.dataTransfer.types
+              if (host.readOnly || !state?.comp || !types.includes('Files')) return
+              event.preventDefault()
+              event.dataTransfer.dropEffect = 'copy'
+              setDropping(true)
+            }}
+            onDragLeave={(event) => {
+              if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) setDropping(false)
+            }}
+            onDrop={(event) => {
+              setDropping(false)
+              if (host.readOnly || !state?.comp) return
+              const files = [...event.dataTransfer.files]
+              if (!files.length) return
+              event.preventDefault()
+              // Dropped on the composition, the picture's centre goes where it was dropped; on the timeline, the middle.
+              const onCanvas = !(event.target instanceof Element && event.target.closest('.motion-timeline, .motion-transport, .motion-splitter'))
+              const position = onCanvas ? compPoint(event.clientX, event.clientY) : undefined
+              void footage.importDropped(files, { time: state.time, ...(position ? { position } : {}) })
+            }}
+          >
             <KitDocumentCanvas
               canvas={canvas}
               viewMemory={viewMemory}

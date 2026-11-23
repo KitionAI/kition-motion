@@ -42,7 +42,14 @@ export const ARRANGE: Record<string, 'front' | 'forward' | 'backward' | 'back'> 
 }
 
 const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
-  ['File', [['Render Movie (MP4)', 'file.exportMovie']]],
+  [
+    'File',
+    [
+      ['Import…', 'file.import', 'Cmd+I'],
+      SEPARATOR,
+      ['Render Movie (MP4)', 'file.exportMovie'],
+    ],
+  ],
   [
     'Edit',
     [
@@ -171,7 +178,7 @@ export const VIEW_MENUS = ['View']
 
 /** The rows each menu tab shows in Single line's row, by menu. */
 export const MOTION_PRIMARY: Record<string, readonly string[]> = {
-  File: ['file.exportMovie'],
+  File: ['file.import', 'file.exportMovie'],
   Edit: ['edit.undo', 'edit.redo', 'edit.cut', 'edit.copy', 'edit.paste', 'edit.duplicate', 'edit.splitLayer', 'edit.clear'],
   Composition: ['comp.new', 'comp.settings', 'playback.toggle', 'comp.trimToWorkArea'],
   Layer: ['layer.newText', 'layer.newSolid', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment', 'layer.precompose', 'layer.addMask'],

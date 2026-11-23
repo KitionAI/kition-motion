@@ -138,6 +138,13 @@ const enUS: Catalog = {
   "effect.moveUp": "Move up",
   "effect.moveDown": "Move down",
   "effect.remove": "Remove",
+  "import.done": "Imported {name}",
+  "import.doneMany": "Imported {count} files",
+  "import.unsupported": "{name} cannot be imported: this file type is not supported",
+  "import.unreadable": "{name} could not be imported: the file is missing, damaged, or in a format that cannot be read",
+  "import.types": "Supported: {types}",
+  "import.noPicker": "This host cannot choose files: drop them on the composition or the timeline instead",
+  "import.failed": "Could not import",
 }
 
 const zhCN: Catalog = {
@@ -277,6 +284,13 @@ const zhCN: Catalog = {
   "effect.moveUp": "上移",
   "effect.moveDown": "下移",
   "effect.remove": "移除",
+  "import.done": "已导入 {name}",
+  "import.doneMany": "已导入 {count} 个文件",
+  "import.unsupported": "无法导入 {name}：不支持这种文件类型",
+  "import.unreadable": "无法导入 {name}：文件不存在、已损坏，或无法识别其格式",
+  "import.types": "支持：{types}",
+  "import.noPicker": "这个宿主不能选择文件：请把文件拖到合成或时间轴上",
+  "import.failed": "导入失败",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }
@@ -312,6 +326,7 @@ export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
   "Switches": "开关",
   "Categories": "类别",
   // File.
+  "Import…": "导入…",
   "Render Movie (MP4)": "渲染影片（MP4）",
   // Edit.
   "Undo": "撤销",
@@ -376,7 +391,6 @@ export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
   "Toggle Hold Keyframe": "切换定格关键帧",
   "Time-Reverse Keyframes": "时间反向关键帧",
   "Separate Dimensions": "单独尺寸",
-  // View.
   "Zoom In": "放大",
   "Zoom Out": "缩小",
   "Fit in Window": "适合窗口",

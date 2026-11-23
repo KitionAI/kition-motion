@@ -23,6 +23,7 @@ const step = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ` - ${detail}` : ''}`)
 }
 const CJK = /[㐀-鿿]/
+const PICTURE = 'iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAIAAAAuKetIAAAACXBIWXMAAAABAAAAAQBPJcTWAAAAT0lEQVR4nO3PwQkAIBDAMAX3X/kcwkcQmgnaPetvRwe8akBrQGtAa0BrQGtAa0BrQGtAa0BrQGtAa0BrQGtAa0BrQGtAa0BrQGtAa0BrQLufsAG9SQcS0wAAAABJRU5ErkJggg=='
 
 /** A fresh page on the sample: the playhead at the middle, and in `layer` the shape layer selected by a click on its row. */
 async function open(state) {
@@ -34,6 +35,8 @@ async function open(state) {
   await page.waitForFunction(() => document.getElementById('status')?.textContent?.includes(' open in '), null, { timeout: 60000 })
   const kit = page.frameLocator('#kit')
   await kit.getByTestId('motion-timeline').waitFor()
+  // A 64 × 48 red picture in the workspace, for File ▸ Import's picker to pick.
+  await page.evaluate((data) => window.devHost.files.set('picture.png', { bytes: Uint8Array.from(atob(data), (c) => c.charCodeAt(0)).buffer, version: 1 }), PICTURE)
   await page.waitForTimeout(400)
   const primary = (await page.evaluate(() => /Mac|iPhone|iPad/i.test(navigator.platform))) ? 'Meta' : 'Control'
   const ruler = await kit.getByTestId('motion-ruler').boundingBox()

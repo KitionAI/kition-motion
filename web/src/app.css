@@ -816,3 +816,9 @@
   background: var(--kit-primary-soft);
   outline: none;
 }
+
+/* Footage dragged over the composition or the timeline. */
+.motion-main[data-drop] {
+  outline: 2px dashed var(--kit-primary);
+  outline-offset: -2px;
+}
