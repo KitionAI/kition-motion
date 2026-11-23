@@ -7,6 +7,8 @@ import { LayerHeader } from './LayerHeader'
 import { PanelEdge, usePanelWidth } from './PanelEdge'
 import { PanelContext, PropertyChildren, PropertyGroup, hasRows, visible } from './PropertyTree'
 import { Section, remember } from './Section'
+import { ShapeControls } from './ShapeSection'
+import { SolidSection } from './SolidSection'
 import { TextControls } from './TextSection'
 
 /** How deep the panel reads a layer's property tree (shape groups nest). */
@@ -36,7 +38,7 @@ function TypeSection({ node, layer, focusText, onFocused }: { node: TreeNode; la
   }
   return (
     <Section scope={scope} id={node.path} title={phrase(node.name)} testId={`motion-section-${node.match}`}>
-      <PropertyChildren node={node} scope={scope} depth={0} />
+      {node.match === 'contents' ? <ShapeControls contents={node} scope={scope} /> : <PropertyChildren node={node} scope={scope} depth={0} />}
     </Section>
   )
 }
@@ -85,6 +87,7 @@ export function PropertiesPanel({ info }: { info: MotionInfo }) {
               .map((node) => (
                 <TypeSection key={node.path} node={node} layer={layer} focusText={fresh === layer.id} onFocused={focused} />
               ))}
+            {layer.type === 'Solid' ? <SolidSection /> : null}
             <EffectsSection layer={layer} group={group('effects')} />
             {transform ? (
               <Section scope={layer.type} id="transform" title={t('props.transform')} testId="motion-section-transform">

@@ -115,6 +115,19 @@ const enUS: Catalog = {
   "text.left": "Align left",
   "text.center": "Centre",
   "text.right": "Align right",
+  "shape.size": "Size",
+  "shape.roundness": "Roundness",
+  "shape.points": "Points",
+  "shape.outerRadius": "Outer radius",
+  "shape.innerRadius": "Inner radius",
+  "shape.fillColor": "Fill colour",
+  "shape.fillOpacity": "Fill opacity",
+  "shape.strokeColor": "Stroke colour",
+  "shape.strokeWidth": "Stroke width",
+  "shape.addFill": "Add fill",
+  "shape.addStroke": "Add stroke",
+  "shape.all": "All contents",
+  "solid.title": "Solid",
 }
 
 const zhCN: Catalog = {
@@ -231,6 +244,19 @@ const zhCN: Catalog = {
   "text.left": "左对齐",
   "text.center": "居中",
   "text.right": "右对齐",
+  "shape.size": "大小",
+  "shape.roundness": "圆度",
+  "shape.points": "顶点数",
+  "shape.outerRadius": "外径",
+  "shape.innerRadius": "内径",
+  "shape.fillColor": "填充颜色",
+  "shape.fillOpacity": "填充不透明度",
+  "shape.strokeColor": "描边颜色",
+  "shape.strokeWidth": "描边宽度",
+  "shape.addFill": "添加填充",
+  "shape.addStroke": "添加描边",
+  "shape.all": "全部内容",
+  "solid.title": "纯色",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }

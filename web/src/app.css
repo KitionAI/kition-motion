@@ -434,6 +434,11 @@
   fill: currentColor;
 }
 
+.motion-key-spacer {
+  flex: none;
+  width: 24px;
+}
+
 .motion-prop-name {
   width: 96px;
   flex: none;
@@ -565,6 +570,24 @@
 
 .motion-text .motion-number {
   height: 28px;
+}
+
+/* A simple shape layer's controls, then its whole contents in a closed group. */
+.motion-shape {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.motion-shape-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px;
+}
+
+.motion-shape > .motion-prop-group {
+  padding: 0 8px 0 12px;
 }
 
 .motion-effect-params {

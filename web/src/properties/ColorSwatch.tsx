@@ -19,7 +19,8 @@ export function ColorSwatch({ value, label, onChange, testId, readOnly = false }
   const [open, setOpen] = useState(false)
   const [text, setText] = useState(value)
   useEffect(() => setText(value), [value])
-  const rgb = parseHex(value) ?? [0, 0, 0]
+  // The picker shows what it was dragged to until the engine's value catches up.
+  const rgb = parseHex(text) ?? parseHex(value) ?? [0, 0, 0]
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild disabled={readOnly}>
