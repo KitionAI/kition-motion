@@ -222,6 +222,15 @@ const enUS: Catalog = {
   "velocity.speed": "Speed",
   "velocity.influence": "Influence",
   "velocity.continuous": "Continuous (outgoing follows incoming)",
+  "dialog.stretch": "Time Stretch",
+  "stretch.factor": "Stretch factor",
+  "stretch.duration": "New duration",
+  "stretch.hold": "Hold in place",
+  "stretch.hold.in": "Layer in point",
+  "stretch.hold.current": "Current frame",
+  "stretch.hold.out": "Layer out point",
+  "stretch.badFactor": "A factor of at least 1 % (negative plays backwards)",
+  "stretch.badDuration": "A duration as 0:00:02:00 or in seconds",
 }
 
 const zhCN: Catalog = {
@@ -444,6 +453,15 @@ const zhCN: Catalog = {
   "velocity.speed": "速度",
   "velocity.influence": "影响",
   "velocity.continuous": "连续（输出与进入相同）",
+  "dialog.stretch": "时间伸缩",
+  "stretch.factor": "拉伸因数",
+  "stretch.duration": "新持续时间",
+  "stretch.hold": "保持不变的位置",
+  "stretch.hold.in": "图层入点",
+  "stretch.hold.current": "当前帧",
+  "stretch.hold.out": "图层出点",
+  "stretch.badFactor": "拉伸因数至少 1%（负数表示倒放）",
+  "stretch.badDuration": "持续时间写成 0:00:02:00 或秒数",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }
@@ -881,4 +899,5 @@ export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
   "Off": "关",
   "On": "开",
   "Only": "仅",
+  "Time Stretch…": "时间伸缩…",
 } }

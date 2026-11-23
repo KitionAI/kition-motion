@@ -274,7 +274,7 @@ const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).re
  * ones it asks values for in its own dialogs, Pre-compose (which then offers to open the new
  * composition), and the ones given another shortcut (`SHORTCUT_OVERRIDES`).
  */
-const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', ...Object.keys(SHORTCUT_OVERRIDES)]
+const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', ...Object.keys(SHORTCUT_OVERRIDES)]
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -491,6 +491,14 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     const [inside, outside] = [side(first.inEase), side(first.outEase)]
     setDialog({ kind: 'velocity', units: first.units ?? '', values: { inSpeed: inside.speed, inInfluence: inside.influence, outSpeed: outside.speed, outInfluence: outside.influence } })
   }
+  /** Time Stretch, from the first selected layer's stretch and length. */
+  const openStretch = async () => {
+    const selected = state?.layers.filter((layer) => layer.selected) ?? []
+    const first = selected[0]
+    if (!first || !state?.comp) return
+    const row = (await query<{ layers?: Array<{ id: number; stretch?: number }> }>('comp.info', {}))?.layers?.find((layer) => layer.id === first.id)
+    setDialog({ kind: 'stretch', layers: selected.map((layer) => layer.id), stretch: row?.stretch ?? 100, span: Math.max(0, first.out - first.in), fps: state.comp.fps })
+  }
   /** Commands the editor answers itself (the rest go to the engine as they are). */
   const own: Record<string, () => void> = {
     'playback.toggle': playback.toggle,
@@ -512,6 +520,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'comp.new': () => void openComp('new'),
     'keys.interpolation': () => void openInterpolation(),
     'keys.velocity': () => void openVelocity(),
+    'layer.timeStretch': () => void openStretch(),
     ...Object.fromEntries(INTERPOLATIONS.map((row) => [row.command, () => void run('keys.interpolation', { interpolation: row.interpolation })])),
     'comp.settings': () => void openComp('settings'),
     'layer.newSolid': () => void openSolid('new'),

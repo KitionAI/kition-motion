@@ -21,6 +21,7 @@ export type MotionDialog =
   | { kind: 'rename'; layer: number; name: string }
   | { kind: 'interpolation'; spatial: boolean }
   | { kind: 'velocity'; values: VelocityValues; units: string }
+  | { kind: 'stretch'; layers: number[]; stretch: number; span: number; fps: number }
 
 /** The first selected keyframe's speed (units per second) and influence (%) on each side, for Keyframe Velocity. */
 export type VelocityValues = { inSpeed: number; inInfluence: number; outSpeed: number; outInfluence: number }
@@ -362,6 +363,58 @@ function VelocityDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { ki
   )
 }
 
+/**
+ * Time Stretch: the selected layers' speed as a stretch factor (%), or the first layer's new
+ * duration (the factor follows), and which point keeps its frame (the in point, the current
+ * time or the out point). One undo step (`layer.timeStretch`).
+ */
+function StretchDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'stretch' }>; onDone: () => void }) {
+  const { run, t } = useKitEditor()
+  const round = (value: number) => String(Math.round(value * 1000) / 1000)
+  const [factor, setFactor] = useState(round(dialog.stretch))
+  const [duration, setDuration] = useState(formatTimecode(dialog.span, dialog.fps))
+  const [hold, setHold] = useState<'in' | 'current' | 'out'>('in')
+  const percent = numberIn(factor, -10000, 10000)
+  const validFactor = percent !== null && Math.abs(percent) >= 1
+  const seconds = (text: string) => parseTimecode(text, dialog.fps, false, dialog.span)
+  // The two fields follow each other: a new factor gives the duration it makes, and the other way round.
+  const changeFactor = (text: string) => {
+    setFactor(text)
+    const value = numberIn(text, -10000, 10000)
+    if (value !== null && Math.abs(value) >= 1 && dialog.stretch !== 0) setDuration(formatTimecode(Math.abs((dialog.span * value) / dialog.stretch), dialog.fps))
+  }
+  const changeDuration = (text: string) => {
+    setDuration(text)
+    const value = seconds(text)
+    if (value !== null && value > 0 && dialog.span > 0) setFactor(round((dialog.stretch * value) / dialog.span))
+  }
+  return (
+    <FormDialog
+      title={t('dialog.stretch')}
+      testId="motion-stretch-dialog"
+      onSubmit={() => {
+        if (!validFactor) return
+        void run('layer.timeStretch', { layers: dialog.layers, percent, hold })
+        onDone()
+      }}
+      onClose={onDone}
+      valid={validFactor}
+    >
+      <TextRow label={t('stretch.factor')} value={factor} onChange={changeFactor} error={validFactor ? null : t('stretch.badFactor')} testId="motion-stretch-factor" unit="%" autoFocus />
+      <TextRow label={t('stretch.duration')} value={duration} onChange={changeDuration} error={seconds(duration) !== null ? null : t('stretch.badDuration')} testId="motion-stretch-duration" />
+      <Field label={t('stretch.hold')}>
+        {({ id }) => (
+          <Select id={id} value={hold} onChange={(event) => setHold(event.target.value as 'in' | 'current' | 'out')} data-testid="motion-stretch-hold">
+            <option value="in">{t('stretch.hold.in')}</option>
+            <option value="current">{t('stretch.hold.current')}</option>
+            <option value="out">{t('stretch.hold.out')}</option>
+          </Select>
+        )}
+      </Field>
+    </FormDialog>
+  )
+}
+
 /** The open dialog, if any; each runs one engine command (one undo step) when confirmed. */
 export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialog | null; onClose: () => void; onSeek: (seconds: number) => void }) {
   // A new dialog (even of the same kind) starts from its own values.
@@ -393,5 +446,7 @@ export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialo
       return <InterpolationDialog key={key} dialog={dialog} onDone={onClose} />
     case 'velocity':
       return <VelocityDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'stretch':
+      return <StretchDialog key={key} dialog={dialog} onDone={onClose} />
   }
 }

@@ -566,3 +566,12 @@ features:
     gap: "About 1500 less common effect parameters keep their English names. Gated by web/tests/menus.mjs (Find Effect by 高斯)."
     cases: []
     since: "2026-11-23"
+  - id: motion.editor.timeStretch
+    title: "Layer ▸ Time ▸ Time Stretch… asks for the stretch factor or the new duration (each follows the other) and which point holds its frame (in point, current frame, out point), and stretches the selected layers in one undo step; Time-Reverse Layer plays them backwards"
+    dimension: [function]
+    priority: P2
+    status: has
+    paths: [web/src/dialogs.tsx, web/src/menus.ts, web/src/App.tsx, web/src/strings.ts, web/tests/menus.mjs]
+    gap: "The duration field speaks for the first selected layer; several layers take the same factor. Gated by web/tests/menus.mjs (the dialog stretches the shape layer to 200 % and undoes)."
+    cases: []
+    since: "2026-11-23"

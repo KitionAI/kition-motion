@@ -207,6 +207,7 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
       [
         'Time',
         [
+          ['Time Stretch…', 'layer.timeStretch'],
           ['Time-Reverse Layer', 'layer.timeReverse'],
           ['Freeze Frame', 'layer.freezeFrame'],
           SEPARATOR,

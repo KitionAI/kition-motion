@@ -224,6 +224,19 @@ async function finishDialog(ctx, leaf, state) {
     if ((await revision()) === startRevision) throw new Error('no effect applied')
     return 'found 高斯模糊 by typing and applied it'
   }
+  if (await field('motion-stretch-dialog').count()) {
+    const layer = before.info.layers.find((each) => each.selected)
+    await field('motion-stretch-factor').fill('200')
+    if (!(await field('motion-stretch-duration').inputValue())) throw new Error('the duration does not follow the factor')
+    await confirm()
+    const stretched = (await details()).info.layers.find((each) => each.id === layer.id)
+    const [was, now] = [layer.out - layer.in, stretched.out - stretched.in]
+    if (Math.abs(now - was * 2) > 0.1 || Math.abs(stretched.in - layer.in) > 1e-3) throw new Error(`200 % did not double the layer from its in point: ${was} → ${now}`)
+    await undo(ctx)
+    const back = (await details()).info.layers.find((each) => each.id === layer.id)
+    if (Math.abs(back.out - layer.out) > 1e-3) throw new Error('undo did not restore the length')
+    return `stretched to 200 % (${was.toFixed(2)} s → ${now.toFixed(2)} s) holding the in point; undo restored it`
+  }
   if (await field('motion-export-dialog').count()) {
     const movies = async () => (await page.evaluate(() => [...window.devHost.files.keys()])).filter((name) => name.endsWith('.mp4'))
     await field('motion-export-dialog-ok').click()
