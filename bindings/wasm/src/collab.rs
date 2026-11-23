@@ -134,7 +134,14 @@ impl MotionDocument {
         // on it). A person's commands keep the editor's own behaviour.
         let kept = (origin.kind != kition_kit::kdm::OriginKind::Person && crate::acts::names_what_or_when(&params))
             .then(|| (self.session.call_state(), made(&self.session.project)));
+        // Someone else's command that changes nothing (an agent reading the project while the
+        // person types or drags) does not end the person's coalescing gesture: the engine forgets
+        // the merge key whenever the undo scope switches, so it comes back when nothing changed.
+        let (merge, revision) = (self.session.history.merge_key.clone(), self.session.revision);
         let result = self.session.execute_as(command, params, origin).map_err(crate::command_failure);
+        if merge.is_some() && self.session.revision == revision && self.session.history.merge_key.is_none() {
+            self.session.history.merge_key = merge;
+        }
         if let Some((state, before)) = kept
             && (result.is_err() || (!crate::acts::moves_the_editor(command) && !grew(before, made(&self.session.project))))
         {
@@ -276,6 +283,22 @@ mod tests {
         let (done, damage) = doc.undo().unwrap();
         assert!(!done, "nothing to undo is a normal false");
         assert_eq!(damage, Damage::None);
+    }
+
+    /// An agent's read between two keystrokes of the person's typing leaves them one undo step.
+    #[test]
+    fn an_agents_read_does_not_split_the_persons_gesture() {
+        let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        let person = Origin::person("user:me");
+        let layer = doc.execute("comp.info", json!({})).unwrap()["layers"][0]["id"].clone();
+        let opacity =
+            |doc: &mut MotionDocument| doc.execute_as("prop.get", json!({ "layer": layer, "path": "transform/opacity" }), &person).unwrap()["value"].clone();
+        let before = opacity(&mut doc);
+        doc.execute_as("prop.set", json!({ "layer": layer, "path": "transform/opacity", "value": 10, "merge": "g" }), &person).unwrap();
+        doc.execute_as("comp.info", json!({}), &Origin::agent("reader")).unwrap();
+        doc.execute_as("prop.set", json!({ "layer": layer, "path": "transform/opacity", "value": 20, "merge": "g" }), &person).unwrap();
+        assert!(doc.undo().unwrap().0);
+        assert_eq!(opacity(&mut doc), before, "one undo takes back the whole gesture");
     }
 
     #[test]
