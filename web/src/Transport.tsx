@@ -1,5 +1,5 @@
-import { PauseIcon as Pause, PlayIcon as Play, PlusIcon as Plus, SkipBackIcon as SkipBack, SkipForwardIcon as SkipForward, StepBackIcon as StepBack, StepForwardIcon as StepForward } from '@kition/tessera/icons/react'
-import { Button, IconButton, MenuButton, MenuItem, useKitEditor, useReadOnly } from '@kition/sdk/editor'
+import { ArrowLeftIcon as Back, ChevronRightIcon as Into, PauseIcon as Pause, PlayIcon as Play, PlusIcon as Plus, SkipBackIcon as SkipBack, SkipForwardIcon as SkipForward, StepBackIcon as StepBack, StepForwardIcon as StepForward } from '@kition/tessera/icons/react'
+import { Button, IconButton, MenuButton, MenuItem, useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import { timecode, type MotionInfo } from './motion'
 import { CompSwitcher } from './CompSwitcher'
 
@@ -12,8 +12,51 @@ export const NEW_LAYERS = [
   { id: 'adjustment', command: 'layer.newAdjustment', params: {} },
 ] as const
 
-/** Add a layer, play, step, and jump, under the composition viewer. */
-export function Transport({ info, playing, onPlay, onSeek, onStep, onCommand }: { info: MotionInfo; playing: boolean; onPlay: () => void; onSeek: (seconds: number) => void; onStep: (frames: number) => void; onCommand: (command: string) => void }) {
+/**
+ * The compositions the person went into from precomp layers, outermost first, each a button back
+ * to it, with a Back button to the one just outside; the drop-down beside them is the one open now.
+ */
+function CompPath({ trail, onBack }: { trail: readonly number[]; onBack: (comp: number) => void }) {
+  const { t } = useKitEditor()
+  const summary = useEngineQuery<{ items?: Array<{ id: number; name: string }> }>('project.summary', {})
+  const name = (id: number) => summary?.items?.find((item) => item.id === id)?.name ?? String(id)
+  const parent = trail[trail.length - 1]
+  if (parent === undefined) return null
+  return (
+    <nav className="motion-comp-path" aria-label={t('compPath')} data-testid="motion-comp-path">
+      <IconButton icon={Back} label={t('compPath.back', { name: name(parent) })} onClick={() => onBack(parent)} data-testid="motion-comp-back" />
+      {trail.map((comp) => (
+        <span key={comp} className="motion-comp-crumb">
+          <Button variant="ghost" onClick={() => onBack(comp)} data-testid={`motion-comp-crumb-${comp}`}>
+            {name(comp)}
+          </Button>
+          <Into size={12} aria-hidden="true" className="kui-muted" />
+        </span>
+      ))}
+    </nav>
+  )
+}
+
+/** Add a layer, play, step, and jump, under the composition viewer; the way back out of a precomp before the composition's name. */
+export function Transport({
+  info,
+  playing,
+  onPlay,
+  onSeek,
+  onStep,
+  onCommand,
+  trail,
+  onBack,
+}: {
+  info: MotionInfo
+  playing: boolean
+  onPlay: () => void
+  onSeek: (seconds: number) => void
+  onStep: (frames: number) => void
+  onCommand: (command: string) => void
+  trail: readonly number[]
+  onBack: (comp: number) => void
+}) {
   const { run, t } = useKitEditor()
   const readOnly = useReadOnly()
   const fps = info.comp?.fps ?? 30
@@ -32,6 +75,7 @@ export function Transport({ info, playing, onPlay, onSeek, onStep, onCommand }: 
           <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => (layer.command === 'layer.newSolid' ? onCommand(layer.command) : void run(layer.command, { ...layer.params }))} testId={`motion-new-${layer.id}`} />
         ))}
       </MenuButton>
+      <CompPath trail={trail} onBack={onBack} />
       <CompSwitcher info={info} />
       <span style={{ flex: 1 }} />
       <IconButton icon={SkipBack} label={t('goToStart')} onClick={() => onSeek(0)} />

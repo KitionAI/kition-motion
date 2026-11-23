@@ -159,6 +159,11 @@ const enUS: Catalog = {
   "import.types": "Supported: {types}",
   "import.noPicker": "This host cannot choose files: drop them on the composition or the timeline instead",
   "import.failed": "Could not import",
+  "precomposed": "Pre-composed. Double-click the new layer to open its composition.",
+  "precomposed.open": "Open",
+  "layerMenu.open": "Open composition",
+  "compPath": "Compositions opened from precomp layers",
+  "compPath.back": "Back to {name}",
 }
 
 const zhCN: Catalog = {
@@ -319,6 +324,11 @@ const zhCN: Catalog = {
   "import.types": "支持：{types}",
   "import.noPicker": "这个宿主不能选择文件：请把文件拖到合成或时间轴上",
   "import.failed": "导入失败",
+  "precomposed": "已预合成。双击新图层可进入它的合成。",
+  "precomposed.open": "进入",
+  "layerMenu.open": "打开合成",
+  "compPath": "从预合成图层进入的合成",
+  "compPath.back": "返回 {name}",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }

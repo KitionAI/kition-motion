@@ -38,7 +38,7 @@ import { Splitter, useTimelineHeight } from './Splitter'
 import { PropertiesPanel } from './properties/PropertiesPanel'
 import { EffectCatalog } from './properties/catalog'
 import { ProjectPanel, useProjectPanel } from './ProjectPanel'
-import { ITEM_MIME, useFootage } from './footage'
+import { ITEM_MIME, parseAnswer, useFootage } from './footage'
 
 /** Plays the composition from the current time against the wall clock; frames the engine cannot render in time are skipped, as a preview does. */
 function usePlayback(run: (command: string, params: Record<string, unknown>) => Promise<unknown>, time: number, duration: number) {
@@ -306,6 +306,38 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const footage = useFootage({ host, run, t })
   /** Footage, a solid or a composition from the project as a layer at the current time (one undo step). */
   const placeItem = (item: number, position?: [number, number]) => footage.place(item, { time: state?.time ?? 0, ...(position ? { position } : {}) })
+  /**
+   * The compositions the person went into from a precomp layer, outermost first: the breadcrumb
+   * back out. `entering` is the composition a precomp was opened from (by its bar, its menu, or a
+   * double-click on the canvas) until the switch arrives; any other switch starts over.
+   */
+  const [trail, setTrail] = useState<number[]>([])
+  const entering = useRef<number | null>(null)
+  const shownComp = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    const now = state?.comp?.id
+    const before = shownComp.current
+    shownComp.current = now
+    if (now === undefined || before === undefined || now === before) return
+    const from = entering.current
+    entering.current = null
+    setTrail((current) => {
+      const at = current.indexOf(now)
+      if (at >= 0) return current.slice(0, at)
+      return from === before ? [...current, before] : []
+    })
+  }, [state?.comp?.id])
+  const openPrecomp = (layer: number) => {
+    entering.current = state?.comp?.id ?? null
+    void run('layer.openSource', { layer })
+  }
+  /** Pre-compose, then say where the new composition is and offer to open it. */
+  const precompose = async () => {
+    const made = parseAnswer<{ comp?: number; layer?: number }>(await run('layer.precompose', {}))
+    if (made?.layer == null) return
+    const layer = made.layer
+    toast.success(t('precomposed'), { action: { label: t('precomposed.open'), onClick: () => openPrecomp(layer) } })
+  }
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
   const [findEffect, setFindEffect] = useState(false)
   // Every effect the engine has, for the Effect menu; and whether one was applied here (Last Effect).
@@ -351,6 +383,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'playback.toggle': playback.toggle,
     'file.exportMovie': () => void movie.start(),
     'file.import': () => void footage.importPicked(),
+    'layer.precompose': () => void precompose(),
     [KIT.projectPanel]: project.toggle,
     'time.start': () => seek(0),
     'time.end': end,
@@ -519,6 +552,15 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               if (item) placeItem(item, position)
               else void footage.importDropped(files, { time: state.time, ...(position ? { position } : {}) })
             }}
+            onDoubleClickCapture={(event) => {
+              // A double-click on the canvas may open a precomp layer (the Selection tool's): the switch it brings is a step in.
+              if (event.target instanceof Element && !event.target.closest('.motion-timeline, .motion-transport, .motion-splitter') && tools.active === 'selection') {
+                entering.current = state?.comp?.id ?? null
+                window.setTimeout(() => {
+                  if (shownComp.current === entering.current) entering.current = null
+                }, 1500)
+              }
+            }}
           >
             <KitDocumentCanvas
               canvas={canvas}
@@ -543,7 +585,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             {state ? (
               <FrameChrome>
                 <Splitter height={timelineHeight} onHeight={setTimelineHeight} main={main} />
-                <Transport info={state} playing={playback.playing} onPlay={playback.toggle} onSeek={seek} onStep={step} onCommand={dispatch} />
+                <Transport info={state} playing={playback.playing} onPlay={playback.toggle} onSeek={seek} onStep={step} onCommand={dispatch} trail={trail} onBack={(comp) => void run('comp.open', { comp })} />
                 <Timeline
                   info={state}
                   onSeek={(seconds) => {
@@ -551,6 +593,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
                     seek(seconds)
                   }}
                   keys={timelineKeys}
+                  onOpenPrecomp={openPrecomp}
+                  onPrecompose={() => void precompose()}
                 />
               </FrameChrome>
             ) : null}

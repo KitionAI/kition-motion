@@ -904,3 +904,15 @@
   outline: 2px dashed var(--kit-primary);
   outline-offset: -2px;
 }
+
+/* The comps the person went into, before the composition switcher. */
+.motion-comp-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.motion-comp-crumb {
+  display: inline-flex;
+  align-items: center;
+}

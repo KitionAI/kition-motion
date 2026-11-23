@@ -41,7 +41,7 @@ function useWidth() {
  * (useKeyGestures); a click on empty timeline deselects. The timeline zooms and scrolls in time
  * (useTimeView), and the ruler sets the work area.
  */
-export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys }) {
+export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys; onOpenPrecomp: (layer: number) => void; onPrecompose: () => void }) {
   const { run, t } = useKitEditor()
   const readOnly = useReadOnly()
   const duration = Math.max(info.comp?.duration ?? 0, info.frame)
@@ -66,7 +66,6 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
   const gestures = useKeyGestures(rows, frame, selectedKeys)
   /** Whether Cmd+V pastes keyframes: the last Cmd+C copied some. */
   const copiedKeys = useRef(false)
-
   const twirl = (layer: number) =>
     setTwirls((current) => {
       const next = new Map(current)
@@ -151,7 +150,7 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
   const select = (layer: number, add: boolean) => void run('layer.select', { layers: [layer], add, toggle: add })
   const openMenu = (layer: MotionLayer, at: { x: number; y: number }) => {
     if (!layer.selected) void run('layer.select', { layers: [layer.id] })
-    setMenu({ at, layer: layer.id, layers: layer.selected ? selected : [layer.id] })
+    setMenu({ at, layer: layer.id, layers: layer.selected ? selected : [layer.id], precomp: layer.type === 'Composition' })
   }
 
   return (
@@ -193,6 +192,10 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
                   />
                   <div
                     className="motion-row-track"
+                    // A double-click on a precomp layer's bar opens its composition.
+                    onDoubleClick={(event) => {
+                      if (layer.type === 'Composition' && (event.target as HTMLElement).closest('.motion-bar')) onOpenPrecomp(layer.id)
+                    }}
                     onContextMenu={(event) => {
                       if (!(event.target as HTMLElement).closest('.motion-bar')) return
                       event.preventDefault()
@@ -227,7 +230,7 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
             <Scrollbar label={t('horizontalScroll')} orientation="horizontal" value={view.start} max={Math.max(0, duration - view.span)} page={view.span} onChange={time.scrollTo} />
           </div>
         ) : null}
-        <LayerMenu target={menu} onClose={() => setMenu(null)} onRename={(layer) => setRenaming(layer)} />
+        <LayerMenu target={menu} onClose={() => setMenu(null)} onRename={(layer) => setRenaming(layer)} onOpen={onOpenPrecomp} onPrecompose={onPrecompose} />
       </div>
     </TimelineContext.Provider>
   )
