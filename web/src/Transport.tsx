@@ -12,7 +12,7 @@ export const NEW_LAYERS = [
 ] as const
 
 /** Add a layer, play, step, and jump, under the composition viewer. */
-export function Transport({ info, playing, onPlay, onSeek, onStep }: { info: MotionInfo; playing: boolean; onPlay: () => void; onSeek: (seconds: number) => void; onStep: (frames: number) => void }) {
+export function Transport({ info, playing, onPlay, onSeek, onStep, onCommand }: { info: MotionInfo; playing: boolean; onPlay: () => void; onSeek: (seconds: number) => void; onStep: (frames: number) => void; onCommand: (command: string) => void }) {
   const { run, t } = useKitEditor()
   const readOnly = useReadOnly()
   const fps = info.comp?.fps ?? 30
@@ -28,7 +28,7 @@ export function Transport({ info, playing, onPlay, onSeek, onStep }: { info: Mot
         )}
       >
         {NEW_LAYERS.map((layer) => (
-          <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => void run(layer.command, { ...layer.params })} testId={`motion-new-${layer.id}`} />
+          <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => (layer.command === 'layer.newSolid' ? onCommand(layer.command) : void run(layer.command, { ...layer.params }))} testId={`motion-new-${layer.id}`} />
         ))}
       </MenuButton>
       <span style={{ flex: 1 }} />

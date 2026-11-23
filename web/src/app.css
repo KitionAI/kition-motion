@@ -416,3 +416,38 @@
 .motion-scrollbars[data-both] > .kui-scrollbar[aria-orientation='horizontal'] {
   right: 14px;
 }
+
+/* The editor's dialogs: fields one under another, pairs side by side. */
+.motion-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 360px;
+}
+
+.motion-form-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.motion-form-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.motion-color {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.motion-swatch {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--kit-border);
+  border-radius: 6px;
+  cursor: pointer;
+}

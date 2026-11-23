@@ -65,6 +65,9 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
   [
     'Composition',
     [
+      ['New Composition…', 'comp.new'],
+      ['Composition Settings…', 'comp.settings'],
+      SEPARATOR,
       ['Play / Pause', 'playback.toggle', 'Space'],
       SEPARATOR,
       ['Trim Comp to Work Area', 'comp.trimToWorkArea'],
@@ -79,12 +82,16 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
         [
           ['Text', 'layer.newText'],
           ['Shape Layer', 'layer.newShape'],
+          ['Solid…', 'layer.newSolid'],
           ['Null Object', 'layer.newNull'],
           ['Adjustment Layer', 'layer.newAdjustment'],
           ['Camera', 'layer.newCamera'],
           ['Light', 'layer.newLight'],
         ],
       ],
+      SEPARATOR,
+      ['Solid Settings…', 'layer.settings'],
+      ['Rename…', 'layer.rename'],
       SEPARATOR,
       ['Pre-compose', 'layer.precompose'],
       ['Mask', [['New Mask', 'layer.addMask']]],
@@ -137,6 +144,7 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
   [
     'View',
     [
+      ['Go to Time…', 'time.set'],
       ['Go to Start', 'time.start', 'Home'],
       ['Go to End', 'time.end', 'End'],
       ['Previous Frame', 'time.previousFrame', 'PageUp'],
@@ -160,17 +168,17 @@ export const VIEW_MENUS = ['View']
 export const MOTION_PRIMARY: Record<string, readonly string[]> = {
   File: ['file.exportMovie'],
   Edit: ['edit.undo', 'edit.redo', 'edit.cut', 'edit.copy', 'edit.paste', 'edit.duplicate', 'edit.splitLayer', 'edit.clear'],
-  Composition: ['playback.toggle', 'comp.trimToWorkArea'],
-  Layer: ['layer.newText', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment', 'layer.precompose', 'layer.addMask'],
+  Composition: ['comp.new', 'comp.settings', 'playback.toggle', 'comp.trimToWorkArea'],
+  Layer: ['layer.newText', 'layer.newSolid', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment', 'layer.precompose', 'layer.addMask'],
   Animation: ['keys.easyEase', 'keys.toggleHold'],
-  View: ['time.start', 'time.end', 'time.previousKey', 'time.nextKey'],
+  View: ['time.set', 'time.start', 'time.end', 'time.previousKey', 'time.nextKey'],
 }
 
 /**
  * Rows hidden where they would have nothing to act on (so a shown row always does something):
  * Arrange and Deselect All without a selection, Select All with every layer selected, Show All
  * Video with none hidden, Unlock All with none locked, Trim to Work Area while the work area is
- * the whole composition.
+ * the whole composition, Solid Settings unless the selected layer is a solid.
  */
 export function hiddenRow(info: MotionInfo | null) {
   const layers = info?.layers ?? []
@@ -181,6 +189,7 @@ export function hiddenRow(info: MotionInfo | null) {
   if (layers.length && layers.every((layer) => layer.selected)) hidden.add('edit.selectAll')
   if (!layers.some((layer) => !layer.switches.video)) hidden.add('layer.showAllVideo')
   if (!layers.some((layer) => layer.switches.locked)) hidden.add('layer.unlockAll')
+  if (layers.find((layer) => layer.selected)?.type !== 'Solid') hidden.add('layer.settings')
   if (!comp || (comp.workArea[0] <= 1e-6 && comp.workArea[1] >= comp.duration - 1e-6)) hidden.add('comp.trimToWorkArea')
   const key = [...hidden].sort().join(' ')
   return { key, hidden: (row: MenuRow) => hidden.has(row.command) }

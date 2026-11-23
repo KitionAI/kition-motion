@@ -9,6 +9,7 @@ import {
   HAND_TOOL,
   catalogTabs,
   createKitStrings,
+  shortcutMatches,
   toast,
   useKitEditorState,
   useKitSession,
@@ -25,6 +26,7 @@ import { describe, picturePanBounds } from './motion'
 import { ARRANGE, MENU_ROWS, MOTION_PRIMARY, VIEW_MENUS, hiddenRow } from './menus'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
+import { MotionDialogs, toHex, type MotionDialog, type Rgb } from './dialogs'
 import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
 import { PropertiesPanel } from './PropertiesPanel'
@@ -95,6 +97,9 @@ function useMovieRender(doc: KitEngine | null, host: HostConnection, t: (key: st
   return { rendering, start }
 }
 
+/** Commands the editor asks values for in its own dialogs. */
+const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set']
+
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
   const manifest = useMemo(engineManifest, [])
@@ -115,7 +120,37 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const movie = useMovieRender(session.doc, host, t)
   const seek = useCallback((seconds: number) => void runQuietly('time.set', { time: Math.max(0, seconds) }).catch(() => undefined), [runQuietly])
   const step = (frames: number) => void runQuietly('time.step', { frames }).catch(() => undefined)
-  const { run } = editor
+  const { run, query } = editor
+  const [dialog, setDialog] = useState<MotionDialog | null>(null)
+  /** A name not taken by a project item: `Comp 2`, `Solid 1`. */
+  const unusedName = async (base: string) => {
+    const summary = await query<{ items?: Array<{ name?: string }> }>('project.summary', {})
+    const names = new Set((summary?.items ?? []).map((item) => item.name))
+    let n = 1
+    while (names.has(`${base} ${n}`)) n += 1
+    return `${base} ${n}`
+  }
+  const openComp = async (mode: 'new' | 'settings') => {
+    const comp = state?.comp
+    if (mode === 'settings') {
+      if (!comp) return
+      const info = await query<{ background?: Rgb }>('comp.info', {})
+      setDialog({ kind: 'comp', mode, values: { name: comp.name, width: comp.width, height: comp.height, frameRate: comp.fps, duration: comp.duration, background: toHex(info?.background ?? [0, 0, 0]) } })
+    } else setDialog({ kind: 'comp', mode, values: { name: await unusedName(t('defaultComp')), width: 1920, height: 1080, frameRate: 30, duration: 10, background: '#000000' } })
+  }
+  const openSolid = async (mode: 'new' | 'settings') => {
+    const comp = { width: state?.comp?.width ?? 1920, height: state?.comp?.height ?? 1080 }
+    if (mode === 'new') {
+      setDialog({ kind: 'solid', mode, values: { name: await unusedName(t('defaultSolid')), width: comp.width, height: comp.height, color: '#808080', comp } })
+      return
+    }
+    const layer = state?.layers.find((item) => item.selected)
+    if (!layer) return
+    const solid = await query<{ solid?: number }>('layer.settings', { layer: layer.id })
+    const meta = solid?.solid != null ? await query<{ item?: { name?: string; width?: number; height?: number; color?: Rgb } }>('item.metadata', { item: solid.solid }) : null
+    const item = meta?.item
+    setDialog({ kind: 'solid', mode, layer: layer.id, values: { name: item?.name ?? layer.name, width: item?.width ?? comp.width, height: item?.height ?? comp.height, color: toHex(item?.color ?? [0.5, 0.5, 0.5]), comp } })
+  }
   const end = () => seek((state?.comp?.duration ?? 0) - (state?.frame ?? 0))
   /** Commands the editor answers itself (the rest go to the engine as they are). */
   const own: Record<string, () => void> = {
@@ -125,6 +160,15 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'time.end': end,
     'time.previousFrame': () => step(-1),
     'time.nextFrame': () => step(1),
+    'comp.new': () => void openComp('new'),
+    'comp.settings': () => void openComp('settings'),
+    'layer.newSolid': () => void openSolid('new'),
+    'layer.settings': () => void openSolid('settings'),
+    'time.set': () => state?.comp && setDialog({ kind: 'time', time: state.time, fps: state.comp.fps, duration: state.comp.duration }),
+    'layer.rename': () => {
+      const layer = state?.layers.find((item) => item.selected)
+      if (layer) setDialog({ kind: 'rename', layer: layer.id, name: layer.name })
+    },
   }
   const latestOwn = useRef(own)
   latestOwn.current = own
@@ -156,6 +200,14 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const keyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!state) return false
     if (timelineKeys.current?.(event)) return true
+    // The commands the editor asks values for take their menu shortcuts here (Cmd+N, Cmd+K, Cmd+Y…), before the engine would run them without.
+    for (const id of DIALOG_COMMANDS) {
+      const shortcut = editor.byId.get(id)?.shortcut
+      if (shortcut && shortcutMatches(shortcut, event) && (editor.enabled(id) || id === 'comp.new')) {
+        if (!host.readOnly || id === 'time.set') dispatch(id)
+        return true
+      }
+    }
     const command = event.metaKey || event.ctrlKey
     if (event.key === ' ' && !command) playback.toggle()
     else if (event.key === 'PageDown' || (event.key === 'ArrowRight' && command)) step(event.shiftKey ? 10 : 1)
@@ -190,6 +242,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         }
         panels={state ? <PropertiesPanel info={state} /> : null}
       >
+        <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
         <div className="kui-row" ref={workspace} data-testid="motion-workspace" data-picture={picture ? `${picture.width} ${picture.height}` : undefined}>
           <div className="motion-main">
             <KitDocumentCanvas
@@ -210,7 +263,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             {/* The transport and the timeline are the kit's own bars: Focus shows the composition alone. */}
             {state ? (
               <FrameChrome>
-                <Transport info={state} playing={playback.playing} onPlay={playback.toggle} onSeek={seek} onStep={step} />
+                <Transport info={state} playing={playback.playing} onPlay={playback.toggle} onSeek={seek} onStep={step} onCommand={dispatch} />
                 <Timeline
                   info={state}
                   onSeek={(seconds) => {

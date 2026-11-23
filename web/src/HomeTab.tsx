@@ -20,7 +20,7 @@ export function HomeTab({ onCommand, wholeWorkArea }: { onCommand: (command: str
       <RibbonGroup label={p('Layer')} icon={Layers}>
         <RibbonMenu icon={Plus} label={t('newLayer')} size="large" disabled={readOnly} testId="motion-home-new-layer" primary>
           {HOME_LAYERS.map((layer) => (
-            <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => void run(layer.command, { ...layer.params })} testId={`motion-home-new-${layer.id}`} />
+            <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => (layer.command === 'layer.newSolid' ? onCommand(layer.command) : void run(layer.command, { ...layer.params }))} testId={`motion-home-new-${layer.id}`} />
           ))}
         </RibbonMenu>
         <CommandButton command="layer.newText" params={{ text: 'Text' }} icon={Type} primary />
@@ -47,8 +47,8 @@ export function HomeTab({ onCommand, wholeWorkArea }: { onCommand: (command: str
       </RibbonGroup>
 
       <RibbonGroup label={p('Composition')} icon={SquarePlus}>
-        <CommandButton command="comp.new" icon={SquarePlus} primary />
-        <CommandButton command="comp.settings" icon={Settings2} primary />
+        <CommandButton command="comp.new" icon={SquarePlus} primary onRun={onCommand} />
+        <CommandButton command="comp.settings" icon={Settings2} primary onRun={onCommand} />
         <RibbonStack>
           {/* Trimming to a work area that is the whole composition would change nothing. */}
           <CommandButton command="comp.trimToWorkArea" icon={Scissors} onRun={onCommand} disabled={wholeWorkArea} />
