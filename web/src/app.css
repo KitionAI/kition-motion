@@ -572,6 +572,11 @@
   height: 28px;
 }
 
+/* A group straight in a section (a text layer's More). */
+.kui-panel-section-body > .motion-prop-group {
+  padding: 0 8px 0 12px;
+}
+
 /* A simple shape layer's controls, then its whole contents in a closed group. */
 .motion-shape {
   display: flex;

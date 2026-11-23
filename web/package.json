@@ -14,7 +14,8 @@
     "test:flow": "node tests/flow.mjs chromium && node tests/flow.mjs webkit",
     "test:modes": "node tests/modes.mjs chromium && node tests/modes.mjs webkit",
     "test:timeline": "node tests/timeline.mjs chromium && node tests/timeline.mjs webkit",
-    "test:menus": "node tests/menus.mjs chromium && node tests/menus.mjs webkit"
+    "test:menus": "node tests/menus.mjs chromium && node tests/menus.mjs webkit",
+    "test:properties": "node tests/properties.mjs chromium && node tests/properties.mjs webkit"
   },
   "dependencies": {
     "@kition/sdk": "npm:@kitionstage/sdk@0.5.2-stage.16",
