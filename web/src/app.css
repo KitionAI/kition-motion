@@ -178,9 +178,11 @@
   cursor: default;
 }
 
-/* A bar's ends: dragged, they trim the in and out points. */
+/* A bar's ends: dragged, they trim the in and out points. Over the keyframes: a keyframe on the
+   in or out point is still pressed on its outer half. */
 .motion-bar-end {
   position: absolute;
+  z-index: 2;
   top: -1px;
   bottom: -1px;
   width: 6px;
@@ -214,6 +216,15 @@
 
 .motion-key {
   z-index: 1;
+  touch-action: none;
+}
+
+/* A marquee being dragged over the tracks: the keyframes inside it are selected on release. */
+.motion-marquee {
+  position: absolute;
+  z-index: 4;
+  border: 1px solid var(--kit-primary);
+  background: var(--kit-primary-soft);
   pointer-events: none;
 }
 

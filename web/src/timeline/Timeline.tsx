@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react'
-import { useKitEditor, useReadOnly } from '@kition/sdk/editor'
+import { useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
 import { TimelineContext, type TimelineFrame } from './context'
 import { LayerBar } from './LayerBar'
 import { LayerMenu, type LayerMenuTarget } from './LayerMenu'
 import { KeyMark } from './KeyMark'
-import { layerKeyMarks } from './keys'
+import { keyId, layerKeyMarks, type SelectedKey } from './keys'
 import { LayerNames } from './LayerNames'
 import { PropertyRows } from './PropertyRows'
 import { Ruler } from './Ruler'
 import { SOLO_PATHS, type Twirl } from './tree'
+import { useKeyGestures } from './useKeyGestures'
 import { useRowDrag } from './useRowDrag'
 import { leftOf, type TimeView } from './view'
 
@@ -34,7 +35,8 @@ function useWidth() {
  * The composition's layers over time, as in After Effects: one row per layer with its switches,
  * name, bar from in to out point, and keyframes; the ruler scrubs the current time. A bar drags
  * the layer in time and its ends trim it; a row drags to a new place in the stack; a double-click
- * renames; a right-click opens the layer menu; a click on empty timeline deselects.
+ * renames; a right-click opens the layer menu. Keyframes select, drag and marquee-select
+ * (useKeyGestures); a click on empty timeline deselects.
  */
 export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys }) {
   const { run, t } = useKitEditor()
@@ -53,7 +55,13 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
   // Which layers are twirled open and how, and per layer the groups the person opened or closed.
   const [twirls, setTwirls] = useState<ReadonlyMap<number, Twirl>>(new Map())
   const [toggled, setToggled] = useState<ReadonlyMap<number, ReadonlySet<string>>>(new Map())
-  const noKeys = useMemo(() => new Set<string>(), [])
+  const noPaths = useMemo(() => new Set<string>(), [])
+  // The person's selected keyframes, asked again after every change.
+  const selection = useEngineQuery<SelectedKey[]>('keys.info', {})
+  const selectedKeys = useMemo(() => new Set((Array.isArray(selection) ? selection : []).map((key) => keyId({ layer: key.layer, path: key.path, time: key.compTime }))), [selection])
+  const gestures = useKeyGestures(rows, frame, selectedKeys)
+  /** Whether Cmd+V pastes keyframes: the last Cmd+C copied some. */
+  const copiedKeys = useRef(false)
 
   const twirl = (layer: number) =>
     setTwirls((current) => {
@@ -92,8 +100,27 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
     const plain = !command && !event.altKey && !event.shiftKey
     // Delete, or Backspace (the Mac's delete key): the selected keyframes, else the selected layers.
     if (plain && (event.key === 'Delete' || event.key === 'Backspace')) {
-      if (readOnly || !selected.length) return false
+      if (readOnly || (!selected.length && !selectedKeys.size)) return false
       void run('edit.clear', {})
+      return true
+    }
+    if (command && !event.altKey && !event.shiftKey && event.code === 'KeyC' && selectedKeys.size) {
+      copiedKeys.current = true
+      void run('keys.copy', {})
+      return true
+    }
+    if (command && !event.altKey && !event.shiftKey && event.code === 'KeyC') copiedKeys.current = false
+    if (command && !event.altKey && !event.shiftKey && event.code === 'KeyV' && copiedKeys.current && !readOnly) {
+      void run('keys.paste', { time: info.time })
+      return true
+    }
+    // J and K: the previous and next keyframe; F9: Easy Ease on the selected keyframes.
+    if (plain && (event.code === 'KeyJ' || event.code === 'KeyK')) {
+      void run(event.code === 'KeyJ' ? 'time.previousKey' : 'time.nextKey', {})
+      return true
+    }
+    if (plain && event.key === 'F9') {
+      if (!readOnly && selectedKeys.size) void run('keys.easyEase', {})
       return true
     }
     if (plain && event.code === 'KeyU') {
@@ -123,11 +150,7 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
         <div
           ref={rows}
           className="motion-timeline-rows"
-          onClick={(event) => {
-            // A click on empty timeline (below the rows, or a track beside its bar) deselects.
-            const target = event.target as HTMLElement
-            if (target === event.currentTarget || target.classList.contains('motion-row-track')) void run('edit.deselectAll', {})
-          }}
+          {...gestures.handlers}
           data-testid="motion-timeline-rows"
         >
           <div className="motion-timeline-head">
@@ -168,18 +191,19 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
                   >
                     <LayerBar layer={layer} shift={shift} onShift={setShift} />
                     {/* A collapsed layer keeps its keyframes on its own row; twirled open, its property rows show them. */}
-                    {twirls.has(layer.id) ? null : layerKeyMarks(layer).map((mark) => <KeyMark key={mark.time} time={mark.time} keys={mark.keys} selected={noKeys} label={layer.name} row={String(layer.id)} />)}
+                    {twirls.has(layer.id) ? null : layerKeyMarks(layer).map((mark) => <KeyMark key={mark.time} time={mark.time} keys={mark.keys} selected={selectedKeys} label={layer.name} row={String(layer.id)} />)}
                     <span className="motion-playhead" style={{ left: leftOf(view, info.time) }} aria-hidden="true" />
                   </div>
                 </div>
                 {twirls.has(layer.id) ? (
-                  <PropertyRows layer={layer} twirl={twirls.get(layer.id) ?? { kind: 'tree' }} toggled={toggled.get(layer.id) ?? noKeys} onToggle={(path) => toggleGroup(layer.id, path)} selected={noKeys} />
+                  <PropertyRows layer={layer} twirl={twirls.get(layer.id) ?? { kind: 'tree' }} toggled={toggled.get(layer.id) ?? noPaths} onToggle={(path) => toggleGroup(layer.id, path)} selected={selectedKeys} />
                 ) : null}
               </div>
             ))
           ) : (
             <p className="kui-muted motion-empty">{t('noLayers')}</p>
           )}
+          {gestures.marquee ? <div className="motion-marquee" style={gestures.marquee} data-testid="motion-marquee" /> : null}
           {rowDrag.drop ? <div className="motion-drop-line" style={{ top: rowDrag.drop.top }} data-testid="motion-drop-line" /> : null}
         </div>
         <LayerMenu target={menu} onClose={() => setMenu(null)} onRename={(layer) => setRenaming(layer)} />
