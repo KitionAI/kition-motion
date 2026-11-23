@@ -1,6 +1,7 @@
 import { PauseIcon as Pause, PlayIcon as Play, PlusIcon as Plus, SkipBackIcon as SkipBack, SkipForwardIcon as SkipForward, StepBackIcon as StepBack, StepForwardIcon as StepForward } from '@kition/tessera/icons/react'
 import { Button, IconButton, MenuButton, MenuItem, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import { timecode, type MotionInfo } from './motion'
+import { CompSwitcher } from './CompSwitcher'
 
 /** The layers the add menu makes, as engine commands. */
 export const NEW_LAYERS = [
@@ -31,6 +32,7 @@ export function Transport({ info, playing, onPlay, onSeek, onStep, onCommand }: 
           <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => (layer.command === 'layer.newSolid' ? onCommand(layer.command) : void run(layer.command, { ...layer.params }))} testId={`motion-new-${layer.id}`} />
         ))}
       </MenuButton>
+      <CompSwitcher info={info} />
       <span style={{ flex: 1 }} />
       <IconButton icon={SkipBack} label={t('goToStart')} onClick={() => onSeek(0)} />
       <IconButton icon={StepBack} label={t('stepBack')} onClick={() => onStep(-1)} />

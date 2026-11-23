@@ -451,3 +451,8 @@
   border-radius: 6px;
   cursor: pointer;
 }
+
+/* The composition switcher beside New layer: the active composition's name. */
+.motion-comp-switcher {
+  max-width: 220px;
+}

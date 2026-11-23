@@ -77,6 +77,7 @@ const enUS: Catalog = {
   "preset.social": "Social 4:5",
   "defaultComp": "Comp",
   "defaultSolid": "Solid",
+  "compSwitcher": "Composition: choose one to open it",
 }
 
 const zhCN: Catalog = {
@@ -155,6 +156,7 @@ const zhCN: Catalog = {
   "preset.social": "社交 4:5",
   "defaultComp": "合成",
   "defaultSolid": "纯色",
+  "compSwitcher": "合成：选择一个以打开",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }

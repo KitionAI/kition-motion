@@ -113,6 +113,19 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const picture = state?.picture
   const panBounds = useMemo(() => picturePanBounds(picture?.width ?? 0, picture?.height ?? 0, zoom), [picture?.width, picture?.height, zoom])
   const workspace = useRef<HTMLDivElement>(null)
+  // A composition opened (new, or switched to) fits the window once its picture has its size.
+  const compId = state?.comp?.id
+  const fitted = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    if (compId === undefined || !picture) return
+    if (fitted.current === undefined) {
+      fitted.current = compId
+      return
+    }
+    if (fitted.current === compId || picture.width !== state?.comp?.width || picture.height !== state?.comp?.height) return
+    fitted.current = compId
+    requestAnimationFrame(() => canvas.current?.fit())
+  }, [compId, picture, state?.comp?.width, state?.comp?.height])
   const views = useMemo(createViewStore, [])
   // Moving through time is not an edit: it goes to the engine without the editor's notices.
   const runQuietly = session.run
