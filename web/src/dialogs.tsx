@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { Button, ColorPicker, Dialog, Field, Select, TextInput, formatTimecode, parseHex, parseTimecode, rgbToHex, useKitEditor } from '@kition/sdk/editor'
+import { Button, Dialog, Field, Select, TextInput, formatTimecode, parseHex, parseTimecode, rgbToHex, useKitEditor } from '@kition/sdk/editor'
+import { ColorSwatch } from './properties/ColorSwatch'
 
 /** A colour as the engine gives it: [r, g, b] from 0 to 1. */
 export type Rgb = readonly [number, number, number]
@@ -84,42 +85,35 @@ function TextRow({ label, value, onChange, error, testId, autoFocus, unit }: { l
   )
 }
 
-/** A colour: its swatch opens a picker under it, and its hex can be typed. */
+/** A colour: its swatch opens the picker in a popover beside it, and its hex can be typed. */
 function ColorRow({ label, value, onChange, testId }: { label: string; value: string; onChange: (hex: string) => void; testId: string }) {
   const { t } = useKitEditor()
-  const [open, setOpen] = useState(false)
   const [text, setText] = useState(value)
-  const rgb = parseHex(value) ?? [0, 0, 0]
   return (
     <Field label={label} error={parseHex(text) ? undefined : t('dialog.badColor')}>
       {({ id, describedBy, invalid }) => (
-        <span className="motion-color">
-          <span className="motion-form-input">
-            <button type="button" className="motion-swatch" style={{ background: value }} aria-label={t('dialog.pickColor')} aria-expanded={open} onClick={() => setOpen(!open)} data-testid={`${testId}-swatch`} />
-            <TextInput
-              id={id}
-              aria-describedby={describedBy}
-              invalid={invalid}
-              value={text}
-              onChange={(event) => {
-                setText(event.target.value)
-                const hex = parseHex(event.target.value)
-                if (hex) onChange(rgbToHex(hex))
-              }}
-              data-testid={testId}
-            />
-          </span>
-          {open ? (
-            <ColorPicker
-              value={rgb}
-              onChange={(next) => {
-                const hex = rgbToHex(next)
-                setText(hex)
-                onChange(hex)
-              }}
-              testId={`${testId}-picker`}
-            />
-          ) : null}
+        <span className="motion-form-input">
+          <ColorSwatch
+            value={value}
+            label={label}
+            onChange={(hex) => {
+              setText(hex)
+              onChange(hex)
+            }}
+            testId={testId}
+          />
+          <TextInput
+            id={id}
+            aria-describedby={describedBy}
+            invalid={invalid}
+            value={text}
+            onChange={(event) => {
+              setText(event.target.value)
+              const hex = parseHex(event.target.value)
+              if (hex) onChange(rgbToHex(hex))
+            }}
+            data-testid={testId}
+          />
         </span>
       )}
     </Field>

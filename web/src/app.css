@@ -756,12 +756,6 @@
   gap: 6px;
 }
 
-.motion-color {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .motion-swatch {
   flex: none;
   width: 28px;
