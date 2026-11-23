@@ -37,6 +37,9 @@ export function Ruler({ onSeek, onWorkArea, rulerRef, children }: { onSeek: (sec
     onPointerDown: (event: ReactPointerEvent<HTMLSpanElement>) => {
       if (event.button !== 0 || readOnly) return
       event.stopPropagation()
+      // No text selection or native drag from the press: WebKit starts one on the move (selectstart)
+      // and cancels the pointer when a drag begins, which would drop the work area edit.
+      event.preventDefault()
       event.currentTarget.setPointerCapture(event.pointerId)
       grip.current = { pointerId: event.pointerId, edge }
     },

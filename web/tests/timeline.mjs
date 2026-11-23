@@ -309,9 +309,19 @@ try {
   await until(async () => near((await details()).info.workArea[1], 2))
   step('dragging the work area end on the ruler sets it', near((await details()).info.workArea[1], 2), JSON.stringify((await details()).info.workArea))
   const workStart = await box('motion-work-start')
-  await drag({ x: workStart.x + workStart.width / 2, y: workStart.y + workStart.height / 2 }, { x: rulerBox.x + (0.5 * rulerBox.width) / 3, y: workStart.y + workStart.height / 2 })
+  // What the press hits and which pointer events the ruler sees, printed with the result (for a failure on another platform).
+  const press = { x: workStart.x + workStart.width / 2, y: workStart.y + workStart.height / 2 }
+  const kitFrame = await page.locator('#kit').boundingBox()
+  const hit = await kit.getByTestId('motion-ruler').evaluate((el, [x, y]) => {
+    window.__rulerEvents = []
+    for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture', 'dragstart', 'selectstart']) el.ownerDocument.addEventListener(type, (event) => { if (window.__rulerEvents.at(-1)?.startsWith(type) !== true) window.__rulerEvents.push(`${type}@${Math.round(event.clientX)}:${event.target?.dataset?.testid ?? event.target?.className}`) }, true)
+    const at = el.ownerDocument.elementFromPoint(x, y)
+    return at?.dataset?.testid ?? at?.className ?? 'nothing'
+  }, [press.x - kitFrame.x, press.y - kitFrame.y])
+  await drag(press, { x: rulerBox.x + (0.5 * rulerBox.width) / 3, y: workStart.y + workStart.height / 2 })
   await until(async () => near((await details()).info.workArea[0], 0.5))
-  step('and its start', near((await details()).info.workArea[0], 0.5) && near((await details()).info.workArea[1], 2), JSON.stringify((await details()).info.workArea))
+  const seen = await kit.getByTestId('motion-ruler').evaluate(() => window.__rulerEvents.join(' '))
+  step('and its start', near((await details()).info.workArea[0], 0.5) && near((await details()).info.workArea[1], 2), `${JSON.stringify((await details()).info.workArea)} (press on ${hit}, time ${(await details()).time}; ${seen})`)
 } catch (error) {
   failures += 1
   console.log(`FAIL ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`)
