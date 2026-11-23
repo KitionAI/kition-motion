@@ -41,13 +41,10 @@ fn layer_address(answer: &mut Under, comp_id: ItemId, comp: &Comp, value: &Value
 
 /// `None` leaves a command with its existing, general declaration.
 pub(crate) fn under(session: &Session, command: &str, params: &Value) -> Option<Under> {
-    let render_preference = match command {
-        "renderQueue.setNotify" => Some("attrs.render_prefs.notify"),
-        "renderQueue.setOverflowFolders" => Some("attrs.render_prefs.overflow_folders"),
-        _ => None,
-    };
-    if let Some(field) = render_preference {
-        return Some(Under { premises: vec![fields("project", [field])], ..Default::default() });
+    // Render Queue preferences are this machine's own, not the document's (kdm-model `local`):
+    // setting one reads and writes nothing another writer can change.
+    if matches!(command, "renderQueue.setNotify" | "renderQueue.setOverflowFolders") {
+        return Some(Under::default());
     }
     if let Some(answer) = crate::rest_comp::under(session, command, params) {
         return Some(answer);

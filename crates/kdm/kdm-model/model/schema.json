@@ -114,7 +114,7 @@
       }
     },
     "Marker": {
-      "batchOps": { "*": { "direct": true } },
+      "batchOps": { "set": { "command": "model.markerField", "params": { "target": "target", "field": "field" } }, "*": { "direct": true } },
       "batchIndependent": true,
       "text": "comment",
       "fields": {

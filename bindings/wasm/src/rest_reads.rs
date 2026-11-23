@@ -742,9 +742,6 @@ fn differences(now: &kition_motion_project::Project, then: &kition_motion_projec
     if now.render_templates != then.render_templates {
         project.push("attrs.render_templates");
     }
-    if now.render_prefs != then.render_prefs {
-        project.push("attrs.render_prefs");
-    }
     if !project.is_empty() {
         answer.premises.push(field("project", project));
     }

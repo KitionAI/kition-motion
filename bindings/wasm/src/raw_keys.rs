@@ -195,6 +195,9 @@ pub(crate) fn under(session: &Session, command: &str, params: &Value) -> Result<
     if matches!(command, "model.compAttrs" | "model.layerAttrs") {
         return attrs_under(session, command, params);
     }
+    if command == "model.markerField" {
+        return marker_under(session, params);
+    }
     if !command.starts_with("model.key") {
         return Ok(None);
     }
@@ -245,7 +248,12 @@ pub(crate) fn prefix(command: &str, params: &Value, step: &kition_kit::PremiseSt
 
 pub(crate) fn covered(session: &Session, command: &str, params: &Value, objects: &[CoveredAsk]) -> Option<CoveredAt> {
     if command == "model.layerAttrs" {
-        return attrs_covered(session, params, objects);
+        let (cid, layer) = layer_holder(session, params)?;
+        return layer_covered(cid, layer.id, objects);
+    }
+    if command == "model.markerField" {
+        let (cid, layer) = marker_layer(session, params)?;
+        return layer_covered(cid, layer, objects);
     }
     let target = address(session, command, params).ok()??;
     let mut keys = target.keys.clone();
@@ -305,12 +313,48 @@ fn attrs_under(session: &Session, command: &str, params: &Value) -> Result<Optio
     }
     Ok(Some(answer))
 }
-fn attrs_covered(session: &Session, params: &Value, objects: &[CoveredAsk]) -> Option<CoveredAt> {
-    let (cid, layer) = layer_holder(session, params)?;
+/// The layer holding the `Marker` object a raw marker write targets, with its composition;
+/// `None` for a composition's marker.
+fn marker_layer(session: &Session, params: &Value) -> Option<(ItemId, kition_motion_project::LayerId)> {
+    let target = params.get("target")?.as_str()?;
+    let layer = {
+        let replica = session.kdm()?;
+        replica.ids().layers.iter().find(|(_, ids)| ids.markers.iter().any(|marker| marker.as_str() == target)).map(|(key, _)| key.id)?
+    };
+    Some((session.project.comp_of_layer(layer)?, layer))
+}
+
+/// A raw write of one field of a `Marker` (schema 1: markers are objects of their own) holds that
+/// field of that marker; the marker's place in its list, and its layer's place in the stack, are
+/// not read. A layer's marker also holds the layer's composition, as a raw layer attribute does:
+/// the layer moved into another composition relocates it.
+fn marker_under(session: &Session, params: &Value) -> Result<Option<Under>, String> {
+    let target = params.get("target").and_then(Value::as_str).ok_or("a raw marker write needs its target")?;
+    let field = params.get("field").and_then(Value::as_str).ok_or("a raw marker write needs its field")?;
+    let known = session.kdm().is_some_and(|replica| {
+        let ids = replica.ids();
+        ids.parts.values().any(|parts| parts.markers.iter().any(|marker| marker.as_str() == target))
+            || ids.layers.values().any(|layer| layer.markers.iter().any(|marker| marker.as_str() == target))
+    });
+    if !known {
+        return Err("the raw marker write names no retained marker".to_owned());
+    }
+    let mut answer = Under::default();
+    answer.premises.push(Premise::on(json!(target)).fields([field.to_owned()]).positions(Vec::<String>::new()));
+    if let Some((comp, layer)) = marker_layer(session, params) {
+        answer.objects.push(json!(comp.0));
+        answer.covers = Some(Covers { fields: vec!["~container".to_owned()] });
+        answer.premises.push(Premise::on(json!(layer.0)).fields(Vec::<String>::new()).positions(Vec::<String>::new()));
+        answer.premises.push(Premise::on(json!(comp.0)).fields(Vec::<String>::new()).positions(Vec::<String>::new()));
+    }
+    Ok(Some(answer))
+}
+
+fn layer_covered(cid: ItemId, layer: kition_motion_project::LayerId, objects: &[CoveredAsk]) -> Option<CoveredAt> {
     let mut comp = json!(cid.0);
     let mut covered = Vec::new();
     for object in objects {
-        let same = object.id.as_u64().or_else(|| object.id.as_str()?.parse().ok()) == Some(layer.id.0);
+        let same = object.id.as_u64().or_else(|| object.id.as_str()?.parse().ok()) == Some(layer.0);
         if same {
             if object.unknown.iter().any(|field| field == "~container") {
                 return None;
