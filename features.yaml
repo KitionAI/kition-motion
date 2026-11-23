@@ -522,12 +522,12 @@ features:
     cases: []
     since: "2026-11-23"
   - id: motion.editor.graph
-    title: "The graph editor (the timeline's 图表 button, Shift+F3) shows the value curves of the selected layers' animated properties, one per dimension, sampled by the engine (curveSamples) over the stretch of time the timeline shows, zoomed and scrolled with it; a key clicks to select it (Shift adds or removes) and drags in time (snapped to frames and the playhead) and value, and a selected eased key's Bezier handles drag its speed and influence, each drag one undo step"
+    title: "The graph editor (the timeline's 图表 button, Shift+F3) shows the selected layers' animated properties over the stretch of time the timeline shows, sampled by the engine (curveSamples), as values (one curve per dimension) or speeds (值 / 速度; Position and Anchor Point as their speed along the path), each property on its own vertical scale fitted to its values, the value labels belonging to the property marked in its list (a click on a name moves them); a key clicks to select it (Shift adds or removes), a box drawn on empty space selects the keys in it, 适合全部 and F show every key's time; a key drags in time (snapped to frames and the playhead) and, in the value graph, in value, kept in its property's range by keys.set (Opacity stops at 100); a selected eased key's handles drag its influence and speed (the slope in the value graph, the height in the speed graph, where Position and Anchor Point show theirs), each drag one undo step"
     dimension: [function]
     priority: P1
     status: has
-    paths: [web/src/timeline/GraphEditor.tsx, web/src/timeline/samples.ts, web/src/timeline/Timeline.tsx, bindings/wasm/src/lib.rs, web/src/App.tsx, web/src/app.css, web/tests/curves.mjs]
-    gap: "Value graph only (no speed graph); all curves share one value axis; Position and Anchor Point ease their speed along their path, so their keys drag but show no handles; no box selection, no frame-to-fit button and no handle drag in the timeline's rows. Gated by web/tests/curves.mjs."
+    paths: [web/src/timeline/GraphEditor.tsx, web/src/timeline/samples.ts, web/src/timeline/Timeline.tsx, web/src/timeline/useTimeView.ts, web/src/keys.ts, crates/engine/engine/src/commands/anim.rs, crates/engine/engine/src/tests_editor_queries.rs, bindings/wasm/src/lib.rs, web/src/App.tsx, web/src/app.css, web/tests/curves.mjs]
+    gap: "The speed graph is the change per second the engine's samples show (not drawn from the eases themselves), so a hold key draws a spike; keys of different properties at the same time and height can overlap on their own scales, and the one drawn last takes the press; keys at 0 s sit half past the left edge; no handle drag in the timeline's rows. Gated by web/tests/curves.mjs."
     cases: []
     since: "2026-11-23"
   - id: motion.editor.stopwatch

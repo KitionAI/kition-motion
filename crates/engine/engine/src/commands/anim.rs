@@ -2,7 +2,7 @@
 //! inspection for the Keyframe Velocity / Keyframe Interpolation dialogs.
 
 use kition_motion_keyframe::{Ease, Interp, Keyframe, key_at, retime_roving, side_ease};
-use kition_motion_project::{LayerId, Property, Uid};
+use kition_motion_project::{LayerId, ParamUi, Property, Uid};
 use kition_motion_time::Tick;
 use serde_json::{Value, json};
 
@@ -218,7 +218,14 @@ fn set_key(s: &mut Session, p: &Value) -> Result<Value> {
         let i = nearest_key(&pr.keys, t).ok_or_else(|| bad("keys.set", "the property has no keyframes"))?;
         let old_t = pr.keys[i].time;
         if let Some(v) = &value {
-            let nv = pr.keys[i].value.coerce_json(v).ok_or_else(|| bad("keys.set", format!("can't use {v} here")))?;
+            let mut nv = pr.keys[i].value.coerce_json(v).ok_or_else(|| bad("keys.set", format!("can't use {v} here")))?;
+            // A value the property declares a range for stays in it (Opacity 0–100), as prop.set keeps it.
+            if let ParamUi::Slider { min, max, .. } = pr.ui
+                && min <= max
+                && let kition_motion_keyframe::Value::Scalar(x) = nv
+            {
+                nv = kition_motion_keyframe::Value::Scalar(x.clamp(min, max));
+            }
             pr.keys[i].value = nv;
         }
         let mut nt = old_t;
@@ -313,7 +320,6 @@ fn set_ease(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// Speed units for a property (Keyframe Velocity dialog).
 fn units(pr: &Property) -> &'static str {
-    use kition_motion_project::ParamUi;
     if pr.spatial {
         return "pixels/sec";
     }

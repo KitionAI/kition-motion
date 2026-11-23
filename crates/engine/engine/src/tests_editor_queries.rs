@@ -50,3 +50,20 @@ fn the_tree_gives_drop_down_labels_and_the_text_style() {
     assert_eq!(opacity["range"]["min"], 0.0);
     assert_eq!(opacity["range"]["max"], 100.0);
 }
+
+#[test]
+fn a_keyframe_value_stays_in_its_propertys_range() {
+    let mut s = comp();
+    let solid = s.execute("layer.newSolid", json!({"color": "#336699"})).unwrap()["layer"].as_u64().unwrap();
+    s.execute("prop.toggleAnimation", json!({"layer": solid, "path": "transform/opacity"})).unwrap();
+    s.execute("keys.set", json!({"layer": solid, "path": "transform/opacity", "time": 0, "value": 180})).unwrap();
+    let opacity = |s: &Session| s.active_comp().unwrap().layers[0].props.prop("transform/opacity").unwrap().keys[0].value.clone();
+    assert_eq!(opacity(&s), kition_motion_keyframe::Value::Scalar(100.0), "Opacity cannot pass 100");
+    s.execute("keys.set", json!({"layer": solid, "path": "transform/opacity", "time": 0, "value": -20})).unwrap();
+    assert_eq!(opacity(&s), kition_motion_keyframe::Value::Scalar(0.0), "nor go below 0");
+    // A property without a declared range takes any number.
+    s.execute("prop.toggleAnimation", json!({"layer": solid, "path": "transform/rotation"})).unwrap();
+    s.execute("keys.set", json!({"layer": solid, "path": "transform/rotation", "time": 0, "value": 720})).unwrap();
+    let rotation = s.active_comp().unwrap().layers[0].props.prop("transform/rotation").unwrap().keys[0].value.clone();
+    assert_eq!(rotation, kition_motion_keyframe::Value::Scalar(720.0));
+}

@@ -60,5 +60,8 @@ export function useTimeView(rows: RefObject<HTMLDivElement | null>, duration: nu
     return () => element.removeEventListener('wheel', wheel)
   }, [rows, settle])
 
-  return { view, zoomed: stored !== null, zoomIn: () => zoomBy(ZOOM_STEP), zoomOut: () => zoomBy(1 / ZOOM_STEP), scrollTo }
+  /** Shows from `start` to `end` seconds (the graph editor's 适合全部). */
+  const fit = useCallback((start: number, end: number) => settle(clampView({ start, span: Math.max(latest.current.frame * 2, end - start) }, latest.current.duration, latest.current.frame)), [settle])
+
+  return { view, zoomed: stored !== null, zoomIn: () => zoomBy(ZOOM_STEP), zoomOut: () => zoomBy(1 / ZOOM_STEP), scrollTo, fit }
 }

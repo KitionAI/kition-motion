@@ -26,6 +26,7 @@ export const TIMELINE_KEYS = {
   previousKey: { keys: ['J'], zh: '转到上一个关键帧', en: 'Go to the previous keyframe' },
   nextKey: { keys: ['K'], zh: '转到下一个关键帧', en: 'Go to the next keyframe' },
   graph: { keys: ['Shift+F3'], zh: '切换图表编辑器', en: 'Show or hide the Graph Editor' },
+  graphFit: { keys: ['F'], zh: '图表编辑器里：适合全部（时间轴显示从第一个到最后一个关键帧）', en: 'In the Graph Editor: fit all (show every keyframe’s time)', match: (event: KeyLike) => plain(event) && event.code === 'KeyF' },
   zoomIn: { keys: ['='], zh: '放大时间轴', en: 'Zoom the timeline in', match: (event: KeyLike) => !event.metaKey && !event.ctrlKey && !event.altKey && event.code === 'Equal' },
   zoomOut: { keys: ['-'], zh: '缩小时间轴', en: 'Zoom the timeline out', match: (event: KeyLike) => !event.metaKey && !event.ctrlKey && !event.altKey && event.code === 'Minus' },
   animated: { keys: ['U'], zh: '只显示有关键帧的属性（再按一次收起）', en: 'Show only the animated properties (again: close)' },

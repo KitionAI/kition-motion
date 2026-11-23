@@ -76,6 +76,7 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose, onCo
   const [naming, setNaming] = useState<{ marker: MarkerRef; comment: string } | null>(null)
   // The graph editor in place of the layer rows (Shift+F3), and a keyframe's right-click menu.
   const [graph, setGraph] = useState(false)
+  const fitGraph = useRef<(() => void) | null>(null)
   const [keyMenu, setKeyMenu] = useState<{ x: number; y: number } | null>(null)
   // The graph shows the selected layers' animated properties; it reads them again when their keys or the selected keys change.
   const targetsKey = JSON.stringify(info.layers.filter((layer) => layer.selected).map((layer) => [layer.id, layer.name, layer.switches.threeD, layer.animated.map((property) => [property.path, property.name])]))
@@ -151,6 +152,10 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose, onCo
       setGraph((open) => !open)
       return true
     }
+    if (graph && pressed(K.graphFit, event)) {
+      fitGraph.current?.()
+      return true
+    }
     // = and -: zoom the timeline in and out (Cmd or Ctrl with them zoom the composition).
     if (pressed(K.zoomIn, event) || pressed(K.zoomOut, event)) {
       if (pressed(K.zoomIn, event)) time.zoomIn()
@@ -219,7 +224,7 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose, onCo
             </Ruler>
           </div>
           {graph ? (
-            <GraphEditor targets={graphTargets} selected={selectedKeys} revision={graphRevision} />
+            <GraphEditor targets={graphTargets} selected={selectedKeys} revision={graphRevision} onFit={time.fit} fitRef={fitGraph} />
           ) : info.layers.length ? (
             info.layers.map((layer) => (
               <div key={layer.id} className="motion-layer-block" data-layer-block={layer.id} data-testid={`motion-layer-block-${layer.id}`}>

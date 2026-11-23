@@ -6,6 +6,7 @@ import { chromium, webkit } from 'playwright'
 import { createServer } from 'vite'
 
 const which = process.argv[2] ?? 'chromium'
+const shots = process.argv[3] === 'shots' ? new URL('../../../kition-plan/kit-docs/motion/images/', import.meta.url).pathname : null
 const server = await createServer({ configFile: new URL('../vite.config.ts', import.meta.url).pathname, server: { port: 0, host: '127.0.0.1', watch: null }, logLevel: 'error' })
 await server.listen()
 const origin = `http://127.0.0.1:${server.httpServer.address().port}`
@@ -210,6 +211,84 @@ try {
   await undo()
   await until(async () => near((await opacityEase())?.influence ?? 0, before?.influence ?? 0, 1e-3))
   step('one undo puts the handle back', near((await opacityEase())?.influence ?? 0, before.influence, 1e-3), JSON.stringify(await opacityEase()))
+
+  // Each property on its own scale: Opacity (0 to 100) fills the height as Position (hundreds of pixels) does.
+  const spanOf = async (testId) => {
+    const ys = ((await kit.getByTestId(testId).getAttribute('points')) ?? '').split(' ').map((point) => Number(point.split(',')[1])).filter(Number.isFinite)
+    return ys.length ? Math.max(...ys) - Math.min(...ys) : 0
+  }
+  const plot = await box('motion-graph-svg')
+  await until(async () => (await spanOf(`motion-graph-curve-${SHAPE}-transform.opacity-0`)) > plot.height * 0.6)
+  step('Opacity fills the graph’s height on its own scale beside Position', (await spanOf(`motion-graph-curve-${SHAPE}-transform.opacity-0`)) > plot.height * 0.6 && (await spanOf(`motion-graph-curve-${SHAPE}-transform.position-0`)) > plot.height * 0.6, `${await spanOf(`motion-graph-curve-${SHAPE}-transform.opacity-0`)} of ${plot.height}`)
+  await kit.getByTestId(`motion-graph-legend-${SHAPE}-transform.opacity`).locator('button').click()
+  await until(async () => (await kit.getByTestId('motion-graph').getAttribute('data-scale')) === `${SHAPE}-transform.opacity`)
+  step('a click on a property’s name puts its values on the scale', (await kit.getByTestId('motion-graph').getAttribute('data-scale')) === `${SHAPE}-transform.opacity`)
+
+  // Fit all: zoomed in so the last key is out of view, F (and the button) brings every key back.
+  const lastKey = kit.getByTestId(`motion-graph-key-${SHAPE}-transform.position-0-2500`)
+  const inView = async (locator) => {
+    const x = Number(await locator.getAttribute('x'))
+    return x >= -4 && x <= plot.width
+  }
+  await kit.locator('.kui-app').focus()
+  for (let i = 0; i < 4; i += 1) await page.keyboard.press('Equal')
+  await until(async () => !(await inView(lastKey)))
+  const hidden = !(await inView(lastKey))
+  await page.keyboard.press('KeyF')
+  await until(async () => (await inView(lastKey)) && (await inView(kit.getByTestId(`motion-graph-key-${SHAPE}-transform.opacity-0-0`))))
+  step('F fits every key into the graph', hidden && (await inView(lastKey)) && (await inView(kit.getByTestId(`motion-graph-key-${SHAPE}-transform.opacity-0-0`))))
+  for (let i = 0; i < 4; i += 1) await page.keyboard.press('Equal')
+  await until(async () => !(await inView(lastKey)))
+  await kit.getByTestId('motion-graph-fit').click()
+  await until(async () => inView(lastKey))
+  step('and so does the 适合全部 button', await inView(lastKey))
+
+  // A box drawn on empty space selects the keys inside it.
+  const area = await box('motion-graph-svg')
+  // From the top right to past the left edge: keys at 0 s sit on the graph's left edge.
+  await drag({ x: area.x + area.width - 3, y: area.y + 3 }, { x: area.x - 12, y: area.y + area.height - 3 })
+  await until(async () => (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === (await kit.locator('.motion-graph-key').count()))
+  step('a box over the graph selects every key in it', (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === (await kit.locator('.motion-graph-key').count()) && (await kit.locator('.motion-graph-key').count()) >= 6, `${await kit.locator('.motion-graph-key[aria-selected="true"]').count()} of ${await kit.locator('.motion-graph-key').count()}`)
+  await page.mouse.click(area.x + area.width - 3, area.y + 3)
+  await until(async () => (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === 0)
+  step('a click on empty space clears them', (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === 0)
+
+  // A key dragged past its property's range stops at it: Opacity cannot pass 100.
+  const opacityLast = kit.getByTestId(`motion-graph-key-${SHAPE}-transform.opacity-0-2000`)
+  const fromLast = await centre(opacityLast)
+  await drag(fromLast, { x: fromLast.x, y: area.y - 60 })
+  const opacityKeys = async () => (await query('prop.get', { layer: SHAPE, path: OPACITY })).keys
+  await until(async () => (await opacityKeys())[1].value > 50)
+  step('Opacity dragged above the graph stops at 100', near((await opacityKeys())[1].value, 100, 1e-6), String((await opacityKeys())[1].value))
+  await undo()
+  await until(async () => near((await opacityKeys())[1].value, 0, 1e-6))
+
+  // The speed graph: Position draws as one speed along its path, and its eased key's handles drag.
+  await kit.getByTestId('motion-graph-mode-speed').click()
+  await until(async () => (await kit.getByTestId('motion-graph').getAttribute('data-mode')) === 'speed' && (await kit.getByTestId(`motion-graph-curve-${SHAPE}-transform.position-1`).count()) === 0)
+  if (shots) await page.screenshot({ path: `${shots}phase6-graph-speed.png` })
+  step('the speed graph draws Position as one speed along its path', (await kit.getByTestId(`motion-graph-curve-${SHAPE}-transform.position-0`).count()) === 1 && (await kit.getByTestId(`motion-graph-curve-${SHAPE}-transform.position-1`).count()) === 0)
+  const positionKey = kit.getByTestId(`motion-graph-key-${SHAPE}-transform.position-0-2500`)
+  await positionKey.click()
+  await until(async () => (await positionKey.getAttribute('aria-selected')) === 'true')
+  await page.keyboard.press('F9')
+  const positionHandle = kit.getByTestId(`motion-graph-handle-${SHAPE}-transform.position-0-2500-in`)
+  await positionHandle.waitFor({ timeout: 4000 }).catch(() => null)
+  step('an eased Position key shows its handle in the speed graph', (await positionHandle.count()) === 1)
+  const positionEase = async () => (await query('keys.info', { keys: [{ layer: SHAPE, prop: uid, time: 2.5 }] }))[0]?.inEase?.[0]
+  const easeBefore = await positionEase()
+  if (await positionHandle.count()) {
+    const at = await centre(positionHandle)
+    await drag(at, { x: at.x - 60, y: at.y - 30 })
+  }
+  await until(async () => !near((await positionEase())?.influence ?? 0, easeBefore?.influence ?? 0, 1e-3))
+  const easeAfter = await positionEase()
+  step('dragging it changes Position’s influence and speed along its path', easeAfter && easeBefore && !near(easeAfter.influence, easeBefore.influence, 1) && !near(easeAfter.speed, easeBefore.speed, 1e-3), `${JSON.stringify(easeBefore)} → ${JSON.stringify(easeAfter)}`)
+  await undo()
+  await until(async () => near((await positionEase())?.influence ?? 0, easeBefore?.influence ?? 0, 1e-3))
+  step('one undo puts it back', near((await positionEase())?.influence ?? 0, easeBefore?.influence ?? 0, 1e-3))
+  await undo()
+  await kit.getByTestId('motion-graph-mode-value').click()
   await kit.getByTestId('motion-graph-toggle').click()
 
   // 3. The stopwatch: start animating, add between keys, remove at a key, clear by Alt-click and by its menu.
