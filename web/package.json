@@ -16,7 +16,8 @@
     "test:timeline": "node tests/timeline.mjs chromium && node tests/timeline.mjs webkit",
     "test:menus": "node tests/menus.mjs chromium && node tests/menus.mjs webkit",
     "test:properties": "node tests/properties.mjs chromium && node tests/properties.mjs webkit",
-    "test:canvas": "node tests/canvas.mjs chromium && node tests/canvas.mjs webkit"
+    "test:canvas": "node tests/canvas.mjs chromium && node tests/canvas.mjs webkit",
+    "test:footage": "node tests/footage.mjs chromium && node tests/footage.mjs webkit"
   },
   "dependencies": {
     "@kition/sdk": "npm:@kitionstage/sdk@0.5.2-stage.16",

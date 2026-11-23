@@ -476,3 +476,39 @@ features:
     gap: "Layers are picked by their transformed content box (glyph bounds for text, painted bounds for shapes), not by their pixels' alpha; a 3D layer shows its projected box but has no scale or rotation handles, and its move is in composition x and y; snapping does not include guides or the grid. Gated by web/tests/canvas.mjs (the test:canvas job of the kit's CI run) and the tools tests in bindings/wasm/src/tools/; no case under cases/ runs it yet."
     cases: []
     since: "2026-11-22"
+  - id: motion.editor.footage
+    title: "Footage comes in through the host: File ▸ Import (Cmd+I) and the Project panel's Import button import the file the host's picker gives (pictures png, jpg, gif, webp and svg, movies mp4, mov and webm, sounds mp3 and wav), and files dropped from the computer on the composition or the timeline are written beside the project through the host, imported and placed; a file the build cannot read, or of another type, says so in a sentence and imports nothing. The Project panel (a top-bar button and View ▸ Project Panel; its width from its right edge and whether it is open kept for the session) lists the compositions, footage, solids and folders with their type's icon, name, and size or length; a double-click opens a composition or places footage or a solid at the current time in the active composition, a row dragged onto the composition places it where it was dropped and onto the timeline at the current time, F2 renames, Delete removes (asking first, with the count, when layers use it), its menu also adds to the composition and makes a new composition from footage, and New Composition opens the composition dialog; placed footage is a layer the canvas tools select, move and scale like any other, each step one undo step"
+    dimension: [function]
+    priority: P0
+    status: has
+    paths: [web/src/footage.ts, web/src/ProjectPanel.tsx, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/src/devHost.ts, web/vite.config.ts, web/tests/footage.mjs]
+    gap: "A movie in VP8 (older WebM) imports but draws black in the web build (VP9 WebM, H.264 MP4 and MOV draw); a sound imports and places as a layer but the editor does not play sound. The development host lends its in-memory workspace over Vite (vite.config.ts), as Kition lends a project's folder; its picker answers the first picture, movie or sound in the workspace. Gated by web/tests/footage.mjs (the test:footage job of the kit's CI run); no case under cases/ runs it yet."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.precomp
+    title: "A precomp layer opens its composition from a double-click on its timeline bar, its layer menu's Open Composition, or a double-click on it with the Selection tool on the canvas; a breadcrumb before the composition switcher names each composition gone through, with Back to the one just outside, and switching any other way starts it over; Pre-compose (menus, Home, the layer menu) says the new layer opens with a double-click and offers to open it"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/App.tsx, web/src/Transport.tsx, web/src/timeline/Timeline.tsx, web/src/timeline/LayerMenu.tsx, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/tools/text.rs, bindings/wasm/src/tools/tests.rs, web/tests/footage.mjs]
+    gap: "A precomp layer's box is its composition's frame, so a double-click anywhere in that frame (not just on what the precomp draws) opens it; a double-click on a layer's name still renames it. Gated by web/tests/footage.mjs and the tools tests in bindings/wasm/src/tools/."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.export
+    title: "Export (the top-bar button and File ▸ Export) asks for the format (MP4 H.264, WebM VP9, animated GIF: the ones the web build encodes into one file), the range (the whole composition or its work area), the size (full, half, or a width and height) and the frame rate (the composition's or half), renders the active composition and writes it beside the project through the host, naming the file in its message; File ▸ Save Frame As PNG writes the current frame beside the project"
+    dimension: [function]
+    priority: P0
+    status: has
+    paths: [web/src/ExportDialog.tsx, bindings/wasm/src/movie.rs, bindings/wasm/src/lib.rs, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/tests/footage.mjs, web/tests/menus.mjs]
+    gap: "The engine renders in one call on the editor's worker: the dialog shows that it is busy, with no progress and no Cancel. HEVC, AV1, ProRes and image sequences encode in the web build but are not offered. Gated by web/tests/footage.mjs, web/tests/menus.mjs and the movie tests in bindings/wasm/src/movie.rs."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.markers
+    title: "Markers show on the timeline, the composition's as flags on the ruler and each layer's on its row, with their names; * (the keypad's, or Shift+8) and Composition ▸ Add Marker add one at the current time, to the selected layers or, with none selected, to the composition; a marker drags in time (snapped like a bar), a double-click names it, a click selects it and Delete removes it, each one undo step"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/timeline/Markers.tsx, web/src/timeline/Timeline.tsx, web/src/timeline/Ruler.tsx, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/tests/footage.mjs]
+    gap: "Marker durations, chapters, URLs and cue points are not shown or edited (markers.set keeps them for agents). Gated by web/tests/footage.mjs."
+    cases: []
+    since: "2026-11-23"
