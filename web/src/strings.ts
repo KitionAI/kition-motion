@@ -128,6 +128,16 @@ const enUS: Catalog = {
   "shape.addStroke": "Add stroke",
   "shape.all": "All contents",
   "solid.title": "Solid",
+  "effect.add": "Add effect",
+  "effect.empty": "No effects yet. Add one to blur, glow, colour or distort this layer.",
+  "effect.drag": "Drag to change the order",
+  "effect.enabled": "{name} on or off",
+  "effect.reset": "Reset",
+  "effect.menu": "More",
+  "effect.duplicate": "Duplicate",
+  "effect.moveUp": "Move up",
+  "effect.moveDown": "Move down",
+  "effect.remove": "Remove",
 }
 
 const zhCN: Catalog = {
@@ -257,6 +267,16 @@ const zhCN: Catalog = {
   "shape.addStroke": "添加描边",
   "shape.all": "全部内容",
   "solid.title": "纯色",
+  "effect.add": "添加效果",
+  "effect.empty": "还没有效果。添加一个来模糊、发光、调色或变形此图层。",
+  "effect.drag": "拖动以调整顺序",
+  "effect.enabled": "开启或关闭“{name}”",
+  "effect.reset": "重置",
+  "effect.menu": "更多",
+  "effect.duplicate": "复制",
+  "effect.moveUp": "上移",
+  "effect.moveDown": "下移",
+  "effect.remove": "移除",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }

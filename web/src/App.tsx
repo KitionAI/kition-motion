@@ -337,7 +337,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             {state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : t('noComp')}
           </span>
         }
-        panels={state ? <PropertiesPanel info={state} /> : null}
+        panels={state ? <PropertiesPanel info={state} onAddEffect={() => setFindEffect(true)} /> : null}
       >
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
         {findEffect ? <FindEffectDialog effects={effects} onApply={(effect) => applyEffect(effect.id)} onClose={() => setFindEffect(false)} /> : null}

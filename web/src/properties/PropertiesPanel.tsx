@@ -48,7 +48,7 @@ function TypeSection({ node, layer, focusText, onFocused }: { node: TreeNode; la
  * blending mode and parent; its type's own section (Text, Contents); its effects; Transform; and
  * Masks when it has any. With several layers selected it shows the first, and says so.
  */
-export function PropertiesPanel({ info }: { info: MotionInfo }) {
+export function PropertiesPanel({ info, onAddEffect }: { info: MotionInfo; onAddEffect: () => void }) {
   const { t } = useKitEditor()
   // A viewer sees the values but cannot change them or add keyframes.
   const readOnly = useReadOnly()
@@ -88,7 +88,7 @@ export function PropertiesPanel({ info }: { info: MotionInfo }) {
                 <TypeSection key={node.path} node={node} layer={layer} focusText={fresh === layer.id} onFocused={focused} />
               ))}
             {layer.type === 'Solid' ? <SolidSection /> : null}
-            <EffectsSection layer={layer} group={group('effects')} />
+            <EffectsSection layer={layer} group={group('effects')} onAdd={onAddEffect} />
             {transform ? (
               <Section scope={layer.type} id="transform" title={t('props.transform')} testId="motion-section-transform">
                 <PropertyChildren node={transform} scope={layer.type} depth={0} />

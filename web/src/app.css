@@ -590,14 +590,109 @@
   padding: 0 8px 0 12px;
 }
 
-.motion-effect-params {
-  padding-bottom: 4px;
+/* Effect cards: one per applied effect, in render order. */
+.motion-effect-list-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 8px 0 8px;
 }
 
-.motion-effect-name {
-  margin: 4px 12px;
+.motion-effect-none {
+  margin: 0 4px;
+  font-size: 12px;
+}
+
+.motion-effect-slot[data-drop] {
+  box-shadow: 0 -2px 0 var(--kit-primary);
+}
+
+.motion-effect-slot:empty[data-drop] {
+  height: 2px;
+}
+
+.motion-effect-card {
+  border: 1px solid var(--kit-border);
+  border-radius: var(--kit-radius-control);
+  background: var(--kit-surface);
+  outline: none;
+}
+
+.motion-effect-card[data-selected] {
+  border-color: var(--kit-primary);
+}
+
+.motion-effect-card:focus-visible {
+  box-shadow: 0 0 0 2px var(--kit-primary-soft);
+}
+
+.motion-effect-card[data-enabled='false'] .motion-effect-title {
+  color: var(--kit-text-muted);
+  text-decoration: line-through;
+}
+
+.motion-effect-header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 4px 0 2px;
+}
+
+.motion-effect-grip {
+  display: inline-flex;
+  color: var(--kit-text-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.motion-effect-list-cards[data-dragging] .motion-effect-grip {
+  cursor: grabbing;
+}
+
+.motion-effect-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--kit-text);
   font-size: 12px;
   font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.motion-effect-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.motion-effect-chevron {
+  flex: none;
+  transition: transform 120ms ease;
+}
+
+.motion-effect-toggle[aria-expanded='true'] .motion-effect-chevron {
+  transform: rotate(90deg);
+}
+
+.motion-effect-switch {
+  flex: none;
+  margin: 0 4px;
+}
+
+.motion-effect-body {
+  padding: 0 0 8px;
+}
+
+.motion-effect-body > .motion-props {
+  padding: 0 6px 0 4px;
 }
 
 .kui-spin {
