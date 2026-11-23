@@ -19,8 +19,14 @@ export function useTimeView(rows: RefObject<HTMLDivElement | null>, duration: nu
   const latest = useRef({ view, duration, frame, width })
   latest.current = { view, duration, frame, width }
 
-  /** `next`, or the whole composition when it shows all of it. */
-  const settle = useCallback((next: TimeView) => setStored(next.span >= latest.current.duration - 1e-9 ? null : next), [])
+  /**
+   * `next`, or the whole composition when it shows all of it. The next key press or wheel notch
+   * zooms from `next` even when it comes before React draws it (two quick presses are two steps).
+   */
+  const settle = useCallback((next: TimeView) => {
+    latest.current = { ...latest.current, view: next }
+    setStored(next.span >= latest.current.duration - 1e-9 ? null : next)
+  }, [])
 
   const zoomBy = useCallback(
     (factor: number, anchor?: number) => {
