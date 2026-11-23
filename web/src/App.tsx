@@ -194,6 +194,14 @@ function useSpaceTap(onTap: () => void) {
   }, [])
 }
 
+/** The physical key a held-back key came from (on a US layout), for handlers that read `code`. */
+const CODES: Record<string, string> = { '=': 'Equal', '+': 'Equal', '-': 'Minus', _: 'Minus', '.': 'Period', ',': 'Comma', '[': 'BracketLeft', ']': 'BracketRight', '/': 'Slash', ';': 'Semicolon', "'": 'Quote', '`': 'Backquote', '\\': 'Backslash' }
+function codeOf(key: string) {
+  if (/^[a-z]$/i.test(key)) return `Key${key.toUpperCase()}`
+  if (/^[0-9]$/.test(key)) return `Digit${key}`
+  return CODES[key] ?? ''
+}
+
 /** Commands the editor asks values for in its own dialogs. */
 const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set']
 
@@ -231,7 +239,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     // again at once, for ever).
     window.setTimeout(() => {
       const target = document.activeElement ?? document.body
-      target.dispatchEvent(new KeyboardEvent('keydown', { key, code: /^[a-z]$/i.test(key) ? `Key${key.toUpperCase()}` : '', shiftKey: shift, bubbles: true, cancelable: true }))
+      target.dispatchEvent(new KeyboardEvent('keydown', { key, code: codeOf(key), shiftKey: shift, bubbles: true, cancelable: true }))
     }, 0)
   }
   // Typing ended (Escape, a click elsewhere): the keys are the editor's again (V, T, Space…),
