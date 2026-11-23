@@ -139,8 +139,12 @@ fn tools_handles_scale_and_the_corner_zone_rotates() {
     let mut doc = doc();
     let layer = solid(&mut doc, "Solid");
     click(&mut doc, 960.0, 540.0, ToolMods::default());
-    // The bottom right corner, dragged 100 right: proportional, the top left corner stays.
-    drag(&mut doc, [1060.0, 590.0], [1160.0, 640.0], ToolMods::default());
+    // The bottom right corner, dragged 100 right only: each axis on its own, the height unchanged.
+    drag(&mut doc, [1060.0, 590.0], [1160.0, 590.0], ToolMods::default());
+    assert!(near(&value(&mut doc, layer, "transform/scale"), &[150.0, 100.0]), "{:?}", value(&mut doc, layer, "transform/scale"));
+    doc.execute("edit.undo", json!({})).unwrap();
+    // With Shift, the same corner dragged 100 right and 50 down: proportional, the top left corner stays.
+    drag(&mut doc, [1060.0, 590.0], [1160.0, 640.0], SHIFT);
     assert!(near(&value(&mut doc, layer, "transform/scale"), &[150.0, 150.0]), "{:?}", value(&mut doc, layer, "transform/scale"));
     // Position moves so (860, 490) stays: the anchor (100, 50) at 150 % is 150, 75 from it.
     assert!(near(&value(&mut doc, layer, "transform/position"), &[1010.0, 565.0]), "{:?}", value(&mut doc, layer, "transform/position"));

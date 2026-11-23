@@ -98,19 +98,20 @@ impl MotionDocument {
             self.end_text(st);
         }
         let zoom = st.zoom;
-        // A selected layer's handles and rotation zones first.
-        if !mods.shift {
-            let boxes = selected_boxes(&self.session);
-            for b in boxes.iter().filter(|b| b.flat) {
-                if let Some(handle) = geometry::handle_at(b, p, zoom) {
-                    self.begin_scale(st, b.clone(), handle);
-                    return;
-                }
-            }
-            if let Some(b) = boxes.iter().find(|b| geometry::rotates_at(b, p, zoom)) {
-                self.begin_rotate(st, b.anchor_comp(), p);
+        // A selected layer's handles first (Shift held from the start keeps a corner's
+        // proportions), then, without Shift, its rotation zones.
+        let boxes = selected_boxes(&self.session);
+        for b in boxes.iter().filter(|b| b.flat) {
+            if let Some(handle) = geometry::handle_at(b, p, zoom) {
+                self.begin_scale(st, b.clone(), handle);
                 return;
             }
+        }
+        if !mods.shift
+            && let Some(b) = boxes.iter().find(|b| geometry::rotates_at(b, p, zoom))
+        {
+            self.begin_rotate(st, b.anchor_comp(), p);
+            return;
         }
         let hit = with_ctx(&self.session, |ctx| geometry::pick(ctx, p, &geometry::any_layer)).flatten();
         let selected = self.selected();
@@ -256,12 +257,13 @@ impl MotionDocument {
     }
 
     /// Scales for a handle at `p`: the dragged layer keeps the opposite handle (or with Alt its
-    /// centre) where it was, corners keep the proportions unless Shift is held.
+    /// centre) where it was; a corner scales each axis freely, and keeps the proportions while
+    /// Shift is held.
     fn scale_to(&mut self, s: &Scaling, p: Pt, mods: ToolMods) {
         let Some(at) = s.start.to_layer(p) else { return };
         let bounds = s.start.bounds;
         let fixed = s.handle.fixed(bounds, mods.alt);
-        let f = geometry::scale_factors(s.handle, s.handle.at(bounds), fixed, at, !mods.shift);
+        let f = geometry::scale_factors(s.handle, s.handle.at(bounds), fixed, at, mods.shift);
         let scale = [s.scale[0] * f[0], s.scale[1] * f[1], s.scale[2]];
         self.set_prop(s.start.id, "transform/scale", json!(scale), &s.merge);
         if let Some(shift) = geometry::scale_shift(&s.start.m, &s.parent, s.start.anchor, fixed, f) {

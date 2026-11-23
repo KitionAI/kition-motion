@@ -18,10 +18,39 @@ type Entry = typeof SEPARATOR | readonly [label: string, command: string, shortc
 function rowsOf(path: readonly string[], entries: readonly Entry[]): MenuRow[] {
   return entries.flatMap((entry): MenuRow[] => {
     if (entry === SEPARATOR) return [{ path, label: SEPARATOR, command: SEPARATOR }]
-    const [label, second, shortcut] = entry
+    const [label, second, given] = entry
     if (typeof second !== 'string') return rowsOf([...path, label], second)
+    const shortcut = given ?? SHORTCUT_OVERRIDES[second]
     return [{ path, label, command: second, ...(shortcut ? { shortcut } : {}) }]
   })
+}
+
+/**
+ * Engine commands whose own shortcut a browser or the system takes before the page sees it, with
+ * the one this editor gives them instead (its menus show it, `App` runs it): Cmd+N opens a window
+ * and is Kition's (RESERVED_SHORTCUTS), Cmd+Shift+N a private window, Cmd+Alt+H hides the other
+ * applications on a Mac.
+ */
+export const SHORTCUT_OVERRIDES: Readonly<Record<string, string>> = {
+  'comp.new': 'Cmd+Alt+N',
+  'layer.addMask': 'Cmd+Alt+Shift+N',
+  'keys.toggleHold': 'Cmd+Alt+Shift+H',
+}
+
+/**
+ * Engine commands outside the menus whose own shortcuts work here, each with a visible result:
+ * Alt+Left and Right (with Shift, ten frames) nudge the selected keyframes, Cmd+Up and Down select
+ * the layer above or below, Cmd+Alt+A selects every keyframe of the selected layers.
+ */
+const EXTRA_SHORTCUTS = ['keys.nudgeForward', 'keys.nudgeBackward', 'keys.nudgeForward10', 'keys.nudgeBackward10', 'layer.selectPrevious', 'layer.selectNext', 'keys.selectAll']
+
+/**
+ * The engine commands whose shortcuts the frame runs: the menus' (bar the ones given another
+ * shortcut) and `EXTRA_SHORTCUTS`. Every other engine shortcut does nothing here, since its
+ * command shows no result in this editor or replaces the project (New Project, Cmd+Alt+N).
+ */
+export function shortcutCommands(rows: readonly MenuRow[]): ReadonlySet<string> {
+  return new Set([...rows.map((row) => row.command).filter((command) => !command.startsWith('kit:') && command !== SEPARATOR && !SHORTCUT_OVERRIDES[command]), ...EXTRA_SHORTCUTS])
 }
 
 /** The kit's own rows (`kit:` commands): the editor runs them, not the engine. */

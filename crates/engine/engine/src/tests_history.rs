@@ -237,3 +237,23 @@ fn evicted_branch_parent_does_not_discard_other_reachable_branches() {
     assert_eq!(history.branch_states(), 1);
     assert_eq!(history.tree(&current).len(), 2);
 }
+
+/// Undoing a delete brings the deleted layers back selected, as they were when they went; an
+/// undo that brings no layer back leaves the selection alone.
+#[test]
+fn undoing_a_delete_selects_the_layers_it_brings_back() {
+    let mut s = Session::default();
+    s.execute("comp.new", json!({"name": "U", "width": 64, "height": 64, "duration": 2})).unwrap();
+    solid(&mut s, "A");
+    solid(&mut s, "B");
+    let ids: Vec<_> = s.active_comp().unwrap().layers.iter().map(|l| l.id).collect();
+    s.execute("layer.select", json!({"layers": [ids[0].0]})).unwrap();
+    s.execute("edit.clear", json!({})).unwrap();
+    assert!(s.state.selected_layers.is_empty(), "the deleted layer is no longer selected");
+    s.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(s.state.selected_layers, vec![ids[0]], "the layer brought back is selected");
+    s.execute("layer.select", json!({"layers": [ids[1].0]})).unwrap();
+    s.execute("layer.rename", json!({"layer": ids[1].0, "name": "Renamed"})).unwrap();
+    s.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(s.state.selected_layers, vec![ids[1]], "an undo that brings no layer back keeps the selection");
+}

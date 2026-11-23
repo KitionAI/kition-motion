@@ -116,14 +116,22 @@ fn lend(pool: &MediaPool, path: &str) -> Result<Arc<[u8]>, String> {
 }
 
 /// Import through the host: the file is lent to the pool, then probed from memory.
+/// Video codecs the media crates name but cannot decode: their movies would draw black.
+const UNDECODED_CODECS: [&str; 1] = ["VP8"];
+
 struct LentImporter {
     pool: Arc<MediaPool>,
 }
 
 impl Importer for LentImporter {
+    /// A movie whose pictures no decoder here reads (VP8) is refused, not imported to draw black.
     fn probe(&self, path: &str) -> Result<Footage, String> {
         let bytes = lend(&self.pool, path)?;
-        kition_motion_media::probe_bytes(path, bytes).map_err(|error| error.to_string())
+        let footage = kition_motion_media::probe_bytes(path, bytes).map_err(|error| error.to_string())?;
+        if footage.has_video && UNDECODED_CODECS.iter().any(|codec| footage.codec.eq_ignore_ascii_case(codec)) {
+            return Err(format!("{} video cannot be decoded; convert it to VP9 or H.264 and import that", footage.codec));
+        }
+        Ok(footage)
     }
 
     fn register(&self, path: &str, data: &[u8]) {
@@ -328,6 +336,30 @@ impl MotionDocument {
         serde_json::to_string(&values).map_err(|error| error.to_string())
     }
 
+    /// The active composition's sound from `from` seconds for `seconds` (at most
+    /// [`MAX_AUDIO_SECONDS`]) at `rate` Hz, stereo and interleaved (L R L R …): what preview
+    /// playback plays. Empty when the composition has nothing audible.
+    pub fn mix_audio(&self, from: f64, seconds: f64, rate: u32) -> Result<Vec<f32>, String> {
+        let comp = self.session.active_comp_id().ok_or("no composition is open")?;
+        if !from.is_finite() || !seconds.is_finite() || seconds <= 0.0 || !(8_000..=192_000).contains(&rate) {
+            return Err("from and seconds must be numbers, seconds above 0, and the rate 8000 to 192000 Hz".to_owned());
+        }
+        if !kition_motion_engine::render::audio::comp_has_audio(&self.session.project, comp) {
+            return Ok(Vec::new());
+        }
+        let frames = (seconds.min(MAX_AUDIO_SECONDS) * f64::from(rate)).round() as usize;
+        let start = Tick::from_seconds_f64(from.max(0.0));
+        Ok(kition_motion_engine::render::audio::mix_comp(
+            &self.session.project,
+            &*self.session.footage,
+            self.session.expr.as_deref(),
+            comp,
+            start,
+            frames,
+            rate,
+        ))
+    }
+
     /// Takes a file the engine wrote (an export) out of memory; the host saves it.
     pub fn take_file(&self, path: &str) -> Option<Vec<u8>> {
         if path == self.name {
@@ -350,6 +382,9 @@ pub const EDITOR_STATE: &[&str] = &["/time", "/info/transform", "selected"];
 
 /// The most samples [`MotionDocument::curve_samples`] takes per call.
 pub const MAX_SAMPLES: u32 = 2000;
+
+/// The longest stretch of sound [`MotionDocument::mix_audio`] mixes per call, in seconds.
+pub const MAX_AUDIO_SECONDS: f64 = 10.0;
 
 /// The command the agent's `<prefix>_export` runs (KHP A41, kition-kits `KitExport`): the active
 /// composition as an MP4, its bytes in the answer (base64 `data`), so no path reaches the engine
@@ -1021,6 +1056,12 @@ pub mod web {
                 return Err(JsError::new("the layer must be a layer id"));
             }
             self.0.curve_samples(layer as u64, path, from, to, count).map_err(|message| JsError::new(&message))
+        }
+
+        /// The active composition's sound over a stretch of time (see [`MotionDocument::mix_audio`]).
+        #[wasm_bindgen(js_name = mixAudio)]
+        pub fn mix_audio(&self, from: f64, seconds: f64, rate: u32) -> Result<Vec<f32>, JsError> {
+            self.0.mix_audio(from, seconds, rate).map_err(|message| JsError::new(&message))
         }
 
         /// The active composition rendered as a movie named `path` (see [`MotionDocument::render_movie`]).

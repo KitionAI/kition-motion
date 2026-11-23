@@ -69,7 +69,9 @@ export function useFootage({ host, run, t }: { host: HostConnection; run: (comma
       for (const error of answer.errors ?? []) {
         const name = names.find((each) => error.includes(each)) ?? error.split(':')[0]
         const known = IMPORT_TYPES.includes(extension(name))
-        toast.error(t(known ? 'import.unreadable' : 'import.unsupported', { name }), { description: error })
+        // A movie in a codec the build names but cannot decode (VP8) says so, with what to do.
+        const codec = /cannot be decoded/.test(error) ? /\b(VP8)\b/.exec(error)?.[1] : undefined
+        toast.error(t(codec ? 'import.codec' : known ? 'import.unreadable' : 'import.unsupported', { name, codec: codec ?? '' }), { description: error })
       }
       if (placement) for (const item of items) await run('layer.addItem', { item, ...placement })
       if (items.length) toast.success(items.length === 1 ? t('import.done', { name: names[0] }) : t('import.doneMany', { count: items.length }))

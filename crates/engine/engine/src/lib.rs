@@ -745,12 +745,14 @@ impl Session {
         let Some((label, p)) = self.history.undo.pop() else { return false };
         let steps = self.history.kdm.take_undo(&p);
         let floor = self.project.next_id;
+        let before = self.active_layer_ids();
         let cur = std::mem::replace(&mut self.project, p);
         self.history.kdm.set_redo(&cur, steps);
         self.history.redo.push((label, cur));
         self.history.merge_key = None;
         self.step_kdm(steps, true, floor);
         self.sanitize_state();
+        self.select_returned_layers(&before);
         self.bump();
         true
     }
@@ -763,14 +765,35 @@ impl Session {
         let Some((label, p)) = self.history.redo.pop() else { return false };
         let steps = self.history.kdm.take_redo(&p);
         let floor = self.project.next_id;
+        let before = self.active_layer_ids();
         let cur = std::mem::replace(&mut self.project, p);
         self.history.kdm.set_undo(&cur, steps);
         self.history.undo.push((label, cur));
         self.history.merge_key = None;
         self.step_kdm(steps, false, floor);
         self.sanitize_state();
+        self.select_returned_layers(&before);
         self.bump();
         true
+    }
+
+    /// The active composition and its layers, by id.
+    fn active_layer_ids(&self) -> (Option<ItemId>, Vec<LayerId>) {
+        (self.active_comp_id(), self.active_comp().map(|c| c.layers.iter().map(|l| l.id).collect()).unwrap_or_default())
+    }
+
+    /// After an undo or redo, the layers it brought back into the active composition (a deleted
+    /// layer restored, a made one made again) are the selection, as they were when they went.
+    /// Nothing changes when the step changed which composition is active.
+    fn select_returned_layers(&mut self, before: &(Option<ItemId>, Vec<LayerId>)) {
+        let (comp, layers) = self.active_layer_ids();
+        if comp.is_none() || comp != before.0 {
+            return;
+        }
+        let returned: Vec<LayerId> = layers.into_iter().filter(|id| !before.1.contains(id)).collect();
+        if !returned.is_empty() {
+            self.state.selected_layers = returned;
+        }
     }
 
     /// Drop selections that no longer exist.

@@ -189,12 +189,19 @@ try {
   await until(async () => nearAll(await value(rect.id, 'transform/position'), [850, 200]))
   step('each nudge is one undo step', nearAll(await value(rect.id, 'transform/position'), [850, 200]), JSON.stringify(await value(rect.id, 'transform/position')))
 
-  // 5. Scaling by a handle: the bottom right corner keeps the proportions and the top left corner.
-  await drag([1000, 300], [1150, 400], { held: [primary] })
+  // 5. Scaling by a handle: the bottom right corner scales each axis freely, and with Shift keeps
+  // the proportions; the top left corner stays.
+  await drag([1000, 300], [1150, 300], { held: [primary] })
+  const free = await value(rect.id, 'transform/scale')
+  step('a corner handle scales each axis freely', near(free[0], 150, 2) && near(free[1], 100, 1), JSON.stringify(free))
+  await undo()
+  await until(async () => nearAll(await value(rect.id, 'transform/scale'), [100, 100]))
+  await drag([1000, 300], [1150, 330], { held: [primary, 'Shift'] })
   const scaled = await value(rect.id, 'transform/scale')
-  step('a corner handle scales proportionally', near(scaled[0], scaled[1], 0.5) && near(scaled[0], 150, 2), JSON.stringify(scaled))
+  step('Shift keeps a corner handle proportional', near(scaled[0], scaled[1], 0.5) && scaled[0] > 120 && scaled[0] < 148, JSON.stringify(scaled))
   const corner = await value(rect.id, 'transform/position')
-  step('the opposite corner stays where it was', nearAll([corner[0] - 1.5 * 150, corner[1] - 1.5 * 100], [700, 100], 2), JSON.stringify(corner))
+  const factor = scaled[0] / 100
+  step('the opposite corner stays where it was', nearAll([corner[0] - factor * 150, corner[1] - factor * 100], [700, 100], 2), JSON.stringify(corner))
   if (shots) {
     await drag([700 + 450, 100 + 300], [1180, 430], { held: [primary] })
     await page.screenshot({ path: `${shots}phase2-scaling.png` })

@@ -25,7 +25,7 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, KIT, MOTION_PRIMARY, VIEW_MENUS, hiddenRow, menuRows } from './menus'
+import { ARRANGE, KIT, MOTION_PRIMARY, SHORTCUT_OVERRIDES, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -84,7 +84,63 @@ function usePlayback(run: (command: string, params: Record<string, unknown>) => 
       stopped = true
     }
   }, [playing, run, stop])
-  return { playing, toggle, stop }
+  return { playing, toggle, stop, origin }
+}
+
+/** How much sound (seconds) preview playback asks the engine for at a time, and how far ahead it keeps. */
+const AUDIO_CHUNK = 1
+const AUDIO_AHEAD = 2
+
+/**
+ * The composition's sound while it plays: the engine mixes it (`mixAudio`, every audible layer
+ * with its levels) a second at a time, a little ahead, and the page plays it from the time
+ * playback started, against the same clock. Nothing is asked for again once the engine answers
+ * that nothing is audible. `scheduled` counts the stretches handed to the speakers (the footage
+ * test reads it from the workspace's `data-audio`).
+ */
+function usePreviewAudio(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, playing: boolean, from: number | null, duration: number, scheduled: (count: number) => void) {
+  useEffect(() => {
+    if (!playing || !doc || from === null || typeof AudioContext === 'undefined') return undefined
+    const context = new AudioContext()
+    const started = context.currentTime
+    let stopped = false
+    let mixed = 0
+    let count = 0
+    const pump = async () => {
+      while (!stopped && from + mixed < duration - 1e-6) {
+        if (mixed - (context.currentTime - started) > AUDIO_AHEAD) {
+          await new Promise((resolve) => window.setTimeout(resolve, 200))
+          continue
+        }
+        const length = Math.min(AUDIO_CHUNK, duration - (from + mixed))
+        const samples = await doc.invoke<Float32Array>('mixAudio', from + mixed, length, context.sampleRate).catch(() => null)
+        if (stopped || !samples?.length) return
+        const frames = Math.floor(samples.length / 2)
+        const buffer = context.createBuffer(2, frames, context.sampleRate)
+        const left = buffer.getChannelData(0)
+        const right = buffer.getChannelData(1)
+        for (let index = 0; index < frames; index += 1) {
+          left[index] = samples[index * 2]
+          right[index] = samples[index * 2 + 1]
+        }
+        const source = context.createBufferSource()
+        source.buffer = buffer
+        source.connect(context.destination)
+        // A stretch that arrives late starts part of the way in, so the sound keeps to the picture.
+        const at = started + mixed
+        const late = Math.max(0, context.currentTime - at)
+        if (late < length) source.start(Math.max(at, context.currentTime), late)
+        mixed += length
+        count += 1
+        scheduled(count)
+      }
+    }
+    void pump()
+    return () => {
+      stopped = true
+      void context.close()
+    }
+  }, [doc, playing, from, duration, scheduled])
 }
 
 /** One step of View ▸ Zoom In or Zoom Out, as the frame's Cmd+= and Cmd+-. */
@@ -188,8 +244,12 @@ function codeOf(key: string) {
 /** A time as a file name can have it: `0-00-01-12`. */
 const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).replace(/:/g, '-')
 
-/** Commands the editor asks values for in its own dialogs. */
-const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity']
+/**
+ * Commands whose shortcuts the editor runs itself rather than the frame running the engine's: the
+ * ones it asks values for in its own dialogs, Pre-compose (which then offers to open the new
+ * composition), and the ones given another shortcut (`SHORTCUT_OVERRIDES`).
+ */
+const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', ...Object.keys(SHORTCUT_OVERRIDES)]
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -282,6 +342,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const runQuietly = session.run
   const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0)
   useSpaceTap(playback.toggle)
+  const audioCount = useCallback((count: number) => workspace.current?.setAttribute('data-audio', String(count)), [])
+  usePreviewAudio(session.doc, playback.playing, playback.playing ? (playback.origin.current?.time ?? null) : null, state?.comp?.duration ?? 0, audioCount)
   const [exporting, setExporting] = useState(false)
   const project = useProjectPanel()
   const seek = useCallback((seconds: number) => void runQuietly('time.set', { time: Math.max(0, seconds) }).catch(() => undefined), [runQuietly])
@@ -454,17 +516,20 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1 }, editor.enabled('keys.interpolation'))
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(() => menuRows(effects), [effects])
+  // Only the menus' engine commands (and a few more) run from their shortcuts.
+  const allowed = useMemo(() => shortcutCommands(rows), [rows])
+  const hiddenCommands = useCallback((command: string) => !allowed.has(command), [allowed])
   const wholeWorkArea = hiding.key.includes('comp.trimToWorkArea')
   // Home first (its own ribbon; a drop-down panel in Menus), then the editor's menus.
   const tabs = useMemo<FrameTab[]>(
     () => [
-      { id: 'home', label: t('homeTab'), ribbon: <HomeTab onCommand={dispatch} wholeWorkArea={wholeWorkArea} lastEffect={lastEffect} /> },
+      { id: 'home', label: t('homeTab'), ribbon: <HomeTab info={state} onCommand={dispatch} wholeWorkArea={wholeWorkArea} lastEffect={lastEffect} /> },
       ...catalogTabs(rows, { phrase, view: VIEW_MENUS, primary: MOTION_PRIMARY, hidden, onCommand: dispatch, onKitCommand: dispatch }).map((tab) =>
         // The Effect tab's ribbon: a drop-down per category rather than a button per effect.
         tab.id === 'Effect' ? { ...tab, ribbon: <EffectRibbon effects={effects} onCommand={dispatch} lastEffect={lastEffect} /> } : tab,
       ),
     ],
-    [dispatch, effects, hidden, lastEffect, phrase, rows, t, wholeWorkArea],
+    [dispatch, effects, hidden, lastEffect, phrase, rows, t, wholeWorkArea, state],
   )
 
   // The timeline's own keys (Delete, Cmd+D, …) come first.
@@ -484,9 +549,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       void editor.run('layer.nudge', { x: arrow[0] * by, y: arrow[1] * by })
       return true
     }
-    // The commands the editor asks values for take their menu shortcuts here (Cmd+N, Cmd+K, Cmd+Y…), before the engine would run them without.
-    for (const id of DIALOG_COMMANDS) {
-      const shortcut = editor.byId.get(id)?.shortcut
+    // The editor's own commands take their menu shortcuts here (Cmd+Alt+N, Cmd+K, Cmd+Y…), before the engine would run them without values.
+    for (const id of OWN_SHORTCUTS) {
+      const shortcut = SHORTCUT_OVERRIDES[id] ?? editor.byId.get(id)?.shortcut
       if (shortcut && shortcutMatches(shortcut, event) && (editor.enabled(id) || id === 'comp.new')) {
         if (!host.readOnly || id === 'time.set') dispatch(id)
         return true
@@ -550,6 +615,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         rail={<EngineToolRail />}
         zoom={zoom}
         onKeyDown={keyDown}
+        hiddenCommands={hiddenCommands}
         status={
           <span data-testid="motion-status">
             {state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : t('noComp')}
