@@ -153,7 +153,9 @@
   position: relative;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  /* A keyframe on the first or last frame shows whole, half over the track's edge. */
+  overflow: clip;
+  overflow-clip-margin: 7px;
 }
 
 .motion-bar {
@@ -211,14 +213,42 @@
 }
 
 .motion-key {
-  position: absolute;
+  z-index: 1;
   pointer-events: none;
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--kit-primary);
-  background: var(--kit-surface);
-  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* A twirl: shows or hides a layer's properties, or a group's. */
+.motion-twirl {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kit-text-muted);
+  cursor: pointer;
+}
+
+/* A property row under a twirled-open layer. */
+.motion-prop-row {
+  height: 26px;
+}
+
+.motion-prop-names {
+  gap: 4px;
+}
+
+.motion-prop-label {
+  flex: 1;
+  min-width: 60px;
+  color: var(--kit-text-muted);
+}
+
+.motion-prop-names .motion-prop-values {
+  flex: 0 0 132px;
 }
 
 .motion-empty {

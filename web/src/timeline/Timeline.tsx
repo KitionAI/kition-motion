@@ -4,8 +4,12 @@ import type { MotionInfo, MotionLayer } from '../motion'
 import { TimelineContext, type TimelineFrame } from './context'
 import { LayerBar } from './LayerBar'
 import { LayerMenu, type LayerMenuTarget } from './LayerMenu'
+import { KeyMark } from './KeyMark'
+import { layerKeyMarks } from './keys'
 import { LayerNames } from './LayerNames'
+import { PropertyRows } from './PropertyRows'
 import { Ruler } from './Ruler'
+import { SOLO_PATHS, type Twirl } from './tree'
 import { useRowDrag } from './useRowDrag'
 import { leftOf, type TimeView } from './view'
 
@@ -46,19 +50,62 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
   const rowDrag = useRowDrag(rows, order)
   const frame = useMemo<TimelineFrame>(() => ({ info, view, width, readOnly }), [info, view, width, readOnly])
   const selected = info.layers.filter((layer) => layer.selected).map((layer) => layer.id)
+  // Which layers are twirled open and how, and per layer the groups the person opened or closed.
+  const [twirls, setTwirls] = useState<ReadonlyMap<number, Twirl>>(new Map())
+  const [toggled, setToggled] = useState<ReadonlyMap<number, ReadonlySet<string>>>(new Map())
+  const noKeys = useMemo(() => new Set<string>(), [])
+
+  const twirl = (layer: number) =>
+    setTwirls((current) => {
+      const next = new Map(current)
+      if (next.has(layer)) next.delete(layer)
+      else next.set(layer, { kind: 'tree' })
+      return next
+    })
+  const toggleGroup = (layer: number, path: string) =>
+    setToggled((current) => {
+      const next = new Map(current)
+      const paths = new Set(next.get(layer))
+      if (paths.has(path)) paths.delete(path)
+      else paths.add(path)
+      return next.set(layer, paths)
+    })
+  /** U, P, S, R, T: the selected layers (all, with none selected) show only those properties; the same key again closes them. */
+  const solo = (key: string, paths: Twirl & { kind: 'only' }) => {
+    const targets = selected.length ? selected : order
+    setTwirls((current) => {
+      const next = new Map(current)
+      const again = targets.every((layer) => {
+        const shown = current.get(layer)
+        return shown?.kind === 'only' && shown.key === key
+      })
+      for (const layer of targets) {
+        if (again) next.delete(layer)
+        else next.set(layer, paths)
+      }
+      return next
+    })
+  }
 
   keys.current = (event) => {
     const command = event.metaKey || event.ctrlKey
     const plain = !command && !event.altKey && !event.shiftKey
-    if (readOnly) return false
     // Delete, or Backspace (the Mac's delete key): the selected keyframes, else the selected layers.
     if (plain && (event.key === 'Delete' || event.key === 'Backspace')) {
-      if (!selected.length) return false
+      if (readOnly || !selected.length) return false
       void run('edit.clear', {})
       return true
     }
+    if (plain && event.code === 'KeyU') {
+      solo('KeyU', { kind: 'only', key: 'KeyU', paths: 'animated' })
+      return true
+    }
+    if (plain && SOLO_PATHS[event.code]) {
+      solo(event.code, { kind: 'only', key: event.code, paths: SOLO_PATHS[event.code] })
+      return true
+    }
     if (command && !event.altKey && !event.shiftKey && event.code === 'KeyD') {
-      if (selected.length) void run('edit.duplicate', { layers: selected })
+      if (!readOnly && selected.length) void run('edit.duplicate', { layers: selected })
       return true
     }
     return false
@@ -93,6 +140,8 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
                 <div className="motion-row" data-selected={layer.selected} data-testid={`motion-layer-${layer.id}`}>
                   <LayerNames
                     layer={layer}
+                    open={twirls.has(layer.id)}
+                    onTwirl={() => twirl(layer.id)}
                     renaming={renaming === layer.id}
                     onRename={() => setRenaming(layer.id)}
                     onRenameDone={(name) => {
@@ -118,14 +167,14 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
                     }}
                   >
                     <LayerBar layer={layer} shift={shift} onShift={setShift} />
-                    {layer.animated.flatMap((property) =>
-                      property.times.map((time) => (
-                        <span key={`${property.path}-${time}`} className="motion-key" style={{ left: leftOf(view, time) }} title={`${property.name} ${time.toFixed(2)}s`} data-testid="motion-key" />
-                      )),
-                    )}
+                    {/* A collapsed layer keeps its keyframes on its own row; twirled open, its property rows show them. */}
+                    {twirls.has(layer.id) ? null : layerKeyMarks(layer).map((mark) => <KeyMark key={mark.time} time={mark.time} keys={mark.keys} selected={noKeys} label={layer.name} row={String(layer.id)} />)}
                     <span className="motion-playhead" style={{ left: leftOf(view, info.time) }} aria-hidden="true" />
                   </div>
                 </div>
+                {twirls.has(layer.id) ? (
+                  <PropertyRows layer={layer} twirl={twirls.get(layer.id) ?? { kind: 'tree' }} toggled={toggled.get(layer.id) ?? noKeys} onToggle={(path) => toggleGroup(layer.id, path)} selected={noKeys} />
+                ) : null}
               </div>
             ))
           ) : (

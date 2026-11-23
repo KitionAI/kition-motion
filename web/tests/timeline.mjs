@@ -164,6 +164,46 @@ try {
   await page.mouse.click(rows.x + rows.width - 40, rows.y + rows.height - 6)
   await until(async () => (await layers()).every((each) => !each.selected))
   step('a click on empty timeline deselects', (await layers()).every((each) => !each.selected))
+
+  // 3. Twirl-down: the property tree, values, add key, U and P.
+  await open()
+  await kit.getByTestId(`motion-twirl-layer-${SHAPE}`).click()
+  await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).waitFor()
+  const tree = {
+    transform: await kit.getByTestId(`motion-group-${SHAPE}-transform`).count(),
+    position: await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).count(),
+    orientation: await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.orientation`).count(),
+    material: await kit.getByTestId(`motion-group-${SHAPE}-materialOptions`).count(),
+    keys: await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).locator('.motion-key').count(),
+  }
+  step('the twirl shows Transform open, no 3D-only rows on a 2D layer, and the keyframes on the property row', tree.transform === 1 && tree.position === 1 && tree.orientation === 0 && tree.material === 0 && tree.keys === 2, JSON.stringify(tree))
+  await kit.getByTestId(`motion-row-add-key-${SHAPE}-transform.scale`).click()
+  await until(async () => (await times(SHAPE, 'transform/scale')).length === 1)
+  step('the diamond on a property row adds a keyframe at the current time', near((await times(SHAPE, 'transform/scale'))[0] ?? -1, 0))
+  await kit.getByTestId(`motion-row-value-${SHAPE}-transform.rotation-0`).fill('45')
+  await kit.getByTestId(`motion-row-value-${SHAPE}-transform.rotation-0`).press('Enter')
+  await until(async () => (await query('prop.get', { layer: SHAPE, path: 'transform/rotation' })).value === 45)
+  step('a property row edits its value', (await query('prop.get', { layer: SHAPE, path: 'transform/rotation' })).value === 45)
+  await kit.getByTestId(`motion-twirl-${SHAPE}-transform`).click()
+  await until(async () => (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).count()) === 0)
+  step('a group closes', (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).count()) === 0)
+  await kit.getByTestId(`motion-name-${SHAPE}`).click()
+  await until(async () => (await layer(SHAPE)).selected)
+  await page.keyboard.press('u')
+  await until(async () => (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).count()) === 1)
+  const animated = {
+    position: await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).count(),
+    scale: await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.scale`).count(),
+    anchor: await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.anchor`).count(),
+    groups: await kit.getByTestId(`motion-layer-block-${SHAPE}`).locator('[data-testid^="motion-group-"]').count(),
+  }
+  step('U shows only the animated properties of the selected layer', animated.position === 1 && animated.scale === 1 && animated.anchor === 0 && animated.groups === 0, JSON.stringify(animated))
+  await page.keyboard.press('p')
+  await until(async () => (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.scale`).count()) === 0)
+  step('P shows only Position', (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).count()) === 1 && (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.scale`).count()) === 0)
+  await page.keyboard.press('p')
+  await until(async () => (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).count()) === 0)
+  step('P again closes it', (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).count()) === 0)
 } catch (error) {
   failures += 1
   console.log(`FAIL ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`)

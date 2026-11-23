@@ -40,6 +40,7 @@ const enUS: Catalog = {
   "switch.video": "Show or hide the layer",
   "switch.solo": "Solo",
   "switch.lock": "Lock",
+  "twirl": "Show or hide the properties of {name}",
 }
 
 const zhCN: Catalog = {
@@ -81,6 +82,7 @@ const zhCN: Catalog = {
   "switch.video": "显示或隐藏图层",
   "switch.solo": "独奏",
   "switch.lock": "锁定",
+  "twirl": "显示或隐藏“{name}”的属性",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }

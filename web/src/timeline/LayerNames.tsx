@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { CircleDotIcon as Solo, LockIcon as Lock, LockOpenIcon as Unlock } from '@kition/tessera/icons/react'
+import { ChevronDownIcon as Open, ChevronRightIcon as Closed, CircleDotIcon as Solo, LockIcon as Lock, LockOpenIcon as Unlock } from '@kition/tessera/icons/react'
 import { EyeButton, IconButton, RenameField, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
 import { useTimeline } from './context'
@@ -8,13 +8,16 @@ import { useTimeline } from './context'
 const CLICK_SLOP = 4
 
 /**
- * A layer's cells left of its track: the eye, solo and lock switches, its number, and its name.
+ * A layer's cells left of its track: the eye, solo and lock switches, the twirl that shows its
+ * properties under it, its number, and its name.
  * A click selects the layer (Shift or Cmd adds it); a vertical drag reorders it (`onDrag`, with
  * the pointer's y and whether it ended); a double-click renames it in place (Enter commits, Escape
  * cancels); a right-click opens the layer menu.
  */
 export function LayerNames({
   layer,
+  open,
+  onTwirl,
   renaming,
   onRenameDone,
   onRename,
@@ -23,6 +26,8 @@ export function LayerNames({
   onMenu,
 }: {
   layer: MotionLayer
+  open: boolean
+  onTwirl: () => void
   renaming: boolean
   onRename: () => void
   onRenameDone: (name: string | null) => void
@@ -92,6 +97,18 @@ export function LayerNames({
           data-testid={`motion-switch-lock-${layer.id}`}
         />
       </span>
+      <button
+        type="button"
+        className="motion-twirl"
+        aria-expanded={open}
+        aria-label={t('twirl', { name: layer.name })}
+        onPointerDown={(event) => event.stopPropagation()}
+        onDoubleClick={(event) => event.stopPropagation()}
+        onClick={onTwirl}
+        data-testid={`motion-twirl-layer-${layer.id}`}
+      >
+        {open ? <Open size={12} aria-hidden="true" /> : <Closed size={12} aria-hidden="true" />}
+      </button>
       <span className="motion-row-index kui-muted">{layer.index}</span>
       {renaming ? (
         <RenameField value={text} label={t('layerMenu.rename')} onChange={setText} onDone={(commit) => onRenameDone(commit ? text : null)} testId={`motion-rename-${layer.id}`} />
