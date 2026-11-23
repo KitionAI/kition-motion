@@ -21,7 +21,7 @@ export function KeyMark({ time, keys, selected, label, row }: { time: number; ke
       data-shape="diamond"
       data-keys={JSON.stringify(keys)}
       style={{ left: leftOf(view, time) }}
-      data-testid={`motion-key-${row}-${Math.round(time * 1000)}`}
+      data-testid={`motion-key-${row}-${Math.round((keys[0]?.time ?? time) * 1000)}`}
     />
   )
 }

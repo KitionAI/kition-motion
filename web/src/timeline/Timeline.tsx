@@ -201,7 +201,12 @@ export function Timeline({ info, onSeek, keys }: { info: MotionInfo; onSeek: (se
                   >
                     <LayerBar layer={layer} shift={shift} onShift={setShift} />
                     {/* A collapsed layer keeps its keyframes on its own row; twirled open, its property rows show them. */}
-                    {twirls.has(layer.id) ? null : layerKeyMarks(layer).map((mark) => <KeyMark key={mark.time} time={mark.time} keys={mark.keys} selected={selectedKeys} label={layer.name} row={String(layer.id)} />)}
+                    {twirls.has(layer.id)
+                      ? null
+                      : layerKeyMarks(layer).map((mark) => (
+                          // While its bar is dragged, a layer's keyframes travel with it.
+                          <KeyMark key={mark.time} time={mark.time + (shift?.layers.includes(layer.id) ? shift.delta : 0)} keys={mark.keys} selected={selectedKeys} label={layer.name} row={String(layer.id)} />
+                        ))}
                     <span className="motion-playhead" style={{ left: leftOf(view, info.time) }} aria-hidden="true" />
                   </div>
                 </div>
