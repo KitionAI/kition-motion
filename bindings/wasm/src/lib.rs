@@ -39,6 +39,7 @@ mod rest_visual;
 mod rests;
 mod state_members;
 pub mod text;
+mod tools;
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -954,6 +955,7 @@ fn output_schema(id: &str, mutates: bool) -> Option<serde_json::Value> {
 }
 
 kition_kit::export_kit_document!(MotionDocument as "MotionDocument");
+kition_kit::export_kit_tools!(MotionDocument as "MotionDocument");
 
 /// Adds a font file's faces for text the bundled faces do not cover, such as Chinese in a web
 /// build, which has no system fonts (standard E9): text layers fall back to them. Returns the

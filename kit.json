@@ -46,7 +46,8 @@
   "capabilities": [
     "lent-files",
     "timeline",
-    "kdm"
+    "kdm",
+    "engine-tools"
   ],
   "extras": {
     "takeFile": {
