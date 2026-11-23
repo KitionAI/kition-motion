@@ -10,5 +10,5 @@ await runModeSmoke({
   config: new URL('../vite.config.ts', import.meta.url).pathname,
   browser: process.argv[2] === 'webkit' ? webkit : chromium,
   createServer,
-  line: { tab: 'home', min: 5, primary: ['motion-home-new-layer', 'motion-cmd-layer.newText', 'motion-cmd-layer.newShape', 'motion-cmd-anim.addKeyframe', 'motion-home-effects', 'motion-cmd-comp.settings'] },
+  line: { tab: 'home', min: 5, primary: ['motion-home-new-layer', 'motion-cmd-layer.newText', 'motion-cmd-layer.newShape', 'motion-home-add-key', 'motion-home-effects', 'motion-cmd-comp.settings'] },
 })
