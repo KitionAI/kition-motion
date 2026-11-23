@@ -32,6 +32,7 @@ export const KIT = {
   arrangeBackward: 'kit:arrange-backward',
   arrangeBack: 'kit:arrange-back',
   saveFrame: 'kit:save-frame',
+  addMarker: 'kit:add-marker',
   projectPanel: 'kit:project-panel',
 } as const
 
@@ -80,6 +81,8 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
       ['Composition Settings…', 'comp.settings'],
       SEPARATOR,
       ['Play / Pause', 'playback.toggle', 'Space'],
+      SEPARATOR,
+      ['Add Marker', KIT.addMarker, '*'],
       SEPARATOR,
       ['Trim Comp to Work Area', 'comp.trimToWorkArea'],
       ['Crop Comp to Selected Layer(s) Bounds', 'comp.cropToLayerBounds'],
@@ -185,7 +188,7 @@ export const VIEW_MENUS = ['View']
 export const MOTION_PRIMARY: Record<string, readonly string[]> = {
   File: ['file.import', 'file.exportMovie', KIT.saveFrame],
   Edit: ['edit.undo', 'edit.redo', 'edit.cut', 'edit.copy', 'edit.paste', 'edit.duplicate', 'edit.splitLayer', 'edit.clear'],
-  Composition: ['comp.new', 'comp.settings', 'playback.toggle', 'comp.trimToWorkArea'],
+  Composition: ['comp.new', 'comp.settings', 'playback.toggle', KIT.addMarker, 'comp.trimToWorkArea'],
   Layer: ['layer.newText', 'layer.newSolid', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment', 'layer.precompose', 'layer.addMask'],
   Effect: ['kit:find-effect', 'effect.applyLast'],
   Animation: ['keys.easyEase', 'keys.toggleHold'],

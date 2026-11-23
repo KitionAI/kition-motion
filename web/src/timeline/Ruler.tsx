@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { useKitEditor } from '@kition/sdk/editor'
 import { snapIn, useTimeline } from './context'
 import { leftOf, rulerLabel, rulerStep, timeAtX } from './view'
@@ -10,7 +10,7 @@ type Edge = 'start' | 'end'
  * in), the work area as a band whose ends drag (snapped like a bar's, set on release), and the
  * playhead. A press or drag elsewhere scrubs the current time.
  */
-export function Ruler({ onSeek, onWorkArea, rulerRef }: { onSeek: (seconds: number) => void; onWorkArea: (start: number, end: number) => void; rulerRef: (element: HTMLDivElement | null) => void }) {
+export function Ruler({ onSeek, onWorkArea, rulerRef, children }: { onSeek: (seconds: number) => void; onWorkArea: (start: number, end: number) => void; rulerRef: (element: HTMLDivElement | null) => void; children?: ReactNode }) {
   const frame = useTimeline()
   const { info, view, width, readOnly } = frame
   const { t } = useKitEditor()
@@ -86,6 +86,8 @@ export function Ruler({ onSeek, onWorkArea, rulerRef }: { onSeek: (seconds: numb
       ))}
       <span className="motion-work-handle" data-edge="start" style={{ left: leftOf(view, area[0]) }} title={t('workAreaStart')} {...handle('start')} data-testid="motion-work-start" />
       <span className="motion-work-handle" data-edge="end" style={{ left: leftOf(view, area[1]) }} title={t('workAreaEnd')} {...handle('end')} data-testid="motion-work-end" />
+      {/* The composition's markers. */}
+      {children}
       <span className="motion-playhead" style={{ left: leftOf(view, info.time) }} aria-hidden="true" />
     </div>
   )

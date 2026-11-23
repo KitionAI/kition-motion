@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react'
 import { Scrollbar } from '@kition/tessera/ui'
-import { useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
+import { Button, Dialog, TextInput, useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
 import { TimelineContext, type TimelineFrame } from './context'
 import { LayerBar } from './LayerBar'
@@ -8,6 +8,7 @@ import { LayerMenu, type LayerMenuTarget } from './LayerMenu'
 import { KeyMark } from './KeyMark'
 import { keyId, layerKeyMarks, type SelectedKey } from './keys'
 import { LayerNames } from './LayerNames'
+import { MarkerFlags, markerParams, type MarkerRef } from './Markers'
 import { PropertyRows } from './PropertyRows'
 import { Ruler } from './Ruler'
 import { SOLO_PATHS, type Twirl } from './tree'
@@ -66,6 +67,11 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
   const gestures = useKeyGestures(rows, frame, selectedKeys)
   /** Whether Cmd+V pastes keyframes: the last Cmd+C copied some. */
   const copiedKeys = useRef(false)
+  // The marker clicked last (Delete removes it), and the one being renamed.
+  const [marker, setMarker] = useState<MarkerRef | null>(null)
+  const [naming, setNaming] = useState<{ marker: MarkerRef; comment: string } | null>(null)
+  const markerFlags = (layer: number | null) => <MarkerFlags layer={layer} selected={marker} onSelect={setMarker} onRename={(target, comment) => setNaming({ marker: target, comment })} />
+
   const twirl = (layer: number) =>
     setTwirls((current) => {
       const next = new Map(current)
@@ -101,7 +107,12 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
   keys.current = (event) => {
     const command = event.metaKey || event.ctrlKey
     const plain = !command && !event.altKey && !event.shiftKey
-    // Delete, or Backspace (the Mac's delete key): the selected keyframes, else the selected layers.
+    // Delete, or Backspace (the Mac's delete key): the marker clicked last, the selected keyframes, else the selected layers.
+    if (plain && (event.key === 'Delete' || event.key === 'Backspace') && marker && !readOnly) {
+      void run('markers.delete', markerParams(marker))
+      setMarker(null)
+      return true
+    }
     if (plain && (event.key === 'Delete' || event.key === 'Backspace')) {
       if (readOnly || (!selected.length && !selectedKeys.size)) return false
       void run('edit.clear', {})
@@ -155,7 +166,15 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
 
   return (
     <TimelineContext.Provider value={frame}>
-      <div className="motion-timeline" data-view={`${view.start} ${view.span}`} data-testid="motion-timeline">
+      <div
+        className="motion-timeline"
+        data-view={`${view.start} ${view.span}`}
+        // A press anywhere but on a marker leaves the marker: Delete is the layers' and keyframes' again.
+        onPointerDownCapture={(event) => {
+          if (marker && !(event.target instanceof Element && event.target.closest('.motion-marker'))) setMarker(null)
+        }}
+        data-testid="motion-timeline"
+      >
         <div
           ref={rows}
           className="motion-timeline-rows"
@@ -164,7 +183,9 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
         >
           <div className="motion-timeline-head">
             <div className="motion-timeline-names kui-muted">{t('layers')}</div>
-            <Ruler onSeek={onSeek} rulerRef={rulerRef} onWorkArea={(start, end) => void run('comp.workArea', { start, end })} />
+            <Ruler onSeek={onSeek} rulerRef={rulerRef} onWorkArea={(start, end) => void run('comp.workArea', { start, end })}>
+              {markerFlags(null)}
+            </Ruler>
           </div>
           {info.layers.length ? (
             info.layers.map((layer) => (
@@ -203,6 +224,7 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
                     }}
                   >
                     <LayerBar layer={layer} shift={shift} onShift={setShift} />
+                    {markerFlags(layer.id)}
                     {/* A collapsed layer keeps its keyframes on its own row; twirled open, its property rows show them. */}
                     {twirls.has(layer.id)
                       ? null
@@ -231,6 +253,41 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose }: { 
           </div>
         ) : null}
         <LayerMenu target={menu} onClose={() => setMenu(null)} onRename={(layer) => setRenaming(layer)} onOpen={onOpenPrecomp} onPrecompose={onPrecompose} />
+        {naming ? (
+          <Dialog
+            title={t('marker.rename')}
+            testId="motion-marker-dialog"
+            onClose={() => setNaming(null)}
+            actions={
+              <>
+                <Button onClick={() => setNaming(null)} data-testid="motion-marker-dialog-cancel">
+                  {t('dialog.cancel')}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    void run('markers.set', { ...markerParams(naming.marker), comment: naming.comment.trim() })
+                    setNaming(null)
+                  }}
+                  data-testid="motion-marker-dialog-ok"
+                >
+                  {t('dialog.ok')}
+                </Button>
+              </>
+            }
+          >
+            <form
+              className="motion-form"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void run('markers.set', { ...markerParams(naming.marker), comment: naming.comment.trim() })
+                setNaming(null)
+              }}
+            >
+              <TextInput aria-label={t('marker.name')} value={naming.comment} autoFocus onFocus={(event) => event.target.select()} onChange={(event) => setNaming({ ...naming, comment: event.target.value })} data-testid="motion-marker-name" />
+            </form>
+          </Dialog>
+        ) : null}
       </div>
     </TimelineContext.Provider>
   )

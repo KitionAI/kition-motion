@@ -183,6 +183,9 @@ const enUS: Catalog = {
   "layerMenu.open": "Open composition",
   "compPath": "Compositions opened from precomp layers",
   "compPath.back": "Back to {name}",
+  "marker.untitled": "Marker: drag to move, double-click to name",
+  "marker.rename": "Marker name",
+  "marker.name": "Name",
 }
 
 const zhCN: Catalog = {
@@ -367,6 +370,9 @@ const zhCN: Catalog = {
   "layerMenu.open": "打开合成",
   "compPath": "从预合成图层进入的合成",
   "compPath.back": "返回 {name}",
+  "marker.untitled": "标记：拖动可移动，双击可命名",
+  "marker.rename": "标记名称",
+  "marker.name": "名称",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }
@@ -405,7 +411,8 @@ export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
   "Import…": "导入…",
   "Export…": "导出…",
   "Save Frame As PNG…": "将当前帧存为 PNG…",
-  // View.
+  // Composition and View.
+  "Add Marker": "添加标记",
   "Project Panel": "项目面板",
   // Edit.
   "Undo": "撤销",

@@ -320,6 +320,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     const layer = made.layer
     toast.success(t('precomposed'), { action: { label: t('precomposed.open'), onClick: () => openPrecomp(layer) } })
   }
+  /** Adds a marker at the current time: on the selected layers, or on the composition with none selected. */
+  const addMarker = () => void run(state?.layers.some((layer) => layer.selected) ? 'layer.addMarker' : 'comp.addMarker', {})
   /** The composition's current frame as a PNG beside the project. */
   const saveFrame = async () => {
     const doc = session.doc
@@ -384,6 +386,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'file.import': () => void footage.importPicked(),
     'layer.precompose': () => void precompose(),
     [KIT.saveFrame]: () => void saveFrame(),
+    [KIT.addMarker]: addMarker,
     [KIT.projectPanel]: project.toggle,
     'time.start': () => seek(0),
     'time.end': end,
@@ -460,6 +463,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         if (!host.readOnly || id === 'time.set') dispatch(id)
         return true
       }
+    }
+    // * (on the keypad, or Shift+8): a marker at the current time.
+    if (event.key === '*' && !command && !event.altKey && !host.readOnly) {
+      addMarker()
+      return true
     }
     // Space plays on its release (useSpaceTap); its press is taken here so nothing else runs.
     if (event.key === ' ' && !command) return true
