@@ -1,4 +1,5 @@
 import type { Catalog } from '@kition/sdk/editor'
+import { EFFECT_NAMES_ZH, PARAM_NAMES_ZH } from './effectNames'
 
 /** The editor's own strings (`en-US` is required; others fall back to it). */
 const enUS: Catalog = {
@@ -431,10 +432,13 @@ export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN 
 
 /**
  * Kition Motion ships no Chinese catalog: the Chinese names of its menus, menu items, Home's
- * buttons, effect categories, the most used effects, property and layer-type names. Effect names
- * not listed here stay in English.
+ * buttons, effect categories, effects and their common parameters, property and layer-type
+ * names. Effect names not listed here (the CC effects) stay in English.
  */
 export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
+  // Effect names and common effect parameters (effectNames.ts); the entries below win.
+  ...PARAM_NAMES_ZH,
+  ...EFFECT_NAMES_ZH,
   // The canvas tools on the rail (bindings/wasm/src/tools.rs).
   "Selection Tool": "选取工具",
   "Hand Tool": "抓手工具",
