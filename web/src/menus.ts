@@ -42,7 +42,7 @@ export const SHORTCUT_OVERRIDES: Readonly<Record<string, string>> = {
  * Alt+Left and Right (with Shift, ten frames) nudge the selected keyframes, Cmd+Up and Down select
  * the layer above or below, Cmd+Alt+A selects every keyframe of the selected layers.
  */
-const EXTRA_SHORTCUTS = ['keys.nudgeForward', 'keys.nudgeBackward', 'keys.nudgeForward10', 'keys.nudgeBackward10', 'layer.selectPrevious', 'layer.selectNext', 'keys.selectAll']
+export const EXTRA_SHORTCUTS = ['keys.nudgeForward', 'keys.nudgeBackward', 'keys.nudgeForward10', 'keys.nudgeBackward10', 'layer.selectPrevious', 'layer.selectNext', 'keys.selectAll']
 
 /**
  * The engine commands whose shortcuts the frame runs: the menus' (bar the ones given another

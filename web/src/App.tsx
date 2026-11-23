@@ -39,6 +39,7 @@ import { EffectCatalog } from './properties/catalog'
 import { ProjectPanel, useProjectPanel } from './ProjectPanel'
 import { ExportDialog } from './ExportDialog'
 import { ITEM_MIME, parseAnswer, useFootage } from './footage'
+import { EDITOR_KEYS, pressed } from './keys'
 import { INTERPOLATIONS } from './timeline/interp'
 import { SamplerContext, type CurveSampler } from './timeline/samples'
 
@@ -570,7 +571,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     if (timelineKeys.current?.(event)) return true
     // The arrow keys move the selected layers (Shift: ten times as far), one undo step each.
     const arrow = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key]
-    if (arrow && !command && !event.altKey && tools.active === 'selection' && !host.readOnly && state.layers.some((layer) => layer.selected)) {
+    if (arrow && pressed(EDITOR_KEYS.nudge, event) && tools.active === 'selection' && !host.readOnly && state.layers.some((layer) => layer.selected)) {
       const by = event.shiftKey ? NUDGE.shift : NUDGE.plain
       void editor.run('layer.nudge', { x: arrow[0] * by, y: arrow[1] * by })
       return true
@@ -590,21 +591,22 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       return true
     }
     // * (on the keypad, or Shift+8): a marker at the current time.
-    if (event.key === '*' && !command && !event.altKey && !host.readOnly) {
+    // (EDITOR_KEYS, keys.ts: the help docs' shortcut table is printed from it.)
+    if (pressed(EDITOR_KEYS.marker, event) && !host.readOnly) {
       addMarker()
       return true
     }
     // Space plays on its release (useSpaceTap); its press is taken here so nothing else runs.
-    if (event.key === ' ' && !command) return true
+    if (pressed(EDITOR_KEYS.play, event)) return true
     // View ▸ Zoom In and Zoom Out: . and , (Cmd or Ctrl with = and - zoom too, and Cmd+0 fits).
-    else if ((event.key === '.' || event.key === ',') && !command && !event.altKey) canvas.current?.zoomBy(event.key === '.' ? ZOOM_STEP : 1 / ZOOM_STEP)
-    else if (event.key === 'PageDown' || (event.key === 'ArrowRight' && command)) step(event.shiftKey ? 10 : 1)
-    else if (event.key === 'PageUp' || (event.key === 'ArrowLeft' && command)) step(event.shiftKey ? -10 : -1)
+    else if (pressed(EDITOR_KEYS.zoomIn, event) || pressed(EDITOR_KEYS.zoomOut, event)) canvas.current?.zoomBy(event.key === '.' ? ZOOM_STEP : 1 / ZOOM_STEP)
+    else if (pressed(EDITOR_KEYS.nextFrame, event)) step(event.shiftKey ? 10 : 1)
+    else if (pressed(EDITOR_KEYS.previousFrame, event)) step(event.shiftKey ? -10 : -1)
     // Layer ▸ Arrange ▸ Bring Layer Forward / Send Layer Backward (with Shift: to the front / back).
     else if (command && !host.readOnly && (event.key === ']' || event.key === '}')) void editor.run('layer.arrange', { to: event.shiftKey ? 'front' : 'forward' })
     else if (command && !host.readOnly && (event.key === '[' || event.key === '{')) void editor.run('layer.arrange', { to: event.shiftKey ? 'back' : 'backward' })
-    else if (event.key === 'Home') seek(0)
-    else if (event.key === 'End') end()
+    else if (pressed(EDITOR_KEYS.start, event)) seek(0)
+    else if (pressed(EDITOR_KEYS.end, event)) end()
     else return false
     return true
   }

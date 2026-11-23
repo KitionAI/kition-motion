@@ -18,6 +18,7 @@ import { SOLO_PATHS, type Twirl } from './tree'
 import { useKeyGestures } from './useKeyGestures'
 import { useRowDrag } from './useRowDrag'
 import { useTimeView } from './useTimeView'
+import { TIMELINE_KEYS, pressed } from '../keys'
 import { leftOf } from './view'
 
 /** A key handler the editor asks first; true when the timeline took the key. */
@@ -117,55 +118,56 @@ export function Timeline({ info, onSeek, keys, onOpenPrecomp, onPrecompose, onCo
     })
   }
 
+  // The keys are TIMELINE_KEYS' (keys.ts), which the help docs' shortcut table is printed from.
   keys.current = (event) => {
-    const command = event.metaKey || event.ctrlKey
-    const plain = !command && !event.altKey && !event.shiftKey
+    const K = TIMELINE_KEYS
     // Delete, or Backspace (the Mac's delete key): the marker clicked last, the selected keyframes, else the selected layers.
-    if (plain && (event.key === 'Delete' || event.key === 'Backspace') && marker && !readOnly) {
-      void run('markers.delete', markerParams(marker))
-      setMarker(null)
-      return true
-    }
-    if (plain && (event.key === 'Delete' || event.key === 'Backspace')) {
+    if (pressed(K.delete, event)) {
+      if (marker && !readOnly) {
+        void run('markers.delete', markerParams(marker))
+        setMarker(null)
+        return true
+      }
       if (readOnly || (!selected.length && !selectedKeys.size)) return false
       void run('edit.clear', {})
       return true
     }
-    if (command && !event.altKey && !event.shiftKey && event.code === 'KeyC' && selectedKeys.size) {
-      copiedKeys.current = true
+    if (pressed(K.copyKeys, event)) {
+      copiedKeys.current = selectedKeys.size > 0
+      if (!selectedKeys.size) return false
       void run('keys.copy', {})
       return true
     }
-    if (command && !event.altKey && !event.shiftKey && event.code === 'KeyC') copiedKeys.current = false
-    if (command && !event.altKey && !event.shiftKey && event.code === 'KeyV' && copiedKeys.current && !readOnly) {
+    if (pressed(K.pasteKeys, event) && copiedKeys.current && !readOnly) {
       void run('keys.paste', { time: info.time })
       return true
     }
     // J and K: the previous and next keyframe (F9, Easy Ease, is the engine's shortcut, run by the frame).
-    if (plain && (event.code === 'KeyJ' || event.code === 'KeyK')) {
-      void run(event.code === 'KeyJ' ? 'time.previousKey' : 'time.nextKey', {})
+    if (pressed(K.previousKey, event) || pressed(K.nextKey, event)) {
+      void run(pressed(K.previousKey, event) ? 'time.previousKey' : 'time.nextKey', {})
       return true
     }
-    // Shift+F3: the graph editor in place of the layer rows, and back.
-    if (!command && !event.altKey && event.shiftKey && event.key === 'F3') {
+    if (pressed(K.graph, event)) {
       setGraph((open) => !open)
       return true
     }
     // = and -: zoom the timeline in and out (Cmd or Ctrl with them zoom the composition).
-    if (!command && !event.altKey && (event.code === 'Equal' || event.code === 'Minus')) {
-      if (event.code === 'Equal') time.zoomIn()
+    if (pressed(K.zoomIn, event) || pressed(K.zoomOut, event)) {
+      if (pressed(K.zoomIn, event)) time.zoomIn()
       else time.zoomOut()
       return true
     }
-    if (plain && event.code === 'KeyU') {
+    if (pressed(K.animated, event)) {
       solo('KeyU', { kind: 'only', key: 'KeyU', paths: 'animated' })
       return true
     }
-    if (plain && SOLO_PATHS[event.code]) {
-      solo(event.code, { kind: 'only', key: event.code, paths: SOLO_PATHS[event.code] })
+    for (const binding of [K.position, K.scale, K.rotation, K.opacity]) {
+      if (!pressed(binding, event)) continue
+      const code = `Key${binding.keys[0]}`
+      solo(code, { kind: 'only', key: code, paths: SOLO_PATHS[code] })
       return true
     }
-    if (command && !event.altKey && !event.shiftKey && event.code === 'KeyD') {
+    if (pressed(K.duplicate, event)) {
       if (!readOnly && selected.length) void run('edit.duplicate', { layers: selected })
       return true
     }
