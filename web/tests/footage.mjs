@@ -163,6 +163,13 @@ const centre = (box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 }
 async function focusEditor() {
   await kit.locator('.kui-app').focus()
 }
+/** A click on the ruler at `x` pixels in, and the time once the engine has moved there (it seeks asynchronously). */
+async function seekRuler(x) {
+  const was = (await details()).time
+  await kit.getByTestId('motion-ruler').click({ position: { x, y: 10 } })
+  await until(async () => (await details()).time !== was)
+  return (await details()).time
+}
 async function undo() {
   await focusEditor()
   await page.keyboard.press(`${primary}+KeyZ`)
@@ -249,8 +256,7 @@ try {
   await until(async () => (await layers()).length === before.length)
   step('undo removes it', (await layers()).length === before.length)
   // And onto the timeline: a layer at the current time.
-  await kit.getByTestId('motion-ruler').click({ position: { x: 200, y: 10 } })
-  const now = (await details()).time
+  const now = await seekRuler(200)
   await drag(centre(await row.boundingBox()), centre(await kit.getByTestId('motion-timeline-rows').boundingBox()))
   await until(async () => (await layers()).length === before.length + 1)
   placed = await newest(before)
@@ -359,8 +365,7 @@ try {
   step('undo takes the pre-compose back', (await layers()).some((layer) => layer.id === shape.id) && !(await layers()).some((layer) => layer.type === 'Composition'))
 
   // 12. Markers: * adds one at the current time; drag, double-click to name, Delete; undo each.
-  await kit.getByTestId('motion-ruler').click({ position: { x: 150, y: 10 } })
-  const markAt = (await details()).time
+  const markAt = await seekRuler(150)
   // A click on the canvas outside the composition deselects every layer: the marker is the composition's.
   await page.mouse.click((await at(-30, -30)).x, (await at(-30, -30)).y)
   await until(async () => !(await layers()).some((layer) => layer.selected))
@@ -398,6 +403,9 @@ try {
   // A layer marker: * with a layer selected.
   const text = (await layers()).find((layer) => layer.type === 'Text')
   await kit.getByTestId(`motion-layer-${text.id}`).click()
+  // * goes to the layers the timeline shows selected: press it once the row shows the click's
+  // selection, as a person would (the engine answers the click asynchronously).
+  await until(async () => (await kit.getByTestId(`motion-layer-${text.id}`).getAttribute('data-selected')) === 'true')
   await focusEditor()
   await page.keyboard.press('Shift+Digit8')
   await until(async () => (await query('markers.list', { layer: text.id })).length === 1)
