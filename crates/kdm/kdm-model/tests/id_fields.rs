@@ -27,6 +27,8 @@ const HANDLED: &[&str] = &[
     "props.rs: uid: Uid",
     // Project.items: the `Item` objects themselves (keyed by their `id`).
     "lib.rs: items: BTreeMap<ItemId, Item>",
+    // The content file's view of the same map (`Project::to_content_json`), borrowed.
+    "lib.rs: items: &'a BTreeMap<ItemId, Item>",
     // `ref` fields, translated to the target object's id and back: an item's folder
     // (`Item.parent`), a layer's source item (`Layer.sourceItem`, LayerSource's `item`), its
     // parent (`Layer.parent`) and track matte (`Layer.matteLayer`, TrackMatte's `layer`), a
