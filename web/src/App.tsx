@@ -32,7 +32,8 @@ import { MotionDialogs, toHex, type MotionDialog, type Rgb } from './dialogs'
 import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
 import { Splitter, useTimelineHeight } from './Splitter'
-import { PropertiesPanel } from './PropertiesPanel'
+import { PropertiesPanel } from './properties/PropertiesPanel'
+import { EffectCatalog } from './properties/catalog'
 
 /** Plays the composition from the current time against the wall clock; frames the engine cannot render in time are skipped, as a preview does. */
 function usePlayback(run: (command: string, params: Record<string, unknown>) => Promise<unknown>, time: number, duration: number) {
@@ -200,7 +201,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const [lastEffect, setLastEffect] = useState(false)
   useEffect(() => {
     if (!session.doc) return
-    void query<MotionEffect[]>('effect.list', {}).then((list) => setEffects((list ?? []).map(({ id, name, category }) => ({ id, name, category }))))
+    void query<MotionEffect[]>('effect.list', {}).then((list) => setEffects((list ?? []).map(({ id, name, category, params }) => ({ id, name, category, params }))))
   }, [session.doc, query])
   const applyEffect = (effect: string) => void run('effect.apply', { effect }).then((done) => done !== null && setLastEffect(true))
   /** A name not taken by a project item: `Comp 2`, `Solid 1`. */
@@ -318,6 +319,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
 
   return (
     <KitEditorProvider editor={editor}>
+      <EffectCatalog.Provider value={effects}>
       <EditorFrame
         tabs={tabs}
         defaultTab="home"
@@ -378,6 +380,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           </div>
         </div>
       </EditorFrame>
+      </EffectCatalog.Provider>
     </KitEditorProvider>
   )
 }

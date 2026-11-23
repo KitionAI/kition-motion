@@ -1,11 +1,15 @@
-import { ChevronDownIcon as Open, ChevronRightIcon as Closed, DiamondIcon as Diamond } from '@kition/tessera/icons/react'
+import { useMemo } from 'react'
+import { ChevronDownIcon as Open, ChevronRightIcon as Closed } from '@kition/tessera/icons/react'
 import { useEngineQuery, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
-import { NumberField } from '../ValueField'
+import { useEffectParams } from '../properties/catalog'
+import { KeyDiamond } from '../properties/KeyDiamond'
+import { propMeta } from '../properties/meta'
+import { PropertyValue } from '../properties/PropertyValue'
 import { useTimeline } from './context'
 import { KeyMark } from './KeyMark'
 import { keyTimes } from './keys'
-import { editableNumbers, propertyRows, type TreeNode, type Twirl } from './tree'
+import { effectOf, parentsOf, propertyRows, type TreeNode, type Twirl } from './tree'
 import { leftOf } from './view'
 
 /** How deep the timeline reads a layer's property tree (shape groups nest). */
@@ -16,19 +20,17 @@ export const pathId = (path: string) => path.replaceAll('/', '.')
 
 /**
  * A twirled-open layer's rows under it (`layer.tree`): groups that open and close, and per
- * property the add-keyframe diamond, its value at the current time (typed as in the Properties
- * panel; on an animated property that sets a keyframe here), and its keyframes on the track.
+ * property the keyframe diamond, its value at the current time (the Properties panel's control;
+ * on an animated property an edit sets a keyframe here), and its keyframes on the track.
  */
 export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { layer: MotionLayer; twirl: Twirl; toggled: ReadonlySet<string>; onToggle: (path: string) => void; selected: ReadonlySet<string> }) {
-  const { run, t, phrase } = useKitEditor()
+  const { phrase } = useKitEditor()
   const { info, view, readOnly } = useTimeline()
+  const paramsOf = useEffectParams()
   const tree = useEngineQuery<{ properties?: TreeNode }>('layer.tree', { layer: layer.id, depth: TREE_DEPTH, time: info.time })
+  const parents = useMemo(() => (tree?.properties ? parentsOf(tree.properties) : new Map<string, TreeNode>()), [tree])
   if (!tree?.properties) return null
   const rows = propertyRows(tree.properties, layer, twirl, toggled)
-  const set = (node: TreeNode, index: number, next: number) => {
-    const value = Array.isArray(node.value) ? (node.value as number[]).map((part, at) => (at === index ? next : part)) : next
-    void run('prop.set', { layer: layer.id, path: node.path, value, time: info.time, timeBase: 'comp' })
-  }
   return (
     <>
       {rows.map((row) => {
@@ -49,31 +51,14 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
             </div>
           )
         }
-        const numbers = editableNumbers(node, layer)
         const times = keyTimes(layer, node.path)
+        const meta = propMeta(node, parents.get(node.path), paramsOf(effectOf(node.path, parents)), [])
         return (
           <div key={node.path} className="motion-row motion-prop-row" data-testid={`motion-prop-row-${id}`}>
             <div className="motion-timeline-names motion-prop-names" style={{ paddingLeft: 36 + depth * 14 }}>
-              <button
-                type="button"
-                className="motion-key-button"
-                data-animated={times.length > 0}
-                aria-label={t('addKey', { name })}
-                title={t('addKey', { name })}
-                disabled={readOnly}
-                onClick={() => void run('prop.addKey', { layer: layer.id, path: node.path, time: info.time, timeBase: 'comp' })}
-                data-testid={`motion-row-add-key-${id}`}
-              >
-                <Diamond size={12} aria-hidden="true" />
-              </button>
+              <KeyDiamond layer={layer.id} path={node.path} name={name} times={times} time={info.time} frame={info.frame} testId={`motion-row-add-key-${id}`} readOnly={readOnly} />
               <span className="motion-row-name motion-prop-label">{name}</span>
-              {numbers ? (
-                <span className="motion-prop-values">
-                  {numbers.map((value, index) => (
-                    <NumberField key={index} value={value} label={`${name} ${index + 1}`} onCommit={(next) => set(node, index, next)} testId={`motion-row-value-${id}-${index}`} readOnly={readOnly} />
-                  ))}
-                </span>
-              ) : null}
+              <PropertyValue layer={layer} node={node} meta={meta} time={info.time} name={name} testId={`motion-row-value-${id}`} readOnly={readOnly} compact />
             </div>
             <div className="motion-row-track">
               {times.map((time) => (

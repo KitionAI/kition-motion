@@ -7,7 +7,22 @@ type Animated = { path: string; name: string; times: number[] }
 export type MotionSwitches = { video: boolean; solo: boolean; locked: boolean; threeD: boolean }
 
 /** One layer of the composition, top first: `in`, `out`, and `start` in composition seconds. */
-export type MotionLayer = { id: number; index: number; name: string; type: string; in: number; out: number; start: number; selected: boolean; switches: MotionSwitches; animated: Animated[] }
+export type MotionLayer = {
+  id: number
+  index: number
+  name: string
+  type: string
+  in: number
+  out: number
+  start: number
+  selected: boolean
+  switches: MotionSwitches
+  animated: Animated[]
+  /** Its blending mode by name (`Normal`, `Screen`), as `layer.setBlendMode` takes it. */
+  blendMode: string
+  /** The id of the layer it follows, or null. */
+  parent: number | null
+}
 
 /** One transform property of the selected layer at the current time. */
 export type MotionProperty = { path: string; name: string; type: 'scalar' | 'vec2' | 'vec3' | string; value: number | number[]; animated: boolean }
@@ -40,6 +55,8 @@ type Inspected = {
       selected?: boolean
       switches?: { video?: boolean; solo?: boolean; locked?: boolean; three_d?: boolean }
       animated?: Animated[]
+      blendMode?: string
+      parent?: number | null
     }>
     transform?: { layer?: number; properties?: MotionProperty[] }
   } | null
@@ -76,6 +93,8 @@ export function describe(info: KitEngineInfo): MotionInfo {
       selected: layer.selected === true,
       switches: { video: layer.switches?.video !== false, solo: layer.switches?.solo === true, locked: layer.switches?.locked === true, threeD: layer.switches?.three_d === true },
       animated: layer.animated ?? [],
+      blendMode: layer.blendMode ?? 'Normal',
+      parent: layer.parent ?? null,
     })),
     transform: inspected.info?.transform?.layer != null ? { layer: inspected.info.transform.layer, properties: inspected.info.transform.properties ?? [] } : null,
   }

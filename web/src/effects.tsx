@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { SearchIcon as Search, SparklesIcon as Sparkles, RotateCwIcon as Again } from '@kition/tessera/icons/react'
 import { Button, Dialog, MenuItem, RibbonButton, RibbonGroup, RibbonMenu, TextInput, useKitEditor, useReadOnly, type MenuRow } from '@kition/sdk/editor'
+import type { EffectParam } from './properties/meta'
 
-/** One effect the engine has (`effect.list`). */
-export type MotionEffect = { id: string; name: string; category: string }
+/** One effect the engine has (`effect.list`), with its parameters for the Properties panel. */
+export type MotionEffect = { id: string; name: string; category: string; params?: EffectParam[] }
 
 /** The kit row that applies an effect: `kit:effect:<id>`. */
 export const EFFECT_PREFIX = 'kit:effect:'

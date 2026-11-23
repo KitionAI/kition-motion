@@ -10,6 +10,10 @@ export type TreeNode = {
   value?: unknown
   keys?: Array<{ time: number }>
   children?: TreeNode[]
+  /** An applied effect's id (`ec.blur.gaussian`), on its group. */
+  effect?: string
+  /** Whether a group (an effect, a mask, a shape group) is switched on. */
+  enabled?: boolean
 }
 
 /** What a layer's twirl shows: its whole property tree, or only some properties (After Effects' U, P, S, R, T). */
@@ -27,7 +31,7 @@ export const SOLO_PATHS: Record<string, readonly string[]> = {
 }
 
 /** Groups and properties only a 3D layer has: hidden on a 2D layer, as After Effects hides them. */
-const THREE_D_ONLY = new Set(['materialOptions', 'transform/orientation', 'transform/rotationX', 'transform/rotationY'])
+const THREE_D_ONLY = new Set(['materialOptions', 'geometryOptions', 'transform/orientation', 'transform/rotationX', 'transform/rotationY'])
 
 /** The groups open until the person closes them. */
 const OPEN_BY_DEFAULT = new Set(['transform'])
@@ -37,7 +41,8 @@ export function groupOpen(path: string, toggled: boolean) {
   return OPEN_BY_DEFAULT.has(path) !== toggled
 }
 
-function shown(node: TreeNode, layer: MotionLayer) {
+/** Whether a 2D layer shows the node (a 3D layer shows everything). */
+export function shown(node: TreeNode, layer: MotionLayer) {
   return layer.switches.threeD || !THREE_D_ONLY.has(node.path)
 }
 
@@ -86,4 +91,28 @@ export function editableNumbers(node: TreeNode, layer: MotionLayer): number[] | 
     return layer.switches.threeD ? parts : parts.slice(0, 2)
   }
   return null
+}
+
+/** Each node's parent group in `root`, by path. */
+export function parentsOf(root: TreeNode): Map<string, TreeNode> {
+  const parents = new Map<string, TreeNode>()
+  const visit = (node: TreeNode, depth: number) => {
+    if (depth > 32) return
+    for (const child of node.children ?? []) {
+      parents.set(child.path, node)
+      visit(child, depth + 1)
+    }
+  }
+  visit(root, 0)
+  return parents
+}
+
+/** The effect a node belongs to: its nearest group with an effect id. */
+export function effectOf(path: string, parents: ReadonlyMap<string, TreeNode>): string | undefined {
+  let node = parents.get(path)
+  for (let depth = 0; node && depth < 32; depth += 1) {
+    if (node.effect) return node.effect
+    node = parents.get(node.path)
+  }
+  return undefined
 }
