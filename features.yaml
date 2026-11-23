@@ -449,3 +449,12 @@ features:
     gap: "Gated by web/tests/timeline.mjs (the test:timeline job of the kit's CI run); no case under cases/ runs it yet."
     cases: []
     since: "2026-11-22"
+  - id: motion.editor.menus
+    title: "Every item in the editor's menus and on Home does something when clicked: the menus list only what visibly works here (web/src/menus.ts; rows with nothing to act on are hidden), New Composition, Composition Settings (Cmd+K), New Solid (Cmd+Y), Solid Settings, Go to Time (Alt+Shift+J) and Rename open dialogs prefilled with the current values (Enter confirms, Escape cancels, one undo step), a drop-down beside New layer switches compositions and an opened composition fits the window, View zooms (., ,, Cmd+0, 100%) and Cmd or Ctrl and the wheel zoom about 15% per notch, the Effect menu lists every effect by category with Find Effect, labels and property names are in Chinese in zh-CN, engine refusals read as short sentences, and a splitter sets the timeline's height for the session"
+    dimension: [function]
+    priority: P0
+    status: has
+    paths: [web/src/menus.ts, web/src/dialogs.tsx, web/src/effects.tsx, web/src/CompSwitcher.tsx, web/src/Splitter.tsx, web/src/errors.ts, web/src/App.tsx, web/src/HomeTab.tsx, web/src/Transport.tsx, web/src/strings.ts, web/tests/menus.mjs]
+    gap: "Gated by web/tests/menus.mjs (the test:menus job of the kit's CI run); no case under cases/ runs it yet. Cmd+N stays the host's shortcut (its init.shortcuts), so New Composition runs from the menu and Home only; grid, rulers, guides and resolution are not shown by the canvas and are not in the menus."
+    cases: []
+    since: "2026-11-22"
