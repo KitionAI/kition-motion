@@ -441,11 +441,11 @@ features:
     cases: [regressions/issue-scroll-past-composition]
     since: "2026-11-22"
   - id: motion.editor.timeline-editing
-    title: "The timeline edits by hand: a layer's bar drags to move it in time and its ends trim it (snapped to frames and to the playhead, one undo step per drag, the new in and out shown while dragging)"
+    title: "The timeline edits by hand: a layer's bar drags to move it in time and its ends trim it (snapped to frames and to the playhead, one undo step per drag, the new in and out shown while dragging); a row drags to reorder, has eye, solo and lock switches, renames on double-click and has a right-click menu (Rename, Duplicate, Split, Pre-compose, Delete); Delete or Backspace deletes, Cmd+D duplicates, a click on empty timeline deselects"
     dimension: [function]
     priority: P0
     status: has
-    paths: [web/src/timeline/Timeline.tsx, web/src/timeline/LayerBar.tsx, web/src/timeline/Ruler.tsx, web/src/timeline/view.ts, web/src/timeline/context.ts, web/src/motion.ts, web/tests/timeline.mjs]
+    paths: [web/src/timeline/Timeline.tsx, web/src/timeline/LayerBar.tsx, web/src/timeline/Ruler.tsx, web/src/timeline/view.ts, web/src/timeline/context.ts, web/src/timeline/LayerNames.tsx, web/src/timeline/LayerMenu.tsx, web/src/timeline/useRowDrag.ts, web/src/motion.ts, web/src/App.tsx, web/src/strings.ts, web/tests/timeline.mjs]
     gap: "Gated by web/tests/timeline.mjs (the test:timeline job of the kit's CI run); no case under cases/ runs it yet."
     cases: []
     since: "2026-11-22"

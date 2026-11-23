@@ -31,6 +31,15 @@ const enUS: Catalog = {
   "renderFailed": "Could not render the movie",
   "summary": "{name}: {width} × {height}, {fps} fps, {layers} layers",
   "noComp": "This project has no composition yet.",
+  "layerMenu": "Layer",
+  "layerMenu.rename": "Rename",
+  "layerMenu.duplicate": "Duplicate",
+  "layerMenu.split": "Split at current time",
+  "layerMenu.precompose": "Pre-compose…",
+  "layerMenu.delete": "Delete",
+  "switch.video": "Show or hide the layer",
+  "switch.solo": "Solo",
+  "switch.lock": "Lock",
 }
 
 const zhCN: Catalog = {
@@ -63,6 +72,15 @@ const zhCN: Catalog = {
   "renderFailed": "无法渲染影片",
   "summary": "{name}：{width} × {height}，{fps} fps，{layers} 个图层",
   "noComp": "此项目还没有合成。",
+  "layerMenu": "图层",
+  "layerMenu.rename": "重命名",
+  "layerMenu.duplicate": "复制图层",
+  "layerMenu.split": "在当前时间拆分",
+  "layerMenu.precompose": "预合成…",
+  "layerMenu.delete": "删除",
+  "switch.video": "显示或隐藏图层",
+  "switch.solo": "独奏",
+  "switch.lock": "锁定",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }

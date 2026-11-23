@@ -24,7 +24,7 @@ import { CATALOGS } from './strings'
 import { MOTION_PRIMARY, MENU_ORDER, describe, picturePanBounds } from './motion'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
-import { Timeline } from './timeline/Timeline'
+import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
 import { PropertiesPanel } from './PropertiesPanel'
 
@@ -126,8 +126,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [commands, phrase, t],
   )
 
+  // The timeline's own keys (Delete, Cmd+D, …) come first.
+  const timelineKeys: TimelineKeys = useRef(null)
   const keyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!state) return false
+    if (timelineKeys.current?.(event)) return true
     const command = event.metaKey || event.ctrlKey
     if (event.key === ' ' && !command) playback.toggle()
     else if (event.key === 'PageDown' || (event.key === 'ArrowRight' && command)) step(event.shiftKey ? 10 : 1)
@@ -189,7 +192,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
                     playback.stop()
                     seek(seconds)
                   }}
-                  onSelect={(layer, add) => void editor.run('layer.select', { layers: [layer], add })}
+                  keys={timelineKeys}
                 />
               </FrameChrome>
             ) : null}
