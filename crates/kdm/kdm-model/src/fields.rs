@@ -91,10 +91,7 @@ pub(crate) fn render_item(r: &RenderQueueItem) -> KdmResult<Value> {
 /// it gives it: queued when its Render box is checked, else unqueued.
 pub(crate) fn render_item_from(item: Value) -> KdmResult<RenderQueueItem> {
     let mut item: RenderQueueItem = serde_json::from_value(item).map_err(kdm_err)?;
-    item.status = unrendered(item.render);
-    item.started = None;
-    item.render_time = None;
-    item.last_output = None;
+    item.forget_render();
     Ok(item)
 }
 

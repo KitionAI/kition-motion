@@ -93,7 +93,7 @@ fn queue_frame(s: &mut Session, p: &Value) -> Result<Value> {
         it.output.output = "[compName]_frame.[fileExtension]".into();
     }
     let id = s.edit("Save Frame As", None, |proj, _| {
-        it.id = proj.render_queue.iter().map(|i| i.id).max().unwrap_or(0) + 1;
+        it.id = proj.alloc();
         let id = it.id;
         proj.render_queue.push(it);
         Ok(id)

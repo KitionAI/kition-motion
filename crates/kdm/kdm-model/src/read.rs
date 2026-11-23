@@ -361,7 +361,7 @@ impl Tree<'_> {
 }
 
 /// An id counter past every id `project` holds (items, layers, property uids, Graphics Templates
-/// controls) in the slot that starts at `floor` ([`crate::slot_base`]), and never below `floor`.
+/// controls, Render Queue items) in the slot that starts at `floor` ([`crate::slot_base`]), and never below `floor`.
 /// Ids outside that slot are not counted: a file's own ids sit below every slot, repair ids
 /// ([`crate::repair_id`]) above them all, and another actor's ids in that actor's slot (counting
 /// those would move this actor into the other's slot, where both then mint the same ids). A
@@ -397,6 +397,9 @@ pub(crate) fn next_id_hint(project: &Project, floor: u64) -> u64 {
                 Node::Group(g) => uids(g, bump, depth + 1),
             }
         }
+    }
+    for r in &project.render_queue {
+        bump(r.id);
     }
     for (id, item) in &project.items {
         bump(id.0);

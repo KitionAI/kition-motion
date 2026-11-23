@@ -189,7 +189,7 @@ impl KitModel for MotionModel {
 
     fn import(_name: &str, bytes: &[u8], _blobs: &mut dyn BlobSink, actor: ActorId) -> Result<Replica> {
         let text = std::str::from_utf8(bytes).map_err(|_| KitError::new("not a text project file"))?;
-        let project = Project::from_json(text).map_err(kit_err)?;
+        let project = Project::from_file_json(text).map_err(kit_err)?;
         let (replica, _) = create_replica(&project, actor, &Origin::system("import")).map_err(kit_err)?;
         Ok(replica)
     }

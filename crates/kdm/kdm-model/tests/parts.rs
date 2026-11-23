@@ -253,3 +253,23 @@ fn a_render_on_one_machine_stays_there() {
     assert!(other.render_queue[0].last_output.is_none() && !other.render_prefs.notify);
     assert_same_content(mine, other, "the same document");
 }
+
+#[test]
+fn render_queue_ids_are_minted_per_author() {
+    let d = demo();
+    let mut a = first(&d.project);
+    let mut b = peer(&a, 2);
+    for (session, name) in [(&mut a, "a"), (&mut b, "b")] {
+        let mut after = session.model().project.clone();
+        let id = after.alloc();
+        after.render_queue.push(RenderQueueItem::new(id, d.main));
+        record(session, &person(name), &after);
+    }
+    sync(&mut a, &mut b);
+    assert_eq!(a.state_hash().unwrap(), b.state_hash().unwrap());
+    let ids: Vec<u64> = a.model().project.render_queue.iter().map(|r| r.id).collect();
+    assert_eq!(ids.len(), 2);
+    assert_ne!(ids[0], ids[1], "each author's own id");
+    assert!(ids.iter().all(|id| *id < 1 << 52), "neither needed a repair id: {ids:?}");
+    assert_same_content(&a.model().project, &b.model().project, "converged");
+}

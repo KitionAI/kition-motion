@@ -35,7 +35,6 @@ mod keying;
 mod keying2;
 pub mod keylight;
 mod matte;
-pub mod migrate;
 mod misc;
 pub mod mocha_shape;
 mod noise;
@@ -554,10 +553,6 @@ pub fn lookup(name_or_id: &str) -> Option<&'static EffectSpec> {
     find(name_or_id)
         .or_else(|| all().into_iter().find(|s| s.name.eq_ignore_ascii_case(name_or_id)))
         .or_else(|| ALIASES.iter().find(|(_, names)| names.iter().any(|a| a.eq_ignore_ascii_case(name_or_id))).and_then(|(id, _)| find(id)))
-        .or_else(|| {
-            // Display names of earlier versions.
-            migrate::EFFECT_NAME_ALIASES.iter().find(|(old, _)| old.eq_ignore_ascii_case(name_or_id)).and_then(|(_, id)| find(id))
-        })
 }
 
 /// A parameter's default value on a layer of `layer_size` (point defaults are fractions of the

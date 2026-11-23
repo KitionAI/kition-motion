@@ -176,111 +176,6 @@ fn layer_params_get_a_source_companion() {
     }
 }
 
-/// Projects saved before parameters were renamed, regrouped, added or had their popups
-/// reordered open with their instances brought up to date (`kition_motion_effects::migrate`).
-#[test]
-fn opening_an_old_project_upgrades_effect_instances() {
-    use kition_motion_effects::migrate::PARAM_ID_ALIASES;
-    use kition_motion_project::{Node, ParamUi, PropGroup};
-    let (mut s, a, _) = comp_with_two_solids();
-    apply(&mut s, a, "ec.blur.gaussian");
-    // One instance of every effect with renamed parameter ids.
-    let mut aliased: Vec<&str> = PARAM_ID_ALIASES.iter().map(|(e, _, _)| *e).collect();
-    aliased.dedup();
-    for e in &aliased {
-        apply(&mut s, a, e);
-    }
-    // Rewrite the saved instances the way an older version wrote them.
-    fn take(g: &mut PropGroup, path: &str) -> Option<kition_motion_project::Property> {
-        match path.split_once('/') {
-            None => {
-                let i = g.children.iter().position(|c| matches!(c, Node::Prop(p) if p.match_id == path))?;
-                match g.children.remove(i) {
-                    Node::Prop(p) => Some(p),
-                    Node::Group(_) => None,
-                }
-            }
-            Some((first, rest)) => take(g.sub_mut(first)?, rest),
-        }
-    }
-    let mut old = (*s.project).clone();
-    let cid = s.active_comp_id().unwrap();
-    {
-        let comp = std::sync::Arc::make_mut(match &mut old.items.get_mut(&cid).unwrap().kind {
-            kition_motion_project::ItemKind::Comp(c) => c,
-            _ => panic!("not a composition"),
-        });
-        let l = comp.layers.iter_mut().find(|l| l.id == LayerId(a)).unwrap();
-        for n in &mut l.props.sub_mut("effects").unwrap().children {
-            let Node::Group(g) = n else { continue };
-            if g.match_id == "ec.blur.gaussian" {
-                // Repeat Edge Pixels did not exist yet, Blurriness had another name, the popup
-                // listed its options in reverse.
-                take(g, "repeatEdge").unwrap();
-                g.get_mut("blurriness").unwrap().name = "Old Blurriness".into();
-                let d = g.get_mut("dimensions").unwrap();
-                let ParamUi::Popup { options } = &d.ui else { panic!("dimensions is a popup") };
-                d.ui = ParamUi::Popup { options: options.iter().rev().cloned().collect() };
-                d.value = KV::Enum(0);
-            }
-            for (e, old_id, new_id) in PARAM_ID_ALIASES {
-                if g.match_id == *e {
-                    let mut p = take(g, new_id).unwrap_or_else(|| panic!("{e}: no {new_id}"));
-                    // Put it back at its old path (which may be inside a group).
-                    let (path, leaf) = old_id.rsplit_once('/').map(|(p, l)| (Some(p), l)).unwrap_or((None, old_id));
-                    p.match_id = leaf.to_string();
-                    let mut at: &mut PropGroup = g;
-                    for seg in path.into_iter().flat_map(|p| p.split('/')) {
-                        if at.sub(seg).is_none() {
-                            at.children.push(PropGroup::new(1_000_000 + at.children.len() as u64, seg, seg).into());
-                        }
-                        at = at.sub_mut(seg).unwrap();
-                    }
-                    at.children.push(p.into());
-                }
-            }
-        }
-    }
-    let dir = std::env::temp_dir().join(format!("ec-upgrade-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    let path = dir.join("old.kmotion").to_string_lossy().to_string();
-    std::fs::write(&path, old.to_json()).unwrap();
-    let mut s2 = Session::default();
-    s2.execute("file.open", json!({"path": path})).unwrap();
-    let _ = std::fs::remove_dir_all(dir);
-    let l = s2.project.comp(cid).unwrap().layer(LayerId(a)).unwrap().clone();
-    let fx = l.effects().unwrap();
-    let spec = kition_motion_effects::find("ec.blur.gaussian").unwrap();
-    let sp = |id: &str| spec.params.iter().find(|p| p.id == id).unwrap();
-    let blur = fx.groups().find(|g| g.match_id == "ec.blur.gaussian").unwrap();
-    assert_eq!(blur.get("blurriness").unwrap().name, sp("blurriness").name);
-    assert!(blur.get("repeatEdge").is_some(), "missing parameter added");
-    let dims = blur.get("dimensions").unwrap();
-    let ParamUi::Popup { options } = &sp("dimensions").ui else { panic!() };
-    assert_eq!(dims.value, KV::Enum(options.len() as u32 - 1), "popup value remapped by label");
-    assert_eq!(dims.ui, sp("dimensions").ui);
-    for (e, old_id, new_id) in PARAM_ID_ALIASES {
-        let g = fx.groups().find(|g| g.match_id == *e).unwrap();
-        let at = |id: &str| {
-            let (path, leaf) = id.rsplit_once('/').map(|(p, l)| (Some(p), l)).unwrap_or((None, id));
-            let mut node = Some(g);
-            for seg in path.into_iter().flat_map(|p| p.split('/')) {
-                node = node.and_then(|n| n.sub(seg));
-            }
-            node.and_then(|n| n.get(leaf)).is_some()
-        };
-        assert!(!at(old_id), "{e}: {old_id} still present");
-        let (path, leaf) = new_id.rsplit_once('/').map(|(p, l)| (Some(p), l)).unwrap_or((None, new_id));
-        let mut node = Some(g);
-        for seg in path.into_iter().flat_map(|p| p.split('/')) {
-            node = node.and_then(|n| n.sub(seg));
-        }
-        assert!(node.and_then(|n| n.get(leaf)).is_some(), "{e}: {old_id} not moved to {new_id}");
-    }
-    // The upgraded project renders.
-    let _ = s2.render(cid, s2.time(), Default::default());
-}
-
 /// The project file's format version is 1 (#227's effect space is simply how version 1 measures
 /// effect positions): a file says it, and a file of a later version is refused rather than read
 /// wrongly. There is no earlier version and no conversion.
@@ -294,6 +189,34 @@ fn project_files_are_format_version_1_and_later_versions_are_refused() {
     let later = text.replacen("\"schema\": 1,", "\"schema\": 2,", 1);
     let error = kition_motion_project::Project::from_json(&later).unwrap_err().to_string();
     assert!(error.contains("newer"), "{error}");
+}
+
+/// A project file holds content only: what a render on this machine left on the Render Queue
+/// (status, start, duration, last output) and the Render Queue preferences are not written, and
+/// not read; the queue's definition is. A new Render Queue item's id is minted like every other
+/// engine id, never "the highest plus one".
+#[test]
+fn a_project_file_holds_no_machine_render_state() {
+    use kition_motion_project::render_queue::RenderStatus;
+    let mut s = Session::default();
+    s.execute("comp.new", json!({"name": "Main", "width": 200, "height": 100, "frameRate": 30, "duration": 2})).unwrap();
+    let item = s.execute("renderQueue.add", json!({})).unwrap()["item"].as_u64().unwrap();
+    assert!(s.project.items.keys().all(|id| id.0 != item), "an id of its own");
+    s.execute("renderQueue.setNotify", json!({"notify": true})).unwrap();
+    let mut p = (*s.project).clone();
+    p.render_queue[0].status = RenderStatus::Done;
+    p.render_queue[0].started = Some(1_700_000_000);
+    p.render_queue[0].render_time = Some(2.5);
+    p.render_queue[0].last_output = Some("/tmp/out.mov".into());
+    let text = p.to_file_json().unwrap();
+    for key in ["status", "started", "render_time", "last_output", "render_prefs", "notify"] {
+        assert!(!text.contains(&format!("\"{key}\"")), "{key} in the file");
+    }
+    let back = kition_motion_project::Project::from_file_json(&text).unwrap();
+    assert_eq!(back.render_queue.len(), 1);
+    assert_eq!(back.render_queue[0].id, item);
+    assert_eq!(back.render_queue[0].status, RenderStatus::Queued, "queued, as its Render box says");
+    assert!(back.render_queue[0].last_output.is_none() && !back.render_prefs.notify);
 }
 
 /// #410: `effect.warning` reports what an OCIO effect can't render as asked (Effect Controls

@@ -1299,6 +1299,9 @@ impl Project {
                 }
             }
         }
+        for r in &self.render_queue {
+            m = m.max(r.id.saturating_add(1));
+        }
         self.next_id = m;
     }
     /// Whether `other` holds the same content. An allocated id counts (an edit may hand it out
@@ -1321,9 +1324,31 @@ impl Project {
             && self.render_templates == other.render_templates
             && self.render_prefs == other.render_prefs
     }
-    /// The project file's text: the project with the version that wrote it (`savedBy`), checked
-    /// to read back, so a save never writes a file that can't be opened (JSON has no NaN or
-    /// infinity: such a value would be written as `null`).
+    /// Forgets this machine's state: its Render Queue preferences and what its renders left on
+    /// each Render Queue item ([`render_queue::RenderQueueItem::forget_render`]).
+    pub fn forget_machine_state(&mut self) {
+        self.render_prefs = Default::default();
+        for item in &mut self.render_queue {
+            item.forget_render();
+        }
+    }
+    /// The project as a content file holds it: content only, without this machine's state
+    /// ([`Project::forget_machine_state`]).
+    pub fn content(&self) -> Project {
+        let mut out = self.clone();
+        out.forget_machine_state();
+        out
+    }
+    /// A project file's project ([`Project::from_json`]): a file holds content only, so no
+    /// machine state is read from it.
+    pub fn from_file_json(s: &str) -> Result<Project, ProjectError> {
+        let mut p = Project::from_json(s)?;
+        p.forget_machine_state();
+        Ok(p)
+    }
+    /// The project file's text: the project's content ([`Project::content`]) with the version
+    /// that wrote it (`savedBy`), checked to read back, so a save never writes a file that can't
+    /// be opened (JSON has no NaN or infinity: such a value would be written as `null`).
     pub fn to_file_json(&self) -> Result<String, ProjectError> {
         #[derive(Serialize)]
         struct File<'a> {
@@ -1332,7 +1357,8 @@ impl Project {
             #[serde(flatten)]
             project: &'a Project,
         }
-        let text = serde_json::to_string_pretty(&File { saved_by: APP_VERSION, project: self })
+        let content = self.content();
+        let text = serde_json::to_string_pretty(&File { saved_by: APP_VERSION, project: &content })
             .map_err(|e| ProjectError::Invalid(format!("the project can't be saved: {e}")))?;
         Project::from_json(&text)
             .map_err(|e| ProjectError::Invalid(format!("the project can't be saved: it holds a value a project file can't store ({e})")))?;

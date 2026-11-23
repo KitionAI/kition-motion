@@ -17,8 +17,7 @@
 //!   nothing live lists any more (its composition or layer, or its control group, deleted while
 //!   someone added it) is deleted;
 //! - an id two actors minted alike (only possible if they share an id slot, see
-//!   [`crate::slot_base`]) is given a repair id of its own; so is a Render Queue id two people
-//!   added at once.
+//!   [`crate::slot_base`]) is given a repair id of its own, Render Queue ids included.
 //!
 //! [`KitModel::validate`]: kition_kit::session::KitModel::validate
 
@@ -441,25 +440,26 @@ fn render_queue(tx: &mut Tx<'_>) -> KdmResult<bool> {
         }
         alive.push(entry);
     }
-    let mut items = Vec::with_capacity(alive.len());
-    for entry in &alive {
-        items.push(tx.get(entry, "item")?);
-    }
-    let mut max = items.iter().filter_map(|i| i.get("id").and_then(Value::as_u64)).max().unwrap_or(0);
+    // Render Queue ids are minted per author like every other engine id (`crate::slot_base`);
+    // one two people minted alike, or none, gets a repair id derived from its object.
     let mut seen = HashSet::new();
-    for (entry, mut item) in alive.iter().zip(items) {
-        let id = item.get("id").and_then(Value::as_u64).unwrap_or(0);
-        let id = if seen.insert(id) {
-            id
-        } else {
-            max = max.saturating_add(1);
-            if let Some(slot) = item.get_mut("id") {
-                *slot = json!(max);
+    for entry in &alive {
+        let mut item = tx.get(entry, "item")?;
+        let id = item.get("id").and_then(Value::as_u64).filter(|id| seen.insert(*id));
+        let id = match id {
+            Some(id) => id,
+            None => {
+                let fresh = repair_id(entry);
+                if let Some(slot) = item.get_mut("id") {
+                    *slot = json!(fresh);
+                } else if let Value::Object(fields) = &mut item {
+                    fields.insert("id".into(), json!(fresh));
+                }
+                seen.insert(fresh);
+                tx.set(entry, "item", item)?;
+                wrote = true;
+                fresh
             }
-            seen.insert(max);
-            tx.set(entry, "item", item)?;
-            wrote = true;
-            max
         };
         if tx.get(entry, "id")? != json!(id) {
             tx.set(entry, "id", json!(id))?;

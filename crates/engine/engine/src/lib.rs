@@ -1036,7 +1036,6 @@ impl Session {
         self.roto_pending.clear();
         self.drop_tasks();
         p.fix_next_id();
-        upgrade_effects(&mut p);
         self.project = Arc::new(p);
         // A new project: a replica made from here on starts from it, not from the old one.
         self.reset_kdm();
@@ -1051,36 +1050,6 @@ impl Session {
             self.open_comp(c);
         }
     }
-}
-
-/// Bring effect instances saved by earlier versions up to date with the effect registry
-/// (renamed / regrouped / added parameters, reordered popups; see
-/// [`kition_motion_effects::migrate`]). Stamps the current schema.
-pub fn upgrade_effects(p: &mut Project) {
-    // Effect bounds per layer: (size, top-left in layer coordinates).
-    let mut bounds = std::collections::HashMap::new();
-    for (cid, c) in p.comps() {
-        for l in &c.layers {
-            bounds.insert((*cid, l.id), kition_motion_render::effect_bounds(p, c, l));
-        }
-    }
-    let mut next = p.next_id;
-    for (cid, it) in p.items.iter_mut() {
-        let kition_motion_project::ItemKind::Comp(c) = &mut it.kind else { continue };
-        for l in &mut std::sync::Arc::make_mut(c).layers {
-            let (size, _) = bounds.get(&(*cid, l.id)).copied().unwrap_or(([100.0, 100.0], [0.0; 2]));
-            let Some(fx) = l.props.sub_mut("effects") else { continue };
-            for n in &mut fx.children {
-                let kition_motion_project::Node::Group(g) = n else { continue };
-                let kition_motion_project::GroupKind::Effect { effect } = &g.kind else { continue };
-                if let Some(spec) = kition_motion_effects::find(effect) {
-                    kition_motion_effects::migrate::upgrade_instance(spec, g, &mut kition_motion_project::build::Ids(&mut next), size);
-                }
-            }
-        }
-    }
-    p.next_id = next;
-    p.schema = kition_motion_project::SCHEMA_VERSION;
 }
 
 #[cfg(test)]

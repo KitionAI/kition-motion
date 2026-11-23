@@ -729,35 +729,4 @@ mod tests {
         let o = crate::apply(&specs()[0], &ctx, Buf { img: frame(0.3), offset: [0.0; 2], scale: 1.0 }).img;
         assert!(o.data.iter().all(|p| p[3] == 0.0));
     }
-
-    /// Instances saved before the propagation controls got their own twirl-down (and motion
-    /// blur / decontamination their nested ones) load with their values in the new places.
-    #[test]
-    fn old_group_layout_is_migrated_on_load() {
-        use kition_motion_project::build::Ids;
-        let spec = crate::find(ID).unwrap();
-        let mut next = 1;
-        let mut ids = Ids(&mut next);
-        // The old layout: everything under Rotoscope Brush Matte / Edge Refine Matte.
-        let mut g = ids.group(ID, "Rotoscope Brush & Edge Refine");
-        g.kind = kition_motion_project::GroupKind::Effect { effect: ID.into() };
-        let mut rb = ids.group("rotoscopeMatte", "Rotoscope Brush Matte");
-        rb.children.push(ids.prop("searchRadius", "Search Radius", Value::Scalar(33.0)).into());
-        rb.children.push(ids.prop("feather", "Feather", Value::Scalar(2.0)).into());
-        let mut re = ids.group("edgeRefineMatte", "Edge Refine Matte");
-        re.children.push(ids.prop("shutterAngle", "Shutter Angle", Value::Scalar(90.0)).into());
-        re.children.push(ids.prop("decontaminationAmount", "Decontamination Amount", Value::Scalar(40.0)).into());
-        g.children.push(rb.into());
-        g.children.push(re.into());
-        assert!(crate::migrate::upgrade_instance(spec, &mut g, &mut ids, [100.0, 80.0]));
-        let params = crate::flatten_params(&g, &mut |p| p.value.clone());
-        assert_eq!(f(&params, "rotoscopePropagation/searchRadius"), 33.0);
-        assert_eq!(f(&params, "rotoscopeMatte/feather"), 2.0);
-        assert_eq!(f(&params, "edgeRefineMatte/motionBlur/shutterAngle"), 90.0);
-        assert_eq!(f(&params, "edgeRefineMatte/decontamination/decontaminationAmount"), 40.0);
-        assert!(g.sub("rotoscopeMatte").unwrap().get("searchRadius").is_none());
-        assert_eq!(g.sub("rotoscopePropagation").unwrap().name, "Rotoscope Brush Propagation");
-        // Parameters the old save lacked get their defaults.
-        assert_eq!(f(&params, "rotoscopePropagation/motionDamping"), 20.0);
-    }
 }

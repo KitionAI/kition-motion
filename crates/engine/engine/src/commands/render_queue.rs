@@ -536,7 +536,7 @@ fn add(s: &mut Session, p: &Value) -> Result<Value> {
         it.log = l;
     }
     let id = s.edit("Add to Render Queue", None, |proj, _| {
-        it.id = proj.render_queue.iter().map(|i| i.id).max().unwrap_or(0) + 1;
+        it.id = proj.alloc();
         let id = it.id;
         proj.render_queue.push(it);
         Ok(id)
@@ -655,7 +655,7 @@ fn duplicate(s: &mut Session, p: &Value) -> Result<Value> {
     let i = item_index(s, p, "renderQueue.duplicate")?;
     let id = s.edit("Duplicate Render Item", None, |proj, _| {
         let mut it = proj.render_queue[i].clone();
-        it.id = proj.render_queue.iter().map(|i| i.id).max().unwrap_or(0) + 1;
+        it.id = proj.alloc();
         it.render = true;
         it.status = RenderStatus::Queued;
         it.started = None;
@@ -772,7 +772,7 @@ fn pre_render(s: &mut Session, p: &Value) -> Result<Value> {
     apply_output(&mut it.output, &templates, s.state.region_of_interest, p, "render.preRender")?;
     it.post_render = PostRenderAction::ImportAndReplace;
     let id = s.edit("Pre-render", None, |proj, _| {
-        it.id = proj.render_queue.iter().map(|i| i.id).max().unwrap_or(0) + 1;
+        it.id = proj.alloc();
         let id = it.id;
         proj.render_queue.push(it);
         Ok(id)

@@ -1410,6 +1410,16 @@ impl RenderQueueItem {
     pub fn output_modules(&self) -> impl Iterator<Item = &OutputModule> {
         std::iter::once(&self.output).chain(self.extra_outputs.iter())
     }
+    /// Forgets what a render on this machine left on the item (its status, start, duration and
+    /// last output): it shows as a machine that never rendered it shows it, queued when its
+    /// Render box is checked, else unqueued. That state is no content: no project file or replica
+    /// holds it.
+    pub fn forget_render(&mut self) {
+        self.status = if self.render { RenderStatus::Queued } else { RenderStatus::Unqueued };
+        self.started = None;
+        self.render_time = None;
+        self.last_output = None;
+    }
     /// Will be rendered by the next Render.
     pub fn is_queued(&self) -> bool {
         self.render && matches!(self.status, RenderStatus::Queued)

@@ -865,7 +865,7 @@ fn export_template(s: &mut Session, p: &Value) -> Result<Value> {
     {
         entries.push(("poster.png".into(), png));
     }
-    entries.insert(0, ("project.kmotion".into(), sub.to_json().into_bytes()));
+    entries.insert(0, ("project.kmotion".into(), sub.content().to_json().into_bytes()));
     entries.insert(0, ("manifest.json".into(), serde_json::to_vec_pretty(&manifest).unwrap_or_default()));
     let bytes = kition_motion_lottie::zip::store(&entries);
     s.services.write_file(&path, &bytes).map_err(|e| EngineError::Other(format!("cannot write {path}: {e}")))?;
@@ -886,8 +886,7 @@ pub fn read_template(bytes: &[u8]) -> std::result::Result<(Value, Project, Vec<(
         return Err("the template was made by a newer Kition Motion".into());
     }
     let text = String::from_utf8(get("project.kmotion").ok_or("template has no project.kmotion")?).map_err(|e| e.to_string())?;
-    let mut project = Project::from_json(&text).map_err(|e| e.to_string())?;
-    crate::upgrade_effects(&mut project);
+    let project = Project::from_file_json(&text).map_err(|e| e.to_string())?;
     Ok((manifest, project, entries))
 }
 

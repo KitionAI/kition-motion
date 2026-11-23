@@ -34,11 +34,5 @@ pub(crate) fn keep(from: &Project, into: &mut Project) {
 /// `project` without any machine's state: default Render Queue preferences, and every render
 /// item as a machine that has not rendered it shows it.
 pub(crate) fn strip(project: &mut Project) {
-    project.render_prefs = Default::default();
-    for item in &mut project.render_queue {
-        item.status = unrendered(item.render);
-        item.started = None;
-        item.render_time = None;
-        item.last_output = None;
-    }
+    project.forget_machine_state();
 }
