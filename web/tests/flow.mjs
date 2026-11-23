@@ -47,6 +47,10 @@ try {
   await page.waitForTimeout(600)
   await kit.getByTestId('motion-play').click()
   step('plays and pauses', (await details()).time > 1.6, String((await details()).time))
+  // Where playback stopped depends on the machine's speed (it may stop on the key at 2.5 s, where
+  // an edit changes that key): the edit happens at 1.8 s, between the layer's keys.
+  await page.mouse.click(ruler.x + ruler.width * 0.6, ruler.y + ruler.height / 2)
+  await until(async () => Math.abs((await details()).time - 1.8) < 0.05)
   await kit.getByTestId('motion-value-position-1').fill('200')
   await kit.getByTestId('motion-value-position-1').press('Enter')
   const keys = async () => (await details()).info.layers.find((layer) => layer.id === shape.id).animated.find((property) => property.name === 'Position')?.times.length ?? 0
