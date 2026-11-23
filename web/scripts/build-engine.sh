@@ -1,13 +1,29 @@
 #!/bin/sh
 # Builds the Motion engine (bindings/wasm) to WebAssembly into public/engine, where the
-# editor loads it from its own package. Needs wasm-pack.
+# editor loads it from its own package. Needs wasm-pack, rustup's wasm32 target, and a C compiler
+# for wasm32 (Homebrew's LLVM on macOS) for the engine's C dependencies.
 set -eu
 web="$(cd "$(dirname "$0")/.." && pwd)"
 repo="$(cd "$web/.." && pwd)"
+# A Homebrew rustc earlier in PATH has no wasm32 standard library: put rustup's toolchain first.
+if [ -x "$HOME/.cargo/bin/rustup" ]; then
+  export PATH="$HOME/.cargo/bin:$PATH"
+fi
 if toolchain="$(rustc --print sysroot 2>/dev/null)" && [ -d "$toolchain/lib" ]; then
   export DYLD_FALLBACK_LIBRARY_PATH="$toolchain/lib${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 fi
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$repo/target}"
+# Apple's clang and ar cannot build WebAssembly archives: use Homebrew's LLVM when it is there and
+# no compiler is set.
+if [ -z "${CC_wasm32_unknown_unknown:-}" ] && command -v brew >/dev/null 2>&1; then
+  for formula in llvm@21 llvm; do
+    llvm="$(brew --prefix "$formula" 2>/dev/null || true)"
+    if [ -n "$llvm" ] && [ -x "$llvm/bin/clang" ]; then
+      export CC_wasm32_unknown_unknown="$llvm/bin/clang" AR_wasm32_unknown_unknown="$llvm/bin/llvm-ar"
+      break
+    fi
+  done
+fi
 cd "$repo"
 wasm-pack build bindings/wasm --target web --release --no-typescript --out-dir "$web/public/engine"
 rm -f "$web/public/engine/.gitignore" "$web/public/engine/package.json"
