@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { DownloadIcon as Download, LoaderCircleIcon as Loader2 } from '@kition/tessera/icons/react'
 import {
   Button,
@@ -23,7 +23,7 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds } from './motion'
-import { ARRANGE, MENU_ROWS, MOTION_PRIMARY, VIEW_MENUS, hiddenRow } from './menus'
+import { ARRANGE, KIT, MENU_ROWS, MOTION_PRIMARY, VIEW_MENUS, hiddenRow } from './menus'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
 import { MotionDialogs, toHex, type MotionDialog, type Rgb } from './dialogs'
@@ -97,6 +97,47 @@ function useMovieRender(doc: KitEngine | null, host: HostConnection, t: (key: st
   return { rendering, start }
 }
 
+/** One step of View ▸ Zoom In or Zoom Out, as the frame's Cmd+= and Cmd+-. */
+const ZOOM_STEP = 1.25
+
+/** How fast Cmd or Ctrl and the wheel zoom the composition: the zoom changes by e^(pixels × this), about 15 % per 200-pixel notch. */
+const WHEEL_ZOOM = 0.0007
+
+/**
+ * Cmd or Ctrl and the wheel over the composition zoom around the pointer, gently: taken before the
+ * canvas's own, faster zoom. Over the transport and the timeline the wheel is theirs.
+ */
+function useGentleWheelZoom(workspace: RefObject<HTMLDivElement | null>, canvas: RefObject<KitCanvasHandle | null>) {
+  useEffect(() => {
+    const element = workspace.current
+    if (!element) return undefined
+    const wheel = (event: WheelEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || !(event.target instanceof Element)) return
+      if (event.target.closest('.motion-timeline, .motion-transport, .motion-splitter')) return
+      const handle = canvas.current
+      const view = handle?.view()
+      if (!handle || !view) return
+      event.preventDefault()
+      event.stopPropagation()
+      // The canvas's own element: the first one up from the target that is the view's size.
+      let box: Element | null = event.target
+      while (box && box !== element && Math.abs(box.clientWidth - view.width) > 1) box = box.parentElement
+      const rect = (box ?? element).getBoundingClientRect()
+      const px = event.clientX - rect.left
+      const py = event.clientY - rect.top
+      const zoom = view.zoom * Math.exp(-event.deltaY * WHEEL_ZOOM)
+      // The document point under the pointer stays under it.
+      const dx = view.x + px / view.zoom
+      const dy = view.y + py / view.zoom
+      handle.zoomTo(zoom)
+      const now = handle.view()?.zoom ?? zoom
+      handle.panTo(dx - px / now, dy - py / now)
+    }
+    element.addEventListener('wheel', wheel, { passive: false, capture: true })
+    return () => element.removeEventListener('wheel', wheel, { capture: true })
+  }, [workspace, canvas])
+}
+
 /** Commands the editor asks values for in its own dialogs. */
 const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set']
 
@@ -127,6 +168,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     requestAnimationFrame(() => canvas.current?.fit())
   }, [compId, picture, state?.comp?.width, state?.comp?.height])
   const views = useMemo(createViewStore, [])
+  useGentleWheelZoom(workspace, canvas)
   // Moving through time is not an edit: it goes to the engine without the editor's notices.
   const runQuietly = session.run
   const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0)
@@ -173,6 +215,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'time.end': end,
     'time.previousFrame': () => step(-1),
     'time.nextFrame': () => step(1),
+    'view.zoomIn': () => canvas.current?.zoomBy(ZOOM_STEP),
+    'view.zoomOut': () => canvas.current?.zoomBy(1 / ZOOM_STEP),
+    [KIT.zoomFit]: () => canvas.current?.fit(),
+    [KIT.zoom100]: () => canvas.current?.zoomTo(1),
     'comp.new': () => void openComp('new'),
     'comp.settings': () => void openComp('settings'),
     'layer.newSolid': () => void openSolid('new'),
@@ -223,6 +269,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     }
     const command = event.metaKey || event.ctrlKey
     if (event.key === ' ' && !command) playback.toggle()
+    // View ▸ Zoom In and Zoom Out: . and , (Cmd or Ctrl with = and - zoom too, and Cmd+0 fits).
+    else if ((event.key === '.' || event.key === ',') && !command && !event.altKey) canvas.current?.zoomBy(event.key === '.' ? ZOOM_STEP : 1 / ZOOM_STEP)
     else if (event.key === 'PageDown' || (event.key === 'ArrowRight' && command)) step(event.shiftKey ? 10 : 1)
     else if (event.key === 'PageUp' || (event.key === 'ArrowLeft' && command)) step(event.shiftKey ? -10 : -1)
     // Layer ▸ Arrange ▸ Bring Layer Forward / Send Layer Backward (with Shift: to the front / back).

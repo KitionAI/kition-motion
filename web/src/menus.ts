@@ -144,6 +144,11 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
   [
     'View',
     [
+      ['Zoom In', 'view.zoomIn', '.'],
+      ['Zoom Out', 'view.zoomOut', ','],
+      ['Fit in Window', KIT.zoomFit, 'Cmd+0'],
+      ['Zoom 100%', KIT.zoom100],
+      SEPARATOR,
       ['Go to Time…', 'time.set'],
       ['Go to Start', 'time.start', 'Home'],
       ['Go to End', 'time.end', 'End'],
@@ -171,7 +176,7 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
   Composition: ['comp.new', 'comp.settings', 'playback.toggle', 'comp.trimToWorkArea'],
   Layer: ['layer.newText', 'layer.newSolid', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment', 'layer.precompose', 'layer.addMask'],
   Animation: ['keys.easyEase', 'keys.toggleHold'],
-  View: ['time.set', 'time.start', 'time.end', 'time.previousKey', 'time.nextKey'],
+  View: ['view.zoomIn', 'view.zoomOut', KIT.zoomFit, 'time.set', 'time.start', 'time.end', 'time.previousKey', 'time.nextKey'],
 }
 
 /**
