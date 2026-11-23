@@ -154,6 +154,11 @@ async function drag(a, b, held = []) {
     await page.mouse.move(a.x + ((b.x - a.x) * i) / 10, a.y + ((b.y - a.y) * i) / 10)
     await page.waitForTimeout(16)
   }
+  // A drag-and-drop needs a move over the target after it was entered: WebKit drops only where a
+  // dragover has been taken, and the last step of the path may be the one that enters the target.
+  await page.mouse.move(b.x + 1, b.y + 1)
+  await page.waitForTimeout(16)
+  await page.mouse.move(b.x, b.y)
   await page.waitForTimeout(100)
   await page.mouse.up()
   for (const key of held) await page.keyboard.up(key)
@@ -256,11 +261,14 @@ try {
   await until(async () => (await layers()).length === before.length)
   step('undo removes it', (await layers()).length === before.length)
   // And onto the timeline: a layer at the current time.
+  // WebKit gives the first press after a drag-and-drop no pointerdown (the drag took the pointer),
+  // so a press on the empty status bar comes first and the ruler gets a whole press.
+  await kit.getByTestId('motion-status').click({ position: { x: 4, y: 4 } })
   const now = await seekRuler(200)
   await drag(centre(await row.boundingBox()), centre(await kit.getByTestId('motion-timeline-rows').boundingBox()))
   await until(async () => (await layers()).length === before.length + 1)
   placed = await newest(before)
-  step('dragging it onto the timeline places it at the current time', placed && near(placed.in, now, 1e-3), JSON.stringify({ in: placed?.in, now }))
+  step('dragging it onto the timeline places it at the current time', placed && now > 0 && near(placed.in, now, 1e-3), JSON.stringify({ in: placed?.in, now }))
   await undo()
   await until(async () => (await layers()).length === before.length)
 

@@ -99,6 +99,8 @@ try {
   await kit.getByTestId(`motion-layer-${SHAPE}`).click()
   await page.keyboard.press('KeyP')
   await kit.getByTestId(`motion-key-${SHAPE}-transform.position-0`).waitFor()
+  // The marks are drawn before their keys' interpolation has come back from the engine.
+  await until(async () => (await shape(0))[0] !== null && (await shape(2500))[0] !== null)
   step('linear keyframes show as diamonds (both halves linear)', same(await shape(0), ['linear', 'linear']) && same(await shape(2500), ['linear', 'linear']), JSON.stringify([await shape(0), await shape(2500)]))
   await selectBoth()
   await page.keyboard.press('F9')
