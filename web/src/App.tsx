@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
 import { DownloadIcon as Download, LoaderCircleIcon as Loader2 } from '@kition/tessera/icons/react'
 import {
   Button,
@@ -27,9 +27,11 @@ import { ARRANGE, KIT, MOTION_PRIMARY, VIEW_MENUS, hiddenRow, menuRows } from '.
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
+import { motionReport } from './errors'
 import { MotionDialogs, toHex, type MotionDialog, type Rgb } from './dialogs'
 import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
+import { Splitter, useTimelineHeight } from './Splitter'
 import { PropertiesPanel } from './PropertiesPanel'
 
 /** Plays the composition from the current time against the wall clock; frames the engine cannot render in time are skipped, as a preview does. */
@@ -146,7 +148,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
   const manifest = useMemo(engineManifest, [])
   const session = useKitSession(host, manifest, describe)
-  const editor = useKitEditorState(session, host, t, 'motion', phrase)
+  // Failures read as short sentences; the engine's English goes in the details.
+  const report = useMemo(() => motionReport(t, t('commandFailed')), [t])
+  const editor = useKitEditorState(session, host, t, 'motion', phrase, undefined, { report })
   const { state } = session
   const canvas = useRef<KitCanvasHandle>(null)
   const viewMemory = useRef<RasterView | null>(null)
@@ -155,6 +159,16 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const picture = state?.picture
   const panBounds = useMemo(() => picturePanBounds(picture?.width ?? 0, picture?.height ?? 0, zoom), [picture?.width, picture?.height, zoom])
   const workspace = useRef<HTMLDivElement>(null)
+  // The view a fit gave (the canvas opens fitted): Fit in Window is hidden while the view is still that.
+  const fitting = useRef(true)
+  const [fitView, setFitView] = useState<string | null>(null)
+  const [viewKey, setViewKey] = useState('')
+  const fit = useCallback(() => {
+    fitting.current = true
+    canvas.current?.fit()
+    // A fit that changed nothing reports no view: the next view is not a fit's.
+    window.setTimeout(() => (fitting.current = false), 300)
+  }, [])
   // A composition opened (new, or switched to) fits the window once its picture has its size.
   const compId = state?.comp?.id
   const fitted = useRef<number | undefined>(undefined)
@@ -166,10 +180,12 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     }
     if (fitted.current === compId || picture.width !== state?.comp?.width || picture.height !== state?.comp?.height) return
     fitted.current = compId
-    requestAnimationFrame(() => canvas.current?.fit())
+    requestAnimationFrame(fit)
   }, [compId, picture, state?.comp?.width, state?.comp?.height])
   const views = useMemo(createViewStore, [])
   useGentleWheelZoom(workspace, canvas)
+  const main = useRef<HTMLDivElement>(null)
+  const [timelineHeight, setTimelineHeight] = useTimelineHeight()
   // Moving through time is not an edit: it goes to the engine without the editor's notices.
   const runQuietly = session.run
   const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0)
@@ -228,7 +244,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [FIND_EFFECT]: () => setFindEffect(true),
     'view.zoomIn': () => canvas.current?.zoomBy(ZOOM_STEP),
     'view.zoomOut': () => canvas.current?.zoomBy(1 / ZOOM_STEP),
-    [KIT.zoomFit]: () => canvas.current?.fit(),
+    [KIT.zoomFit]: fit,
     [KIT.zoom100]: () => canvas.current?.zoomTo(1),
     'comp.new': () => void openComp('new'),
     'comp.settings': () => void openComp('settings'),
@@ -256,7 +272,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [run],
   )
   // Rows with nothing to act on are hidden; the predicate changes only when that does.
-  const hiding = hiddenRow(state, lastEffect)
+  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1 })
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(() => menuRows(effects), [effects])
   const wholeWorkArea = hiding.key.includes('comp.trimToWorkArea')
@@ -324,7 +340,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
         {findEffect ? <FindEffectDialog effects={effects} onApply={(effect) => applyEffect(effect.id)} onClose={() => setFindEffect(false)} /> : null}
         <div className="kui-row" ref={workspace} data-testid="motion-workspace" data-picture={picture ? `${picture.width} ${picture.height}` : undefined}>
-          <div className="motion-main">
+          <div className="motion-main" ref={main} style={{ '--motion-timeline-height': `${timelineHeight}px` } as CSSProperties}>
             <KitDocumentCanvas
               canvas={canvas}
               viewMemory={viewMemory}
@@ -332,6 +348,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               tool={HAND_TOOL}
               onView={(view) => {
                 setZoom(view.zoom)
+                const key = `${view.zoom} ${view.x} ${view.y}`
+                if (fitting.current) setFitView(key)
+                fitting.current = false
+                setViewKey(key)
                 views.set(view)
                 // The view, for the scroll test's checks (zoom and the document point at the top left).
                 workspace.current?.setAttribute('data-view', `${view.zoom} ${view.x} ${view.y}`)
@@ -343,6 +363,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             {/* The transport and the timeline are the kit's own bars: Focus shows the composition alone. */}
             {state ? (
               <FrameChrome>
+                <Splitter height={timelineHeight} onHeight={setTimelineHeight} main={main} />
                 <Transport info={state} playing={playback.playing} onPlay={playback.toggle} onSeek={seek} onStep={step} onCommand={dispatch} />
                 <Timeline
                   info={state}

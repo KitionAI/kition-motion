@@ -185,9 +185,10 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
  * Arrange and Deselect All without a selection, Select All with every layer selected, Show All
  * Video with none hidden, Unlock All with none locked, Trim to Work Area while the work area is
  * the whole composition, Solid Settings unless the selected layer is a solid, effects without a
- * selection, and Last Effect until one was applied here.
+ * selection, Last Effect until one was applied here, Fit in Window while the view is fitted and
+ * Zoom 100% at 100%.
  */
-export function hiddenRow(info: MotionInfo | null, lastEffect: boolean) {
+export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean }) {
   const layers = info?.layers ?? []
   const selected = layers.some((layer) => layer.selected)
   const comp = info?.comp
@@ -199,6 +200,8 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean) {
   if (layers.find((layer) => layer.selected)?.type !== 'Solid') hidden.add('layer.settings')
   if (!comp || (comp.workArea[0] <= 1e-6 && comp.workArea[1] >= comp.duration - 1e-6)) hidden.add('comp.trimToWorkArea')
   if (!selected || !lastEffect) hidden.add('effect.applyLast')
+  if (view.fitted) hidden.add(KIT.zoomFit)
+  if (view.actual) hidden.add(KIT.zoom100)
   const key = [...hidden].sort().join(' ') + (selected ? '' : ' effects')
   return { key, hidden: (row: MenuRow) => hidden.has(row.command) || (!selected && row.command.startsWith(EFFECT_PREFIX)) }
 }
