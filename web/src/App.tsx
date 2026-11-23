@@ -23,7 +23,8 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds } from './motion'
-import { ARRANGE, KIT, MENU_ROWS, MOTION_PRIMARY, VIEW_MENUS, hiddenRow } from './menus'
+import { ARRANGE, KIT, MOTION_PRIMARY, VIEW_MENUS, hiddenRow, menuRows } from './menus'
+import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
 import { MotionDialogs, toHex, type MotionDialog, type Rgb } from './dialogs'
@@ -177,6 +178,15 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const step = (frames: number) => void runQuietly('time.step', { frames }).catch(() => undefined)
   const { run, query } = editor
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
+  const [findEffect, setFindEffect] = useState(false)
+  // Every effect the engine has, for the Effect menu; and whether one was applied here (Last Effect).
+  const [effects, setEffects] = useState<MotionEffect[]>([])
+  const [lastEffect, setLastEffect] = useState(false)
+  useEffect(() => {
+    if (!session.doc) return
+    void query<MotionEffect[]>('effect.list', {}).then((list) => setEffects((list ?? []).map(({ id, name, category }) => ({ id, name, category }))))
+  }, [session.doc, query])
+  const applyEffect = (effect: string) => void run('effect.apply', { effect }).then((done) => done !== null && setLastEffect(true))
   /** A name not taken by a project item: `Comp 2`, `Solid 1`. */
   const unusedName = async (base: string) => {
     const summary = await query<{ items?: Array<{ name?: string }> }>('project.summary', {})
@@ -215,6 +225,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'time.end': end,
     'time.previousFrame': () => step(-1),
     'time.nextFrame': () => step(1),
+    [FIND_EFFECT]: () => setFindEffect(true),
     'view.zoomIn': () => canvas.current?.zoomBy(ZOOM_STEP),
     'view.zoomOut': () => canvas.current?.zoomBy(1 / ZOOM_STEP),
     [KIT.zoomFit]: () => canvas.current?.fit(),
@@ -230,28 +241,35 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     },
   }
   const latestOwn = useRef(own)
+  const latestApply = useRef(applyEffect)
+  latestApply.current = applyEffect
   latestOwn.current = own
   /** A menu row, a ribbon button, or a shortcut: the editor's own handling first, else the engine. */
   const dispatch = useCallback(
     (command: string) => {
       const handler = latestOwn.current[command]
       if (handler) handler()
+      else if (command.startsWith(EFFECT_PREFIX)) latestApply.current(command.slice(EFFECT_PREFIX.length))
       else if (ARRANGE[command]) void run('layer.arrange', { to: ARRANGE[command] })
       else void run(command, {})
     },
     [run],
   )
   // Rows with nothing to act on are hidden; the predicate changes only when that does.
-  const hiding = hiddenRow(state)
+  const hiding = hiddenRow(state, lastEffect)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  const rows = useMemo(() => menuRows(effects), [effects])
   const wholeWorkArea = hiding.key.includes('comp.trimToWorkArea')
   // Home first (its own ribbon; a drop-down panel in Menus), then the editor's menus.
   const tabs = useMemo<FrameTab[]>(
     () => [
-      { id: 'home', label: t('homeTab'), ribbon: <HomeTab onCommand={dispatch} wholeWorkArea={wholeWorkArea} /> },
-      ...catalogTabs(MENU_ROWS, { phrase, view: VIEW_MENUS, primary: MOTION_PRIMARY, hidden, onCommand: dispatch, onKitCommand: dispatch }),
+      { id: 'home', label: t('homeTab'), ribbon: <HomeTab onCommand={dispatch} wholeWorkArea={wholeWorkArea} lastEffect={lastEffect} /> },
+      ...catalogTabs(rows, { phrase, view: VIEW_MENUS, primary: MOTION_PRIMARY, hidden, onCommand: dispatch, onKitCommand: dispatch }).map((tab) =>
+        // The Effect tab's ribbon: a drop-down per category rather than a button per effect.
+        tab.id === 'Effect' ? { ...tab, ribbon: <EffectRibbon effects={effects} onCommand={dispatch} lastEffect={lastEffect} /> } : tab,
+      ),
     ],
-    [dispatch, hidden, phrase, t, wholeWorkArea],
+    [dispatch, effects, hidden, lastEffect, phrase, rows, t, wholeWorkArea],
   )
 
   // The timeline's own keys (Delete, Cmd+D, …) come first.
@@ -304,6 +322,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         panels={state ? <PropertiesPanel info={state} /> : null}
       >
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
+        {findEffect ? <FindEffectDialog effects={effects} onApply={(effect) => applyEffect(effect.id)} onClose={() => setFindEffect(false)} /> : null}
         <div className="kui-row" ref={workspace} data-testid="motion-workspace" data-picture={picture ? `${picture.width} ${picture.height}` : undefined}>
           <div className="motion-main">
             <KitDocumentCanvas

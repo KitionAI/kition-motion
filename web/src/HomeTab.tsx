@@ -1,6 +1,7 @@
 import { DiamondIcon as Diamond, LayersIcon as Layers, PauseIcon as Pause, PlusIcon as Plus, ScissorsIcon as Scissors, Settings2Icon as Settings2, SparklesIcon as Sparkles, SplineIcon as Spline, SquareIcon as Square, SquareDashedIcon as SquareDashed, SquarePlusIcon as SquarePlus, TypeIcon as Type } from '@kition/tessera/icons/react'
 import { CommandButton, CommandItem, MenuItem, MenuSeparator, RibbonGroup, RibbonMenu, RibbonStack, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import { NEW_LAYERS } from './Transport'
+import { EFFECT_PREFIX, FIND_EFFECT } from './effects'
 
 /** The layers Home's New Layer menu makes: the transport's, then a camera and a light. */
 const HOME_LAYERS = [...NEW_LAYERS, { id: 'camera', command: 'layer.newCamera', params: {} }, { id: 'light', command: 'layer.newLight', params: {} }] as const
@@ -12,7 +13,7 @@ const EFFECTS = ['Gaussian Blur', 'Glow', 'Drop Shadow', 'Fill', 'Tint', 'Hue/Sa
  * Motion's Home tab: the motion tasks done most, in every display mode (a drop-down panel in
  * Menus): new layers, keyframes, effects, and the composition. Render stays in the top bar.
  */
-export function HomeTab({ onCommand, wholeWorkArea }: { onCommand: (command: string) => void; wholeWorkArea: boolean }) {
+export function HomeTab({ onCommand, wholeWorkArea, lastEffect }: { onCommand: (command: string) => void; wholeWorkArea: boolean; lastEffect: boolean }) {
   const { run, enabled, phrase: p, t } = useKitEditor()
   const readOnly = useReadOnly()
   return (
@@ -38,11 +39,12 @@ export function HomeTab({ onCommand, wholeWorkArea }: { onCommand: (command: str
       <RibbonGroup label={p('Effect')} icon={Sparkles}>
         <RibbonMenu icon={Sparkles} label={t('home.effects')} size="large" disabled={readOnly || !enabled('effect.apply')} testId="motion-home-effects" primary>
           {EFFECTS.map((name) => (
-            <MenuItem key={name} label={p(name)} onSelect={() => void run('effect.apply', { effect: name })} testId={`motion-home-effect-${name.toLowerCase().replace(/[^a-z]+/g, '-')}`} />
+            <MenuItem key={name} label={p(name)} onSelect={() => onCommand(`${EFFECT_PREFIX}${name}`)} testId={`motion-home-effect-${name.toLowerCase().replace(/[^a-z]+/g, '-')}`} />
           ))}
           <MenuSeparator />
-          <CommandItem command="effect.applyLast" />
-          <CommandItem command="effect.removeAll" />
+          {/* Last Effect once one was applied here; every other effect is in Find Effect. */}
+          {lastEffect ? <CommandItem command="effect.applyLast" onRun={onCommand} /> : null}
+          <MenuItem label={p('Find Effect…')} onSelect={() => onCommand(FIND_EFFECT)} testId="motion-home-find-effect" />
         </RibbonMenu>
       </RibbonGroup>
 

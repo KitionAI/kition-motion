@@ -456,3 +456,27 @@
 .motion-comp-switcher {
   max-width: 220px;
 }
+
+/* Find Effect: the matches under the search field, scrolling. */
+.motion-effect-find {
+  width: 420px;
+}
+
+.motion-effect-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.motion-effect-option {
+  justify-content: space-between;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.motion-effect-option[aria-selected='true'] {
+  background: var(--kit-primary-soft);
+}

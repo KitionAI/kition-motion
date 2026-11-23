@@ -1,5 +1,6 @@
 import type { MenuRow } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
+import { EFFECT_PREFIX, effectRows, type MotionEffect } from './effects'
 
 /**
  * The editor's menus: the commands each menu shows, in order, with separators and submenus. A
@@ -160,11 +161,10 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
   ],
 ]
 
-/** The menu bar's menus, in order. */
-export const MENU_ORDER = MENUS.map(([name]) => name)
-
-/** Every menu row, in menu order. */
-export const MENU_ROWS: readonly MenuRow[] = MENUS.flatMap(([name, entries]) => rowsOf([name], entries))
+/** Every menu row, in menu order: the Effect menu (every effect the engine has, by category) after Layer. */
+export function menuRows(effects: readonly MotionEffect[]): MenuRow[] {
+  return MENUS.flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
+}
 
 /** Menus kept in a read-only document. */
 export const VIEW_MENUS = ['View']
@@ -175,6 +175,7 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
   Edit: ['edit.undo', 'edit.redo', 'edit.cut', 'edit.copy', 'edit.paste', 'edit.duplicate', 'edit.splitLayer', 'edit.clear'],
   Composition: ['comp.new', 'comp.settings', 'playback.toggle', 'comp.trimToWorkArea'],
   Layer: ['layer.newText', 'layer.newSolid', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment', 'layer.precompose', 'layer.addMask'],
+  Effect: ['kit:find-effect', 'effect.applyLast'],
   Animation: ['keys.easyEase', 'keys.toggleHold'],
   View: ['view.zoomIn', 'view.zoomOut', KIT.zoomFit, 'time.set', 'time.start', 'time.end', 'time.previousKey', 'time.nextKey'],
 }
@@ -183,9 +184,10 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
  * Rows hidden where they would have nothing to act on (so a shown row always does something):
  * Arrange and Deselect All without a selection, Select All with every layer selected, Show All
  * Video with none hidden, Unlock All with none locked, Trim to Work Area while the work area is
- * the whole composition, Solid Settings unless the selected layer is a solid.
+ * the whole composition, Solid Settings unless the selected layer is a solid, effects without a
+ * selection, and Last Effect until one was applied here.
  */
-export function hiddenRow(info: MotionInfo | null) {
+export function hiddenRow(info: MotionInfo | null, lastEffect: boolean) {
   const layers = info?.layers ?? []
   const selected = layers.some((layer) => layer.selected)
   const comp = info?.comp
@@ -196,6 +198,7 @@ export function hiddenRow(info: MotionInfo | null) {
   if (!layers.some((layer) => layer.switches.locked)) hidden.add('layer.unlockAll')
   if (layers.find((layer) => layer.selected)?.type !== 'Solid') hidden.add('layer.settings')
   if (!comp || (comp.workArea[0] <= 1e-6 && comp.workArea[1] >= comp.duration - 1e-6)) hidden.add('comp.trimToWorkArea')
-  const key = [...hidden].sort().join(' ')
-  return { key, hidden: (row: MenuRow) => hidden.has(row.command) }
+  if (!selected || !lastEffect) hidden.add('effect.applyLast')
+  const key = [...hidden].sort().join(' ') + (selected ? '' : ' effects')
+  return { key, hidden: (row: MenuRow) => hidden.has(row.command) || (!selected && row.command.startsWith(EFFECT_PREFIX)) }
 }

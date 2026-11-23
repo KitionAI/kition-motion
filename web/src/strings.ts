@@ -78,6 +78,12 @@ const enUS: Catalog = {
   "defaultComp": "Comp",
   "defaultSolid": "Solid",
   "compSwitcher": "Composition: choose one to open it",
+  "effect.find": "Find Effect",
+  "effect.apply": "Apply",
+  "effect.search": "Type part of an effect's name",
+  "effect.selectFirst": "Select a layer first: effects apply to the selected layers.",
+  "effect.none": "No effect has that name.",
+  "effect.more": "{count} more: type more of the name.",
 }
 
 const zhCN: Catalog = {
@@ -157,6 +163,12 @@ const zhCN: Catalog = {
   "defaultComp": "合成",
   "defaultSolid": "纯色",
   "compSwitcher": "合成：选择一个以打开",
+  "effect.find": "查找效果",
+  "effect.apply": "应用",
+  "effect.search": "输入效果名称的一部分",
+  "effect.selectFirst": "请先选中图层：效果会加到选中的图层上。",
+  "effect.none": "没有这个名称的效果。",
+  "effect.more": "还有 {count} 个：再多输入几个字。",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }
