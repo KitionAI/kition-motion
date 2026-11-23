@@ -34,10 +34,14 @@
 }
 
 .motion-timeline-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
   flex: none;
   height: 28px;
   border-bottom: 1px solid var(--kit-border);
+  background: var(--kit-surface);
 }
 
 .motion-timeline-names {
@@ -110,15 +114,57 @@
 .motion-row-track {
   position: relative;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .motion-bar {
   position: absolute;
   top: 6px;
   bottom: 6px;
+  box-sizing: border-box;
   border: 1px solid var(--kit-border);
   border-radius: 6px;
   background: var(--kit-surface-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.motion-bar[data-dragging] {
+  cursor: grabbing;
+}
+
+.motion-bar[data-locked] {
+  cursor: default;
+}
+
+/* A bar's ends: dragged, they trim the in and out points. */
+.motion-bar-end {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 6px;
+  cursor: ew-resize;
+}
+
+.motion-bar-end[data-edge='in'] {
+  left: -1px;
+}
+
+.motion-bar-end[data-edge='out'] {
+  right: -1px;
+}
+
+.motion-bar-readout {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+  color: var(--kit-text);
+  font-family: var(--kit-font-mono);
+  font-size: 10px;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .motion-row[data-selected='true'] .motion-bar {
@@ -128,6 +174,7 @@
 
 .motion-key {
   position: absolute;
+  pointer-events: none;
   top: 50%;
   width: 8px;
   height: 8px;

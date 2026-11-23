@@ -24,7 +24,7 @@ import { CATALOGS } from './strings'
 import { MOTION_PRIMARY, MENU_ORDER, describe, picturePanBounds } from './motion'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
-import { Timeline } from './Timeline'
+import { Timeline } from './timeline/Timeline'
 import { Transport } from './Transport'
 import { PropertiesPanel } from './PropertiesPanel'
 

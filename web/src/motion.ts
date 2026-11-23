@@ -3,8 +3,11 @@ import type { KitEngineInfo, RasterRect } from '@kition/sdk/editor'
 /** One animated property of a layer and its key times, in composition seconds. */
 type Animated = { path: string; name: string; times: number[] }
 
-/** One layer of the composition, top first. */
-export type MotionLayer = { id: number; index: number; name: string; type: string; in: number; out: number; selected: boolean; animated: Animated[] }
+/** A layer's switches the timeline shows: visible (video), solo, locked, and 3D. */
+export type MotionSwitches = { video: boolean; solo: boolean; locked: boolean; threeD: boolean }
+
+/** One layer of the composition, top first: `in`, `out`, and `start` in composition seconds. */
+export type MotionLayer = { id: number; index: number; name: string; type: string; in: number; out: number; start: number; selected: boolean; switches: MotionSwitches; animated: Animated[] }
 
 /** One transform property of the selected layer at the current time. */
 export type MotionProperty = { path: string; name: string; type: 'scalar' | 'vec2' | 'vec3' | string; value: number | number[]; animated: boolean }
@@ -13,7 +16,7 @@ export type MotionProperty = { path: string; name: string; type: 'scalar' | 'vec
 export type MotionInfo = {
   /** The picture the canvas shows, in document pixels. Scrolling stops a margin past it. */
   picture: { width: number; height: number }
-  comp: { id: number; name: string; width: number; height: number; fps: number; duration: number } | null
+  comp: { id: number; name: string; width: number; height: number; fps: number; duration: number; workArea: [number, number] } | null
   time: number
   /** One frame, in seconds. */
   frame: number
@@ -25,7 +28,19 @@ export type MotionInfo = {
 type Inspected = {
   comp?: { id?: number; name?: string; width?: number; height?: number; frameRate?: number; duration?: number } | null
   info?: {
-    layers?: Array<{ id?: number; index?: number; name?: string; type?: string; in?: number; out?: number; selected?: boolean; animated?: Animated[] }>
+    workArea?: [number, number]
+    layers?: Array<{
+      id?: number
+      index?: number
+      name?: string
+      type?: string
+      in?: number
+      out?: number
+      start?: number
+      selected?: boolean
+      switches?: { video?: boolean; solo?: boolean; locked?: boolean; three_d?: boolean }
+      animated?: Animated[]
+    }>
     transform?: { layer?: number; properties?: MotionProperty[] }
   } | null
   time?: number
@@ -37,7 +52,17 @@ export function describe(info: KitEngineInfo): MotionInfo {
   const fps = comp?.frameRate || 30
   return {
     picture: { width: info.width, height: info.height },
-    comp: comp ? { id: comp.id ?? 0, name: comp.name ?? '', width: comp.width ?? info.width, height: comp.height ?? info.height, fps, duration: comp.duration ?? 0 } : null,
+    comp: comp
+      ? {
+          id: comp.id ?? 0,
+          name: comp.name ?? '',
+          width: comp.width ?? info.width,
+          height: comp.height ?? info.height,
+          fps,
+          duration: comp.duration ?? 0,
+          workArea: inspected.info?.workArea ?? [0, comp.duration ?? 0],
+        }
+      : null,
     time: inspected.time ?? 0,
     frame: 1 / fps,
     layers: (inspected.info?.layers ?? []).map((layer) => ({
@@ -47,7 +72,9 @@ export function describe(info: KitEngineInfo): MotionInfo {
       type: layer.type ?? '',
       in: layer.in ?? 0,
       out: layer.out ?? 0,
+      start: layer.start ?? 0,
       selected: layer.selected === true,
+      switches: { video: layer.switches?.video !== false, solo: layer.switches?.solo === true, locked: layer.switches?.locked === true, threeD: layer.switches?.three_d === true },
       animated: layer.animated ?? [],
     })),
     transform: inspected.info?.transform?.layer != null ? { layer: inspected.info.transform.layer, properties: inspected.info.transform.properties ?? [] } : null,
