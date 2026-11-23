@@ -158,7 +158,7 @@ pub(crate) async fn webm_av1(job: &Cx<'_>, comp: &Comp, w: u32, h: u32, st: &mut
         let t_end = if end >= total { span_end } else { job.settings.frame_time(comp, end) };
         audio_until(t_end, &mut blocks, end >= total);
         flush_blocks(&mut blocks, &mut file, &mut seg_len)?;
-        st.advance(end - i)?;
+        st.step(end - i).await?;
         i = end;
     }
     if total == 0 {

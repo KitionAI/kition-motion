@@ -426,6 +426,26 @@ try {
   await kit.getByTestId('motion-render').click()
   await kit.getByTestId('motion-export-dialog').waitFor()
   step('the top-bar button opens the Export dialog', (await kit.getByTestId('motion-export-dialog').textContent()).includes('工作区域'))
+  // The whole composition at full size: the bar counts frames up, the engine still answers
+  // other questions between its steps, and Cancel stops the render and writes no file.
+  const exportProgress = async () => {
+    const bar = kit.getByTestId('motion-export-progress')
+    return (await bar.count()) ? { done: Number(await bar.getAttribute('data-done')), total: Number(await bar.getAttribute('data-total')) } : null
+  }
+  await kit.getByTestId('motion-export-dialog-ok').click()
+  await until(async () => (await exportProgress())?.done > 0, 150)
+  const first = await exportProgress()
+  const asked = Date.now()
+  const answered = await query('project.summary', {}).then(() => Date.now() - asked).catch(() => -1)
+  await until(async () => (await exportProgress())?.done > first.done, 150)
+  const later = await exportProgress()
+  if (shots) await page.screenshot({ path: `${shots}phase6-export-progress.png` })
+  step('the export shows the frames it has rendered, counting up', first?.total > 0 && later?.done > first.done && later.done < later.total, JSON.stringify({ first, later }))
+  step('the engine answers while it exports', answered >= 0 && answered < 3000, `${answered} ms`)
+  await kit.getByTestId('motion-export-dialog-cancel').click()
+  await until(async () => (await kit.getByTestId('motion-export-busy').count()) === 0, 100)
+  const stopped = await page.evaluate(() => [...window.devHost.files.keys()].filter((name) => /\.(mp4|webm|gif)$/.test(name)))
+  step('Cancel stops the export, writes no file and keeps the dialog', stopped.length === 0 && (await kit.getByTestId('motion-export-dialog').count()) === 1 && (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('已取消导出')), JSON.stringify(stopped))
   await kit.getByTestId('motion-export-range').selectOption('workArea')
   await kit.getByTestId('motion-export-size').selectOption('half')
   if (shots) await page.screenshot({ path: `${shots}phase4-export-dialog.png` })

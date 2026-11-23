@@ -283,7 +283,7 @@ pub(crate) async fn webm(job: &Cx<'_>, comp: &Comp, w: u32, h: u32, st: &mut Sta
         let c = cluster(&mut frames);
         file.write_all(&c).map_err(io)?;
         seg_len += c.len() as u64;
-        st.advance(end - i)?;
+        st.step(end - i).await?;
         i = end;
     }
     if total == 0 {

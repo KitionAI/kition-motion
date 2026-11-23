@@ -223,6 +223,30 @@ impl State<'_> {
         let p = self.snapshot();
         if (self.progress)(&p) { Ok(()) } else { Err(ExportError::Cancelled) }
     }
+    /// [`State::advance`], then a pause: the export's future answers "not ready" once, so a
+    /// caller that drives it a little at a time (the web editor's Export dialog, which must keep
+    /// answering and offer Cancel) gets control back after every batch. A blocking caller
+    /// ([`export`]) polls again at once.
+    pub(crate) async fn step(&mut self, n: u64) -> Result<()> {
+        self.advance(n)?;
+        YieldOnce(false).await;
+        Ok(())
+    }
+}
+
+/// A future that is not ready the first time it is polled and ready the second.
+struct YieldOnce(bool);
+
+impl std::future::Future for YieldOnce {
+    type Output = ();
+    fn poll(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<()> {
+        if self.0 {
+            return std::task::Poll::Ready(());
+        }
+        self.0 = true;
+        cx.waker().wake_by_ref();
+        std::task::Poll::Pending
+    }
 }
 
 /// Frames per parallel batch.
@@ -277,7 +301,7 @@ async fn sequence(cx: &Cx<'_>, comp: &Comp, w: u32, h: u32, st: &mut State<'_>) 
         for r in written {
             bytes += r?;
         }
-        st.advance(end - i)?;
+        st.step(end - i).await?;
         i = end;
     }
     Ok(Report { path: sequence_path(cx.path, f0), frames: 0, width: w, height: h, seconds: 0.0, bytes, audio: false, log: None, overflow: vec![] })
@@ -385,7 +409,7 @@ async fn gif_export(job: &Cx<'_>, comp: &Comp, w: u32, h: u32, st: &mut State<'_
             }
             enc.write_frame(&f).map_err(|e| ExportError::Encode(e.to_string()))?;
         }
-        st.advance(end - i)?;
+        st.step(end - i).await?;
         i = end;
     }
     drop(enc);

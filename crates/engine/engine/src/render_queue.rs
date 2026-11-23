@@ -142,6 +142,58 @@ impl RenderJob {
     }
 }
 
+/// A render that advances when asked ([`Session::render_stepped`]).
+pub struct RenderStepper {
+    shared: Arc<JobShared>,
+    future: Option<LocalFuture<'static, ()>>,
+    ids: Vec<u64>,
+}
+
+impl RenderStepper {
+    /// Renders until the job ends or `budget` has passed (at least one batch of frames);
+    /// returns whether the job has ended.
+    pub fn step(&mut self, budget: std::time::Duration) -> bool {
+        let Some(future) = self.future.as_mut() else { return true };
+        let t0 = web_time::Instant::now();
+        let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+        loop {
+            if future.as_mut().poll(&mut cx).is_ready() {
+                self.future = None;
+                return true;
+            }
+            if t0.elapsed() >= budget {
+                return false;
+            }
+        }
+    }
+
+    /// Asks the job to stop: the next step ends it and the export removes what it wrote.
+    pub fn cancel(&self) {
+        self.shared.cancel.store(true, Ordering::Relaxed);
+    }
+
+    /// Frames done and in total of the item being rendered, and items done and in total.
+    pub fn progress(&self) -> JobState {
+        self.shared.snapshot()
+    }
+
+    /// The queue items this job renders.
+    pub fn ids(&self) -> &[u64] {
+        &self.ids
+    }
+
+    /// How each item ended so far: its id, status and output path.
+    pub fn outcomes(&self) -> Vec<(u64, RenderStatus, Option<String>)> {
+        lock(&self.shared.updates)
+            .iter()
+            .filter_map(|u| match u {
+                ItemUpdate::Finished { id, status, output, .. } => Some((*id, status.clone(), output.clone())),
+                ItemUpdate::Started { .. } => None,
+            })
+            .collect()
+    }
+}
+
 /// Everything the worker needs, detached from the session.
 struct Work {
     project: Arc<Project>,
@@ -433,53 +485,7 @@ impl Session {
     pub fn start_render(&mut self, wait: bool) -> Result<Vec<u64>, String> {
         let offload = self.offload.clone().filter(|_| !wait);
         let wait = wait || (cfg!(target_arch = "wasm32") && offload.is_none());
-        if self.is_rendering() {
-            return Err("a render is already in progress".into());
-        }
-        self.poll_render();
-        let exporter = self.exporter.clone().ok_or("export is not available in this build")?;
-        let formats = exporter.formats();
-        let mut items = Vec::new();
-        let mut needs_output = Vec::new();
-        for it in self.project.render_queue.iter().filter(|i| i.is_queued()) {
-            let mut modules = vec![];
-            let mut problem = None;
-            for om in it.output_modules() {
-                let mut m = it.clone();
-                m.output = om.clone();
-                match self.resolve_output(&m) {
-                    Some(p) if formats.contains(&om.format) => {
-                        // Settings ▸ Export: Append Bit Depth to File Name, Segment Sequences /
-                        // Movie Files.
-                        let bits = output_bits(om.format, self.project.settings.bit_depth);
-                        let p = self.prefs.output_name(&p, bits);
-                        modules.extend(self.segments(&m, &p));
-                    }
-                    Some(_) => problem = Some(RenderStatus::Failed(format!("{} export is not available", om.format.label()))),
-                    None if self.project.comp(it.comp).is_none() => problem = Some(RenderStatus::Failed("composition missing".into())),
-                    None => problem = Some(RenderStatus::NeedsOutput),
-                }
-                if problem.is_some() {
-                    break;
-                }
-            }
-            match problem {
-                Some(st) => needs_output.push((it.id, st)),
-                None => items.push(modules),
-            }
-        }
-        if !needs_output.is_empty() {
-            let p = Arc::make_mut(&mut self.project);
-            for (id, st) in needs_output {
-                if let Some(i) = p.render_queue.iter_mut().find(|i| i.id == id) {
-                    i.status = st;
-                }
-            }
-            self.bump();
-        }
-        if items.is_empty() {
-            return Err("nothing is queued: add a composition (Composition ▸ Add to Render Queue) and tick Render".into());
-        }
+        let (exporter, items) = self.queued_work()?;
         let ids: Vec<u64> = items.iter().filter_map(|m| m.first().map(|(i, _)| i.id)).collect();
         if let Some(off) = offload {
             let id = crate::offload::next_id();
@@ -536,6 +542,93 @@ impl Session {
         }
         self.poll_render();
         Ok(ids)
+    }
+
+    /// What every queued item renders: per item, one (item with that output module, resolved
+    /// path) per output module and segment. Items that cannot render are marked (Needs Output,
+    /// Failed) and left out; refuses while a render runs or when nothing is queued.
+    #[allow(clippy::type_complexity)]
+    fn queued_work(&mut self) -> Result<(Arc<dyn Exporter>, Vec<Vec<(RenderQueueItem, String)>>), String> {
+        if self.is_rendering() {
+            return Err("a render is already in progress".into());
+        }
+        self.poll_render();
+        let exporter = self.exporter.clone().ok_or("export is not available in this build")?;
+        let formats = exporter.formats();
+        let mut items = Vec::new();
+        let mut needs_output = Vec::new();
+        for it in self.project.render_queue.iter().filter(|i| i.is_queued()) {
+            let mut modules = vec![];
+            let mut problem = None;
+            for om in it.output_modules() {
+                let mut m = it.clone();
+                m.output = om.clone();
+                match self.resolve_output(&m) {
+                    Some(p) if formats.contains(&om.format) => {
+                        // Settings ▸ Export: Append Bit Depth to File Name, Segment Sequences /
+                        // Movie Files.
+                        let bits = output_bits(om.format, self.project.settings.bit_depth);
+                        let p = self.prefs.output_name(&p, bits);
+                        modules.extend(self.segments(&m, &p));
+                    }
+                    Some(_) => problem = Some(RenderStatus::Failed(format!("{} export is not available", om.format.label()))),
+                    None if self.project.comp(it.comp).is_none() => problem = Some(RenderStatus::Failed("composition missing".into())),
+                    None => problem = Some(RenderStatus::NeedsOutput),
+                }
+                if problem.is_some() {
+                    break;
+                }
+            }
+            match problem {
+                Some(st) => needs_output.push((it.id, st)),
+                None => items.push(modules),
+            }
+        }
+        if !needs_output.is_empty() {
+            let p = Arc::make_mut(&mut self.project);
+            for (id, st) in needs_output {
+                if let Some(i) = p.render_queue.iter_mut().find(|i| i.id == id) {
+                    i.status = st;
+                }
+            }
+            self.bump();
+        }
+        if items.is_empty() {
+            return Err("nothing is queued: add a composition (Composition ▸ Add to Render Queue) and tick Render".into());
+        }
+        Ok((exporter, items))
+    }
+
+    /// Renders every queued item a little at a time: the returned [`RenderStepper`] renders
+    /// until [`RenderStepper::step`] has used its time, then hands back control, so a single
+    /// threaded caller (the web editor's worker) can report progress and stop between batches.
+    /// [`Session::finish_stepped`] gives the queue the outcome afterwards.
+    pub fn render_stepped(&mut self) -> Result<RenderStepper, String> {
+        let (exporter, items) = self.queued_work()?;
+        let ids: Vec<u64> = items.iter().filter_map(|m| m.first().map(|(i, _)| i.id)).collect();
+        let work = Work {
+            project: self.project.clone(),
+            footage: self.footage.clone(),
+            expr: self.expr.clone(),
+            accel: self.accel.clone(),
+            exporter,
+            storage: self.storage_quota.clone(),
+            items,
+            nested_switches: self.prefs.general.switches_affect_nested_comps,
+        };
+        let shared = Arc::new(JobShared::default());
+        lock(&shared.state).items_total = ids.len();
+        let job = shared.clone();
+        let future: LocalFuture<'static, ()> = Box::pin(async move { run_work(work, &job, &mut |_| {}).await });
+        Ok(RenderStepper { shared, future: Some(future), ids })
+    }
+
+    /// Hands a stepped render's item status (done, stopped, failed) to the Render Queue, as a
+    /// finished background render does.
+    pub fn finish_stepped(&mut self, stepper: RenderStepper) {
+        lock(&stepper.shared.state).finished = true;
+        self.render_job = Some(RenderJob { shared: stepper.shared, thread: None, remote: None });
+        self.poll_render();
     }
 
     /// Stop the running render (the current item becomes "User Stopped").

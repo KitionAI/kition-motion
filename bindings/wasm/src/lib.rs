@@ -165,6 +165,8 @@ pub struct MotionDocument {
     /// Footage files already lent to the pool.
     lent: HashSet<String>,
     frame: RefCell<Option<Cached>>,
+    /// The movie the Export dialog is rendering, a little at a time.
+    export: Option<movie::Export>,
 }
 
 impl MotionDocument {
@@ -201,7 +203,7 @@ impl MotionDocument {
     }
 
     fn from_session(session: Session, name: &str, services: Arc<KitServices>, pool: Arc<MediaPool>) -> Self {
-        let mut doc = Self { session, name: name.to_owned(), services, pool, lent: HashSet::new(), frame: RefCell::new(None) };
+        let mut doc = Self { session, name: name.to_owned(), services, pool, lent: HashSet::new(), frame: RefCell::new(None), export: None };
         doc.lend_footage();
         doc
     }
@@ -294,22 +296,60 @@ impl MotionDocument {
     /// a copy of the project, so the document and its Render Queue are left as they are. Returns
     /// the file's bytes; the host saves it as a new file.
     pub fn render_movie(&self, path: &str, format: &str) -> Result<Vec<u8>, String> {
+        let mut export = self.new_export(path, format)?;
+        while !export.step(f64::INFINITY).finished {}
+        let path = export.finished()?;
+        self.take_file(&path).ok_or_else(|| "the render produced no file".to_owned())
+    }
+
+    /// A render of the active composition as a movie named `path` (`settings` as
+    /// [`MotionDocument::render_movie`] takes them), from a copy of the project, so the document
+    /// and its Render Queue are left as they are. Nothing has rendered yet.
+    fn new_export(&self, path: &str, settings: &str) -> Result<movie::Export, String> {
         let comp = self.session.active_comp_id().ok_or("no composition is open")?;
         let mut scratch = Self::new_session(&self.services, &self.pool);
-        scratch.project = self.session.project.clone();
         scratch.state = self.session.state.clone();
         scratch.project = Arc::new({
-            let mut project = (*scratch.project).clone();
+            let mut project = (*self.session.project).clone();
             project.render_queue.clear();
             project
         });
-        scratch.execute("renderQueue.add", movie::queue_params(comp.0, path, format)?).map_err(|error| error.to_string())?;
-        let report = scratch.execute("renderQueue.render", json!({ "wait": true })).map_err(|error| error.to_string())?;
-        let failed = report["items"].as_array().and_then(|items| items.iter().find(|item| item["status"] != "Done"));
-        if let Some(item) = failed {
-            return Err(format!("the render failed: {}", item["statusLabel"].as_str().unwrap_or("unknown")));
-        }
-        self.take_file(path).ok_or_else(|| "the render produced no file".to_owned())
+        scratch.execute("renderQueue.add", movie::queue_params(comp.0, path, settings)?).map_err(|error| error.to_string())?;
+        Ok(movie::Export::new(scratch.render_stepped()?, path))
+    }
+
+    /// Starts an export as [`MotionDocument::render_movie`] makes it, without rendering yet:
+    /// [`MotionDocument::export_step`] renders a little at a time, [`MotionDocument::export_finish`]
+    /// hands over the file and [`MotionDocument::export_cancel`] stops. Starting again drops an
+    /// unfinished export.
+    pub fn export_start(&mut self, path: &str, settings: &str) -> Result<movie::Progress, String> {
+        self.export_cancel();
+        let export = self.new_export(path, settings)?;
+        let progress = export.progress(false);
+        self.export = Some(export);
+        Ok(progress)
+    }
+
+    /// Renders the export for about `milliseconds` (at least one batch of frames) and says how
+    /// far it is.
+    pub fn export_step(&mut self, milliseconds: f64) -> Result<movie::Progress, String> {
+        let export = self.export.as_mut().ok_or("no export is running")?;
+        Ok(export.step(milliseconds))
+    }
+
+    /// The finished export's file; an export that failed answers why, one still running says so.
+    pub fn export_finish(&mut self) -> Result<Vec<u8>, String> {
+        let export = self.export.take().ok_or("no export is running")?;
+        let path = export.finished()?;
+        self.take_file(&path).ok_or_else(|| "the render produced no file".to_owned())
+    }
+
+    /// Stops the export and drops what it wrote; whether one was running.
+    pub fn export_cancel(&mut self) -> bool {
+        let Some(mut export) = self.export.take() else { return false };
+        export.cancel();
+        let _ = self.take_file(export.path());
+        true
     }
 
     /// The keyframed values of one property of a layer in the active composition (`path` as
@@ -1095,10 +1135,29 @@ pub mod web {
             self.0.mix_audio(from, seconds, rate).map_err(|message| JsError::new(&message))
         }
 
-        /// The active composition rendered as a movie named `path` (see [`MotionDocument::render_movie`]).
-        #[wasm_bindgen(js_name = renderMovie)]
-        pub fn render_movie(&self, path: &str, format: &str) -> Result<Vec<u8>, JsError> {
-            self.0.render_movie(path, format).map_err(|message| JsError::new(&message))
+        /// Starts exporting the active composition as a movie named `path` (see
+        /// [`MotionDocument::export_start`]); answers the progress as JSON `{done, total, finished}`.
+        #[wasm_bindgen(js_name = exportStart)]
+        pub fn export_start(&mut self, path: &str, settings: &str) -> Result<String, JsError> {
+            self.0.export_start(path, settings).map(|progress| progress.to_json()).map_err(|message| JsError::new(&message))
+        }
+
+        /// Renders the export for about `milliseconds` (see [`MotionDocument::export_step`]).
+        #[wasm_bindgen(js_name = exportStep)]
+        pub fn export_step(&mut self, milliseconds: f64) -> Result<String, JsError> {
+            self.0.export_step(milliseconds).map(|progress| progress.to_json()).map_err(|message| JsError::new(&message))
+        }
+
+        /// The finished export's bytes (see [`MotionDocument::export_finish`]).
+        #[wasm_bindgen(js_name = exportFinish)]
+        pub fn export_finish(&mut self) -> Result<Vec<u8>, JsError> {
+            self.0.export_finish().map_err(|message| JsError::new(&message))
+        }
+
+        /// Stops the export and keeps no file (see [`MotionDocument::export_cancel`]).
+        #[wasm_bindgen(js_name = exportCancel)]
+        pub fn export_cancel(&mut self) -> bool {
+            self.0.export_cancel()
         }
 
         // The collaboration members (engine contract 2). Shapes mirror `kition-sdk`'s
@@ -1298,6 +1357,50 @@ mod tests {
         assert_eq!(doc.revision(), revision);
         assert!(!doc.dirty());
         assert!(doc.session.project.render_queue.is_empty());
+    }
+
+    #[test]
+    fn an_export_renders_a_batch_at_a_time_and_reports_its_frames() {
+        let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        doc.execute("comp.settings", json!({ "duration": 1.0 })).unwrap();
+        let revision = doc.revision();
+        let start = doc.export_start("Motion.webm", r#"{"format":"webm","size":"half"}"#).unwrap();
+        assert!(!start.finished);
+        let mut seen = vec![];
+        loop {
+            let progress = doc.export_step(0.0).unwrap();
+            seen.push(progress.done);
+            if progress.finished {
+                assert_eq!(progress.done, progress.total);
+                break;
+            }
+            assert!(progress.done <= progress.total, "{progress:?}");
+            assert!(seen.len() < 1000, "the export never ends");
+        }
+        assert!(seen.len() > 2, "rendered in several steps: {seen:?}");
+        assert!(seen.windows(2).all(|pair| pair[0] <= pair[1]), "progress only goes up: {seen:?}");
+        let bytes = doc.export_finish().unwrap();
+        assert_eq!(&bytes[..4], &[0x1a, 0x45, 0xdf, 0xa3], "a WebM (EBML) file");
+        assert_eq!(doc.revision(), revision);
+        assert!(doc.export_finish().is_err(), "the export is over");
+    }
+
+    #[test]
+    fn a_cancelled_export_leaves_no_file() {
+        let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        doc.execute("comp.settings", json!({ "duration": 1.0 })).unwrap();
+        doc.export_start("Motion.mp4", "h264").unwrap();
+        let progress = doc.export_step(0.0).unwrap();
+        assert!(!progress.finished && progress.done > 0, "{progress:?}");
+        assert!(doc.export_cancel());
+        assert!(doc.take_file("Motion.mp4").is_none(), "no file after cancel");
+        assert!(doc.export_step(0.0).is_err() && doc.export_finish().is_err());
+        assert!(!doc.export_cancel());
+        assert!(doc.session.project.render_queue.is_empty());
+        // A finished export still finishes as before after a cancelled one.
+        doc.export_start("Motion.gif", r#"{"format":"gif","size":{"width":64,"height":36}}"#).unwrap();
+        while !doc.export_step(50.0).unwrap().finished {}
+        assert_eq!(&doc.export_finish().unwrap()[..3], b"GIF");
     }
 
     #[test]

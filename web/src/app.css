@@ -1011,9 +1011,23 @@
 
 .motion-export-busy {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   margin: 0;
+}
+
+.motion-export-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--kit-surface-muted);
+  overflow: hidden;
+}
+
+.motion-export-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--kit-primary);
+  transition: width 0.1s linear;
 }
 
 /* The timeline's Graph button, beside "Layers" in its head. */

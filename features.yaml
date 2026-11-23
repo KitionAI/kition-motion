@@ -495,12 +495,12 @@ features:
     cases: []
     since: "2026-11-23"
   - id: motion.editor.export
-    title: "Export (the top-bar button and File ▸ Export) asks for the format (MP4 H.264, WebM VP9, animated GIF: the ones the web build encodes into one file), the range (the whole composition or its work area), the size (full, half, or a width and height) and the frame rate (the composition's or half), renders the active composition and writes it beside the project through the host, naming the file in its message; File ▸ Save Frame As PNG writes the current frame beside the project"
+    title: "Export (the top-bar button and File ▸ Export) asks for the format (MP4 H.264, WebM VP9, animated GIF: the ones the web build encodes into one file), the range (the whole composition or its work area), the size (full, half, or a width and height) and the frame rate (the composition's or half), renders the active composition a batch of frames at a time (exportStart, exportStep, exportFinish) with a progress bar counting the frames, while the editor keeps answering, and writes it beside the project through the host, naming the file in its message; Cancel stops the render between two steps and writes no file; File ▸ Save Frame As PNG writes the current frame beside the project"
     dimension: [function]
     priority: P0
     status: has
-    paths: [web/src/ExportDialog.tsx, bindings/wasm/src/movie.rs, bindings/wasm/src/lib.rs, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/tests/footage.mjs, web/tests/menus.mjs]
-    gap: "The engine renders in one call on the editor's worker: the dialog shows that it is busy, with no progress and no Cancel. HEVC, AV1, ProRes and image sequences encode in the web build but are not offered. Gated by web/tests/footage.mjs, web/tests/menus.mjs and the movie tests in bindings/wasm/src/movie.rs."
+    paths: [web/src/ExportDialog.tsx, bindings/wasm/src/movie.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/render_queue.rs, crates/formats/export/src/lib.rs, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/tests/footage.mjs, web/tests/menus.mjs]
+    gap: "Progress counts frames; the last step (writing the file) shows as one message without its own progress, and a GIF quantises its palette after the last frame. HEVC, AV1, ProRes and image sequences encode in the web build but are not offered. Gated by web/tests/footage.mjs, web/tests/menus.mjs, the movie tests in bindings/wasm/src/movie.rs and the stepped and cancelled export tests in bindings/wasm/src/lib.rs."
     cases: []
     since: "2026-11-23"
   - id: motion.editor.markers

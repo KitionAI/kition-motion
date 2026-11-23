@@ -3,7 +3,84 @@
 //! frame rate (the composition's, or another). The dialog sends them as a JSON object in place of
 //! the format name; a bare format name (`h264`) renders the whole composition as it is.
 
+use std::time::Duration;
+
+use kition_motion_engine::render_queue::RenderStepper;
+use kition_motion_project::render_queue::RenderStatus;
 use serde_json::{Map, Value, json};
+
+/// How far an export is: frames done of the frames it renders, and whether it has ended.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Progress {
+    pub done: u64,
+    pub total: u64,
+    pub finished: bool,
+}
+
+impl Progress {
+    pub fn to_json(self) -> String {
+        json!({ "done": self.done, "total": self.total, "finished": self.finished }).to_string()
+    }
+}
+
+/// A movie being rendered for the Export dialog, a batch of frames at a time.
+pub(crate) struct Export {
+    stepper: RenderStepper,
+    path: String,
+    finished: bool,
+}
+
+impl Export {
+    pub(crate) fn new(stepper: RenderStepper, path: &str) -> Export {
+        Export { stepper, path: path.to_owned(), finished: false }
+    }
+
+    pub(crate) fn progress(&self, finished: bool) -> Progress {
+        let state = self.stepper.progress();
+        Progress { done: state.done, total: state.total, finished }
+    }
+
+    /// Renders for about `milliseconds` (a negative, NaN or zero time still renders one batch).
+    pub(crate) fn step(&mut self, milliseconds: f64) -> Progress {
+        let budget = if milliseconds == f64::INFINITY {
+            Duration::MAX
+        } else if milliseconds.is_finite() && milliseconds > 0.0 {
+            Duration::try_from_secs_f64(milliseconds / 1000.0).unwrap_or(Duration::MAX)
+        } else {
+            Duration::ZERO
+        };
+        self.finished = self.finished || self.stepper.step(budget);
+        self.progress(self.finished)
+    }
+
+    /// The written file's path once the render has ended well, or why it did not.
+    pub(crate) fn finished(&self) -> Result<String, String> {
+        if !self.finished {
+            return Err("the export is still rendering".to_owned());
+        }
+        match self.stepper.outcomes().into_iter().next() {
+            Some((_, RenderStatus::Done, Some(path))) => Ok(path),
+            Some((_, RenderStatus::Done, None)) => Ok(self.path.clone()),
+            Some((_, RenderStatus::Failed(why), _)) => Err(format!("the render failed: {why}")),
+            Some((_, RenderStatus::UserStopped, _)) => Err("the export was cancelled".to_owned()),
+            Some((_, status, _)) => Err(format!("the render failed: {}", status.label())),
+            None => Err("the render produced no file".to_owned()),
+        }
+    }
+
+    /// Stops the render: the export removes the file it opened.
+    pub(crate) fn cancel(&mut self) {
+        self.stepper.cancel();
+        while !self.finished {
+            self.finished = self.stepper.step(Duration::MAX);
+        }
+    }
+
+    /// Where the movie was (or would have been) written.
+    pub(crate) fn path(&self) -> &str {
+        &self.path
+    }
+}
 
 /// The formats the Export dialog offers: the ones the web build encodes into one file.
 const FORMATS: [&str; 3] = ["h264", "webm", "gif"];

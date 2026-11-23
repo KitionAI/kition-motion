@@ -274,7 +274,7 @@ pub(crate) async fn movie(job: &Cx<'_>, comp: &Comp, w: u32, h: u32, st: &mut St
         pending.extend(venc.encode(px, k as u64)?);
     }
     drop(first);
-    st.advance(first_end)?;
+    st.step(first_end).await?;
 
     let path = job.place(job.path, 1);
     let mut file = job.create(&path)?;
@@ -363,7 +363,7 @@ pub(crate) async fn movie(job: &Cx<'_>, comp: &Comp, w: u32, h: u32, st: &mut St
             write_video(&mut mux, ps)?;
         }
         write_audio_until(&mut mux, frame_end_time(end), &mut cursor)?;
-        st.advance(end - i)?;
+        st.step(end - i).await?;
         i = end;
     }
     write_video(&mut mux, venc.flush()?)?;

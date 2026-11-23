@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button, Dialog, Field, Select, TextInput, toast, useKitEditor, type KitEngine } from '@kition/sdk/editor'
-import { Spinner } from '@kition/tessera/ui'
 import type { MotionInfo } from './motion'
 
 /** The formats the web build encodes into one file (`bindings/wasm/src/movie.rs`), with their extensions. */
@@ -24,11 +23,18 @@ function side(text: string) {
 /** A name for a file: the composition's, without characters a file name cannot have. */
 const fileName = (name: string) => name.replace(/[\\/:*?"<>|]+/g, '_').trim() || 'Composition'
 
+/** How far the engine's export is (`exportStart` and `exportStep` answer it). */
+type Progress = { done: number; total: number; finished: boolean }
+
+/** How long the engine renders per `exportStep` call before it answers (and can hear Cancel). */
+const STEP_MS = 120
+
 /**
  * Export: the active composition (all of it or its work area) at full, half or a custom size, at
  * its frame rate or half of it, as H.264 MP4, WebM or animated GIF, written beside the project by
- * the host. The engine renders in one call that reports no progress and cannot be stopped, so the
- * dialog shows that it is busy until the file is written.
+ * the host. The engine renders a little at a time (`exportStart`, then `exportStep` until it has
+ * finished, then `exportFinish` hands over the file), so the dialog shows the frames done and
+ * Cancel stops the render between two steps and writes no file.
  */
 export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: KitEngine | null; onClose: () => void }) {
   const { host, t } = useKitEditor()
@@ -40,6 +46,8 @@ export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: Ki
   const [height, setHeight] = useState(String(comp?.height ?? 1080))
   const [rate, setRate] = useState<'comp' | 'half'>('comp')
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<Progress | null>(null)
+  const cancelled = useRef(false)
   if (!comp) return null
   const w = side(width)
   const h = side(height)
@@ -59,25 +67,48 @@ export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: Ki
       size: size === 'custom' && w !== null && h !== null ? { width: w, height: h } : size === 'half' ? 'half' : 'full',
       frameRate: rate === 'half' ? Math.round((comp.fps / 2) * 1000) / 1000 : null,
     }
+    cancelled.current = false
+    const read = (json: string) => JSON.parse(json) as Progress
     try {
-      const bytes = await doc.invoke<Uint8Array>('renderMovie', path.split('/').pop() ?? path, JSON.stringify(settings))
+      let now = read(await doc.invoke<string>('exportStart', path.split('/').pop() ?? path, JSON.stringify(settings)))
+      setProgress(now)
+      while (!now.finished && !cancelled.current) {
+        now = read(await doc.invoke<string>('exportStep', STEP_MS))
+        if (!cancelled.current) setProgress(now)
+      }
+      if (cancelled.current) {
+        await doc.invoke<boolean>('exportCancel')
+        toast.info(t('export.cancelled'))
+        setBusy(false)
+        setProgress(null)
+        return
+      }
+      const bytes = await doc.invoke<Uint8Array>('exportFinish')
       const written = await host.exportFile(path, bytes)
       toast.success(t('export.done', { name: written.split('/').pop() ?? written }))
       onClose()
     } catch (error) {
+      await doc.invoke<boolean>('exportCancel').catch(() => false)
       toast.error(t('renderFailed'), { description: error instanceof Error ? error.message : String(error) })
       setBusy(false)
+      setProgress(null)
     }
+  }
+
+  /** Cancel while rendering stops the render (the loop above ends at the engine's next answer). */
+  const cancel = () => {
+    if (busy) cancelled.current = true
+    else onClose()
   }
 
   return (
     <Dialog
       title={t('export.title')}
       testId="motion-export-dialog"
-      onClose={() => !busy && onClose()}
+      onClose={cancel}
       actions={
         <>
-          <Button disabled={busy} onClick={onClose} data-testid="motion-export-dialog-cancel">
+          <Button onClick={cancel} data-testid="motion-export-dialog-cancel">
             {t('dialog.cancel')}
           </Button>
           <Button variant="primary" disabled={!valid || busy || !doc} onClick={() => void render()} data-testid="motion-export-dialog-ok">
@@ -142,10 +173,25 @@ export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: Ki
           </Select>
         </Field>
         {busy ? (
-          <p className="motion-export-busy" role="status" data-testid="motion-export-busy">
-            <Spinner size={14} />
-            {t('export.busy')}
-          </p>
+          <div className="motion-export-busy" role="status" data-testid="motion-export-busy">
+            <div
+              className="motion-export-bar"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={progress?.total ?? 0}
+              aria-valuenow={progress?.done ?? 0}
+              data-testid="motion-export-progress"
+              data-done={progress?.done ?? 0}
+              data-total={progress?.total ?? 0}
+            >
+              <span style={{ width: `${progress && progress.total > 0 ? Math.min(100, (progress.done / progress.total) * 100) : 0}%` }} />
+            </div>
+            <span className="kui-muted">
+              {progress && progress.total > 0 && progress.done >= progress.total
+                ? t('export.finishing')
+                : t('export.frames', { done: progress?.done ?? 0, total: progress?.total ?? 0 })}
+            </span>
+          </div>
         ) : null}
         <button type="submit" hidden />
       </form>
