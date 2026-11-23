@@ -12594,11 +12594,11 @@
   "comp": "none",
   "layers": false,
   "items": false,
-  "project": true,
+  "project": false,
   "queue": false,
   "host": false,
   "evidence": "reads/writes 'render_prefs.notify' (crates/engine/engine/src/commands/render_queue.rs:972)",
-  "note": "render_prefs counted as project-level render prefs"
+  "note": "render_prefs are this machine's own Render Queue preferences, not the document's (schema 1): the command holds nothing of the document"
  },
  {
   "id": "render_queue/21",
@@ -12613,11 +12613,11 @@
   "comp": "none",
   "layers": false,
   "items": false,
-  "project": true,
+  "project": false,
   "queue": false,
   "host": false,
   "evidence": "reads/writes 'render_prefs.overflow_folders'; 'folders host path strings' not read (crates/engine/engine/src/commands/render_queue.rs:981)",
-  "note": "render_prefs counted as project-level render prefs"
+  "note": "render_prefs are this machine's own Render Queue preferences, not the document's (schema 1): the command holds nothing of the document"
  },
  {
   "id": "templates/0",
