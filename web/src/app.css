@@ -817,7 +817,89 @@
   outline: none;
 }
 
-/* Footage dragged over the composition or the timeline. */
+/* The Project panel, left of the composition: its items, a header with Import and New Composition, and its right edge to drag. */
+.motion-project {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--kit-border);
+}
+
+.motion-project-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 4px 0 10px;
+  border-bottom: 1px solid var(--kit-border);
+}
+
+.motion-project-title {
+  font-weight: 600;
+}
+
+.motion-project-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+}
+
+.motion-project-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding-right: 8px;
+  color: var(--kit-text);
+  cursor: default;
+  user-select: none;
+}
+
+.motion-project-row > svg {
+  flex: none;
+  color: var(--kit-text-muted);
+}
+
+.motion-project-row:hover {
+  background: var(--kit-surface-muted);
+}
+
+.motion-project-row[aria-selected='true'] {
+  background: var(--kit-primary-soft);
+}
+
+.motion-project-list:focus-visible .motion-project-row[aria-selected='true'] {
+  outline: 1px solid var(--kit-primary);
+  outline-offset: -1px;
+}
+
+.motion-project-row[data-active] .motion-project-name {
+  font-weight: 600;
+}
+
+.motion-project-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.motion-project-detail {
+  flex: none;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.motion-panel-edge[data-side='right'] {
+  right: 0;
+  left: auto;
+}
+
+/* Footage or a project item dragged over the composition or the timeline. */
 .motion-main[data-drop] {
   outline: 2px dashed var(--kit-primary);
   outline-offset: -2px;

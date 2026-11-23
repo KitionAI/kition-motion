@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
-import { DownloadIcon as Download, LoaderCircleIcon as Loader2 } from '@kition/tessera/icons/react'
+import { DownloadIcon as Download, LoaderCircleIcon as Loader2, PanelLeftIcon } from '@kition/tessera/icons/react'
 import {
   Button,
   EditorFrame,
@@ -37,7 +37,8 @@ import { Transport } from './Transport'
 import { Splitter, useTimelineHeight } from './Splitter'
 import { PropertiesPanel } from './properties/PropertiesPanel'
 import { EffectCatalog } from './properties/catalog'
-import { useFootage } from './footage'
+import { ProjectPanel, useProjectPanel } from './ProjectPanel'
+import { ITEM_MIME, useFootage } from './footage'
 
 /** Plays the composition from the current time against the wall clock; frames the engine cannot render in time are skipped, as a preview does. */
 function usePlayback(run: (command: string, params: Record<string, unknown>) => Promise<unknown>, time: number, duration: number) {
@@ -298,10 +299,13 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0)
   useSpaceTap(playback.toggle)
   const movie = useMovieRender(session.doc, host, t)
+  const project = useProjectPanel()
   const seek = useCallback((seconds: number) => void runQuietly('time.set', { time: Math.max(0, seconds) }).catch(() => undefined), [runQuietly])
   const step = (frames: number) => void runQuietly('time.step', { frames }).catch(() => undefined)
   const { run, query } = editor
   const footage = useFootage({ host, run, t })
+  /** Footage, a solid or a composition from the project as a layer at the current time (one undo step). */
+  const placeItem = (item: number, position?: [number, number]) => footage.place(item, { time: state?.time ?? 0, ...(position ? { position } : {}) })
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
   const [findEffect, setFindEffect] = useState(false)
   // Every effect the engine has, for the Effect menu; and whether one was applied here (Last Effect).
@@ -347,6 +351,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'playback.toggle': playback.toggle,
     'file.exportMovie': () => void movie.start(),
     'file.import': () => void footage.importPicked(),
+    [KIT.projectPanel]: project.toggle,
     'time.start': () => seek(0),
     'time.end': end,
     'time.previousFrame': () => step(-1),
@@ -455,10 +460,21 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         tabs={tabs}
         defaultTab="home"
         actions={
-          <Button variant="ghost" disabled={!state?.comp || movie.rendering} onClick={() => void movie.start()} data-testid="motion-render">
-            {movie.rendering ? <Loader2 size={14} className="kui-spin" aria-hidden="true" /> : <Download size={14} aria-hidden="true" />}
-            {movie.rendering ? t('rendering') : t('renderMovie')}
-          </Button>
+          <>
+            <Button variant="ghost" aria-pressed={project.open} onClick={project.toggle} title={t('project.toggle')} data-testid="motion-project-toggle">
+              <PanelLeftIcon size={14} aria-hidden="true" />
+              {t('project.title')}
+            </Button>
+            <Button variant="ghost" disabled={!state?.comp || movie.rendering} onClick={() => void movie.start()} data-testid="motion-render">
+              {movie.rendering ? <Loader2 size={14} className="kui-spin" aria-hidden="true" /> : <Download size={14} aria-hidden="true" />}
+              {movie.rendering ? t('rendering') : t('renderMovie')}
+            </Button>
+          </>
+        }
+        sidebar={
+          state && project.open ? (
+            <ProjectPanel info={state} width={project.width} onWidth={project.setWidth} onImport={() => void footage.importPicked()} onNewComp={() => void openComp('new')} onPlace={(item) => placeItem(item)} />
+          ) : null
         }
         canvas={canvas}
         rail={<EngineToolRail />}
@@ -482,7 +498,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             data-drop={dropping || undefined}
             onDragOver={(event) => {
               const types = event.dataTransfer.types
-              if (host.readOnly || !state?.comp || !types.includes('Files')) return
+              if (host.readOnly || !state?.comp || !(types.includes(ITEM_MIME) || types.includes('Files'))) return
               event.preventDefault()
               event.dataTransfer.dropEffect = 'copy'
               setDropping(true)
@@ -493,13 +509,15 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             onDrop={(event) => {
               setDropping(false)
               if (host.readOnly || !state?.comp) return
+              const item = Number(event.dataTransfer.getData(ITEM_MIME))
               const files = [...event.dataTransfer.files]
-              if (!files.length) return
+              if (!item && !files.length) return
               event.preventDefault()
-              // Dropped on the composition, the picture's centre goes where it was dropped; on the timeline, the middle.
+              // Dropped on the composition, the layer's centre goes where it was dropped; on the timeline, the middle.
               const onCanvas = !(event.target instanceof Element && event.target.closest('.motion-timeline, .motion-transport, .motion-splitter'))
               const position = onCanvas ? compPoint(event.clientX, event.clientY) : undefined
-              void footage.importDropped(files, { time: state.time, ...(position ? { position } : {}) })
+              if (item) placeItem(item, position)
+              else void footage.importDropped(files, { time: state.time, ...(position ? { position } : {}) })
             }}
           >
             <KitDocumentCanvas

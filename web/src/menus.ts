@@ -31,6 +31,7 @@ export const KIT = {
   arrangeForward: 'kit:arrange-forward',
   arrangeBackward: 'kit:arrange-backward',
   arrangeBack: 'kit:arrange-back',
+  projectPanel: 'kit:project-panel',
 } as const
 
 /** Layer ▸ Arrange's rows and where each moves the selected layers (`layer.arrange`'s `to`). */
@@ -156,6 +157,8 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
       ['Zoom Out', 'view.zoomOut', ','],
       ['Fit in Window', KIT.zoomFit, 'Cmd+0'],
       ['Zoom 100%', KIT.zoom100],
+      SEPARATOR,
+      ['Project Panel', KIT.projectPanel],
       SEPARATOR,
       ['Go to Time…', 'time.set'],
       ['Go to Start', 'time.start', 'Home'],
