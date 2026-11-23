@@ -1,6 +1,6 @@
 //! Read-only queries for agents (not journaled).
 
-use kition_motion_project::{GroupKind, ItemKind, Layer, Node, PropGroup, Uid};
+use kition_motion_project::{GroupKind, ItemKind, Layer, Node, ParamUi, PropGroup, Uid};
 use serde_json::{Value, json};
 
 use super::{CommandSpec, b_p, comp_id, layer_p, str_p};
@@ -133,6 +133,15 @@ pub(crate) fn group_json(g: &PropGroup, path: &str, l: &Layer, t: kition_motion_
                         if let Some(e) = &p.expr {
                             o["expression"] = json!(e.text);
                         }
+                        if let Some(options) = popup_options(&p.ui, &cpath, l) {
+                            o["options"] = json!(options);
+                        }
+                        if let ParamUi::Slider { min, max, slider_min, slider_max, decimals } = p.ui {
+                            o["range"] = json!({"min": min, "max": max, "sliderMin": slider_min, "sliderMax": slider_max, "decimals": decimals});
+                        }
+                        if let kition_motion_project::Value::Text(doc) = p.value_at(l.layer_time(t)) {
+                            o["style"] = text_style(&doc);
+                        }
                         o
                     }
                     Node::Group(g) => group_json(g, &cpath, l, t, depth + 1, max_depth),
@@ -155,6 +164,38 @@ pub(crate) fn group_json(g: &PropGroup, path: &str, l: &Layer, t: kition_motion_
         _ => {}
     }
     o
+}
+
+/// The labels of a drop-down property, in the order of its values: the ones it was built with,
+/// or, for a choice of the layer's masks (a text layer's Path, an effect's mask popup), None and
+/// the masks' names.
+fn popup_options(ui: &ParamUi, path: &str, l: &Layer) -> Option<Vec<String>> {
+    let names = l.masks().map(|masks| masks.children.iter().map(|mask| mask.name().to_owned()).collect::<Vec<_>>()).unwrap_or_default();
+    let masks = || std::iter::once("None".to_owned()).chain(names.iter().cloned()).collect();
+    match ui {
+        ParamUi::Popup { .. } if path == "text/pathOptions/path" => Some(masks()),
+        ParamUi::Popup { options } => Some(options.clone()),
+        ParamUi::Mask => Some(masks()),
+        _ => None,
+    }
+}
+
+/// A text document's character and paragraph settings (the first run's, as the Character panel
+/// shows them): `leading` is the line distance in pixels, 1.2 × the size when `autoLeading`.
+fn text_style(doc: &kition_motion_project::keyframe::TextDoc) -> Value {
+    use kition_motion_project::keyframe::Justify;
+    let justify = match doc.justify {
+        Justify::Left => "left",
+        Justify::Center => "center",
+        Justify::Right => "right",
+        _ => "other",
+    };
+    let rgb = |c: [f32; 4]| [c[0], c[1], c[2]];
+    json!({
+        "family": doc.font, "style": doc.style, "size": doc.size, "fill": rgb(doc.fill), "stroke": rgb(doc.stroke),
+        "strokeWidth": doc.stroke_width, "applyFill": doc.apply_fill, "applyStroke": doc.apply_stroke, "tracking": doc.tracking,
+        "leading": doc.leading.unwrap_or(doc.size * 1.2), "autoLeading": doc.leading.is_none(), "justify": justify,
+    })
 }
 
 fn layer_tree(s: &mut Session, p: &Value) -> Result<Value> {

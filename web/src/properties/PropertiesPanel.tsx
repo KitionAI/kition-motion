@@ -83,7 +83,7 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false }: {
       <PanelEdge width={width} onWidth={setWidth} />
       <div className="kui-panel-body motion-side-body" data-testid="motion-properties-body">
         {layer && root ? (
-          <PanelContext.Provider value={{ layer, time: info.time, frame: info.frame, readOnly, masks: (masks?.children ?? []).map((mask) => mask.name) }}>
+          <PanelContext.Provider value={{ layer, time: info.time, frame: info.frame, readOnly }}>
             <LayerHeader info={info} layer={layer} readOnly={readOnly} count={selected} />
             {top
               .filter((node) => node.children && !PLACED.has(node.match ?? '') && visible(node, layer) && hasRows(node, layer))

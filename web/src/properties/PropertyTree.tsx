@@ -11,7 +11,7 @@ import { PropertyValue } from './PropertyValue'
 import { useOpen } from './Section'
 
 /** What every row of the panel reads: the layer shown, the time, and the layer's mask names. */
-export type PanelFrame = { layer: MotionLayer; time: number; frame: number; readOnly: boolean; masks: readonly string[] }
+export type PanelFrame = { layer: MotionLayer; time: number; frame: number; readOnly: boolean }
 
 export const PanelContext = createContext<PanelFrame | null>(null)
 
@@ -42,10 +42,10 @@ export function propId(path: string) {
  */
 export function PropertyRow({ node, parent, params, label }: { node: TreeNode; parent?: TreeNode; params?: readonly EffectParam[]; label?: string }) {
   const { phrase } = useKitEditor()
-  const { layer, time, frame, readOnly, masks } = usePanel()
+  const { layer, time, frame, readOnly } = usePanel()
   const name = label ?? phrase(node.name)
   const id = propId(node.path)
-  const meta = propMeta(node, parent, params, masks)
+  const meta = propMeta(node, parent, params)
   // Text keeps its own field below its name; the rest sit beside it.
   const wide = node.type === 'text' || (node.type === 'scalar' && !!meta?.slider)
   return (

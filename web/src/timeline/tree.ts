@@ -14,6 +14,30 @@ export type TreeNode = {
   effect?: string
   /** Whether a group (an effect, a mask, a shape group) is switched on. */
   enabled?: boolean
+  /** A drop-down property's labels, in the order of its values (English, from the engine). */
+  options?: string[]
+  /** A number's range, slider range and decimals, when the engine declares them. */
+  range?: { min: number | null; max: number | null; sliderMin: number | null; sliderMax: number | null; decimals: number }
+  /** A text property's character and paragraph settings at the asked time. */
+  style?: TextStyle
+  /** The property's expression, when it has one. */
+  expression?: string
+}
+
+/** A text layer's character and paragraph settings, as `layer.tree` reports them on its Source Text. */
+export type TextStyle = {
+  family: string
+  style: string
+  size: number
+  fill: number[]
+  stroke: number[]
+  strokeWidth: number
+  applyFill: boolean
+  applyStroke: boolean
+  tracking: number
+  leading: number
+  autoLeading: boolean
+  justify: 'left' | 'center' | 'right' | 'other'
 }
 
 /** What a layer's twirl shows: its whole property tree, or only some properties (After Effects' U, P, S, R, T). */

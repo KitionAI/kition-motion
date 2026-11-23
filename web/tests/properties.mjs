@@ -146,6 +146,23 @@ try {
   await undo()
   await until(async () => hex(await value(SHAPE, FILL)) !== '#22cc44')
   step('undo restores roundness and fill', near(await value(SHAPE, 'contents/group/contents/rect/roundness'), 0) && hex(await value(SHAPE, FILL)) !== '#22cc44')
+  // A drop-down's labels come from the engine's tree (layer.tree `options`), translated.
+  for (const group of ['contents', 'contents.group', 'contents.group.contents', 'contents.group.contents.fill']) {
+    const toggle = kit.getByTestId(`motion-group-toggle-${group}`).first()
+    await toggle.waitFor({ timeout: 5000 }).catch(() => null)
+    if ((await toggle.count()) && (await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
+  }
+  const rule = kit.getByTestId('motion-value-contents.group.contents.fill.rule')
+  await rule.waitFor({ timeout: 5000 }).catch(() => null)
+  const labels = (await rule.count()) ? await rule.locator('option').allTextContents() : []
+  step('the fill rule lists the engine’s labels in Chinese', labels.join('|') === '非零环绕|奇偶', JSON.stringify(labels))
+  if (labels.length) {
+    await rule.selectOption({ label: '奇偶' })
+    await until(async () => (await value(SHAPE, 'contents/group/contents/fill/rule')) === 1)
+    step('choosing a label sets its value', (await value(SHAPE, 'contents/group/contents/fill/rule')) === 1, String(await value(SHAPE, 'contents/group/contents/fill/rule')))
+    await undo()
+    await until(async () => (await value(SHAPE, 'contents/group/contents/fill/rule')) === 0)
+  }
   await kit.getByTestId('motion-shape-add-stroke').click()
   const stroked = async () => (await query('prop.get', { layer: SHAPE, path: 'contents/group/contents/stroke/width' }).catch(() => null))?.value
   await until(async () => (await stroked()) > 0)

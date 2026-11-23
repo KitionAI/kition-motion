@@ -1,14 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { Field, Select, TextInput, useKitEditor } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
-import { BLEND_MODES } from './enums'
 
 /**
  * The top of the Properties panel: the layer's name (typed in place), its type, its blending
  * mode, and the layer it follows (its parent), each change one undo step.
  */
+/** Where the blending-mode menu starts a new group (the modes themselves come from the engine). */
+const GROUP_STARTS = new Set(['Darken', 'Add', 'Overlay', 'Difference', 'Hue', 'Stencil Alpha'])
+
+/** The blending modes `layer.setBlendMode` takes, from its parameter schema, in the engine's order. */
+function blendModes(schema: Record<string, unknown> | null | undefined): string[] {
+  const mode = (schema as Record<string, { enum?: unknown }> | null | undefined)?.mode
+  return Array.isArray(mode?.enum) ? mode.enum.filter((value): value is string => typeof value === 'string') : []
+}
+
 export function LayerHeader({ info, layer, readOnly, count }: { info: MotionInfo; layer: MotionLayer; readOnly: boolean; count: number }) {
-  const { run, t, phrase } = useKitEditor()
+  const { run, t, phrase, byId } = useKitEditor()
+  const modes = blendModes(byId.get('layer.setBlendMode')?.schema)
   const [name, setName] = useState(layer.name)
   const dropped = useRef(false)
   useEffect(() => setName(layer.name), [layer.name, layer.id])
@@ -51,17 +60,18 @@ export function LayerHeader({ info, layer, readOnly, count }: { info: MotionInfo
         <Field label={t('props.blendMode')}>
           {({ id }) => (
             <Select id={id} value={layer.blendMode} disabled={readOnly} onChange={(event) => void run('layer.setBlendMode', { layers: [layer.id], mode: event.target.value })} data-testid="motion-blend-mode">
-              {BLEND_MODES.map((mode, at) =>
-                mode === '---' ? (
-                  <option key={`---${at}`} disabled>
-                    ──────
-                  </option>
-                ) : (
-                  <option key={mode} value={mode}>
-                    {phrase(mode)}
-                  </option>
-                ),
-              )}
+              {modes.flatMap((mode) => [
+                ...(GROUP_STARTS.has(mode)
+                  ? [
+                      <option key={`--${mode}`} disabled>
+                        ──────
+                      </option>,
+                    ]
+                  : []),
+                <option key={mode} value={mode}>
+                  {phrase(mode)}
+                </option>,
+              ])}
             </Select>
           )}
         </Field>

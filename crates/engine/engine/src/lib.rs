@@ -1092,6 +1092,8 @@ mod tests_color_view;
 #[cfg(test)]
 mod tests_disk_cache;
 #[cfg(test)]
+mod tests_editor_queries;
+#[cfg(test)]
 mod tests_effects;
 #[cfg(test)]
 mod tests_face;

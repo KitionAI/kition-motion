@@ -66,7 +66,7 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
           )
         }
         const times = keyTimes(layer, node.path)
-        const meta = propMeta(node, parents.get(node.path), paramsOf(effectOf(node.path, parents)), [])
+        const meta = propMeta(node, parents.get(node.path), paramsOf(effectOf(node.path, parents)))
         return (
           <div key={node.path} className="motion-row motion-prop-row" data-testid={`motion-prop-row-${id}`}>
             <div className="motion-timeline-names motion-prop-names" style={{ paddingLeft: 36 + depth * 14 }}>

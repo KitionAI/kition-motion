@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { TextAlignCenterIcon as Center, TextAlignEndIcon as Right, TextAlignStartIcon as Left } from '@kition/tessera/icons/react'
 import { Combobox } from '@kition/tessera/ui'
 import { Segmented, Select, Textarea, useEngineQuery, useKitEditor } from '@kition/sdk/editor'
@@ -10,22 +10,7 @@ import { KeyDiamond } from './KeyDiamond'
 import { usePanel } from './PropertyTree'
 import { useSender } from './useSetProp'
 
-/** A text layer's character and paragraph settings, as the scripting model's TextDocument reads them. */
-type TextStyle = { family: string; style: string; size: number; fill: number[]; stroke: number[]; strokeWidth: number; applyFill: boolean; applyStroke: boolean; tracking: number; leading: number; justify: 'left' | 'center' | 'right' | 'other' }
-
 type Fonts = { families?: Array<{ family: string; styles: string[] }> }
-
-/**
- * Reads the layer's text settings through the scripting object model (`script.run`, which edits
- * nothing here): no engine command answers them yet.
- */
-const styleScript = (index: number) => `(function () {
-  var d = app.project.activeItem.layer(${index}).property("ADBE Text Properties").property("ADBE Text Document").value;
-  var j = d.justification;
-  return JSON.stringify({ family: d.fontFamily || d.font, style: d.fontStyle, size: d.fontSize, fill: d.fillColor, stroke: d.strokeColor, strokeWidth: d.strokeWidth,
-    applyFill: d.applyFill, applyStroke: d.applyStroke, tracking: d.tracking, leading: d.leading,
-    justify: j === ParagraphJustification.LEFT_JUSTIFY ? "left" : j === ParagraphJustification.CENTER_JUSTIFY ? "center" : j === ParagraphJustification.RIGHT_JUSTIFY ? "right" : "other" });
-})()`
 
 let sessions = 0
 
@@ -110,14 +95,7 @@ export function TextControls({ node, focusNow, onFocused }: { node: TreeNode; fo
   const { t } = useKitEditor()
   const { layer, readOnly } = usePanel()
   const source = (node.children ?? []).find((child) => child.match === 'sourceText')
-  const read = useEngineQuery<{ ok?: boolean; result?: string }>('script.run', { code: styleScript(layer.index) }, source?.value)
-  const style = useMemo<TextStyle | null>(() => {
-    try {
-      return read?.ok && read.result ? (JSON.parse(read.result) as TextStyle) : null
-    } catch {
-      return null
-    }
-  }, [read])
+  const style = source?.style ?? null
   const fonts = useEngineQuery<Fonts>('text.fonts', {})
   const families = fonts?.families ?? []
   const styles = families.find((family) => family.family === style?.family)?.styles ?? (style ? [style.style] : [])

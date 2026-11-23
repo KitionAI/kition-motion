@@ -1360,6 +1360,18 @@ mod tests {
     }
 
     #[test]
+    fn the_blend_mode_schema_lists_every_mode_the_engine_takes() {
+        let modes: Vec<String> =
+            param_types()["layer.setBlendMode"]["mode"]["enum"].as_array().unwrap().iter().map(|mode| mode.as_str().unwrap().to_owned()).collect();
+        assert_eq!(modes.len(), kition_motion_engine::color::BlendMode::ALL.len());
+        let labels: Vec<&str> = kition_motion_engine::color::BlendMode::ALL.iter().map(|mode| mode.label()).collect();
+        assert_eq!(modes, labels, "the schema's order is the engine's");
+        let doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        let command = doc.commands().into_iter().find(|command| command.id == "layer.setBlendMode").unwrap();
+        assert_eq!(command.schema.unwrap()["mode"]["enum"].as_array().map(Vec::len), Some(labels.len()), "the editor reads the modes from the command");
+    }
+
+    #[test]
     fn an_export_renders_a_batch_at_a_time_and_reports_its_frames() {
         let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
         doc.execute("comp.settings", json!({ "duration": 1.0 })).unwrap();
