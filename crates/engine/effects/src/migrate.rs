@@ -487,4 +487,11 @@ mod tests {
         assert!(upgrade_instance(spec, &mut g, &mut Ids(&mut next), [100.0, 50.0]));
         assert_eq!(g.get("viewingMode").unwrap().value, Value::Enum(4), "Final Output");
     }
+
+    const SIZE: [f64; 2] = [200.0, 100.0];
+
+    fn instance(id: &str, next: &mut u64) -> (&'static EffectSpec, PropGroup) {
+        let spec = find(id).unwrap();
+        (spec, instantiate(spec, &mut Ids(next), spec.name, SIZE))
+    }
 }
