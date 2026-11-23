@@ -3,14 +3,17 @@ import { DownloadIcon as Download, LoaderCircleIcon as Loader2 } from '@kition/t
 import {
   Button,
   EditorFrame,
+  EngineToolRail,
   FrameChrome,
   KitDocumentCanvas,
   KitEditorProvider,
   HAND_TOOL,
+  ZOOM_TOOL,
   catalogTabs,
   createKitStrings,
   shortcutMatches,
   toast,
+  useEngineTools,
   useKitEditorState,
   useKitSession,
   type FrameTab,
@@ -142,6 +145,55 @@ function useGentleWheelZoom(workspace: RefObject<HTMLDivElement | null>, canvas:
   }, [workspace, canvas])
 }
 
+/** The view tools are the editor's own; Selection, the shapes and Text run in the engine (bindings/wasm/src/tools.rs). */
+const HOST_TOOLS = { hand: HAND_TOOL, zoom: ZOOM_TOOL }
+/** The tools that change the document: a read-only one has only the view tools. */
+const EDITING_TOOLS: ReadonlySet<string> = new Set(['selection', 'rectangle', 'ellipse', 'text'])
+
+/** How far (screen pixels) the arrow keys move the selected layers: 1, or 10 with Shift (comp pixels). */
+const NUDGE = { plain: 1, shift: 10 }
+
+/** Keys typed here belong to the target: a field, a button or menu row it presses, a dialog. */
+function ownsKeys(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false
+  if (target instanceof HTMLElement && target.isContentEditable) return true
+  return target.matches('input, textarea, select, button, [role="menuitem"]') || target.closest('.kui-dialog') != null
+}
+
+/**
+ * Space held pans the composition (the canvas's own hand); a Space pressed and let go without a
+ * drag plays or pauses, as it always did. Watched on the window before anything else takes the key
+ * (the tools hold keys back while the engine is busy, as it is during playback).
+ */
+function useSpaceTap(onTap: () => void) {
+  const latest = useRef(onTap)
+  latest.current = onTap
+  useEffect(() => {
+    let held: { dragged: boolean } | null = null
+    const keydown = (event: globalThis.KeyboardEvent) => {
+      if (event.code !== 'Space' || event.repeat || event.metaKey || event.ctrlKey || event.altKey || ownsKeys(event.target)) return
+      held ??= { dragged: false }
+    }
+    const pointerdown = () => {
+      if (held) held.dragged = true
+    }
+    const keyup = (event: globalThis.KeyboardEvent) => {
+      if (event.code !== 'Space' || !held) return
+      const { dragged } = held
+      held = null
+      if (!dragged) latest.current()
+    }
+    window.addEventListener('keydown', keydown, true)
+    window.addEventListener('pointerdown', pointerdown, true)
+    window.addEventListener('keyup', keyup, true)
+    return () => {
+      window.removeEventListener('keydown', keydown, true)
+      window.removeEventListener('pointerdown', pointerdown, true)
+      window.removeEventListener('keyup', keyup, true)
+    }
+  }, [])
+}
+
 /** Commands the editor asks values for in its own dialogs. */
 const DIALOG_COMMANDS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set']
 
@@ -153,6 +205,42 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const report = useMemo(() => motionReport(t, t('commandFailed')), [t])
   const editor = useKitEditorState(session, host, t, 'motion', phrase, undefined, { report })
   const { state } = session
+  const toolsRef = useRef<ReturnType<typeof useEngineTools> | null>(null)
+  const tools = useEngineTools(session.tool, session.doc != null, session.change, {
+    initial: host.readOnly ? 'hand' : 'selection',
+    hostTools: HOST_TOOLS,
+    hidden: host.readOnly ? EDITING_TOOLS : undefined,
+    onDeferredKey: deferredKey,
+  })
+  toolsRef.current = tools
+  /**
+   * A key pressed while the engine was answering (during playback it nearly always is), which was
+   * not typed text. Space was the window's already (useSpaceTap): given back as a keydown with no
+   * release it would leave the canvas panning. A tool's letter picks the tool; any other key goes
+   * to the page again, as the editor would have had it.
+   */
+  function deferredKey(key: string, shift: boolean) {
+    if (key === ' ') return
+    const current = toolsRef.current
+    const tool = current?.toolForKey(key, shift)
+    if (tool) {
+      current?.select(tool)
+      return
+    }
+    // Given back after the engine's queue has run (from inside it, the key would be held back
+    // again at once, for ever).
+    window.setTimeout(() => {
+      const target = document.activeElement ?? document.body
+      target.dispatchEvent(new KeyboardEvent('keydown', { key, code: /^[a-z]$/i.test(key) ? `Key${key.toUpperCase()}` : '', shiftKey: shift, bubbles: true, cancelable: true }))
+    }, 0)
+  }
+  // Typing ended (Escape, a click elsewhere): the keys are the editor's again (V, T, Space…),
+  // not the hidden field's that took the text.
+  useEffect(() => {
+    if (tools.wantsText) return
+    const focused = document.activeElement
+    if (focused instanceof HTMLElement && focused.classList.contains('kui-text-sink')) focused.closest<HTMLElement>('.kui-app')?.focus({ preventScroll: true })
+  }, [tools.wantsText])
   const canvas = useRef<KitCanvasHandle>(null)
   const viewMemory = useRef<RasterView | null>(null)
   const [zoom, setZoom] = useState<number | null>(null)
@@ -190,6 +278,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   // Moving through time is not an edit: it goes to the engine without the editor's notices.
   const runQuietly = session.run
   const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0)
+  useSpaceTap(playback.toggle)
   const movie = useMovieRender(session.doc, host, t)
   const seek = useCallback((seconds: number) => void runQuietly('time.set', { time: Math.max(0, seconds) }).catch(() => undefined), [runQuietly])
   const step = (frames: number) => void runQuietly('time.step', { frames }).catch(() => undefined)
@@ -293,7 +382,19 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const timelineKeys: TimelineKeys = useRef(null)
   const keyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!state) return false
+    const command = event.metaKey || event.ctrlKey
+    const plain = !command && !event.altKey && !event.shiftKey
+    // T picks the Text tool from the composition; in the timeline it shows Opacity, as it did.
+    const inTimeline = event.target instanceof Element && event.target.closest('.motion-timeline') != null
+    if (plain && event.code === 'KeyT' && !inTimeline && !host.readOnly) return false
     if (timelineKeys.current?.(event)) return true
+    // The arrow keys move the selected layers (Shift: ten times as far), one undo step each.
+    const arrow = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key]
+    if (arrow && !command && !event.altKey && tools.active === 'selection' && !host.readOnly && state.layers.some((layer) => layer.selected)) {
+      const by = event.shiftKey ? NUDGE.shift : NUDGE.plain
+      void editor.run('layer.nudge', { x: arrow[0] * by, y: arrow[1] * by })
+      return true
+    }
     // The commands the editor asks values for take their menu shortcuts here (Cmd+N, Cmd+K, Cmd+Y…), before the engine would run them without.
     for (const id of DIALOG_COMMANDS) {
       const shortcut = editor.byId.get(id)?.shortcut
@@ -302,8 +403,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         return true
       }
     }
-    const command = event.metaKey || event.ctrlKey
-    if (event.key === ' ' && !command) playback.toggle()
+    // Space plays on its release (useSpaceTap); its press is taken here so nothing else runs.
+    if (event.key === ' ' && !command) return true
     // View ▸ Zoom In and Zoom Out: . and , (Cmd or Ctrl with = and - zoom too, and Cmd+0 fits).
     else if ((event.key === '.' || event.key === ',') && !command && !event.altKey) canvas.current?.zoomBy(event.key === '.' ? ZOOM_STEP : 1 / ZOOM_STEP)
     else if (event.key === 'PageDown' || (event.key === 'ArrowRight' && command)) step(event.shiftKey ? 10 : 1)
@@ -317,8 +418,18 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     return true
   }
 
+  /**
+   * A letter typed into a text layer on the canvas is text, not a shortcut: it stays with the
+   * engine's text field (which takes it as input) and never reaches the editor's single-key
+   * shortcuts (V, P, Space…). Its default is kept, or the letter would not be typed.
+   */
+  const keepTypedKeys = (event: KeyboardEvent<HTMLDivElement>) => {
+    const sink = event.target instanceof HTMLTextAreaElement && event.target.classList.contains('kui-text-sink')
+    if (sink && tools.wantsText && !event.metaKey && !event.ctrlKey && (event.key.length === 1 || event.key === 'Process' || event.nativeEvent.isComposing)) event.stopPropagation()
+  }
+
   return (
-    <KitEditorProvider editor={editor}>
+    <KitEditorProvider editor={editor} tools={tools}>
       <EffectCatalog.Provider value={effects}>
       <EditorFrame
         tabs={tabs}
@@ -330,6 +441,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           </Button>
         }
         canvas={canvas}
+        rail={<EngineToolRail />}
         zoom={zoom}
         onKeyDown={keyDown}
         status={
@@ -337,17 +449,17 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             {state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : t('noComp')}
           </span>
         }
-        panels={state ? <PropertiesPanel info={state} onAddEffect={() => setFindEffect(true)} /> : null}
+        panels={state ? <PropertiesPanel info={state} onAddEffect={() => setFindEffect(true)} typingOnCanvas={tools.active === 'text' || tools.wantsText} /> : null}
       >
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
         {findEffect ? <FindEffectDialog effects={effects} onApply={(effect) => applyEffect(effect.id)} onClose={() => setFindEffect(false)} /> : null}
         <div className="kui-row" ref={workspace} data-testid="motion-workspace" data-picture={picture ? `${picture.width} ${picture.height}` : undefined}>
-          <div className="motion-main" ref={main} style={{ '--motion-timeline-height': `${timelineHeight}px` } as CSSProperties}>
+          <div className="motion-main" ref={main} style={{ '--motion-timeline-height': `${timelineHeight}px` } as CSSProperties} onKeyDown={keepTypedKeys}>
             <KitDocumentCanvas
               canvas={canvas}
               viewMemory={viewMemory}
               panBounds={panBounds}
-              tool={HAND_TOOL}
+              animated={tools.wantsText}
               onView={(view) => {
                 setZoom(view.zoom)
                 const key = `${view.zoom} ${view.x} ${view.y}`

@@ -287,6 +287,13 @@ export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN 
  * not listed here stay in English.
  */
 export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
+  // The canvas tools on the rail (bindings/wasm/src/tools.rs).
+  "Selection Tool": "选取工具",
+  "Hand Tool": "抓手工具",
+  "Zoom Tool": "缩放工具",
+  "Rectangle Tool": "矩形工具",
+  "Ellipse Tool": "椭圆工具",
+  "Text Tool": "文字工具",
   // Menus and submenus.
   "File": "文件",
   "Edit": "编辑",

@@ -48,7 +48,8 @@ function TypeSection({ node, layer, focusText, onFocused }: { node: TreeNode; la
  * blending mode and parent; its type's own section (Text, Contents); its effects; Transform; and
  * Masks when it has any. With several layers selected it shows the first, and says so.
  */
-export function PropertiesPanel({ info, onAddEffect }: { info: MotionInfo; onAddEffect: () => void }) {
+/** `typingOnCanvas`: the Text tool is out, so a new text layer is typed into on the canvas, not here. */
+export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false }: { info: MotionInfo; onAddEffect: () => void; typingOnCanvas?: boolean }) {
   const { t } = useKitEditor()
   // A viewer sees the values but cannot change them or add keyframes.
   const readOnly = useReadOnly()
@@ -65,11 +66,13 @@ export function PropertiesPanel({ info, onAddEffect }: { info: MotionInfo; onAdd
   // A text layer made just now: its content box takes the focus with its text selected, so typing replaces it.
   const known = useRef<Set<number> | null>(null)
   const [fresh, setFresh] = useState<number | null>(null)
+  const onCanvas = useRef(typingOnCanvas)
+  onCanvas.current = typingOnCanvas
   useEffect(() => {
     const ids = new Set(info.layers.map((item) => item.id))
     const before = known.current
     known.current = ids
-    if (before && layer && layer.type === 'Text' && !before.has(layer.id)) {
+    if (before && layer && layer.type === 'Text' && !before.has(layer.id) && !onCanvas.current) {
       remember('Text:text', true)
       setFresh(layer.id)
     }
