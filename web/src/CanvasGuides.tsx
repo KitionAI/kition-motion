@@ -122,10 +122,12 @@ export function CanvasGuides({ views, comp, overlays, gridSpacing, readOnly }: {
     if (cancelled) return
     const removed = onRuler(event)
     const orientation = dragging.vertical ? 'vertical' : 'horizontal'
+    // Where the pointer is let go (WebKit may not report the last moves before the release).
+    const position = compAt(event, dragging.vertical)
     if (dragging.index === null) {
-      if (!removed) void run('view.addGuide', { orientation, position: dragging.position })
+      if (!removed) void run('view.addGuide', { orientation, position })
     } else if (removed) void run('view.removeGuide', { index: dragging.index })
-    else if (guides[dragging.index]?.position !== dragging.position) void run('view.moveGuide', { index: dragging.index, position: dragging.position })
+    else if (guides[dragging.index]?.position !== position) void run('view.moveGuide', { index: dragging.index, position })
   }
 
   const step = tickStep(view.zoom)
