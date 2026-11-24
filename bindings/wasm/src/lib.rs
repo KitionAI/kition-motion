@@ -328,6 +328,18 @@ impl MotionDocument {
                 });
                 row["animated"] = Value::Array(animated);
                 row["selected"] = Value::Bool(self.session.state.selected_layers.contains(&layer.id));
+                // The properties selected on it (a click on a property's name in the timeline),
+                // by the paths `prop.*` take: what Add Expression and the like act on.
+                let chosen: Vec<Value> = self
+                    .session
+                    .state
+                    .selected_props
+                    .iter()
+                    .filter(|(id, _)| *id == layer.id)
+                    .filter_map(|(_, uid)| prop_path(&layer.props, *uid))
+                    .map(Value::String)
+                    .collect();
+                row["selectedProps"] = Value::Array(chosen);
             }
         }
         // The first selected layer's transform at the current time, for a properties panel.
@@ -400,6 +412,16 @@ impl MotionDocument {
     pub fn set_snap_targets(&mut self, guides: bool, grid: bool) -> f64 {
         self.snap_guides = guides;
         self.snap_grid = grid;
+        self.session.prefs.grids.grid_spacing
+    }
+
+    /// View ▸ Grid Settings: the grid's spacing in composition pixels (what the Selection tool snaps
+    /// to), kept between 2 and 10 000; a spacing that is not a finite number leaves it as it was.
+    /// Answers the spacing now.
+    pub fn set_grid_spacing(&mut self, spacing: f64) -> f64 {
+        if spacing.is_finite() {
+            self.session.prefs.grids.grid_spacing = spacing.clamp(2.0, 10_000.0);
+        }
         self.session.prefs.grids.grid_spacing
     }
 
@@ -1237,6 +1259,12 @@ pub mod web {
         #[wasm_bindgen(js_name = setSnapTargets)]
         pub fn set_snap_targets(&mut self, guides: bool, grid: bool) -> f64 {
             self.0.set_snap_targets(guides, grid)
+        }
+
+        /// View ▸ Grid Settings (see [`MotionDocument::set_grid_spacing`]).
+        #[wasm_bindgen(js_name = setGridSpacing)]
+        pub fn set_grid_spacing(&mut self, spacing: f64) -> f64 {
+            self.0.set_grid_spacing(spacing)
         }
 
         /// View ▸ Resolution (see [`MotionDocument::set_preview_resolution`]).

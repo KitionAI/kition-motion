@@ -86,8 +86,9 @@ impl MotionDocument {
             }
             Tool::Text => text::text_down(self, st, p),
             Tool::Pen => {
-                // A mask's vertex or handle drags when no mask is being drawn; any other press draws.
-                if st.pen.is_none() && self.vertex_down(st, p) {
+                // The selected layers' paths take a press when nothing is being drawn (a vertex,
+                // a handle, a segment to add a vertex on); any other press draws.
+                if st.pen.is_none() && self.path_down(st, p, mods) {
                     return;
                 }
                 self.pen_down(st, p);
@@ -105,11 +106,16 @@ impl MotionDocument {
             self.end_text(st);
         }
         let zoom = st.zoom;
-        // A selected layer's mask vertices (and the picked vertex's handles) first.
-        if self.vertex_down(st, p) {
+        // The selected layers' masks and shape paths first (their vertices, the selected ones'
+        // handles, their segments; with vertices selected, a box over them).
+        if self.path_down(st, p, mods) {
             return;
         }
-        st.vertex = None;
+        self.clear_vertices();
+        // A selected shape layer's gradient points.
+        if self.gradient_down(st, p) {
+            return;
+        }
         // A selected layer's handles first (Shift held from the start keeps a corner's
         // proportions), then, without Shift, its rotation zones.
         let boxes = selected_boxes(&self.session);
@@ -207,7 +213,8 @@ impl MotionDocument {
         }
         match &mut st.gesture {
             Gesture::PenPoint { .. } => Self::pen_drag(st, p),
-            Gesture::Vertex { .. } => self.vertex_drag(st, p, mods),
+            Gesture::Vertex { .. } | Gesture::Vertices { .. } | Gesture::VertexBox { .. } => self.path_drag(st, p, mods),
+            Gesture::GradientPoint { .. } => self.gradient_drag(st, p),
             Gesture::Move { start, applied, layers, features, targets, merge } => {
                 let mut d = [p[0] - start[0], p[1] - start[1]];
                 if mods.shift {
@@ -215,11 +222,14 @@ impl MotionDocument {
                 }
                 // Snapping to layers and the composition is on unless Cmd or Ctrl turns it off for
                 // the drag (and the other way round); guides and the grid snap while their View
-                // menu rows are on.
+                // menu rows are on, and Cmd or Ctrl held turns them off for the drag too.
                 let mut hits = Vec::new();
                 let layers_too = self.session.state.snapping != mods.command;
-                let pool: Vec<SnapTarget> =
-                    targets.iter().filter(|t| layers_too || matches!(t.source, SnapSource::Guide | SnapSource::Grid)).cloned().collect();
+                let pool: Vec<SnapTarget> = targets
+                    .iter()
+                    .filter(|t| if matches!(t.source, SnapSource::Guide | SnapSource::Grid) { !mods.command } else { layers_too })
+                    .cloned()
+                    .collect();
                 if !pool.is_empty() {
                     let moved: Vec<Pt> = features.iter().map(|f| [f[0] + d[0], f[1] + d[1]]).collect();
                     if let Some(snap) = viewer::snap(&moved, &pool, SNAP_REACH / zoom) {
@@ -340,6 +350,10 @@ impl MotionDocument {
                 st.gesture = Gesture::Idle;
                 None
             }
+            path @ (Gesture::Vertices { .. } | Gesture::VertexBox { .. }) => {
+                self.path_up(st, path, p);
+                None
+            }
             _ => None,
         }
     }
@@ -353,6 +367,7 @@ impl MotionDocument {
             Gesture::Move { merge, .. } => Some(merge.as_str()),
             Gesture::Scale(s) => Some(s.merge.as_str()),
             Gesture::Rotate(t) => Some(t.merge.as_str()),
+            Gesture::Vertex { merge, .. } | Gesture::Vertices { merge, .. } | Gesture::GradientPoint { merge, .. } => Some(merge.as_str()),
             _ => None,
         };
         // Only a gesture that changed something left its step on top of the history.

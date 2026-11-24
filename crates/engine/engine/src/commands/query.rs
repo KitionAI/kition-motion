@@ -80,6 +80,9 @@ fn comp_info(s: &mut Session, p: &Value) -> Result<Value> {
         "id": cid.0, "name": name, "width": c.width, "height": c.height, "frameRate": c.frame_rate.as_f64(), "duration": c.duration.seconds(),
         "workArea": [c.work_area.0.seconds(), c.work_area.1.seconds()], "background": c.background,
         "preserveFrameRate": c.preserve_frame_rate, "preserveResolution": c.preserve_resolution,
+        // The composition's switches (`comp.setSwitch`): Hide Shy Layers, and the Motion Blur,
+        // Frame Blending and Draft 3D enables.
+        "switches": {"hideShy": c.hide_shy, "motionBlur": c.enable_motion_blur, "frameBlending": c.enable_frame_blending, "draft3d": c.draft_3d},
         "guides": c.guides.iter().map(|g| json!({"orientation": if g.vertical { "vertical" } else { "horizontal" }, "position": g.position})).collect::<Vec<_>>(),
         "layers": c.layers.iter().enumerate().map(|(i, l)| layer_json(l, i + 1)).collect::<Vec<_>>(),
     }))
@@ -210,7 +213,77 @@ fn layer_tree(s: &mut Session, p: &Value) -> Result<Value> {
     let mut o = layer_json(l, idx);
     o["time"] = json!(t.seconds());
     o["properties"] = group_json(&l.props, "", l, t, 0, depth);
+    if let Some(kition_motion_project::Value::Text(doc)) = l.props.prop("text/sourceText").map(|p| p.value_at(l.layer_time(t))) {
+        let edit = s.state.text_edit.as_ref().filter(|e| e.layer == lid);
+        o["text"] = text_selection(&doc, edit);
+    }
     Ok(o)
+}
+
+/// What the Character and Paragraph panels show for a text layer: the style of the characters
+/// being edited (the selected ones, or at a caret the style the next typed text takes), else of
+/// the whole text. `character` and `paragraph` hold the settings as `layer.setText` takes them;
+/// a setting that differs across the characters (or paragraphs) is `null` there and listed in
+/// `mixed`. `range` is the edited selection (characters; `[caret, caret]` at a caret) to give
+/// `layer.setText` so a change applies to it, or null for the whole text.
+fn text_selection(doc: &kition_motion_project::keyframe::TextDoc, edit: Option<&super::text_edit::TextEdit>) -> Value {
+    use kition_motion_keyframe::text_doc::{char_style_json, para_style_json};
+    let n = doc.char_len();
+    let range = edit.map(|e| {
+        let r = e.range();
+        r.start.min(n)..r.end.min(n)
+    });
+    // The character styles to merge: the runs the range touches, or at a caret its insertion style.
+    let styles: Vec<Value> = match (&range, edit) {
+        (Some(r), Some(e)) if r.is_empty() => vec![char_style_json(&e.pending.clone().unwrap_or_else(|| doc.insertion_style(r.start)))],
+        _ => {
+            let r = range.clone().unwrap_or(0..n);
+            let mut out = Vec::new();
+            let mut at = 0usize;
+            for run in doc.runs() {
+                let end = at.saturating_add(run.len);
+                if (end > r.start && at < r.end) || (r.is_empty() && out.is_empty()) {
+                    out.push(char_style_json(&run.style));
+                }
+                at = end;
+            }
+            if out.is_empty() {
+                out.push(char_style_json(&doc.base_style()));
+            }
+            out
+        }
+    };
+    let paras: Vec<Value> = {
+        let r = range.clone().unwrap_or(0..n);
+        let first = doc.para_of(r.start);
+        let last = if r.end > r.start { doc.para_of(r.end - 1) } else { first };
+        doc.paras().iter().skip(first).take(last.saturating_sub(first) + 1).map(para_style_json).collect()
+    };
+    let mut mixed = Vec::new();
+    let merge = |list: &[Value], mixed: &mut Vec<String>| -> Value {
+        let mut out = serde_json::Map::new();
+        if let Some(Value::Object(first)) = list.first() {
+            for (key, value) in first {
+                if list.iter().all(|other| other.get(key) == Some(value)) {
+                    out.insert(key.clone(), value.clone());
+                } else {
+                    out.insert(key.clone(), Value::Null);
+                    mixed.push(key.clone());
+                }
+            }
+        }
+        Value::Object(out)
+    };
+    let character = merge(&styles, &mut mixed);
+    let paragraph = merge(&paras, &mut mixed);
+    json!({
+        "character": character,
+        "paragraph": paragraph,
+        "mixed": mixed,
+        "range": range.map(|r| json!([r.start, r.end])),
+        "editing": edit.is_some(),
+        "length": n,
+    })
 }
 
 /// One command in full, with the JSON Schema of its parameters.

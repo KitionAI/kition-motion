@@ -394,6 +394,24 @@
    "preserveResolution": {
     "type": "boolean"
    },
+   "switches": {
+    "additionalProperties": true,
+    "properties": {
+     "draft3d": {
+      "type": "boolean"
+     },
+     "frameBlending": {
+      "type": "boolean"
+     },
+     "hideShy": {
+      "type": "boolean"
+     },
+     "motionBlur": {
+      "type": "boolean"
+     }
+    },
+    "type": "object"
+   },
    "width": {
     "type": "integer"
    },

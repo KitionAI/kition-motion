@@ -15,6 +15,7 @@
 //! document per worker.
 
 mod geometry;
+mod gradient;
 mod pen;
 mod select;
 mod text;
@@ -87,8 +88,15 @@ pub(crate) enum Gesture {
     TextDrag { anchor: usize },
     /// The Pen's press that placed a point at `start`: a drag pulls its curve handles.
     PenPoint { start: Pt },
-    /// Dragging a mask vertex or one of its curve handles.
-    Vertex { vertex: pen::VertexRef, part: pen::VertexPart, merge: String },
+    /// Dragging a selected path vertex's curve handle.
+    Vertex { vertex: kition_motion_engine::VertexRef, part: pen::VertexPart, merge: String },
+    /// Moving the selected path vertices from `start`, applied up to `last`; `alone`: a click
+    /// (no drag) on one of several selected vertices selects it alone.
+    Vertices { start: Pt, last: Pt, moved: bool, alone: Option<kition_motion_engine::VertexRef>, merge: String },
+    /// Dragging a shape gradient's Start Point or End Point (`path`).
+    GradientPoint { layer: LayerId, path: String, merge: String },
+    /// A box over path vertices from `start`; `base` stays selected (Shift).
+    VertexBox { start: Pt, end: Pt, base: Vec<kition_motion_engine::VertexRef> },
 }
 
 /// The tools' state for the open document.
@@ -105,10 +113,8 @@ pub(crate) struct ToolState {
     /// The typing session's `merge` key: text typed into one layer is one undo step.
     typing: Option<String>,
     status: Option<String>,
-    /// The mask the Pen is drawing.
+    /// The path the Pen is drawing.
     pen: Option<pen::PenDraft>,
-    /// The mask vertex picked last (its curve handles show).
-    vertex: Option<pen::VertexRef>,
 }
 
 impl Default for ToolState {
@@ -123,7 +129,6 @@ impl Default for ToolState {
             typing: None,
             status: None,
             pen: None,
-            vertex: None,
         }
     }
 }
@@ -302,15 +307,21 @@ impl MotionDocument {
         } else if matches!(st.tool, Tool::Selection | Tool::Rectangle | Tool::Ellipse | Tool::Text | Tool::Pen) {
             selection_overlays(&self.session, zoom, &mut overlays);
         }
-        // The selected layers' masks, editable with the Selection tool and the Pen.
+        // The selected layers' masks and shape paths, editable with the Selection tool and the Pen.
         if !editing && matches!(st.tool, Tool::Selection | Tool::Pen) {
-            pen::mask_overlays(&self.session, st.vertex, &mut overlays);
+            pen::path_overlays(&self.session, &mut overlays);
+        }
+        // The selected shape layers' gradients, their points dragged with the Selection tool.
+        if !editing && st.tool == Tool::Selection {
+            gradient::overlays(&self.session, &mut overlays);
         }
         if let Some(draft) = st.pen.as_ref().filter(|_| st.tool == Tool::Pen) {
             pen::draft_overlays(draft, &mut overlays);
         }
         match &st.gesture {
-            Gesture::Marquee { start, end, .. } => overlays.push(ToolOverlay::Marquee { x0: start[0], y0: start[1], x1: end[0], y1: end[1] }),
+            Gesture::Marquee { start, end, .. } | Gesture::VertexBox { start, end, .. } => {
+                overlays.push(ToolOverlay::Marquee { x0: start[0], y0: start[1], x1: end[0], y1: end[1] })
+            }
             Gesture::Draw { start, end, square, centred } => {
                 let b = geometry::drawn_box(*start, *end, *square, *centred);
                 let d = if st.tool == Tool::Ellipse { ellipse_path(b) } else { quad_path(&[[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]]) };

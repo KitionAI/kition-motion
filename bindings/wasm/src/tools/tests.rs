@@ -272,6 +272,25 @@ fn tools_a_moved_layer_snaps_to_a_guide_and_to_the_grid_while_they_are_on() {
     assert_eq!(spacing, 100.0);
     drag(&mut doc, [960.0, 540.0], [1097.0, 540.0], ToolMods::default());
     assert!(near(&value(&mut doc, layer, "transform/position"), &[1100.0, 540.0]), "the left edge snaps onto the grid line at 1000");
+    doc.execute("edit.undo", json!({})).unwrap();
+    // Cmd or Ctrl held turns guide and grid snapping off for the drag.
+    let command = ToolMods { command: true, ..ToolMods::default() };
+    drag(&mut doc, [960.0, 540.0], [1097.0, 540.0], command);
+    assert!(near(&value(&mut doc, layer, "transform/position"), &[1097.0, 540.0]), "Cmd held: no snapping to the grid");
+    doc.execute("edit.undo", json!({})).unwrap();
+    doc.set_snap_targets(true, false);
+    drag(&mut doc, [960.0, 540.0], [1100.0, 540.0], command);
+    assert!(near(&value(&mut doc, layer, "transform/position"), &[1100.0, 540.0]), "Cmd held: no snapping to the guide");
+    doc.execute("edit.undo", json!({})).unwrap();
+    // View ▸ Grid Settings: a 50 px grid, kept within bounds.
+    assert_eq!(doc.set_grid_spacing(50.0), 50.0);
+    assert_eq!(doc.set_grid_spacing(f64::NAN), 50.0);
+    assert_eq!(doc.set_grid_spacing(0.0), 2.0);
+    assert_eq!(doc.set_grid_spacing(50.0), 50.0);
+    doc.set_snap_targets(false, true);
+    // The left edge (860) moved 87 px is 3 px short of the line at 950.
+    drag(&mut doc, [960.0, 540.0], [1047.0, 540.0], ToolMods::default());
+    assert!(near(&value(&mut doc, layer, "transform/position"), &[1050.0, 540.0]), "the left edge snaps onto the 50 px grid line at 950");
 }
 
 /// The masks of a layer: per mask its vertices, its out tangents and whether it is closed.
@@ -355,10 +374,110 @@ fn tools_the_pen_keeps_an_open_path_on_enter_drops_it_on_escape_and_a_vertex_dra
 }
 
 #[test]
-fn tools_the_pen_without_a_layer_says_what_to_do() {
+fn tools_the_pen_with_no_layer_selected_draws_a_new_shape_layer_in_one_undo_step() {
+    let mut doc = doc();
+    let below = solid(&mut doc, "Below");
+    doc.execute("edit.deselectAll", json!({})).unwrap();
+    assert!(selected(&doc).is_empty());
+    let before = doc.execute("comp.info", json!({})).unwrap()["layers"].as_array().unwrap().len();
+    doc.select_tool("pen", 1.0).unwrap();
+    // Over the solid: the Pen does not take the layer under the pointer.
+    click(&mut doc, 900.0, 500.0, ToolMods::default());
+    click(&mut doc, 1000.0, 500.0, ToolMods::default());
+    click(&mut doc, 1000.0, 580.0, ToolMods::default());
+    click(&mut doc, 901.0, 501.0, ToolMods::default());
+    let info = doc.execute("comp.info", json!({})).unwrap();
+    let layers = info["layers"].as_array().unwrap();
+    assert_eq!(layers.len(), before + 1, "a new layer: {layers:?}");
+    assert_eq!(layers[0]["type"], "Shape", "{:?}", layers[0]);
+    assert!(masks_of(&mut doc, below).is_empty(), "no mask on the solid under the pointer");
+    let made = layers[0]["id"].as_u64().unwrap();
+    assert_eq!(selected(&doc), vec![made], "the new shape layer is selected");
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(doc.execute("comp.info", json!({})).unwrap()["layers"].as_array().unwrap().len(), before, "one undo takes it away");
+}
+
+/// The first shape Path item of a layer: its uid, vertices and in tangents (its own space).
+fn shape_path_of(doc: &mut MotionDocument, layer: u64) -> (u64, Vec<[f64; 2]>, Vec<[f64; 2]>) {
+    fn find(node: &Value) -> Option<Value> {
+        if node["match"] == "path" && node["children"].is_array() {
+            return Some(node.clone());
+        }
+        node["children"].as_array()?.iter().find_map(find)
+    }
+    let tree = doc.execute("layer.tree", json!({ "layer": layer })).unwrap();
+    let item = find(&tree["properties"]).expect("a shape path");
+    let value = item["children"].as_array().unwrap().iter().find(|p| p["match"] == "path").unwrap()["value"]["v"].clone();
+    let pts = |v: &Value| v.as_array().map(|a| a.iter().map(|p| [p[0].as_f64().unwrap(), p[1].as_f64().unwrap()]).collect()).unwrap_or_default();
+    (item["uid"].as_u64().unwrap(), pts(&value["vertices"]), pts(&value["in_tangents"]))
+}
+
+#[test]
+fn tools_shape_path_vertices_select_move_convert_add_and_delete_in_one_undo_step_each() {
     let mut doc = doc();
     doc.select_tool("pen", 1.0).unwrap();
-    let answer = doc.pointer(&event(PointerAction::Down, 100.0, 100.0, ToolMods::default())).unwrap();
-    doc.pointer(&event(PointerAction::Up, 100.0, 100.0, ToolMods::default())).unwrap();
-    assert!(format!("{:?}", answer.requests).contains("Select the layer to mask first"), "{:?}", answer.requests);
+    // A closed square path drawn with nothing selected: a new shape layer.
+    click(&mut doc, 800.0, 400.0, ToolMods::default());
+    click(&mut doc, 1000.0, 400.0, ToolMods::default());
+    click(&mut doc, 1000.0, 600.0, ToolMods::default());
+    click(&mut doc, 800.0, 600.0, ToolMods::default());
+    click(&mut doc, 801.0, 401.0, ToolMods::default());
+    let layer = selected(&doc)[0];
+    let (_, start, _) = shape_path_of(&mut doc, layer);
+    assert_eq!(start.len(), 4, "{start:?}");
+    doc.select_tool("selection", 1.0).unwrap();
+    // Click the first vertex, Shift-click the second, then drag one of them: both move.
+    click(&mut doc, 800.0, 400.0, ToolMods::default());
+    click(&mut doc, 1000.0, 400.0, ToolMods { shift: true, ..ToolMods::default() });
+    assert_eq!(doc.session.state.selected_vertices.len(), 2);
+    drag_from(&mut doc, [1000.0, 400.0], [1010.0, 380.0], ToolMods::default(), ToolMods::default());
+    let (_, moved, _) = shape_path_of(&mut doc, layer);
+    for i in [0, 1] {
+        assert!(near(&moved[i], &[start[i][0] + 10.0, start[i][1] - 20.0]), "vertex {i}: {moved:?}");
+    }
+    assert!(near(&moved[2], &start[2]), "an unselected vertex stays");
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert!(near(&shape_path_of(&mut doc, layer).1[0], &start[0]), "one undo puts both back");
+    // Alt-click: the corner becomes smooth (curve handles), and again a corner.
+    click(&mut doc, 1000.0, 600.0, ToolMods { alt: true, ..ToolMods::default() });
+    let (_, _, ins) = shape_path_of(&mut doc, layer);
+    assert!(ins[2][0].abs() + ins[2][1].abs() > 1.0, "smooth: {ins:?}");
+    doc.execute("edit.undo", json!({})).unwrap();
+    // A press on a segment moves the whole path.
+    drag_from(&mut doc, [900.0, 600.0], [930.0, 600.0], ToolMods::default(), ToolMods::default());
+    let (_, all, _) = shape_path_of(&mut doc, layer);
+    assert!((0..4).all(|i| near(&all[i], &[start[i][0] + 30.0, start[i][1]])), "{all:?}");
+    doc.execute("edit.undo", json!({})).unwrap();
+    // The Pen on a segment adds a vertex there.
+    doc.select_tool("pen", 1.0).unwrap();
+    click(&mut doc, 1000.0, 500.0, ToolMods::default());
+    assert_eq!(shape_path_of(&mut doc, layer).1.len(), 5, "a vertex added on the right side");
+    doc.select_tool("selection", 1.0).unwrap();
+    // A box over the two bottom vertices (vertices are selected, so empty space boxes them), then Delete.
+    drag_from(&mut doc, [700.0, 560.0], [1100.0, 700.0], ToolMods::default(), ToolMods::default());
+    assert_eq!(doc.session.state.selected_vertices.len(), 2, "{:?}", doc.session.state.selected_vertices);
+    doc.execute("edit.clear", json!({})).unwrap();
+    assert_eq!(shape_path_of(&mut doc, layer).1.len(), 3, "the two boxed vertices are gone, the layer stays");
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(shape_path_of(&mut doc, layer).1.len(), 5);
+}
+
+#[test]
+fn tools_a_gradient_fills_start_point_drags_on_the_canvas_in_one_undo_step() {
+    let mut doc = doc();
+    let made = doc.execute("shape.newShape", json!({ "kind": "rect", "size": [400, 200], "position": [960, 540] })).unwrap();
+    let layer = made["layer"].as_u64().unwrap();
+    let group = made["group"].as_u64().unwrap();
+    let added = doc.execute("layer.addShapeItem", json!({ "layer": layer, "kind": "gfill", "group": group })).unwrap();
+    let path = format!("{}/start", added["path"].as_str().unwrap());
+    doc.execute("layer.select", json!({ "layers": [layer] })).unwrap();
+    let points = super::gradient::points(&doc.session);
+    assert_eq!(points.len(), 1);
+    let from = points[0].0.at;
+    let before = value(&mut doc, layer, &path);
+    drag(&mut doc, from, [from[0] + 30.0, from[1] + 10.0], ToolMods::default());
+    let after = value(&mut doc, layer, &path);
+    assert!(near(&after, &[before[0] + 30.0, before[1] + 10.0]), "{before:?} → {after:?}");
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert!(near(&value(&mut doc, layer, &path), &before), "one undo puts it back");
 }

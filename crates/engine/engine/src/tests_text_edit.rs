@@ -275,3 +275,34 @@ fn set_text_schema_accepts_every_opentype_key_and_requires_none() {
     s.execute_checked("layer.setText", json!({"layer": t, "discretionaryLigatures": true, "ss02": true, "ss20": true})).unwrap();
     assert!(doc(&s, t).style_at(0).opentype.stylistic_set(20));
 }
+
+/// `layer.tree`'s `text`: the whole text's style with what differs marked mixed, or while editing
+/// the selection's (and at a caret the style the next typed text takes), with the range to give
+/// `layer.setText`.
+#[test]
+fn layer_tree_reads_back_the_edited_selections_style_and_marks_mixed_settings() {
+    let (mut s, t) = session("Hello World\nSecond line");
+    s.execute("layer.setText", json!({"layer": t, "range": [6, 11], "size": 30, "fauxBold": true})).unwrap();
+    s.execute("layer.setText", json!({"layer": t, "range": [13, 14], "justify": "center"})).unwrap();
+    let text = s.execute("layer.tree", json!({"layer": t})).unwrap()["text"].clone();
+    assert_eq!(text["character"]["size"], json!(null), "{text}");
+    assert_eq!(text["character"]["font"], json!("Inter"), "{text}");
+    let mixed: Vec<&str> = text["mixed"].as_array().unwrap().iter().filter_map(|v| v.as_str()).collect();
+    assert!(mixed.contains(&"size") && mixed.contains(&"fauxBold") && mixed.contains(&"justify"), "{mixed:?}");
+    assert_eq!(text["range"], json!(null));
+    assert_eq!(text["editing"], json!(false));
+    // Editing with "World" selected: its own style, no mix, and its range.
+    s.execute("text.edit", json!({"layer": t})).unwrap();
+    s.execute("text.setSelection", json!({"start": 6, "end": 11})).unwrap();
+    let text = s.execute("layer.tree", json!({"layer": t})).unwrap()["text"].clone();
+    assert_eq!((text["character"]["size"].as_f64(), text["character"]["fauxBold"].as_bool()), (Some(30.0), Some(true)), "{text}");
+    assert_eq!(text["paragraph"]["justify"], json!("left"), "{text}");
+    assert_eq!(text["range"], json!([6, 11]));
+    assert!(text["mixed"].as_array().unwrap().is_empty(), "{text}");
+    // At a caret after "Hello": the style typed text takes, changed by a size set at the caret.
+    s.execute("text.setSelection", json!({"start": 5, "end": 5})).unwrap();
+    s.execute("layer.setText", json!({"layer": t, "range": [5, 5], "size": 12})).unwrap();
+    let text = s.execute("layer.tree", json!({"layer": t})).unwrap()["text"].clone();
+    assert_eq!(text["character"]["size"].as_f64(), Some(12.0), "{text}");
+    assert_eq!(text["range"], json!([5, 5]));
+}
