@@ -3,6 +3,9 @@
 //! frame rate (the composition's, or another). The dialog sends them as a JSON object in place of
 //! the format name; a bare format name (`h264`) renders the whole composition as it is.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use kition_motion_engine::render_queue::RenderStepper;
@@ -79,6 +82,51 @@ impl Export {
     /// Where the movie was (or would have been) written.
     pub(crate) fn path(&self) -> &str {
         &self.path
+    }
+}
+
+thread_local! {
+    /// The exports being rendered, by [`ExportKey`]. A stepped render is a future that stays on
+    /// the thread it started on (a browser worker's WebGPU device is awaited inside it), so it is
+    /// not `Send` and is kept here, per thread, rather than in the document, which a native host
+    /// may move between threads (`MotionDocument` stays `Send`). Asked from another thread, an
+    /// export is simply not found.
+    static EXPORTS: RefCell<HashMap<u64, Export>> = RefCell::new(HashMap::new());
+}
+
+/// Names one document's export in this thread's [`EXPORTS`]; dropping the key drops the export.
+pub(crate) struct ExportKey(u64);
+
+impl ExportKey {
+    pub(crate) fn new() -> ExportKey {
+        static NEXT: AtomicU64 = AtomicU64::new(1);
+        ExportKey(NEXT.fetch_add(1, Ordering::Relaxed))
+    }
+
+    /// Keeps `export` as this document's export, dropping one it had.
+    pub(crate) fn put(&self, export: Export) {
+        let _ = EXPORTS.try_with(|exports| exports.borrow_mut().insert(self.0, export));
+    }
+
+    /// Takes this document's export out.
+    pub(crate) fn take(&self) -> Option<Export> {
+        EXPORTS.try_with(|exports| exports.borrow_mut().remove(&self.0)).ok().flatten()
+    }
+
+    /// Runs `f` on this document's export, if it has one on this thread.
+    pub(crate) fn with<T>(&self, f: impl FnOnce(&mut Export) -> T) -> Option<T> {
+        // The export is taken out while `f` runs, so a render calling back here cannot borrow
+        // the map twice.
+        let mut export = self.take()?;
+        let out = f(&mut export);
+        self.put(export);
+        Some(out)
+    }
+}
+
+impl Drop for ExportKey {
+    fn drop(&mut self) {
+        drop(self.take());
     }
 }
 

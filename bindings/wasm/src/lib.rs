@@ -185,8 +185,9 @@ pub struct MotionDocument {
     /// Footage files already lent to the pool.
     lent: HashSet<String>,
     frame: RefCell<Option<Cached>>,
-    /// The movie the Export dialog is rendering, a little at a time.
-    export: Option<movie::Export>,
+    /// The movie the Export dialog is rendering, a little at a time (kept per thread, see
+    /// [`movie::ExportKey`]).
+    export: movie::ExportKey,
     /// Whether a moved layer snaps to the composition's guides and to the grid (View ▸ Snap to
     /// Guides, Snap to Grid: the person's view, which the editor sets).
     snap_guides: bool,
@@ -195,6 +196,13 @@ pub struct MotionDocument {
     /// 3 Third, 4 Quarter) and the picture is that render blown up to the composition's size.
     preview: u32,
 }
+
+/// A native host (`bindings/headless`) needs the document to be `Send`: checked here, where the
+/// kit is compiled, and not only by the headless binding.
+const _: fn() = || {
+    fn send<T: Send>() {}
+    send::<MotionDocument>();
+};
 
 impl MotionDocument {
     /// Refuses a parameter `command` does not take (a typo or a guessed name) before it runs,
@@ -237,7 +245,7 @@ impl MotionDocument {
             pool,
             lent: HashSet::new(),
             frame: RefCell::new(None),
-            export: None,
+            export: movie::ExportKey::new(),
             snap_guides: true,
             snap_grid: false,
             preview: 1,
@@ -370,15 +378,14 @@ impl MotionDocument {
         self.export_cancel();
         let export = self.new_export(path, settings)?;
         let progress = export.progress(false);
-        self.export = Some(export);
+        self.export.put(export);
         Ok(progress)
     }
 
     /// Renders the export for about `milliseconds` (at least one batch of frames) and says how
     /// far it is.
     pub fn export_step(&mut self, milliseconds: f64) -> Result<movie::Progress, String> {
-        let export = self.export.as_mut().ok_or("no export is running")?;
-        Ok(export.step(milliseconds))
+        self.export.with(|export| export.step(milliseconds)).ok_or_else(|| "no export is running".to_owned())
     }
 
     /// The finished export's file; an export that failed answers why, one still running says so.
