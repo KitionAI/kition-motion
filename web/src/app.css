@@ -217,13 +217,13 @@
   cursor: default;
 }
 
-/* A bar's ends: dragged, they trim the in and out points. Over the keyframes: a keyframe on the
-   in or out point is still pressed on its outer half. */
+/* A bar's ends: dragged, they trim the in and out points. Under the keyframes: a keyframe on the
+   in or out point takes a press on all of it; the end still takes one above and below it. */
 .motion-bar-end {
   position: absolute;
   z-index: 2;
-  top: -1px;
-  bottom: -1px;
+  top: -5px;
+  bottom: -5px;
   width: 6px;
   cursor: ew-resize;
 }
@@ -254,7 +254,7 @@
 }
 
 .motion-key {
-  z-index: 1;
+  z-index: 3;
   touch-action: none;
 }
 

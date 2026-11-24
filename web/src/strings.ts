@@ -275,6 +275,7 @@ const enUS: Catalog = {
   "sequence.transition.dissolveFront": "Dissolve front layer",
   "sequence.transition.crossDissolve": "Cross dissolve front and back layers",
   "sequence.order": "The layers follow one another in the order they were selected.",
+  "defaultPrecomp": "Pre-comp",
 }
 
 const zhCN: Catalog = {
@@ -550,6 +551,7 @@ const zhCN: Catalog = {
   "sequence.transition.dissolveFront": "溶解前景图层",
   "sequence.transition.crossDissolve": "交叉溶解前景和背景图层",
   "sequence.order": "图层按选中的先后顺序一个接一个排列。",
+  "defaultPrecomp": "预合成",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }

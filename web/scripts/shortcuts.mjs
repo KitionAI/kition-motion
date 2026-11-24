@@ -30,7 +30,9 @@ try {
 
   // The menus, menu by menu (the Effect menu's effects have no shortcuts).
   const byMenu = new Map()
-  for (const row of menus.menuRows([])) {
+  // The View menu's switches as a new session has them (their labels say what a click does then).
+  const overlays = { rulers: false, guides: true, lockGuides: false, grid: false, snapGuides: true, snapGrid: false, safe: false }
+  for (const row of menus.menuRows([], overlays, 'composition')) {
     if (row.command === '---') continue
     const shortcut = row.shortcut ?? (row.command.startsWith('kit:') ? undefined : commands.get(row.command)?.shortcut)
     if (!shortcut) continue

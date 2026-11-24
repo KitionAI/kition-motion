@@ -88,7 +88,10 @@ try {
   await until(async () => near((await layer(SHAPE)).in, 0))
   step('one undo takes the whole drag back', near((await layer(SHAPE)).in, 0), String((await layer(SHAPE)).in))
   row = await track(`motion-layer-${SHAPE}`)
-  await drag({ x: row.at(0) + 2, y: row.cy }, { x: row.at(0.5) + 2, y: row.cy })
+  // A keyframe sits on the in point and takes a press on all of it: the bar's start is pressed just above it.
+  const keyAtIn = await kit.getByTestId(`motion-key-${SHAPE}-0`).boundingBox().catch(() => null)
+  const endY = keyAtIn ? keyAtIn.y - 2 : row.cy
+  await drag({ x: row.at(0) + 2, y: endY }, { x: row.at(0.5) + 2, y: endY })
   await until(async () => near((await layer(SHAPE)).in, 0.5))
   shape = await layer(SHAPE)
   step('dragging the start of a bar trims the in point', near(shape.in, 0.5) && near(shape.out, 3), `${shape.in}–${shape.out}`)
@@ -322,6 +325,30 @@ try {
   await until(async () => near((await details()).info.workArea[0], 0.5))
   const seen = await kit.getByTestId('motion-ruler').evaluate(() => window.__rulerEvents.join(' '))
   step('and its start', near((await details()).info.workArea[0], 0.5) && near((await details()).info.workArea[1], 2), `${JSON.stringify((await details()).info.workArea)} (press on ${hit}, time ${(await details()).time}; ${seen})`)
+
+  // 6. A keyframe on a layer's in point takes a press on all of it, its inner half too, not the bar's end.
+  await open()
+  const keyMark = kit.getByTestId(`motion-key-${SHAPE}-0`)
+  await keyMark.waitFor()
+  const keyBox = await keyMark.boundingBox()
+  await page.mouse.click(keyBox.x + keyBox.width * 0.8, keyBox.y + keyBox.height / 2)
+  await until(async () => (await keyMark.getAttribute('aria-selected')) === 'true')
+  step('a press on the inner half of a keyframe on the in point selects the keyframe', (await keyMark.getAttribute('aria-selected')) === 'true' && near((await layer(SHAPE)).in, 0), `${await keyMark.getAttribute('aria-selected')} in ${(await layer(SHAPE)).in}`)
+
+  // 7. T follows the last press: on the timeline it shows Opacity, on the composition it picks the Text tool.
+  // (The press on the name selects the layer alone: T waits until the row shows that.)
+  await kit.getByTestId(`motion-name-${SHAPE}`).click()
+  await until(async () => (await kit.getByTestId(`motion-layer-${SHAPE}`).getAttribute('data-selected')) === 'true' && (await kit.locator('.motion-key[aria-selected="true"]').count()) === 0)
+  await kit.locator('.kui-app').focus()
+  await page.keyboard.press('t')
+  await until(async () => (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.opacity`).count()) === 1)
+  step('T after a press on the timeline shows Opacity', (await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.opacity`).count()) === 1)
+  const surface = await kit.getByTestId('kit-canvas-surface').boundingBox()
+  await page.mouse.click(surface.x + 20, surface.y + 20)
+  await kit.locator('.kui-app').focus()
+  await page.keyboard.press('t')
+  await until(async () => (await kit.locator('[data-testid="motion-tool-text"][aria-pressed="true"]').count()) === 1)
+  step('T after a press on the composition picks the Text tool', (await kit.locator('[data-testid="motion-tool-text"][aria-pressed="true"]').count()) === 1)
 } catch (error) {
   failures += 1
   console.log(`FAIL ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`)

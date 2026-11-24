@@ -260,14 +260,21 @@ try {
   await undo()
   await until(async () => (await layers()).length === before.length)
   step('undo removes it', (await layers()).length === before.length)
-  // And onto the timeline: a layer at the current time.
+  // And onto the timeline: a layer starting at the time under the pointer where it is let go.
   // The first press after the drag-and-drop above goes straight to the ruler (WebKit gives it no
   // pointerdown; the editor makes one from its mousedown, pointerFallback.ts).
   const now = await seekRuler(200)
-  await drag(centre(await row.boundingBox()), centre(await kit.getByTestId('motion-timeline-rows').boundingBox()))
+  step('the first press after a drag-and-drop moves the current time', now > 0, String(now))
+  const target = centre(await kit.getByTestId('motion-timeline-rows').boundingBox())
+  const rulerBox = await kit.getByTestId('motion-ruler').boundingBox()
+  const viewStart = Number(await kit.getByTestId('motion-ruler').getAttribute('data-view-start'))
+  const viewSpan = Number(await kit.getByTestId('motion-ruler').getAttribute('data-view-span'))
+  const fps = (await details()).comp.frameRate ?? 30
+  const under = Math.round((viewStart + ((target.x - rulerBox.x) / rulerBox.width) * viewSpan) * fps) / fps
+  await drag(centre(await row.boundingBox()), target)
   await until(async () => (await layers()).length === before.length + 1)
   placed = await newest(before)
-  step('dragging it onto the timeline places it at the current time', placed && now > 0 && near(placed.in, now, 1e-3), JSON.stringify({ in: placed?.in, now }))
+  step('dragging it onto the timeline starts it at the time under the pointer', placed && Math.abs(under - now) > 0.2 && near(placed.in, under, 1.01 / fps), JSON.stringify({ in: placed?.in, under, now }))
   await undo()
   await until(async () => (await layers()).length === before.length)
 
@@ -349,6 +356,7 @@ try {
   await until(async () => (await layers()).some((layer) => layer.type === 'Composition'))
   const precomp = (await layers()).find((layer) => layer.type === 'Composition')
   step('Pre-compose replaces the layer with a precomp layer', precomp && !(await layers()).some((layer) => layer.id === shape.id))
+  step('the new composition is named in Chinese (预合成 1)', (await items()).some((item) => item.name === '预合成 1') && precomp?.name === '预合成 1', JSON.stringify({ layer: precomp?.name, items: (await items()).map((item) => item.name) }))
   step('and says how to go into it', (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('双击')))
   await kit.getByTestId(`motion-bar-${precomp.id}`).dblclick()
   await until(async () => (await activeComp()) !== comp1)

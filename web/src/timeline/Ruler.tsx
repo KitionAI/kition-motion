@@ -78,6 +78,8 @@ export function Ruler({ onSeek, onWorkArea, rulerRef, children }: { onSeek: (sec
         if (event.buttons & 1 && event.currentTarget.hasPointerCapture(event.pointerId)) seek(event)
       }}
       data-testid="motion-ruler"
+      data-view-start={view.start}
+      data-view-span={view.span}
       data-step={step.frames ? 'frames' : 'seconds'}
       data-step-seconds={step.seconds}
     >

@@ -331,6 +331,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   // when it is committed): shown where they last pressed, so they see what they type.
   const [composing, setComposing] = useState<string | null>(null)
   const lastPress = useRef<{ x: number; y: number }>({ x: 24, y: 24 })
+  // Where the person pressed last: on the timeline (and the transport), or on the composition.
+  const lastArea = useRef<'timeline' | 'canvas'>('canvas')
   /** The composition point under a page point, from the canvas's view; null off the canvas. */
   const compPoint = (clientX: number, clientY: number): [number, number] | undefined => {
     const view = canvas.current?.view()
@@ -385,6 +387,19 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const footage = useFootage({ host, run, t })
   /** Footage, a solid or a composition from the project as a layer at the current time (one undo step). */
   const placeItem = (item: number, position?: [number, number]) => footage.place(item, { time: state?.time ?? 0, ...(position ? { position } : {}) })
+  /** The composition time under a page x on the timeline (its ruler's stretch of time), on a frame; null off it. */
+  const timeUnder = (clientX: number) => {
+    const ruler = workspace.current?.querySelector<HTMLElement>('[data-testid="motion-ruler"]')
+    const comp = state?.comp
+    if (!ruler || !comp) return null
+    const box = ruler.getBoundingClientRect()
+    const start = Number(ruler.dataset.viewStart)
+    const span = Number(ruler.dataset.viewSpan)
+    if (!(box.width > 0) || !Number.isFinite(start) || !(span > 0)) return null
+    const seconds = start + ((clientX - box.left) / box.width) * span
+    const frames = Math.round(seconds * comp.fps)
+    return Math.min(Math.max(0, comp.duration - 1 / comp.fps), Math.max(0, frames / comp.fps))
+  }
   /**
    * The compositions the person went into from a precomp layer, outermost first: the breadcrumb
    * back out. `entering` is the composition a precomp was opened from (by its bar, its menu, or a
@@ -412,7 +427,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }
   /** Pre-compose, then say where the new composition is and offer to open it. */
   const precompose = async () => {
-    const made = parseAnswer<{ comp?: number; layer?: number }>(await run('layer.precompose', {}))
+    const made = parseAnswer<{ comp?: number; layer?: number }>(await run('layer.precompose', { name: await unusedName(t('defaultPrecomp')) }))
     if (made?.layer == null) return
     const layer = made.layer
     toast.success(t('precomposed'), { action: { label: t('precomposed.open'), onClick: () => openPrecomp(layer) } })
@@ -654,8 +669,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     if (!state) return false
     const command = event.metaKey || event.ctrlKey
     const plain = !command && !event.altKey && !event.shiftKey
-    // T picks the Text tool from the composition; in the timeline it shows Opacity, as it did.
-    const inTimeline = event.target instanceof Element && event.target.closest('.motion-timeline') != null
+    // T follows where the person last pressed (or where the focus is): after a press on the
+    // timeline it shows Opacity, after one on the composition it picks the Text tool.
+    const focusIn = event.target instanceof Element && event.target.closest('.motion-timeline') != null
+    const inTimeline = focusIn || lastArea.current === 'timeline'
     if (plain && event.code === 'KeyT' && !inTimeline && !host.readOnly) return false
     if (timelineKeys.current?.(event)) return true
     // The arrow keys move the selected layers (Shift: ten times as far), one undo step each.
@@ -784,6 +801,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             onPointerDownCapture={(event) => {
               const box = event.currentTarget.getBoundingClientRect()
               lastPress.current = { x: event.clientX - box.left, y: event.clientY - box.top }
+              lastArea.current = event.target instanceof Element && event.target.closest('.motion-timeline, .motion-transport, .motion-splitter') ? 'timeline' : 'canvas'
             }}
             onCompositionStart={() => setComposing('')}
             onCompositionUpdate={(event) => setComposing(event.data)}
@@ -806,11 +824,14 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               const files = [...event.dataTransfer.files]
               if (!item && !files.length) return
               event.preventDefault()
-              // Dropped on the composition, the layer's centre goes where it was dropped; on the timeline, the middle.
+              // Dropped on the composition, the layer's centre goes where it was dropped, at the current
+              // time; on the timeline, it starts at the time under the pointer, in the middle.
               const onCanvas = !(event.target instanceof Element && event.target.closest('.motion-timeline, .motion-transport, .motion-splitter'))
               const position = onCanvas ? compPoint(event.clientX, event.clientY) : undefined
-              if (item) placeItem(item, position)
-              else void footage.importDropped(files, { time: state.time, ...(position ? { position } : {}) })
+              const onTimeline = event.target instanceof Element && event.target.closest('.motion-timeline') != null
+              const time = (onTimeline ? timeUnder(event.clientX) : null) ?? state.time
+              if (item) footage.place(item, { time, ...(position ? { position } : {}) })
+              else void footage.importDropped(files, { time, ...(position ? { position } : {}) })
             }}
             onDoubleClickCapture={(event) => {
               // A double-click on the canvas may open a precomp layer (the Selection tool's): the switch it brings is a step in.

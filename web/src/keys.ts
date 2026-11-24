@@ -33,7 +33,7 @@ export const TIMELINE_KEYS = {
   position: { keys: ['P'], zh: '只显示“位置”', en: 'Show only Position' },
   scale: { keys: ['S'], zh: '只显示“缩放”', en: 'Show only Scale' },
   rotation: { keys: ['R'], zh: '只显示“旋转”', en: 'Show only Rotation' },
-  opacity: { keys: ['T'], zh: '只显示“不透明度”（在画面上 T 是文字工具）', en: 'Show only Opacity (on the composition T is the Text tool)' },
+  opacity: { keys: ['T'], zh: '只显示“不透明度”——上一次点的是时间轴时；上一次点的是画面时，T 是文字工具', en: 'Show only Opacity, when the last press was on the timeline; after a press on the composition T is the Text tool' },
   duplicate: { keys: ['Cmd+D'], zh: '复制选中的图层', en: 'Duplicate the selected layers' },
 } satisfies Record<string, Binding>
 
