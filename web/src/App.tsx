@@ -21,11 +21,12 @@ import {
   type KitCanvasHandle,
   type Phrases,
   type RasterView,
+  Select,
 } from '@kition/sdk/editor'
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, OVERLAY_ROWS, SHORTCUT_OVERRIDES, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
+import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -275,7 +276,7 @@ const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).re
  * ones it asks values for in its own dialogs, Pre-compose (which then offers to open the new
  * composition), and the ones given another shortcut (`SHORTCUT_OVERRIDES`).
  */
-const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', ...Object.keys(OVERLAY_ROWS), ...Object.keys(SHORTCUT_OVERRIDES)]
+const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -433,6 +434,23 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   // View's rulers, guides, grid and safe areas, and what a moved layer snaps to (the engine's Selection tool asks).
   const { overlays, toggle: toggleOverlay } = useOverlays()
   const [gridSpacing, setGridSpacing] = useState(100)
+  // View ▸ Resolution: the engine renders every n-th pixel; the canvas paints again.
+  const [preview, setPreview] = useState(() => {
+    const stored = Number(globalThis.sessionStorage?.getItem('motion-preview-resolution'))
+    return [1, 2, 3, 4].includes(stored) ? stored : 1
+  })
+  useEffect(() => {
+    if (!session.doc) return
+    void session.doc
+      .invoke('setPreviewResolution', preview)
+      .then(() => canvas.current?.retryRender())
+      .catch(() => undefined)
+    try {
+      sessionStorage.setItem('motion-preview-resolution', String(preview))
+    } catch {
+      // Kept for this page only.
+    }
+  }, [session.doc, preview])
   useEffect(() => {
     if (!session.doc) return
     void session.doc
@@ -513,6 +531,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   /** Commands the editor answers itself (the rest go to the engine as they are). */
   const own: Record<string, () => void> = {
     ...Object.fromEntries(Object.entries(OVERLAY_ROWS).map(([command, key]) => [command, () => toggleOverlay(key)])),
+    ...Object.fromEntries(RESOLUTIONS.map(([command, , divisor]) => [command, () => setPreview(divisor)])),
     'playback.toggle': playback.toggle,
     'file.exportMovie': () => state?.comp && setExporting(true),
     'file.import': () => void footage.importPicked(),
@@ -561,7 +580,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   )
   // Rows with nothing to act on are hidden; the predicate changes only when that does.
   const idle = useIdleRows(session.doc, state, playback.playing)
-  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1 }, editor.enabled('keys.interpolation'), idle)
+  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview }, editor.enabled('keys.interpolation'), idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(() => menuRows(effects, overlays), [effects, overlays])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
@@ -672,9 +691,27 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         onKeyDown={keyDown}
         hiddenCommands={hiddenCommands}
         status={
+          <>
+          {state?.comp ? (
+            <Select
+              className="motion-resolution"
+              value={String(preview)}
+              aria-label={t('resolution.label')}
+              title={t('resolution.label')}
+              onChange={(event) => setPreview(Number(event.target.value))}
+              data-testid="motion-resolution"
+            >
+              {RESOLUTIONS.map(([command, label, divisor]) => (
+                <option key={command} value={divisor}>
+                  {phrase(label)}
+                </option>
+              ))}
+            </Select>
+          ) : null}
           <span data-testid="motion-status">
             {state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : t('noComp')}
           </span>
+          </>
         }
         panels={state ? <PropertiesPanel info={state} onAddEffect={() => setFindEffect(true)} typingOnCanvas={tools.active === 'text' || tools.wantsText} /> : null}
       >
@@ -687,6 +724,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           data-testid="motion-workspace"
           data-picture={picture ? `${picture.width} ${picture.height}` : undefined}
           data-overlays={OVERLAY_KEYS.filter((key) => overlays[key]).join(' ')}
+          data-resolution={preview}
         >
           <div
             className="motion-main"

@@ -108,6 +108,26 @@ impl Services for KitServices {
     }
 }
 
+/// An RGBA picture `from_w` × `from_h` blown up to `to_w` × `to_h` by repeating its pixels (a
+/// lower preview resolution shows its blocks, as a viewer does). A short source reads as
+/// transparent black where it has no pixel.
+fn blow_up(rgba: &[u8], from_w: u32, from_h: u32, to_w: u32, to_h: u32) -> Vec<u8> {
+    let (fw, fh, tw, th) = (from_w.max(1) as usize, from_h.max(1) as usize, to_w as usize, to_h as usize);
+    let mut out = vec![0u8; tw.saturating_mul(th).saturating_mul(4)];
+    for y in 0..th {
+        let sy = (y * fh / th.max(1)).min(fh - 1);
+        for x in 0..tw {
+            let sx = (x * fw / tw.max(1)).min(fw - 1);
+            let from = (sy * fw + sx) * 4;
+            let to = (y * tw + x) * 4;
+            if let (Some(src), Some(dst)) = (rgba.get(from..from + 4), out.get_mut(to..to + 4)) {
+                dst.copy_from_slice(src);
+            }
+        }
+    }
+    out
+}
+
 /// Lends a footage file to the media pool, which decodes from memory.
 fn lend(pool: &MediaPool, path: &str) -> Result<Arc<[u8]>, String> {
     let bytes: Arc<[u8]> = kition_kit::host::read(path)?.into();
@@ -150,7 +170,7 @@ const TRANSFORM: [&str; 5] = ["transform/anchor", "transform/position", "transfo
 
 /// The last full frame: its project revision, composition time, and pixels.
 struct Cached {
-    key: (u64, Option<u64>, Tick),
+    key: (u64, Option<u64>, Tick, u32),
     rgba: Arc<Vec<u8>>,
     width: u32,
     height: u32,
@@ -171,6 +191,9 @@ pub struct MotionDocument {
     /// Guides, Snap to Grid: the person's view, which the editor sets).
     snap_guides: bool,
     snap_grid: bool,
+    /// View ▸ Resolution: the composition renders every `preview`-th pixel (1 Full, 2 Half,
+    /// 3 Third, 4 Quarter) and the picture is that render blown up to the composition's size.
+    preview: u32,
 }
 
 impl MotionDocument {
@@ -217,6 +240,7 @@ impl MotionDocument {
             export: None,
             snap_guides: true,
             snap_grid: false,
+            preview: 1,
         };
         doc.lend_footage();
         doc
@@ -251,17 +275,23 @@ impl MotionDocument {
     fn frame(&self) -> Result<(Arc<Vec<u8>>, u32, u32), String> {
         let comp_id = self.session.active_comp_id().ok_or("no composition is open")?;
         let time = self.session.time();
-        let key = (self.session.revision, Some(comp_id.0), time);
+        let key = (self.session.revision, Some(comp_id.0), time, self.preview);
         if let Some(cached) = self.frame.borrow().as_ref().filter(|cached| cached.key == key) {
             return Ok((cached.rgba.clone(), cached.width, cached.height));
         }
         let comp = self.session.project.comp(comp_id).ok_or("no composition is open")?;
-        let mut renderer = Renderer::new(&self.session.project, &*self.session.footage, RenderOpts { scale: 1.0, ..Default::default() });
+        let scale = 1.0 / f64::from(self.preview.max(1));
+        let mut renderer = Renderer::new(&self.session.project, &*self.session.footage, RenderOpts { scale, ..Default::default() });
         renderer.expr = self.session.expr.as_deref();
         renderer.cache = Some(&self.session.layer_cache);
         let image = renderer.comp_frame(comp_id, time);
-        let rgba = Arc::new(image.to_rgba8_over(comp.background));
-        let (width, height) = (image.width, image.height);
+        let rendered = image.to_rgba8_over(comp.background);
+        let (rgba, width, height) = if self.preview > 1 {
+            let (width, height) = (comp.width.max(1), comp.height.max(1));
+            (Arc::new(blow_up(&rendered, image.width, image.height, width, height)), width, height)
+        } else {
+            (Arc::new(rendered), image.width, image.height)
+        };
         *self.frame.borrow_mut() = Some(Cached { key, rgba: rgba.clone(), width, height });
         Ok((rgba, width, height))
     }
@@ -364,6 +394,16 @@ impl MotionDocument {
         self.snap_guides = guides;
         self.snap_grid = grid;
         self.session.prefs.grids.grid_spacing
+    }
+
+    /// View ▸ Resolution: renders every `divisor`-th pixel (1 Full, 2 Half, 3 Third, 4 Quarter);
+    /// anything else is refused. The picture keeps the composition's size.
+    pub fn set_preview_resolution(&mut self, divisor: u32) -> Result<(), String> {
+        if !(1..=4).contains(&divisor) {
+            return Err(format!("the preview resolution is 1 (Full), 2 (Half), 3 (Third) or 4 (Quarter), not {divisor}"));
+        }
+        self.preview = divisor;
+        Ok(())
     }
 
     /// Stops the export and drops what it wrote; whether one was running.
@@ -1183,6 +1223,12 @@ pub mod web {
             self.0.set_snap_targets(guides, grid)
         }
 
+        /// View ▸ Resolution (see [`MotionDocument::set_preview_resolution`]).
+        #[wasm_bindgen(js_name = setPreviewResolution)]
+        pub fn set_preview_resolution(&mut self, divisor: u32) -> Result<(), JsError> {
+            self.0.set_preview_resolution(divisor).map_err(|message| JsError::new(&message))
+        }
+
         /// Stops the export and keeps no file (see [`MotionDocument::export_cancel`]).
         #[wasm_bindgen(js_name = exportCancel)]
         pub fn export_cancel(&mut self) -> bool {
@@ -1398,6 +1444,22 @@ mod tests {
         let doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
         let command = doc.commands().into_iter().find(|command| command.id == "layer.setBlendMode").unwrap();
         assert_eq!(command.schema.unwrap()["mode"]["enum"].as_array().map(Vec::len), Some(labels.len()), "the editor reads the modes from the command");
+    }
+
+    #[test]
+    fn a_lower_preview_resolution_draws_blocks_at_the_compositions_size() {
+        let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        let full = doc.frame().unwrap();
+        doc.set_preview_resolution(4).unwrap();
+        let quarter = doc.frame().unwrap();
+        assert_eq!((quarter.1, quarter.2), (full.1, full.2), "the picture keeps the composition's size");
+        let px = |frame: &(Arc<Vec<u8>>, u32, u32), x: u32, y: u32| frame.0[((y * frame.1 + x) * 4) as usize..][..4].to_vec();
+        for (x, y) in [(0, 0), (5, 9), (12, 3)] {
+            assert_eq!(px(&quarter, x - x % 4, y - y % 4), px(&quarter, x, y), "4 × 4 blocks at ({x}, {y})");
+        }
+        assert!(doc.set_preview_resolution(0).is_err() && doc.set_preview_resolution(5).is_err());
+        doc.set_preview_resolution(1).unwrap();
+        assert_eq!(doc.frame().unwrap().0, full.0, "Full draws as before");
     }
 
     #[test]

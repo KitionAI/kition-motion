@@ -233,6 +233,7 @@ const enUS: Catalog = {
   "stretch.badDuration": "A duration as 0:00:02:00 or in seconds",
   "guides.dragHint": "Drag to move this guide; drag it onto a ruler to remove it",
   "guides.fromRuler": "Drag from the ruler to make a guide",
+  "resolution.label": "Preview resolution: Half, Third and Quarter render every second, third or fourth pixel, faster",
 }
 
 const zhCN: Catalog = {
@@ -466,6 +467,7 @@ const zhCN: Catalog = {
   "stretch.badDuration": "持续时间写成 0:00:02:00 或秒数",
   "guides.dragHint": "拖动可移动参考线；拖回标尺上可删除",
   "guides.fromRuler": "从标尺拖出参考线",
+  "resolution.label": "预览分辨率：二分之一、三分之一、四分之一只渲染每 2、3、4 个像素中的一个，更快",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }
@@ -919,4 +921,9 @@ export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
   "Stop Snapping to Grid": "不再对齐到网格",
   "Show Title/Action Safe": "显示标题/动作安全框",
   "Hide Title/Action Safe": "隐藏标题/动作安全框",
+  "Resolution": "分辨率",
+  "Full": "完整",
+  "Half": "二分之一",
+  "Third": "三分之一",
+  "Quarter": "四分之一",
 } }

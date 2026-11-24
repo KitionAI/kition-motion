@@ -584,3 +584,12 @@ features:
     gap: "The switches are the person's view for the session (sessionStorage), not saved with the project; the grid spacing is the engine's preference (100 px) with no subdivisions; guides are not shown in rendered output, as intended. Gated by web/tests/canvas.mjs, web/tests/menus.mjs and the tools tests in bindings/wasm/src/tools/tests.rs."
     cases: []
     since: "2026-11-23"
+  - id: motion.editor.previewResolution
+    title: "View ▸ Resolution (Full, Half, Third, Quarter; Cmd+J, Cmd+Shift+J, Cmd+Alt+Shift+J) and a control in the status bar beside the zoom render the composition at every second, third or fourth pixel, blown up to its size, so previews draw faster; the menu hides the resolution in use"
+    dimension: [function]
+    priority: P2
+    status: has
+    paths: [bindings/wasm/src/lib.rs, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/src/app.css, web/tests/canvas.mjs, web/tests/menus.mjs]
+    gap: "The resolution is the person's view for the session (sessionStorage); Custom… is not offered; export always renders at the size chosen in the Export dialog. Gated by web/tests/canvas.mjs and the preview test in bindings/wasm/src/lib.rs."
+    cases: []
+    since: "2026-11-23"

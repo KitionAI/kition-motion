@@ -390,6 +390,27 @@ try {
     await viewRow('view.rulers')
   }
 
+  // 13. Preview resolution: Quarter from the status bar's control draws the picture in blocks,
+  // Full from View ▸ Resolution draws it as before.
+  {
+    const area = async () => {
+      const p = await at(560, 300)
+      return (await page.screenshot({ clip: { x: Math.round(p.x), y: Math.round(p.y), width: 60, height: 40 } })).toString('base64')
+    }
+    const full = await area()
+    await kit.getByTestId('motion-resolution').selectOption('4')
+    let blocky = full
+    await until(async () => (blocky = await area()) !== full)
+    step('四分之一 from the status bar draws the composition at a quarter of its pixels', blocky !== full)
+    await kit.getByTestId('motion-menu-View').click()
+    await kit.locator('[data-kit-ui-id="menu:View/Resolution"]').hover()
+    const quarterRow = await kit.locator('[role=menu] [data-testid="motion-cmd-view.res.quarter"]').count()
+    await kit.locator('[role=menu] [data-testid="motion-cmd-view.res.full"]').first().click()
+    let back = blocky
+    await until(async () => (back = await area()) === full)
+    step('View ▸ 分辨率 ▸ 完整 draws it in full again, and the menu hides the resolution in use', back === full && quarterRow === 0 && (await kit.getByTestId('motion-resolution').inputValue()) === '1')
+  }
+
   step('no page errors', errors.length === 0, errors.join(' | '))
 } catch (error) {
   step('ran to the end', false, error instanceof Error ? error.stack : String(error))

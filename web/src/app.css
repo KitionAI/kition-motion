@@ -1325,3 +1325,13 @@
   transform: rotate(180deg);
   transform-origin: center;
 }
+
+/* View ▸ Resolution in the status bar, beside the composition's summary. */
+.motion-resolution {
+  width: auto;
+  min-width: 0;
+  height: 22px;
+  margin-right: 8px;
+  padding-block: 0;
+  font-size: 12px;
+}

@@ -81,6 +81,14 @@ export const OVERLAY_ROWS: Readonly<Record<string, keyof Overlays>> = {
   [KIT.safe]: 'safe',
 }
 
+/** View ▸ Resolution's rows and the divisor each renders at (every n-th pixel). */
+export const RESOLUTIONS: ReadonlyArray<readonly [command: string, label: string, divisor: number]> = [
+  ['view.res.full', 'Full', 1],
+  ['view.res.half', 'Half', 2],
+  ['view.res.third', 'Third', 3],
+  ['view.res.quarter', 'Quarter', 4],
+]
+
 /** A switch's label: what a click on it does now. */
 const OVERLAY_LABELS: Record<keyof Overlays, readonly [on: string, off: string]> = {
   rulers: ['Hide Rulers', 'Show Rulers'],
@@ -303,6 +311,7 @@ const MENUS = (overlays: Overlays): ReadonlyArray<readonly [string, readonly Ent
       ['Sequence Layers', 'kit:sequence'],
       SEPARATOR,
       ['Separate Dimensions', 'prop.separateDimensions'],
+
     ],
   ],
   [
@@ -312,6 +321,8 @@ const MENUS = (overlays: Overlays): ReadonlyArray<readonly [string, readonly Ent
       ['Zoom Out', 'view.zoomOut', ','],
       ['Fit in Window', KIT.zoomFit, 'Cmd+0'],
       ['Zoom 100%', KIT.zoom100],
+      SEPARATOR,
+      ['Resolution', RESOLUTIONS.map(([command, label]) => [label, command] as const)],
       SEPARATOR,
       ...overlayEntries(overlays),
       SEPARATOR,
@@ -353,10 +364,10 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
  * Video with none hidden, Unlock All with none locked, Trim to Work Area while the work area is
  * the whole composition, Solid Settings unless the selected layer is a solid, effects without a
  * selection, Last Effect until one was applied here, Fit in Window while the view is fitted and
- * Zoom 100% at 100%, the Keyframe Interpolation rows without selected keyframes, and the
+ * Zoom 100% at 100%, the resolution the canvas shows, the Keyframe Interpolation rows without selected keyframes, and the
  * `KIT_RUNS` and `TRIED_ROWS` rows that would change nothing now (`idle`).
  */
-export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean }, keysSelected: boolean, idle: ReadonlySet<string>) {
+export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean; preview: number }, keysSelected: boolean, idle: ReadonlySet<string>) {
   const layers = info?.layers ?? []
   const selected = layers.some((layer) => layer.selected)
   const comp = info?.comp
@@ -370,6 +381,8 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { 
   if (!selected || !lastEffect) hidden.add('effect.applyLast')
   if (view.fitted) hidden.add(KIT.zoomFit)
   if (view.actual) hidden.add(KIT.zoom100)
+  // The resolution the canvas shows now.
+  for (const [command, , divisor] of RESOLUTIONS) if (divisor === view.preview) hidden.add(command)
   if (!keysSelected) for (const row of INTERPOLATIONS) hidden.add(row.command)
   for (const command of idle) hidden.add(command)
   const key = [...hidden].sort().join(' ') + (selected ? '' : ' effects')
