@@ -2,6 +2,7 @@ import type { MenuRow } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
 import { EFFECT_PREFIX, effectRows, type MotionEffect } from './effects'
 import { INTERPOLATIONS } from './timeline/interp'
+import type { Overlays } from './CanvasGuides'
 
 /**
  * The editor's menus: the commands each menu shows, in order, with separators and submenus. A
@@ -35,6 +36,8 @@ export const SHORTCUT_OVERRIDES: Readonly<Record<string, string>> = {
   'comp.new': 'Cmd+Alt+N',
   'layer.addMask': 'Cmd+Alt+Shift+N',
   'keys.toggleHold': 'Cmd+Alt+Shift+H',
+  // Cmd+R reloads the page in a browser before the editor could take it.
+  'view.rulers': 'Cmd+Alt+Shift+R',
 }
 
 /**
@@ -64,7 +67,30 @@ export const KIT = {
   saveFrame: 'kit:save-frame',
   addMarker: 'kit:add-marker',
   projectPanel: 'kit:project-panel',
+  safe: 'kit:safe-areas',
 } as const
+
+/** View's switches (the engine's own rows, answered by the editor) and the overlay each turns on and off. */
+export const OVERLAY_ROWS: Readonly<Record<string, keyof Overlays>> = {
+  'view.rulers': 'rulers',
+  'view.guides': 'guides',
+  'view.lockGuides': 'lockGuides',
+  'view.snapToGuides': 'snapGuides',
+  'view.grid': 'grid',
+  'view.snapToGrid': 'snapGrid',
+  [KIT.safe]: 'safe',
+}
+
+/** A switch's label: what a click on it does now. */
+const OVERLAY_LABELS: Record<keyof Overlays, readonly [on: string, off: string]> = {
+  rulers: ['Hide Rulers', 'Show Rulers'],
+  guides: ['Hide Guides', 'Show Guides'],
+  lockGuides: ['Unlock Guides', 'Lock Guides'],
+  snapGuides: ['Stop Snapping to Guides', 'Snap to Guides'],
+  grid: ['Hide Grid', 'Show Grid'],
+  snapGrid: ['Stop Snapping to Grid', 'Snap to Grid'],
+  safe: ['Hide Title/Action Safe', 'Show Title/Action Safe'],
+}
 
 /**
  * Rows the editor runs as one engine command with fixed parameters (Layer ▸ Transform, Time and
@@ -111,7 +137,16 @@ export const ARRANGE: Record<string, 'front' | 'forward' | 'backward' | 'back'> 
   [KIT.arrangeBack]: 'back',
 }
 
-const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
+/** The View menu's switch rows, labelled for what they do with `overlays` as they are. */
+function overlayEntries(overlays: Overlays): Entry[] {
+  const row = (command: string): Entry => {
+    const key = OVERLAY_ROWS[command]
+    return [OVERLAY_LABELS[key][overlays[key] ? 0 : 1], command]
+  }
+  return [row('view.rulers'), SEPARATOR, row('view.guides'), row('view.snapToGuides'), row('view.lockGuides'), ['Clear Guides', 'view.clearGuides'], SEPARATOR, row('view.grid'), row('view.snapToGrid'), row(KIT.safe)]
+}
+
+const MENUS = (overlays: Overlays): ReadonlyArray<readonly [string, readonly Entry[]]> => [
   [
     'File',
     [
@@ -278,6 +313,8 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
       ['Fit in Window', KIT.zoomFit, 'Cmd+0'],
       ['Zoom 100%', KIT.zoom100],
       SEPARATOR,
+      ...overlayEntries(overlays),
+      SEPARATOR,
       ['Project Panel', KIT.projectPanel],
       SEPARATOR,
       ['Go to Time…', 'time.set'],
@@ -292,8 +329,8 @@ const MENUS: ReadonlyArray<readonly [string, readonly Entry[]]> = [
 ]
 
 /** Every menu row, in menu order: the Effect menu (every effect the engine has, by category) after Layer. */
-export function menuRows(effects: readonly MotionEffect[]): MenuRow[] {
-  return MENUS.flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
+export function menuRows(effects: readonly MotionEffect[], overlays: Overlays): MenuRow[] {
+  return MENUS(overlays).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
 }
 
 /** Menus kept in a read-only document. */

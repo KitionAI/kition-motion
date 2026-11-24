@@ -249,3 +249,26 @@ fn a_double_click_on_a_precomp_layer_opens_its_composition() {
     doc.pointer(&event(PointerAction::DoubleClick, 960.0, 540.0, ToolMods::default())).unwrap();
     assert_eq!(doc.session.active_comp_id().map(|c| c.0), made["comp"].as_u64());
 }
+
+#[test]
+fn tools_a_moved_layer_snaps_to_a_guide_and_to_the_grid_while_they_are_on() {
+    let mut doc = doc();
+    let layer = solid(&mut doc, "Solid");
+    // A vertical guide at x = 1203: the box's right edge (1060) moved 140 px lands 3 px short of it.
+    doc.execute("view.addGuide", json!({ "orientation": "vertical", "position": 1203 })).unwrap();
+    let guides = doc.execute("comp.info", json!({})).unwrap()["guides"].clone();
+    assert_eq!(guides, json!([{ "orientation": "vertical", "position": 1203.0 }]));
+    doc.set_snap_targets(false, false);
+    drag(&mut doc, [960.0, 540.0], [1100.0, 540.0], ToolMods::default());
+    assert!(near(&value(&mut doc, layer, "transform/position"), &[1100.0, 540.0]), "no snapping: where the pointer went");
+    doc.execute("edit.undo", json!({})).unwrap();
+    doc.set_snap_targets(true, false);
+    drag(&mut doc, [960.0, 540.0], [1100.0, 540.0], ToolMods::default());
+    assert!(near(&value(&mut doc, layer, "transform/position"), &[1103.0, 540.0]), "the right edge snaps onto the guide though layer snapping is off");
+    doc.execute("edit.undo", json!({})).unwrap();
+    // The grid (every 100 px): the left edge (860) moved 137 px is 3 px short of the line at 1000.
+    let spacing = doc.set_snap_targets(false, true);
+    assert_eq!(spacing, 100.0);
+    drag(&mut doc, [960.0, 540.0], [1097.0, 540.0], ToolMods::default());
+    assert!(near(&value(&mut doc, layer, "transform/position"), &[1100.0, 540.0]), "the left edge snaps onto the grid line at 1000");
+}

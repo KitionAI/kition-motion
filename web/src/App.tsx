@@ -25,7 +25,7 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, SHORTCUT_OVERRIDES, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
+import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, OVERLAY_ROWS, SHORTCUT_OVERRIDES, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -38,6 +38,7 @@ import { PropertiesPanel } from './properties/PropertiesPanel'
 import { EffectCatalog } from './properties/catalog'
 import { ProjectPanel, useProjectPanel } from './ProjectPanel'
 import { ExportDialog } from './ExportDialog'
+import { CanvasGuides, OVERLAY_KEYS, useOverlays } from './CanvasGuides'
 import { ITEM_MIME, parseAnswer, useFootage } from './footage'
 import { EDITOR_KEYS, pressed } from './keys'
 import { INTERPOLATIONS } from './timeline/interp'
@@ -274,7 +275,7 @@ const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).re
  * ones it asks values for in its own dialogs, Pre-compose (which then offers to open the new
  * composition), and the ones given another shortcut (`SHORTCUT_OVERRIDES`).
  */
-const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', ...Object.keys(SHORTCUT_OVERRIDES)]
+const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', ...Object.keys(OVERLAY_ROWS), ...Object.keys(SHORTCUT_OVERRIDES)]
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -429,6 +430,16 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     }
   }
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
+  // View's rulers, guides, grid and safe areas, and what a moved layer snaps to (the engine's Selection tool asks).
+  const { overlays, toggle: toggleOverlay } = useOverlays()
+  const [gridSpacing, setGridSpacing] = useState(100)
+  useEffect(() => {
+    if (!session.doc) return
+    void session.doc
+      .invoke<number>('setSnapTargets', overlays.snapGuides, overlays.snapGrid)
+      .then((spacing) => Number.isFinite(spacing) && spacing > 0 && setGridSpacing(spacing))
+      .catch(() => undefined)
+  }, [session.doc, overlays.snapGuides, overlays.snapGrid])
   // The graph editor's curves: a property's values over time, sampled by the engine.
   const doc = session.doc
   const sampler = useCallback<CurveSampler>(
@@ -501,6 +512,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }
   /** Commands the editor answers itself (the rest go to the engine as they are). */
   const own: Record<string, () => void> = {
+    ...Object.fromEntries(Object.entries(OVERLAY_ROWS).map(([command, key]) => [command, () => toggleOverlay(key)])),
     'playback.toggle': playback.toggle,
     'file.exportMovie': () => state?.comp && setExporting(true),
     'file.import': () => void footage.importPicked(),
@@ -551,7 +563,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const idle = useIdleRows(session.doc, state, playback.playing)
   const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1 }, editor.enabled('keys.interpolation'), idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
-  const rows = useMemo(() => menuRows(effects), [effects])
+  const rows = useMemo(() => menuRows(effects, overlays), [effects, overlays])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
   const allowed = useMemo(() => shortcutCommands(rows), [rows])
   const hiddenCommands = useCallback((command: string) => !allowed.has(command), [allowed])
@@ -669,7 +681,13 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
         {exporting && state ? <ExportDialog info={state} doc={session.doc} onClose={() => setExporting(false)} /> : null}
         {findEffect ? <FindEffectDialog effects={effects} onApply={(effect) => applyEffect(effect.id)} onClose={() => setFindEffect(false)} /> : null}
-        <div className="kui-row" ref={workspace} data-testid="motion-workspace" data-picture={picture ? `${picture.width} ${picture.height}` : undefined}>
+        <div
+          className="kui-row"
+          ref={workspace}
+          data-testid="motion-workspace"
+          data-picture={picture ? `${picture.width} ${picture.height}` : undefined}
+          data-overlays={OVERLAY_KEYS.filter((key) => overlays[key]).join(' ')}
+        >
           <div
             className="motion-main"
             ref={main}
@@ -727,6 +745,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             >
               {/* The scrollbars: there only while the composition and its margin are longer than the view. */}
               <CanvasScrollbars views={views} content={(view) => picturePanBounds(picture?.width ?? 0, picture?.height ?? 0, view.zoom)} canvas={canvas} />
+              {state?.comp ? <CanvasGuides views={views} comp={state.comp} overlays={overlays} gridSpacing={gridSpacing} readOnly={host.readOnly === true} /> : null}
             </KitDocumentCanvas>
             {/* The transport and the timeline are the kit's own bars: Focus shows the composition alone. */}
             {state ? (

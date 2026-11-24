@@ -271,6 +271,21 @@
    "frameRate": {
     "type": "number"
    },
+   "guides": {
+    "items": {
+     "additionalProperties": true,
+     "properties": {
+      "orientation": {
+       "type": "string"
+      },
+      "position": {
+       "type": "number"
+      }
+     },
+     "type": "object"
+    },
+    "type": "array"
+   },
    "height": {
     "type": "integer"
    },

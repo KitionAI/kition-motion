@@ -575,3 +575,12 @@ features:
     gap: "The duration field speaks for the first selected layer; several layers take the same factor. Gated by web/tests/menus.mjs (the dialog stretches the shape layer to 200 % and undoes)."
     cases: []
     since: "2026-11-23"
+  - id: motion.editor.guides
+    title: "View ▸ Show Rulers (Cmd+Alt+Shift+R), Show Guides, Snap to Guides, Lock Guides, Clear Guides, Show Grid, Snap to Grid and Show Title/Action Safe, each labelled for what a click does now; rulers in composition pixels along the top and left of the canvas, a guide dragged out of a ruler (view.addGuide), moved (view.moveGuide) or dragged back onto it to remove it (view.removeGuide), each one undo step; the Selection tool snaps a moved layer to the guides and the grid while their rows are on (setSnapTargets), even with layer snapping off"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/CanvasGuides.tsx, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/src/app.css, bindings/wasm/src/lib.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/tools/tests.rs, crates/engine/engine/src/commands/query.rs, bindings/wasm/src/outputs.json, web/tests/canvas.mjs, web/tests/menus.mjs]
+    gap: "The switches are the person's view for the session (sessionStorage), not saved with the project; the grid spacing is the engine's preference (100 px) with no subdivisions; guides are not shown in rendered output, as intended. Gated by web/tests/canvas.mjs, web/tests/menus.mjs and the tools tests in bindings/wasm/src/tools/tests.rs."
+    cases: []
+    since: "2026-11-23"

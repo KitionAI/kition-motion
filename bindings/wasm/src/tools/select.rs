@@ -5,7 +5,7 @@
 use kition_kit::tools::ToolMods;
 use kition_motion_engine::geom::Mat3;
 use kition_motion_engine::project::{LayerId, LayerSource};
-use kition_motion_engine::viewer::{self, SnapOptions};
+use kition_motion_engine::viewer::{self, SnapOptions, SnapSource, SnapTarget};
 use serde_json::json;
 
 use super::geometry::{self, Handle, LayerBox, Pt};
@@ -170,7 +170,14 @@ impl MotionDocument {
         let layers: Vec<LayerId> = self.selected();
         let (features, targets) = with_ctx(&self.session, |ctx| {
             let features: Vec<Pt> = layers.iter().filter_map(|id| ctx.comp.layer(*id)).flat_map(|l| viewer::layer_features(ctx, l)).take(4096).collect();
-            let opts = SnapOptions { layers: true, features: self.session.state.snap_features, ..Default::default() };
+            // Guides and the grid are targets while View ▸ Snap to Guides / Snap to Grid are on.
+            let opts = SnapOptions {
+                layers: true,
+                features: self.session.state.snap_features,
+                guides: self.snap_guides,
+                grid: self.snap_grid,
+                grid_spacing: self.session.prefs.grids.grid_spacing,
+            };
             (features, viewer::targets(ctx, &layers, opts))
         })
         .unwrap_or_default();
@@ -192,11 +199,16 @@ impl MotionDocument {
                 if mods.shift {
                     d = geometry::constrain(d);
                 }
-                // Snapping is on unless Cmd or Ctrl turns it off for the drag (and the other way round).
+                // Snapping to layers and the composition is on unless Cmd or Ctrl turns it off for
+                // the drag (and the other way round); guides and the grid snap while their View
+                // menu rows are on.
                 let mut hits = Vec::new();
-                if self.session.state.snapping != mods.command {
+                let layers_too = self.session.state.snapping != mods.command;
+                let pool: Vec<SnapTarget> =
+                    targets.iter().filter(|t| layers_too || matches!(t.source, SnapSource::Guide | SnapSource::Grid)).cloned().collect();
+                if !pool.is_empty() {
                     let moved: Vec<Pt> = features.iter().map(|f| [f[0] + d[0], f[1] + d[1]]).collect();
-                    if let Some(snap) = viewer::snap(&moved, targets, SNAP_REACH / zoom) {
+                    if let Some(snap) = viewer::snap(&moved, &pool, SNAP_REACH / zoom) {
                         let keep = if mods.shift { [d[0] != 0.0, d[1] != 0.0] } else { [true, true] };
                         d = [d[0] + if keep[0] { snap.delta[0] } else { 0.0 }, d[1] + if keep[1] { snap.delta[1] } else { 0.0 }];
                         hits = snap.hits;

@@ -167,6 +167,10 @@ pub struct MotionDocument {
     frame: RefCell<Option<Cached>>,
     /// The movie the Export dialog is rendering, a little at a time.
     export: Option<movie::Export>,
+    /// Whether a moved layer snaps to the composition's guides and to the grid (View ▸ Snap to
+    /// Guides, Snap to Grid: the person's view, which the editor sets).
+    snap_guides: bool,
+    snap_grid: bool,
 }
 
 impl MotionDocument {
@@ -203,7 +207,17 @@ impl MotionDocument {
     }
 
     fn from_session(session: Session, name: &str, services: Arc<KitServices>, pool: Arc<MediaPool>) -> Self {
-        let mut doc = Self { session, name: name.to_owned(), services, pool, lent: HashSet::new(), frame: RefCell::new(None), export: None };
+        let mut doc = Self {
+            session,
+            name: name.to_owned(),
+            services,
+            pool,
+            lent: HashSet::new(),
+            frame: RefCell::new(None),
+            export: None,
+            snap_guides: true,
+            snap_grid: false,
+        };
         doc.lend_footage();
         doc
     }
@@ -342,6 +356,14 @@ impl MotionDocument {
         let export = self.export.take().ok_or("no export is running")?;
         let path = export.finished()?;
         self.take_file(&path).ok_or_else(|| "the render produced no file".to_owned())
+    }
+
+    /// Whether the Selection tool snaps moved layers to the guides and to the grid; answers the
+    /// grid's spacing in composition pixels (what the editor draws the grid at).
+    pub fn set_snap_targets(&mut self, guides: bool, grid: bool) -> f64 {
+        self.snap_guides = guides;
+        self.snap_grid = grid;
+        self.session.prefs.grids.grid_spacing
     }
 
     /// Stops the export and drops what it wrote; whether one was running.
@@ -1152,6 +1174,13 @@ pub mod web {
         #[wasm_bindgen(js_name = exportFinish)]
         pub fn export_finish(&mut self) -> Result<Vec<u8>, JsError> {
             self.0.export_finish().map_err(|message| JsError::new(&message))
+        }
+
+        /// View ▸ Snap to Guides and Snap to Grid for the Selection tool; answers the grid's
+        /// spacing (see [`MotionDocument::set_snap_targets`]).
+        #[wasm_bindgen(js_name = setSnapTargets)]
+        pub fn set_snap_targets(&mut self, guides: bool, grid: bool) -> f64 {
+            self.0.set_snap_targets(guides, grid)
         }
 
         /// Stops the export and keeps no file (see [`MotionDocument::export_cancel`]).

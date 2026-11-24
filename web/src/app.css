@@ -1225,3 +1225,103 @@
   stroke: var(--kit-text);
   cursor: pointer;
 }
+
+/* View's rulers, guides, grid and safe areas over the composition (CanvasGuides.tsx). */
+.motion-guides {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.motion-guides > svg {
+  position: absolute;
+  inset: 0;
+}
+
+.motion-grid-line {
+  stroke: rgba(122, 156, 255, 0.45);
+  stroke-width: 1;
+}
+
+.motion-safe {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-dasharray: 4 3;
+}
+
+.motion-guide-line {
+  stroke: #33c7ff;
+  stroke-width: 1;
+}
+
+.motion-guide-grab {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  cursor: row-resize;
+  pointer-events: auto;
+}
+
+.motion-guide-grab[data-vertical] {
+  right: auto;
+  cursor: col-resize;
+}
+
+.motion-guide-grab:not([data-vertical]) {
+  bottom: auto;
+}
+
+.motion-ruler-bar {
+  position: absolute;
+  overflow: hidden;
+  background: var(--kit-surface);
+  border-color: var(--kit-border);
+  border-style: solid;
+  border-width: 0;
+  color: var(--kit-text-muted);
+  font-size: 9px;
+  pointer-events: auto;
+}
+
+.motion-ruler-bar[data-side='top'] {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 18px;
+  border-bottom-width: 1px;
+  cursor: row-resize;
+}
+
+.motion-ruler-bar[data-side='left'] {
+  top: 18px;
+  left: 0;
+  bottom: 0;
+  width: 18px;
+  border-right-width: 1px;
+  cursor: col-resize;
+}
+
+.motion-ruler-bar > span {
+  position: absolute;
+  white-space: nowrap;
+}
+
+.motion-ruler-bar[data-side='top'] > span {
+  top: 2px;
+  padding-left: 2px;
+  border-left: 1px solid var(--kit-text-muted);
+  line-height: 14px;
+}
+
+.motion-ruler-bar[data-side='left'] > span {
+  left: 0;
+  padding-top: 2px;
+  border-top: 1px solid var(--kit-text-muted);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  transform-origin: center;
+}

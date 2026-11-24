@@ -328,6 +328,68 @@ try {
     step('a rectangle draws after playing and pausing with Space', await until(async () => (await layers()).length === count + 1))
   }
 
+  // 12. View ▸ Show Rulers, a guide dragged out of the left ruler, the Selection tool snapping a
+  // layer's edge onto it, the grid, and the guide dragged back onto the ruler to remove it.
+  {
+    const viewRow = async (command) => {
+      await kit.getByTestId('motion-menu-View').click()
+      await kit.locator(`[role=menu] [data-testid="motion-cmd-${command}"]`).first().click()
+      await page.waitForTimeout(200)
+    }
+    const shown = async () => ((await kit.getByTestId('motion-workspace').getAttribute('data-overlays')) ?? '').split(' ')
+    await kit.getByTestId('motion-tool-selection').click()
+    await viewRow('view.rulers')
+    await kit.getByTestId('motion-ruler-left').waitFor({ timeout: 3000 }).catch(() => null)
+    step('View ▸ 显示标尺 shows the rulers', (await kit.getByTestId('motion-ruler-left').count()) === 1 && (await shown()).includes('rulers'))
+    const guides = async () => (await query('comp.info', {})).guides ?? []
+    // A 100 × 100 solid on top of the others, to move: its right edge is 50 px right of its position.
+    await page.evaluate(async () => window.devHost.connection().ai.run([{ command: 'layer.newSolid', params: { name: 'Guide test', width: 100, height: 100, color: '#ffcc00' } }], false))
+    await until(async () => (await layers()).some((each) => each.name === 'Guide test'))
+    const MOVED = (await layers()).find((each) => each.name === 'Guide test').id
+    const start = await value(MOVED, 'transform/position')
+    const target = Math.round(start[0] + 50 + 203)
+    const ruler = await kit.getByTestId('motion-ruler-left').boundingBox()
+    const to = await at(target, 300)
+    await page.mouse.move(ruler.x + ruler.width / 2, to.y)
+    await page.mouse.down()
+    for (let i = 1; i <= 10; i += 1) await page.mouse.move(ruler.x + ruler.width / 2 + ((to.x - ruler.x - ruler.width / 2) * i) / 10, to.y)
+    await page.mouse.up()
+    await until(async () => (await guides()).length === 1)
+    const made = (await guides())[0]
+    step('a drag out of the left ruler makes a vertical guide where it is let go', made?.orientation === 'vertical' && Math.abs(made.position - target) <= 2, JSON.stringify(made))
+    await viewRow('view.grid')
+    await until(async () => (await shown()).includes('grid'))
+    if (shots) await page.screenshot({ path: `${shots}phase6-guides-grid.png` })
+    step('View ▸ 显示网格 shows the grid', (await shown()).includes('grid'))
+    await viewRow('view.grid')
+    // The solid's right edge (start + 50) dragged 200 px lands 3 px short of the guide: it snaps.
+    await drag([start[0], start[1]], [start[0] + 200, start[1]])
+    await until(async () => (await value(MOVED, 'transform/position'))[0] > start[0] + 150)
+    const moved = await value(MOVED, 'transform/position')
+    step('a moved layer’s edge snaps onto the guide', near(moved[0] + 50, made?.position ?? NaN, 1e-6), `${moved[0] + 50} vs ${made?.position}`)
+    await undo()
+    await until(async () => near((await value(MOVED, 'transform/position'))[0], start[0]))
+    // Lock Guides: the guide no longer takes a press; unlocked, dragged onto the ruler it goes.
+    await viewRow('view.lockGuides')
+    await until(async () => (await kit.getByTestId('motion-guide-0').count()) === 0)
+    step('locked guides cannot be grabbed', (await kit.getByTestId('motion-guide-0').count()) === 0)
+    await viewRow('view.lockGuides')
+    const grab = await kit.getByTestId('motion-guide-0').boundingBox()
+    await page.mouse.move(grab.x + grab.width / 2, grab.y + 200)
+    await page.mouse.down()
+    for (let i = 1; i <= 10; i += 1) await page.mouse.move(grab.x + grab.width / 2 + ((ruler.x + ruler.width / 2 - grab.x - grab.width / 2) * i) / 10, grab.y + 200)
+    await page.mouse.up()
+    await until(async () => (await guides()).length === 0)
+    step('a guide dragged back onto the ruler is removed', (await guides()).length === 0)
+    await undo()
+    await until(async () => (await guides()).length === 1)
+    step('and undo brings it back', (await guides()).length === 1)
+    await viewRow('view.clearGuides')
+    await until(async () => (await guides()).length === 0)
+    step('View ▸ 清除参考线 removes every guide', (await guides()).length === 0)
+    await viewRow('view.rulers')
+  }
+
   step('no page errors', errors.length === 0, errors.join(' | '))
 } catch (error) {
   step('ran to the end', false, error instanceof Error ? error.stack : String(error))

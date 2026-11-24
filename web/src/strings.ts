@@ -231,6 +231,8 @@ const enUS: Catalog = {
   "stretch.hold.out": "Layer out point",
   "stretch.badFactor": "A factor of at least 1 % (negative plays backwards)",
   "stretch.badDuration": "A duration as 0:00:02:00 or in seconds",
+  "guides.dragHint": "Drag to move this guide; drag it onto a ruler to remove it",
+  "guides.fromRuler": "Drag from the ruler to make a guide",
 }
 
 const zhCN: Catalog = {
@@ -462,6 +464,8 @@ const zhCN: Catalog = {
   "stretch.hold.out": "图层出点",
   "stretch.badFactor": "拉伸因数至少 1%（负数表示倒放）",
   "stretch.badDuration": "持续时间写成 0:00:02:00 或秒数",
+  "guides.dragHint": "拖动可移动参考线；拖回标尺上可删除",
+  "guides.fromRuler": "从标尺拖出参考线",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }
@@ -900,4 +904,19 @@ export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
   "On": "开",
   "Only": "仅",
   "Time Stretch…": "时间伸缩…",
+  "Show Rulers": "显示标尺",
+  "Hide Rulers": "隐藏标尺",
+  "Show Guides": "显示参考线",
+  "Hide Guides": "隐藏参考线",
+  "Lock Guides": "锁定参考线",
+  "Unlock Guides": "解锁参考线",
+  "Snap to Guides": "对齐到参考线",
+  "Stop Snapping to Guides": "不再对齐到参考线",
+  "Clear Guides": "清除参考线",
+  "Show Grid": "显示网格",
+  "Hide Grid": "隐藏网格",
+  "Snap to Grid": "对齐到网格",
+  "Stop Snapping to Grid": "不再对齐到网格",
+  "Show Title/Action Safe": "显示标题/动作安全框",
+  "Hide Title/Action Safe": "隐藏标题/动作安全框",
 } }
