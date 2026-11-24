@@ -81,7 +81,12 @@ try {
   // 1. Layer bars: move, trim, snap, one undo step.
   await open()
   let row = await track(`motion-layer-${SHAPE}`)
-  const readout = await drag({ x: row.at(1.5), y: row.cy }, { x: row.at(2), y: row.cy }, async () => (await kit.getByTestId('motion-bar-readout').textContent().catch(() => null)) ?? '')
+  // The readout is read once it has caught up with the last move (a busy page draws it a little later).
+  const readoutNow = async () => (await kit.getByTestId('motion-bar-readout').textContent().catch(() => null)) ?? ''
+  const readout = await drag({ x: row.at(1.5), y: row.cy }, { x: row.at(2), y: row.cy }, async () => {
+    await until(async () => (await readoutNow()).includes('0:00:00:15'), 20)
+    return readoutNow()
+  })
   await until(async () => near((await layer(SHAPE)).in, 0.5))
   let shape = await layer(SHAPE)
   step('dragging a bar moves the layer in time', near(shape.in, 0.5) && near(shape.out, 3.5), `${shape.in}–${shape.out}`)
