@@ -113,7 +113,7 @@ pub(crate) fn tr3(ctx: &EvalCtx, l: &Layer, name: &str, d: [f64; 3]) -> [f64; 3]
 pub(crate) fn rounded_rect(c: [f64; 2], w: f64, h: f64, rx: f64, ry: f64) -> ShapePath {
     const K: f64 = 0.552_284_75;
     let (hw, hh) = (w.abs() / 2.0, h.abs() / 2.0);
-    let (rx, ry) = (rx.clamp(0.0, hw), ry.clamp(0.0, hh));
+    let (rx, ry) = (rx.max(0.0).min(hw), ry.max(0.0).min(hh));
     let (l, r, t, b) = (c[0] - hw, c[0] + hw, c[1] - hh, c[1] + hh);
     // Clockwise (y down) from the top edge's left end.
     let vertices = vec![[l + rx, t], [r - rx, t], [r, t + ry], [r, b - ry], [r - rx, b], [l + rx, b], [l, b - ry], [l, t + ry]];

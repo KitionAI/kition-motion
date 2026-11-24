@@ -400,10 +400,8 @@ fn set(s: &mut Session, p: &Value) -> Result<Value> {
         let cur = pr.value_at(lt);
         let mut nv = cur.coerce_json(&v).ok_or_else(|| bad("prop.set", format!("can't use {v} for a {} property", cur.kind_name())))?;
         // Clamp to slider ranges.
-        if let kition_motion_project::ParamUi::Slider { min, max, .. } = pr.ui
-            && let kition_motion_keyframe::Value::Scalar(x) = nv
-        {
-            nv = kition_motion_keyframe::Value::Scalar(x.clamp(min, max));
+        if let kition_motion_keyframe::Value::Scalar(x) = nv {
+            nv = kition_motion_keyframe::Value::Scalar(pr.ui.keep_in_range(x));
         }
         pr.set_value_at(at.unwrap_or(lt), nv.clone());
         Ok(nv.to_json())

@@ -220,11 +220,8 @@ fn set_key(s: &mut Session, p: &Value) -> Result<Value> {
         if let Some(v) = &value {
             let mut nv = pr.keys[i].value.coerce_json(v).ok_or_else(|| bad("keys.set", format!("can't use {v} here")))?;
             // A value the property declares a range for stays in it (Opacity 0–100), as prop.set keeps it.
-            if let ParamUi::Slider { min, max, .. } = pr.ui
-                && min <= max
-                && let kition_motion_keyframe::Value::Scalar(x) = nv
-            {
-                nv = kition_motion_keyframe::Value::Scalar(x.clamp(min, max));
+            if let kition_motion_keyframe::Value::Scalar(x) = nv {
+                nv = kition_motion_keyframe::Value::Scalar(pr.ui.keep_in_range(x));
             }
             pr.keys[i].value = nv;
         }
@@ -234,7 +231,8 @@ fn set_key(s: &mut Session, p: &Value) -> Result<Value> {
             // Keys can't pass their neighbours or share a time.
             let lo = if i > 0 { pr.keys[i - 1].time.0.saturating_add(1) } else { i64::MIN };
             let hi = if i + 1 < pr.keys.len() { pr.keys[i + 1].time.0.saturating_sub(1) } else { i64::MAX };
-            nt = Tick(nt.0.clamp(lo, hi));
+            // (Keys sharing a time, as a malformed project can have them, leave no room: the key stays.)
+            nt = if lo <= hi { Tick(nt.0.clamp(lo, hi)) } else { old_t };
             pr.keys[i].time = nt;
         }
         retime_roving(&mut pr.keys, pr.spatial);

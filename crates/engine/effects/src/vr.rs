@@ -331,8 +331,8 @@ impl Proj {
             }
             Some((x, y, Some(r))) => {
                 // Stay inside the face so neighbouring faces don't bleed in.
-                let x = x.clamp(r[0] + 0.5, r[2] - 0.5);
-                let y = y.clamp(r[1] + 0.5, r[3] - 0.5);
+                let x = x.clamp(r[0] + 0.5, (r[2] - 0.5).max(r[0] + 0.5));
+                let y = y.clamp(r[1] + 0.5, (r[3] - 0.5).max(r[1] + 0.5));
                 img.sample_bilinear_clamped(x, y)
             }
         }

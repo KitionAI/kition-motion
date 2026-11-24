@@ -49,6 +49,14 @@ pub struct FontAxis {
     pub max: f32,
 }
 
+impl FontAxis {
+    /// `v` within the axis; a font whose axis minimum is above its maximum (or NaN) leaves it as
+    /// it is, where `f32::clamp` would panic.
+    pub fn keep_in_range(&self, v: f32) -> f32 {
+        if self.min <= self.max { v.clamp(self.min, self.max) } else { v }
+    }
+}
+
 /// The variation axes of a face (empty for static fonts).
 pub fn font_axes(face: FaceId) -> Vec<FontAxis> {
     let f = fonts::face(face);
@@ -110,7 +118,7 @@ pub fn char_outline_varied(g: &CharGlyph, deltas: &[(String, f32)]) -> Option<Be
     let axes = font_axes(g.face);
     let base = |t: &str, d: f32| g.variations.iter().find(|(x, _)| x.trim_end() == t.trim_end()).map(|(_, v)| *v).unwrap_or(d);
     let mut coords: Vec<(String, f32)> =
-        deltas.iter().filter_map(|(t, d)| axes.iter().find(|a| a.tag == *t).map(|a| (t.clone(), (base(&a.tag, a.default) + d).clamp(a.min, a.max)))).collect();
+        deltas.iter().filter_map(|(t, d)| axes.iter().find(|a| a.tag == *t).map(|a| (t.clone(), a.keep_in_range(base(&a.tag, a.default) + d)))).collect();
     if coords.is_empty() {
         return None;
     }
@@ -138,7 +146,7 @@ pub fn char_advance_delta(g: &CharGlyph, deltas: &[(String, f32)]) -> Option<f64
     let axes = font_axes(g.face);
     let base = |t: &str, d: f32| g.variations.iter().find(|(x, _)| x.trim_end() == t.trim_end()).map(|(_, v)| *v).unwrap_or(d);
     let mut coords: Vec<(String, f32)> =
-        deltas.iter().filter_map(|(t, d)| axes.iter().find(|a| a.tag == *t).map(|a| (t.clone(), (base(&a.tag, a.default) + d).clamp(a.min, a.max)))).collect();
+        deltas.iter().filter_map(|(t, d)| axes.iter().find(|a| a.tag == *t).map(|a| (t.clone(), a.keep_in_range(base(&a.tag, a.default) + d)))).collect();
     if coords.is_empty() {
         return None;
     }

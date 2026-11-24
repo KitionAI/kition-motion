@@ -926,7 +926,7 @@ impl<'a, 'i> Parser<'a, 'i> {
             }
             "rect" => {
                 let (w, h) = (l("width", 'x'), l("height", 'y'));
-                if w <= 0.0 || h <= 0.0 {
+                if w.is_nan() || h.is_nan() || w <= 0.0 || h <= 0.0 {
                     return None;
                 }
                 let rx_a = n.attribute("rx").and_then(|v| self.length(v, 'x', st.font_size));

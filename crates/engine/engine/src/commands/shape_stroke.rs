@@ -159,7 +159,7 @@ fn set_group(s: &mut Session, p: &Value, c: &str, group: &str, fields: &[(&str, 
                 KV::Enum(i)
             } else {
                 let x = v.as_f64().ok_or_else(|| bad(c, format!("`{param}` must be a number")))?;
-                let x = if let kition_motion_project::ParamUi::Slider { min, max, .. } = pr.ui { x.clamp(min, max) } else { x.max(0.0) };
+                let x = if matches!(pr.ui, kition_motion_project::ParamUi::Slider { .. }) { pr.ui.keep_in_range(x) } else { x.max(0.0) };
                 KV::Scalar(x)
             };
             pr.set_value_at(lt, nv.clone());

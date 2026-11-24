@@ -2,7 +2,7 @@
 
 use kition_motion_keyframe::Value as KV;
 use kition_motion_project::build::Ids;
-use kition_motion_project::{GroupKind, LayerId, Node, ParamUi, PropGroup, Uid};
+use kition_motion_project::{GroupKind, LayerId, Node, PropGroup, Uid};
 use serde_json::{Value, json};
 
 use super::{CommandSpec, b_p, bad, f_p, has_layers, layer_mut, layers_p, str_p};
@@ -122,10 +122,8 @@ pub(crate) fn set_params(g: &mut PropGroup, params: &serde_json::Map<String, Val
             return Err(format!("{what} `{key}` is a group: set what is in it by path with prop.set"));
         };
         let mut value = pr.value.coerce_json(v).ok_or_else(|| format!("{what} `{key}`: can't use {v} for a {} property", pr.value.kind_name()))?;
-        if let ParamUi::Slider { min, max, .. } = pr.ui
-            && let KV::Scalar(x) = value
-        {
-            value = KV::Scalar(x.clamp(min, max));
+        if let KV::Scalar(x) = value {
+            value = KV::Scalar(pr.ui.keep_in_range(x));
         }
         pr.value = value;
     }

@@ -245,7 +245,7 @@ impl<'a> EvalCtx<'a> {
 /// The protected regions of a comp (Responsive Design — Time markers), merged, sorted and
 /// clamped to the comp, in seconds.
 pub fn protected_regions(comp: &Comp) -> Vec<(f64, f64)> {
-    let d = comp.duration.seconds();
+    let d = comp.duration.seconds().max(0.0);
     let mut v: Vec<(f64, f64)> = comp
         .markers
         .iter()

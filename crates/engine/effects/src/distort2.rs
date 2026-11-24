@@ -151,7 +151,7 @@ fn turbulent_displace(ctx: &EffectCtx, mut b: Buf) -> Buf {
         };
         let (sx, sy) = (x + dx * k, y + dy * k);
         if locked {
-            return Some((sx.clamp(lx + 0.5, lx + lw - 0.5), sy.clamp(ly + 0.5, ly + lh - 0.5)));
+            return Some((sx.clamp(lx + 0.5, (lx + lw - 0.5).max(lx + 0.5)), sy.clamp(ly + 0.5, (ly + lh - 0.5).max(ly + 0.5))));
         }
         // A pinned side lets nothing in from outside the layer: a sample past it is mirrored back.
         let (left, top, right, bottom) = match pin {

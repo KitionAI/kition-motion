@@ -343,8 +343,8 @@ fn bicubic(src: &Image, w: u32, h: u32) -> Image {
         for x in 0..w {
             let o = out.idx(x, y);
             // Clamp to the edge so borders stay opaque.
-            let fx = ((x as f64 + 0.5) * sx).clamp(0.5, src.width as f64 - 0.5);
-            let fy = ((y as f64 + 0.5) * sy).clamp(0.5, src.height as f64 - 0.5);
+            let fx = ((x as f64 + 0.5) * sx).clamp(0.5, (src.width as f64 - 0.5).max(0.5));
+            let fy = ((y as f64 + 0.5) * sy).clamp(0.5, (src.height as f64 - 0.5).max(0.5));
             let mut p = src.sample_bicubic(fx, fy);
             p[3] = p[3].min(1.0);
             out.data[o] = p;

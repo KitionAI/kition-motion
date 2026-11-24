@@ -67,3 +67,40 @@ fn a_keyframe_value_stays_in_its_propertys_range() {
     let rotation = s.active_comp().unwrap().layers[0].props.prop("transform/rotation").unwrap().keys[0].value.clone();
     assert_eq!(rotation, kition_motion_keyframe::Value::Scalar(720.0));
 }
+
+/// A malformed project's slider range (its minimum above its maximum, or NaN) and keys sharing a
+/// time made `prop.set` and `keys.set` panic in `clamp`; they now keep the value or the key.
+#[test]
+fn a_broken_range_or_keys_at_one_time_do_not_panic() {
+    let mut s = comp();
+    let solid = s.execute("layer.newSolid", json!({"color": "#336699"})).unwrap()["layer"].as_u64().unwrap();
+    for (min, max) in [(100.0, 0.0), (f64::NAN, 100.0), (0.0, f64::NAN)] {
+        set_opacity_ui(&mut s, kition_motion_project::ParamUi::Slider { min, max, slider_min: 0.0, slider_max: 100.0, decimals: 1 });
+        let set = s.execute("prop.set", json!({"layer": solid, "path": "transform/opacity", "value": 50}));
+        assert!(set.is_ok(), "prop.set with the range {min}..{max}: {set:?}");
+    }
+    // Two keys at one time with the next a tick later: a move of the second has no room between its
+    // neighbours and keeps it where it is.
+    set_opacity_ui(&mut s, kition_motion_project::ParamUi::Number);
+    for t in 0..5 {
+        s.execute("prop.addKey", json!({"layer": solid, "path": "transform/opacity", "time": t, "value": 10 * t})).unwrap();
+    }
+    let one = kition_motion_time::Tick::from_seconds_f64(1.0);
+    edit_opacity(&mut s, |pr| {
+        pr.keys[2].time = one;
+        pr.keys[3].time = kition_motion_time::Tick(one.0 + 1);
+    });
+    let moved = s.execute("keys.set", json!({"layer": solid, "path": "transform/opacity", "time": 1, "newTime": 3}));
+    assert!(moved.is_ok(), "{moved:?}");
+}
+
+fn edit_opacity(s: &mut Session, f: impl FnOnce(&mut kition_motion_project::Property)) {
+    let id = s.active_comp_id().unwrap();
+    let project = std::sync::Arc::make_mut(&mut s.project);
+    let comp = project.comp_mut(id).unwrap();
+    f(comp.layers[0].props.prop_mut("transform/opacity").unwrap());
+}
+
+fn set_opacity_ui(s: &mut Session, ui: kition_motion_project::ParamUi) {
+    edit_opacity(s, |pr| pr.ui = ui);
+}

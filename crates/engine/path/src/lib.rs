@@ -133,7 +133,8 @@ pub fn from_kurbo(path: &BezPath) -> Vec<ShapePath> {
 /// Rectangle path centred at `pos` with corner `roundness` (AE draws clockwise from the top-right).
 pub fn rect(size: [f64; 2], pos: [f64; 2], roundness: f64) -> BezPath {
     let r = kurbo::Rect::from_center_size(Point::new(pos[0], pos[1]), (size[0].abs(), size[1].abs()));
-    let rad = roundness.clamp(0.0, size[0].abs().min(size[1].abs()) / 2.0);
+    // (`max`/`min`, not `clamp`: a NaN size from an expression must not panic.)
+    let rad = roundness.max(0.0).min(size[0].abs().min(size[1].abs()) / 2.0);
     if rad > 0.0 { r.to_rounded_rect(rad).to_path(0.1) } else { r.to_path(0.1) }
 }
 

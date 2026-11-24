@@ -1038,8 +1038,8 @@ pub(crate) fn draw_sky(r: &Renderer, ctx: &EvalCtx, layer: &Layer, canvas: &mut 
             let dir = if sky.ortho { fwd } else { (fwd * sky.zoom + right * (cx - cw / 2.0) + down * (cy - ch / 2.0)).normalize() };
             let (u, v) = super::adv::shade::equirect_uv([dir.x as f32, dir.y as f32, dir.z as f32], rot);
             // Wrap horizontally across the seam.
-            let sx = (u as f64 * iw).clamp(0.5, iw - 0.5);
-            let sy = (v as f64 * ih).clamp(0.5, ih - 0.5);
+            let sx = (u as f64 * iw).clamp(0.5, (iw - 0.5).max(0.5));
+            let sy = (v as f64 * ih).clamp(0.5, (ih - 0.5).max(0.5));
             let p = img.sample_bilinear(sx, sy);
             let k = 1.0 - p[3] * op;
             *d = [p[0] * op + d[0] * k, p[1] * op + d[1] * k, p[2] * op + d[2] * k, p[3] * op + d[3] * k];

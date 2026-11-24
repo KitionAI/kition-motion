@@ -211,7 +211,7 @@ fn crop_source(ctx: &EffectCtx, b: &Buf) -> Image {
             return Some(v);
         }
         match m {
-            1 => Some(v.clamp(lo, hi - 0.5)),
+            1 => Some(v.clamp(lo, (hi - 0.5).max(lo))),
             2 => {
                 let t = (v - lo).rem_euclid(2.0 * span);
                 Some(lo + if t >= span { 2.0 * span - t - 0.5 } else { t })

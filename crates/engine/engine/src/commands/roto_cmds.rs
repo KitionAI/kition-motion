@@ -282,10 +282,11 @@ fn span(s: &mut Session, p: &Value) -> Result<Value> {
     let first = d.strokes.iter().map(|s| s.frame).min().unwrap_or(base);
     let last = d.strokes.iter().map(|s| s.frame).max().unwrap_or(base);
     if let Some(a) = f_p(p, "start") {
-        d.span[0] = (a.round() as i64).clamp(lim[0], first);
+        // (Strokes outside the layer's frames, after a trim, leave the limits as they are.)
+        d.span[0] = (a.round() as i64).clamp(lim[0], first.max(lim[0]));
     }
     if let Some(b) = f_p(p, "end") {
-        d.span[1] = (b.round() as i64).clamp(last, lim[1]);
+        d.span[1] = (b.round() as i64).clamp(last.min(lim[1]), lim[1]);
     }
     write_data(s, "Segmentation Span", cid, lid, uid, &d)?;
     Ok(json!({"layer": lid.0, "effect": uid, "span": d.span, "base": base}))

@@ -290,8 +290,10 @@ fn lens_flare(ctx: &EffectCtx, mut b: Buf) -> Buf {
 fn beam(ctx: &EffectCtx, mut b: Buf) -> Buf {
     let s = b.to_px(ctx.params.v2("startPoint"));
     let e = b.to_px(ctx.params.v2("endPoint"));
-    let len = (ctx.params.f("length") / 100.0).clamp(0.0, 1.0);
-    let time = (ctx.params.f("time") / 100.0).clamp(0.0, 1.0);
+    // A NaN from an expression counts as 0, so `clamp(t0, t1)` below cannot panic.
+    let unit = |v: f64| if v.is_nan() { 0.0 } else { v.clamp(0.0, 1.0) };
+    let len = unit(ctx.params.f("length") / 100.0);
+    let time = unit(ctx.params.f("time") / 100.0);
     let st = ctx.params.f("startThickness") * b.scale;
     let et = ctx.params.f("endThickness") * b.scale;
     let soft = (ctx.params.f("softness") / 100.0).clamp(0.0, 1.0) as f32;

@@ -414,8 +414,10 @@ impl RenderSettings {
             TimeSpan::LengthOfComp => (Tick::ZERO, comp.duration),
             TimeSpan::Custom { start, end } => (start, end),
         };
-        let a = a.clamp(Tick::ZERO, comp.duration);
-        let b = b.clamp(a, comp.duration);
+        // (A malformed project's negative duration renders nothing rather than panicking.)
+        let duration = comp.duration.max(Tick::ZERO);
+        let a = a.clamp(Tick::ZERO, duration);
+        let b = b.clamp(a, duration);
         (a, b)
     }
     /// The output frame rate: the Frame Rate override, unless the comp preserves its frame rate

@@ -47,6 +47,18 @@ pub enum ParamUi {
     Hidden,
 }
 
+impl ParamUi {
+    /// `x` kept in a slider's valid range (Opacity 0 to 100). Other kinds leave it as it is, and so
+    /// does a range that is not one (its minimum above its maximum, or either bound NaN, as a
+    /// malformed project or effect definition can carry): `f64::clamp` would panic on those.
+    pub fn keep_in_range(&self, x: f64) -> f64 {
+        match *self {
+            ParamUi::Slider { min, max, .. } if min <= max => x.clamp(min, max),
+            _ => x,
+        }
+    }
+}
+
 /// Expression attached to a property.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Expression {

@@ -116,7 +116,7 @@ pub fn wiggle_keys(
             // Temporal path on a spatial property: sample the path at a jittered time (magnitude in
             // percent of the key spacing), so the speed along the path wiggles.
             let jit = noise(o.noise, o.seed, stream, k) * o.magnitude / 100.0 * step as f64 / fps;
-            Tick::from_seconds_f64((lt.seconds() + jit).clamp(t0.seconds(), t1.seconds()))
+            Tick::from_seconds_f64((lt.seconds() + jit).max(t0.seconds()).min(t1.seconds()))
         };
         let Some(v) = evaluate(&orig, base_t, spatial_prop) else { break };
         let mut c = v.components();

@@ -259,7 +259,7 @@ pub fn process(id: &str, params: &Params, buf: &mut [f32], rate: u32, start: f64
             }
         }
         "ec.audio.highlowpass" => {
-            let fc = params.f("cutoffFrequency").clamp(1.0, sr * 0.49);
+            let fc = params.f("cutoffFrequency").min(sr * 0.49).max(1.0);
             let q = std::f64::consts::FRAC_1_SQRT_2;
             let bq = if params.e("filterOptions") == 1 { Biquad::low_pass(sr, fc, q) } else { Biquad::high_pass(sr, fc, q) };
             let dry = (params.f("dryOut") / 100.0) as f32;
@@ -277,7 +277,7 @@ pub fn process(id: &str, params: &Params, buf: &mut [f32], rate: u32, start: f64
                 if g == 0.0 {
                     continue;
                 }
-                let f = params.f(&format!("band{n}Frequency")).clamp(1.0, sr * 0.49);
+                let f = params.f(&format!("band{n}Frequency")).min(sr * 0.49).max(1.0);
                 let bw = (params.f(&format!("band{n}Bandwidth")) / 100.0 * 3.0).max(0.05);
                 run_biquad(buf, Biquad::peaking(sr, f, bw, g));
             }
