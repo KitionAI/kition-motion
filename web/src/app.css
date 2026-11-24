@@ -36,7 +36,8 @@
 .motion-timeline-head {
   position: sticky;
   top: 0;
-  z-index: 3;
+  /* Above the rows' keyframes and bar ends scrolled under it. */
+  z-index: 7;
   display: flex;
   flex: none;
   height: 28px;

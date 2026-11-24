@@ -82,6 +82,7 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
               enabled={node.expressionEnabled !== false}
               error={failure ? explainError(failure.message, t) : null}
               depth={depth}
+              time={info.time}
               testId={`motion-expr-${id}`}
               readOnly={readOnly}
             />

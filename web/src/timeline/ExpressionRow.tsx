@@ -39,13 +39,13 @@ function shownValue(value: unknown): string | null {
  * that turns it on and off, Remove, and, when it fails, why. Each change is one undo step
  * (`prop.setExpression`).
  */
-export function ExpressionRow({ layer, path, name, text, enabled, error, depth, testId, readOnly }: { layer: number; path: string; name: string; text: string; enabled: boolean; error: string | null; depth: number; testId: string; readOnly: boolean }) {
+export function ExpressionRow({ layer, path, name, text, enabled, error, depth, time, testId, readOnly }: { layer: number; path: string; name: string; text: string; enabled: boolean; error: string | null; depth: number; time: number; testId: string; readOnly: boolean }) {
   const { run, t } = useKitEditor()
   const [draft, setDraft] = useState(text)
   const dropped = useRef(false)
   useEffect(() => setDraft(text), [text])
   // What the expression makes of the property now (what renders), as `prop.get` evaluates it.
-  const read = useEngineQuery<{ evaluated?: unknown }>('prop.get', { layer, path }, `${text} ${enabled}`)
+  const read = useEngineQuery<{ evaluated?: unknown }>('prop.get', { layer, path }, `${text} ${enabled} ${time}`)
   const result = shownValue(read?.evaluated)
   const commit = () => {
     if (dropped.current) {

@@ -97,7 +97,7 @@ try {
   await seek(1)
   const result = kit.getByTestId(`${row}-result`)
   await until(async () => ((await result.textContent()) ?? '').includes('90'))
-  step('the row shows what the expression makes of the property (90 at 1 s)', ((await result.textContent()) ?? '').includes('90'), (await result.textContent()) ?? '')
+  step('the row shows what the expression makes of the property (90 at 1 s)', ((await result.textContent()) ?? '').includes('90'), `${(await result.textContent()) ?? ''} at ${(await details()).time} s, evaluated ${JSON.stringify((await query('prop.get', { layer: SHAPE, path: ROTATION, time: 1 })).evaluated)}`)
   if (shots) {
     await kit.getByTestId(row).scrollIntoViewIfNeeded()
     await page.screenshot({ path: `${shots}phase6-expression.png` })
