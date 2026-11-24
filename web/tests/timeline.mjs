@@ -140,6 +140,7 @@ try {
   const count = (await layers()).length
   await kit.getByTestId(`motion-name-${SHAPE}`).click({ button: 'right' })
   await kit.getByTestId('motion-layer-menu').waitFor()
+  await until(async () => (await layer(SHAPE)).selected)
   step('right-clicking a row opens the layer menu and selects the layer', await kit.getByTestId('motion-layer-menu').isVisible() && (await layer(SHAPE)).selected)
   await kit.getByTestId('motion-layer-menu-duplicate').click()
   await until(async () => (await layers()).length === count + 1)
