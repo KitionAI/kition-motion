@@ -49,7 +49,10 @@ export function LayerBar({ layer, shift, onShift }: { layer: MotionLayer; shift:
     event.stopPropagation()
     const add = event.shiftKey || event.metaKey || event.ctrlKey
     // A press selects the layer (Shift or Cmd adds it); a move takes the selected layers along.
-    if (!layer.selected || add) void run('layer.select', { layers: [layer.id], add, toggle: add && layer.selected })
+    // A layer shown selected is still asked for (added, which keeps the other selected layers for
+    // the drag): a click on empty timeline just before may have deselected it in the engine
+    // without the editor knowing yet, and the layer would end up unselected.
+    void run('layer.select', add ? { layers: [layer.id], add, toggle: layer.selected } : { layers: [layer.id], add: layer.selected })
     const track = event.currentTarget.closest('.motion-row-track')
     if (locked || !track) return
     const others = layer.selected && !add ? info.layers.filter((each) => each.selected && !each.switches.locked).map((each) => each.id) : []
