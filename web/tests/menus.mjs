@@ -401,7 +401,7 @@ try {
     // Backspace deletes the selected layer as Delete does.
     const count = (await ctx.details()).info.layers.length
     await page.keyboard.press('Backspace')
-    await page.waitForTimeout(500)
+    for (let i = 0; i < 50 && (await ctx.details()).info.layers.length !== count - 1; i += 1) await page.waitForTimeout(100)
     step('Backspace deletes the selected layer', (await ctx.details()).info.layers.length === count - 1)
     await ctx.context.close()
   }

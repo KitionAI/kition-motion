@@ -103,8 +103,10 @@ function useIdleRows(doc: { invoke: <T>(name: string, ...args: unknown[]) => Pro
     let current = true
     const timer = window.setTimeout(async () => {
       const tries: Array<[string, string, Record<string, unknown>]> = [...Object.entries(KIT_RUNS).map(([row, [command, params]]) => [row, command, command === 'layer.align' ? { ...params, to: alignTo } : params] as [string, string, Record<string, unknown>]), ...Object.entries(TRIED_ROWS).map(([command, params]) => [command, command, params] as [string, string, Record<string, unknown>])]
-      const next = new Set<string>()
-      for (const [row, command, params] of tries) if (!(await doc.invoke<boolean>('wouldChange', command, JSON.stringify(params)).catch(() => false))) next.add(row)
+      // Asked all at once: one at a time, a slow engine's answers took longer than the state
+      // stays the same, so the rows never came back.
+      const answers = await Promise.all(tries.map(([, command, params]) => doc.invoke<boolean>('wouldChange', command, JSON.stringify(params)).catch(() => false)))
+      const next = new Set<string>(tries.filter((_, at) => !answers[at]).map(([row]) => row))
       if (current) setIdle((before) => ([...before].sort().join() === [...next].sort().join() ? before : next))
     }, 120)
     return () => {
