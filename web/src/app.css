@@ -1197,11 +1197,11 @@
 .motion-graph-curve[data-dim='x'] { --motion-dim: #e5534b; }
 .motion-graph-curve[data-dim='y'] { --motion-dim: #3fb950; }
 .motion-graph-curve[data-dim='z'] { --motion-dim: #4c8eda; }
-.motion-graph-curve[data-dim='one'] { --motion-dim: var(--kit-primary); }
+.motion-graph-curve[data-dim='one']:not([style]) { --motion-dim: var(--kit-primary); }
 .motion-graph-chip[data-dim='x'] { background: #e5534b; }
 .motion-graph-chip[data-dim='y'] { background: #3fb950; }
 .motion-graph-chip[data-dim='z'] { background: #4c8eda; }
-.motion-graph-chip[data-dim='one'] { background: var(--kit-primary); }
+.motion-graph-chip[data-dim='one'] { background: var(--motion-dim, var(--kit-primary)); }
 
 .motion-graph-curve polyline {
   stroke: var(--motion-dim);

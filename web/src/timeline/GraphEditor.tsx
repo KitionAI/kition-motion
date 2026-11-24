@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react'
 import { useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
 import { snapIn, useTimeline } from './context'
@@ -32,6 +32,10 @@ type Line = { dim: number; kind: string; points: Array<[number, number]>; ease: 
 
 /** The colours of the dimensions (x, y, z), and of a one-number property. */
 const DIM_CLASS = ['x', 'y', 'z']
+
+/** One-line curves (a number, or a speed along a path) take a colour each, by their place in the list. */
+const ONE_COLOURS = ['var(--kit-primary)', '#d9822b', '#2b9e8f', '#c2417a', '#6b7fd7']
+const lineStyle = (kind: string, index: number) => (kind === 'one' ? ({ '--motion-dim': ONE_COLOURS[index % ONE_COLOURS.length] } as CSSProperties) : undefined)
 
 /** Space (CSS pixels) kept above and below the curves. */
 const PAD = 18
@@ -359,13 +363,13 @@ export function GraphEditor({
       <div className="motion-timeline-names motion-graph-names">
         {head}
         <ul className="motion-graph-legend">
-          {curves.map((curve) => (
+          {curves.map((curve, curveIndex) => (
             <li key={curveId(curve)} data-scale={curve === owner || undefined} data-testid={`motion-graph-legend-${curveId(curve)}`}>
               <button type="button" className="motion-graph-legend-name" title={t('graph.scaleHint', { name: `${curve.target.layer.name} › ${curve.target.name}` })} onClick={() => setScaleOf(curveId(curve))}>
                 {curve.target.layer.name} › {curve.target.name}
               </button>
               {(lines.get(curve) ?? []).map((line) => (
-                <span key={line.dim} className="motion-graph-chip" data-dim={line.kind}>
+                <span key={line.dim} className="motion-graph-chip" data-dim={line.kind} style={lineStyle(line.kind, curveIndex)}>
                   {line.kind === 'one' ? '' : line.kind.toUpperCase()}
                 </span>
               ))}
@@ -396,12 +400,12 @@ export function GraphEditor({
               ))
             : null}
           <line className="motion-graph-playhead" x1={x(info.time)} x2={x(info.time)} y1={0} y2={height} />
-          {curves.map((curve) =>
+          {curves.map((curve, curveIndex) =>
             (lines.get(curve) ?? []).map((line) => {
               const id = `${curveId(curve)}-${line.dim}`
               const points = line.points.map(([time, value]) => `${x(time).toFixed(1)},${y(curve, value).toFixed(1)}`).join(' ')
               return (
-                <g key={id} className="motion-graph-curve" data-dim={line.kind}>
+                <g key={id} className="motion-graph-curve" data-dim={line.kind} style={lineStyle(line.kind, curveIndex)}>
                   <polyline points={points} data-testid={`motion-graph-curve-${id}`} />
                   {curve.keys.map((key, index) => {
                     const mark = markOf(curve, line, key)
