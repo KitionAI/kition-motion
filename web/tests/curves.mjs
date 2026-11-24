@@ -262,9 +262,17 @@ try {
     return null
   })
   step('the graph has empty space beside its last keys to start a box from', start !== null, JSON.stringify(start))
+  // What the page saw of the drag, printed with the result: a pointer that is cancelled (a native
+  // drag or text selection beginning) drops the box.
+  await kit.locator('body').evaluate((body) => {
+    const seen = []
+    window.__boxEvents = seen
+    for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'lostpointercapture', 'selectstart', 'dragstart'])
+      body.ownerDocument.addEventListener(type, (event) => seen.push(`${type}@${event.target?.tagName ?? '?'}`), true)
+  })
   await drag({ x: area.x + (start?.x ?? area.width - 3), y: area.y + (start?.y ?? 3) }, { x: area.x - 12, y: area.y + area.height - 3 })
   await until(async () => (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === (await kit.locator('.motion-graph-key').count()))
-  step('a box over the graph selects every key in it', (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === (await kit.locator('.motion-graph-key').count()) && (await kit.locator('.motion-graph-key').count()) >= 6, `${await kit.locator('.motion-graph-key[aria-selected="true"]').count()} of ${await kit.locator('.motion-graph-key').count()}`)
+  step('a box over the graph selects every key in it', (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === (await kit.locator('.motion-graph-key').count()) && (await kit.locator('.motion-graph-key').count()) >= 6, `${await kit.locator('.motion-graph-key[aria-selected="true"]').count()} of ${await kit.locator('.motion-graph-key').count()}, saw ${await kit.locator('body').evaluate(() => window.__boxEvents.join(' '))}`)
   await page.mouse.click(area.x + area.width - 3, area.y + 3)
   await until(async () => (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === 0)
   step('a click on empty space clears them', (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === 0)

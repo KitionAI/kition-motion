@@ -40,8 +40,9 @@ export function installPointerdownFallback(target: Document): () => void {
       }),
     )
   }
-  // A press ends with its mouseup, or, when it began a drag-and-drop, with the drag's end.
-  const ends = ['mouseup', 'dragend', 'drop'] as const
+  // A press ends with its mouseup (or its pointerup: a press whose pointerdown was cancelled sends no
+  // mouse events), or, when it began a drag-and-drop, with the drag's end.
+  const ends = ['mouseup', 'pointerup', 'pointercancel', 'dragend', 'drop'] as const
   target.addEventListener('pointerdown', pointerdown, true)
   target.addEventListener('mousedown', mousedown, true)
   for (const type of ends) target.addEventListener(type, mouseup, true)

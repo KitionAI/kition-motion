@@ -254,9 +254,19 @@ export function GraphEditor({
     return rect ? { px: event.clientX - rect.left, py: event.clientY - rect.top } : { px: 0, py: 0 }
   }
 
+  // A press on the graph starts no text selection or native drag: WebKit starts one on the move and
+  // cancels the pointer when a drag begins, which would drop the box, key or handle being dragged.
+  // The press then no longer takes the focus from a text field, so that is done here.
+  const own = (event: ReactPointerEvent<SVGElement>) => {
+    event.preventDefault()
+    const active = document.activeElement
+    if (active instanceof HTMLElement && active.matches('input, textarea, [contenteditable]')) active.blur()
+  }
+
   const pressKey = (event: ReactPointerEvent<SVGElement>, curve: Curve, key: GraphKey, dim: number, mark: number) => {
     if (event.button !== 0) return
     event.stopPropagation()
+    own(event)
     const add = event.shiftKey || event.metaKey || event.ctrlKey
     if (add || !isSelected(curve, key)) void run('keys.select', { keys: [keyRef(curve, key)], timeBase: 'comp', selectProperties: true, ...(add ? { toggle: true } : {}) })
     if (readOnly) return
@@ -268,6 +278,7 @@ export function GraphEditor({
   const pressHandle = (event: ReactPointerEvent<SVGElement>, curve: Curve, key: GraphKey, dim: number, side: 'in' | 'out', span: number) => {
     if (event.button !== 0 || readOnly) return
     event.stopPropagation()
+    own(event)
     event.currentTarget.setPointerCapture(event.pointerId)
     held.current = live
     const { px, py } = local(event)
@@ -277,6 +288,7 @@ export function GraphEditor({
   // A press on empty space starts a selection box.
   const pressSpace = (event: ReactPointerEvent<SVGElement>) => {
     if (event.button !== 0) return
+    own(event)
     event.currentTarget.setPointerCapture(event.pointerId)
     const { px, py } = local(event)
     setDrag({ kind: 'box', pointerId: event.pointerId, x0: px, y0: py, x1: px, y1: py, add: event.shiftKey || event.metaKey || event.ctrlKey })

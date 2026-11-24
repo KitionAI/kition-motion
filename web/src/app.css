@@ -1174,6 +1174,8 @@
 .motion-graph-plot svg {
   display: block;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .motion-graph-grid line {
