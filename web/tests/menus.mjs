@@ -298,8 +298,14 @@ async function finishDialog(ctx, leaf, state) {
 }
 
 /** Clicks one leaf on a fresh page and classifies what happened. */
+// The items being clicked right now, printed when the run stops early (a browser process that dies
+// takes every page with it, and this names what was on screen then).
+const inFlight = new Set()
+
 async function run(state, leaf) {
   const ctx = await open(state)
+  const mark = `${state}: ${leaf.path.join(' › ')}`
+  inFlight.add(mark)
   try {
     const before = await snapshot(ctx)
     await click(ctx, leaf)
@@ -317,7 +323,8 @@ async function run(state, leaf) {
   } catch (error) {
     return { result: 'error', note: String(error.message ?? error).split('\n')[0] }
   } finally {
-    await ctx.context.close()
+    inFlight.delete(mark)
+    await ctx.context.close().catch(() => {})
   }
 }
 
@@ -325,8 +332,12 @@ async function run(state, leaf) {
 async function runEffects(leaves) {
   const ctx = await open('layer')
   const results = []
+  let mark = ''
   try {
     for (const leaf of leaves) {
+      inFlight.delete(mark)
+      mark = `effect: ${leaf.path.join(' › ')}`
+      inFlight.add(mark)
       const revision = async () => (await ctx.page.evaluate(async () => window.devHost.connection().ai.inspect())).revision
       const before = await revision()
       const toasts = await errorToasts(ctx.kit)
@@ -505,6 +516,9 @@ try {
     step('the height is kept for the session', Math.abs(kept - taller) <= 2, `${kept}`)
     await ctx.context.close()
   }
+} catch (error) {
+  console.log(`stopped early with these items being clicked: ${[...inFlight].join(' | ') || 'none'}`)
+  throw error
 } finally {
   if (process.env.MENUS_OUT) writeFileSync(process.env.MENUS_OUT, JSON.stringify({ leaves: all, results: report }, null, 1))
   await browser.close()
