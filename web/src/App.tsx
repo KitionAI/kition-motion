@@ -326,6 +326,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const viewMemory = useRef<RasterView | null>(null)
   const [zoom, setZoom] = useState<number | null>(null)
   const [dropping, setDropping] = useState(false)
+  // Text an input method is composing while the person types on the canvas (the engine gets it
+  // when it is committed): shown where they last pressed, so they see what they type.
+  const [composing, setComposing] = useState<string | null>(null)
+  const lastPress = useRef<{ x: number; y: number }>({ x: 24, y: 24 })
   /** The composition point under a page point, from the canvas's view; null off the canvas. */
   const compPoint = (clientX: number, clientY: number): [number, number] | undefined => {
     const view = canvas.current?.view()
@@ -774,6 +778,13 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             ref={main}
             style={{ '--motion-timeline-height': `${timelineHeight}px` } as CSSProperties}
             onKeyDown={keepTypedKeys}
+            onPointerDownCapture={(event) => {
+              const box = event.currentTarget.getBoundingClientRect()
+              lastPress.current = { x: event.clientX - box.left, y: event.clientY - box.top }
+            }}
+            onCompositionStart={() => setComposing('')}
+            onCompositionUpdate={(event) => setComposing(event.data)}
+            onCompositionEnd={() => setComposing(null)}
             data-drop={dropping || undefined}
             onDragOver={(event) => {
               const types = event.dataTransfer.types
@@ -808,6 +819,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               }
             }}
           >
+            {composing !== null && tools.wantsText ? (
+              <div className="motion-preedit" style={{ left: lastPress.current.x, top: lastPress.current.y + 12 }} role="status" data-testid="motion-preedit">
+                {composing}
+              </div>
+            ) : null}
             <KitDocumentCanvas
               canvas={canvas}
               viewMemory={viewMemory}

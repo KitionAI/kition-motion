@@ -96,6 +96,28 @@ try {
   await undo()
   await until(async () => (await value(TEXT, 'text/sourceText')) === 'Northern Lights')
   step('one undo restores the text', (await value(TEXT, 'text/sourceText')) === 'Northern Lights', await value(TEXT, 'text/sourceText'))
+  // An input method in the box (Chromium: a real composition through the DevTools protocol): the
+  // committed text is exact and one undo takes all of it back.
+  if (which === 'chromium') {
+    await content.click()
+    await page.keyboard.press(`${primary}+KeyA`)
+    await page.keyboard.press('Backspace')
+    const cdp = await page.context().newCDPSession(page)
+    for (const text of ['b', 'bei', '北', '北j', '北ji', '北极']) {
+      await cdp.send('Input.imeSetComposition', { text, selectionStart: text.length, selectionEnd: text.length })
+      await page.waitForTimeout(60)
+    }
+    await cdp.send('Input.insertText', { text: '北极光' })
+    await page.keyboard.press(`${primary}+Enter`)
+    await until(async () => (await value(TEXT, 'text/sourceText')) === '北极光')
+    step('a composed Chinese string lands in the box exactly', (await value(TEXT, 'text/sourceText')) === '北极光', JSON.stringify(await value(TEXT, 'text/sourceText')))
+    await undo()
+    await until(async () => (await value(TEXT, 'text/sourceText')) === 'Northern Lights')
+    step('one undo takes the composed text back', (await value(TEXT, 'text/sourceText')) === 'Northern Lights', JSON.stringify(await value(TEXT, 'text/sourceText')))
+    await cdp.detach()
+  } else {
+    console.log(`SKIP input-method composition in the Source Text box: ${which} has no way in Playwright to drive a real IME composition`)
+  }
   const size = kit.getByTestId('motion-text-size')
   await size.click()
   await size.fill('96')

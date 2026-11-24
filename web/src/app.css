@@ -1,6 +1,7 @@
 /* The Motion editor's own layout; colors and shapes come from @kition/sdk/editor's tokens. */
 
 .motion-main {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -1396,4 +1397,19 @@
 
 .motion-expr-result {
   font-size: 12px;
+}
+
+/* What an input method is composing on the canvas, until it is committed (App.tsx). */
+.motion-preedit {
+  position: absolute;
+  z-index: 20;
+  min-width: 8px;
+  padding: 2px 6px;
+  border: 1px solid var(--kit-primary);
+  border-radius: var(--kit-radius-control);
+  background: var(--kit-surface);
+  color: var(--kit-text);
+  text-decoration: underline;
+  white-space: pre;
+  pointer-events: none;
 }

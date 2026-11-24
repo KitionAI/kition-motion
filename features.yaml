@@ -638,3 +638,12 @@ features:
     gap: "The align target is the session's choice, not saved; there is no Align panel, only the menu (and Home has no align buttons). Gated by web/tests/menus.mjs (three layers sequenced with a cross dissolve, aligned left to the selection)."
     cases: []
     since: "2026-11-23"
+  - id: motion.editor.ime
+    title: "Typing on the canvas with an input method: the text being composed shows in a box where the person pressed to type, no single-letter shortcut fires while composing, and the committed text lands in the text layer exactly, one undo step"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/App.tsx, web/src/app.css, web/tests/canvas.mjs]
+    gap: "The composing box sits where the canvas was last pressed, not at the text caret; the Source Text box in the Properties panel is the browser's own field (its IME is the browser's). Gated in Chromium by web/tests/canvas.mjs and web/tests/properties.mjs (the Source Text box; while composing there the engine already gets the field's intermediate text) through a real composition over the DevTools protocol; WebKit skips them with a printed reason."
+    cases: []
+    since: "2026-11-23"

@@ -482,6 +482,44 @@ try {
     step('two undos put mode and Inverted back', (await masksOf())[0].mode === 'Add' && (await masksOf())[0].inverted === false)
   }
 
+  // 15. Typing Chinese with an input method (Chromium only: Playwright drives a real IME
+  // composition there through the DevTools protocol): the composing text shows, no single-letter
+  // shortcut fires while composing, the committed text is exactly the Chinese string, and one
+  // undo removes it.
+  if (which === 'chromium') {
+    await kit.getByTestId('motion-tool-selection').click()
+    await focusEditor()
+    await page.keyboard.press('t')
+    await until(async () => (await active()) === 'text')
+    const was = await layers()
+    await click(300, 640)
+    await until(async () => (await layers()).length === was.length + 1)
+    const ime = await newest(was)
+    await page.waitForTimeout(200)
+    const cdp = await page.context().newCDPSession(page)
+    const compose = async (text) => {
+      await cdp.send('Input.imeSetComposition', { text, selectionStart: text.length, selectionEnd: text.length })
+      await page.waitForTimeout(60)
+    }
+    for (const text of ['z', 'zh', 'zhong', '中', '中w', '中wen']) await compose(text)
+    const preedit = kit.getByTestId('motion-preedit')
+    await until(async () => ((await preedit.textContent().catch(() => '')) ?? '') === '中wen')
+    step('the text being composed shows on the canvas', ((await preedit.textContent().catch(() => '')) ?? '') === '中wen', String(await preedit.textContent().catch(() => null)))
+    step('no single-letter shortcut fires while composing (z, h, n, w)', (await active()) === 'text' && ((await sourceText(ime.id)) ?? '') === '', `${await active()} ${JSON.stringify(await sourceText(ime.id))}`)
+    await cdp.send('Input.insertText', { text: '中文' })
+    await until(async () => (await sourceText(ime.id)) === '中文')
+    step('the committed text is exactly 中文', (await sourceText(ime.id)) === '中文', JSON.stringify(await sourceText(ime.id)))
+    step('and the composing box goes away', (await preedit.count()) === 0)
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+    await undo()
+    await until(async () => (await sourceText(ime.id).catch(() => null)) !== '中文')
+    step('one undo removes the typed text', (await sourceText(ime.id).catch(() => null)) !== '中文', JSON.stringify(await sourceText(ime.id).catch(() => null)))
+    await cdp.detach()
+  } else {
+    console.log(`SKIP input-method composition: ${which} has no way in Playwright to drive a real IME composition (the DevTools protocol's Input.imeSetComposition is Chromium's)`)
+  }
+
   step('no page errors', errors.length === 0, errors.join(' | '))
 } catch (error) {
   step('ran to the end', false, error instanceof Error ? error.stack : String(error))
