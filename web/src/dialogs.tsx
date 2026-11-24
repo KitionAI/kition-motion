@@ -22,8 +22,10 @@ export type MotionDialog =
   | { kind: 'interpolation'; spatial: boolean }
   | { kind: 'velocity'; values: VelocityValues; units: string }
   | { kind: 'stretch'; layers: number[]; stretch: number; span: number; fps: number }
-  | { kind: 'savePreset'; name: string; onSave: (name: string) => void }
+  | { kind: 'savePreset'; name: string; folder: string; onSave: (name: string, folder: string) => void }
   | { kind: 'sequence'; fps: number }
+  | { kind: 'grid'; spacing: number; onSave: (spacing: number) => void }
+  | { kind: 'guide'; comp: { width: number; height: number } }
 
 /** The first selected keyframe's speed (units per second) and influence (%) on each side, for Keyframe Velocity. */
 export type VelocityValues = { inSpeed: number; inInfluence: number; outSpeed: number; outInfluence: number }
@@ -421,21 +423,96 @@ function StretchDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kin
 function SavePresetDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'savePreset' }>; onDone: () => void }) {
   const { t } = useKitEditor()
   const [name, setName] = useState(dialog.name)
+  const [folder, setFolder] = useState(dialog.folder)
   const clean = name.replace(/[\\/:*?"<>|]+/g, '_').trim()
+  const place = presetFolder(folder)
   return (
     <FormDialog
       title={t('dialog.savePreset')}
       testId="motion-preset-dialog"
       onSubmit={() => {
-        if (!clean) return
-        dialog.onSave(clean)
+        if (!clean || place === null) return
+        dialog.onSave(clean, place)
         onDone()
       }}
       onClose={onDone}
-      valid={clean !== ''}
+      valid={clean !== '' && place !== null}
     >
       <TextRow label={t('preset.name')} value={name} onChange={setName} error={clean ? null : t('preset.badName')} testId="motion-preset-name" autoFocus />
-      <p className="kui-muted">{t('preset.where', { file: `${clean || '…'}.ecpreset` })}</p>
+      <TextRow label={t('preset.folder')} value={folder} onChange={setFolder} error={place === null ? t('preset.badFolder') : null} testId="motion-preset-folder" />
+      <p className="kui-muted">{t('preset.where', { file: `${place ? `${place}/` : ''}${clean || '…'}.ecpreset` })}</p>
+    </FormDialog>
+  )
+}
+
+/**
+ * A preset's folder as typed: relative to the project's folder, `/`-separated, each part a file
+ * name; empty is the project's folder itself. Null when it would leave the project's folder.
+ */
+export function presetFolder(text: string): string | null {
+  const parts = text.replace(/\\/g, '/').split('/').map((part) => part.trim()).filter(Boolean)
+  if (parts.some((part) => part === '..' || part === '.' || /[:*?"<>|]/.test(part))) return null
+  return parts.join('/')
+}
+
+/** View ▸ Grid Settings…: the grid's spacing in composition pixels (drawn and snapped to). */
+function GridDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'grid' }>; onDone: () => void }) {
+  const { t } = useKitEditor()
+  const [spacing, setSpacing] = useState(String(dialog.spacing))
+  const value = numberIn(spacing, 2, 10000)
+  return (
+    <FormDialog
+      title={t('dialog.grid')}
+      testId="motion-grid-dialog"
+      onSubmit={() => {
+        if (value === null) return
+        dialog.onSave(value)
+        onDone()
+      }}
+      onClose={onDone}
+      valid={value !== null}
+    >
+      <TextRow label={t('grid.spacing')} value={spacing} onChange={setSpacing} error={value === null ? t('grid.badSpacing') : null} testId="motion-grid-spacing" unit="px" autoFocus />
+    </FormDialog>
+  )
+}
+
+/** View ▸ New Guide…: a horizontal or vertical guide at a position (composition pixels), without the rulers. One undo step (`view.addGuide`). */
+function GuideDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'guide' }>; onDone: () => void }) {
+  const { run, t } = useKitEditor()
+  const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal')
+  const [position, setPosition] = useState(String(Math.round(dialog.comp.height / 2)))
+  const value = numberIn(position, -100000, 100000)
+  return (
+    <FormDialog
+      title={t('dialog.guide')}
+      testId="motion-guide-dialog"
+      onSubmit={() => {
+        if (value === null) return
+        void run('view.addGuide', { orientation, position: value })
+        onDone()
+      }}
+      onClose={onDone}
+      valid={value !== null}
+    >
+      <Field label={t('guide.orientation')}>
+        {({ id }) => (
+          <Select
+            id={id}
+            value={orientation}
+            onChange={(event) => {
+              const next = event.target.value === 'vertical' ? 'vertical' : 'horizontal'
+              setOrientation(next)
+              setPosition(String(Math.round((next === 'vertical' ? dialog.comp.width : dialog.comp.height) / 2)))
+            }}
+            data-testid="motion-guide-orientation"
+          >
+            <option value="horizontal">{t('guide.horizontal')}</option>
+            <option value="vertical">{t('guide.vertical')}</option>
+          </Select>
+        )}
+      </Field>
+      <TextRow label={t('guide.position')} value={position} onChange={setPosition} error={value === null ? t('dialog.badNumber') : null} testId="motion-guide-position" unit="px" />
     </FormDialog>
   )
 }
@@ -521,5 +598,9 @@ export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialo
       return <SavePresetDialog key={key} dialog={dialog} onDone={onClose} />
     case 'sequence':
       return <SequenceDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'grid':
+      return <GridDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'guide':
+      return <GuideDialog key={key} dialog={dialog} onDone={onClose} />
   }
 }

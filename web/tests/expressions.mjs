@@ -113,6 +113,7 @@ try {
   await until(async () => (await kit.getByTestId(`${row}-error`).count()) === 1)
   const said = (await kit.getByTestId(`${row}-error`).textContent().catch(() => '')) ?? ''
   step('a failing expression shows its error in Chinese', said.includes('表达式出错') && said.includes('nothingHere'), said)
+  step('the error is reworded (not defined) and keeps its line number', said.includes('没有定义') && said.includes('第 1 行') && !said.includes('Error at line'), said)
 
   // 4. The switch turns it off and on.
   await kit.getByTestId(`${row}-switch`).click()

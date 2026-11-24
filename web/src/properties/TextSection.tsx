@@ -1,7 +1,21 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { TextAlignCenterIcon as Center, TextAlignEndIcon as Right, TextAlignStartIcon as Left } from '@kition/tessera/icons/react'
+import {
+  BoldIcon,
+  CaseSensitiveIcon,
+  CaseUpperIcon,
+  ItalicIcon,
+  SubscriptIcon,
+  SuperscriptIcon,
+  TextAlignCenterIcon,
+  TextAlignEndIcon,
+  TextAlignJustifyIcon,
+  TextAlignStartIcon,
+  TextJustifyCenterIcon,
+  TextJustifyEndIcon,
+  TextJustifyStartIcon,
+} from '@kition/tessera/icons/react'
 import { Combobox } from '@kition/tessera/ui'
-import { Segmented, Select, Textarea, useEngineQuery, useKitEditor } from '@kition/sdk/editor'
+import { Select, Textarea, useEngineQuery, useKitEditor } from '@kition/sdk/editor'
 import { keyTimes } from '../timeline/keys'
 import type { TreeNode } from '../timeline/tree'
 import { NumberField } from '../ValueField'
@@ -76,7 +90,22 @@ function ContentBox({ node, focusNow, onFocused }: { node: TreeNode; focusNow: b
   )
 }
 
-/** A labelled control in the Text section's grid. */
+/**
+ * What `layer.tree` answers in `text` for a text layer: the character and paragraph settings of
+ * the characters being edited (else the whole text), as `layer.setText` takes them; a setting that
+ * differs across them is null and listed in `mixed`. `range` is the edited selection to give
+ * `layer.setText`, null for the whole text.
+ */
+export type TextSelection = {
+  character: Record<string, unknown>
+  paragraph: Record<string, unknown>
+  mixed: string[]
+  range: [number, number] | null
+  editing: boolean
+  length: number
+}
+
+/** A labelled control in the Character and Paragraph grids. */
 function Item({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return (
     <div className="motion-text-item" data-wide={wide || undefined}>
@@ -86,100 +115,271 @@ function Item({ label, children, wide }: { label: string; children: ReactNode; w
   )
 }
 
+type Icon = typeof BoldIcon
+
+/** The Character panel's switches: the `layer.setText` key each sets, its icon and its label key. */
+const TOGGLES: ReadonlyArray<readonly [key: string, icon: Icon, label: string]> = [
+  ['fauxBold', BoldIcon, 'text.fauxBold'],
+  ['fauxItalic', ItalicIcon, 'text.fauxItalic'],
+  ['allCaps', CaseUpperIcon, 'text.allCaps'],
+  ['smallCaps', CaseSensitiveIcon, 'text.smallCaps'],
+  ['superscript', SuperscriptIcon, 'text.superscript'],
+  ['subscript', SubscriptIcon, 'text.subscript'],
+]
+
+/** The Paragraph panel's seven alignments (`justify`). */
+const JUSTIFY: ReadonlyArray<readonly [value: string, icon: Icon, label: string]> = [
+  ['left', TextAlignStartIcon, 'text.left'],
+  ['center', TextAlignCenterIcon, 'text.center'],
+  ['right', TextAlignEndIcon, 'text.right'],
+  ['justifyLeft', TextJustifyStartIcon, 'text.justifyLeft'],
+  ['justifyCenter', TextJustifyCenterIcon, 'text.justifyCenter'],
+  ['justifyRight', TextJustifyEndIcon, 'text.justifyRight'],
+  ['justifyAll', TextAlignJustifyIcon, 'text.justifyAll'],
+]
+
+/** A row of icon buttons, each pressed, not pressed or mixed (`aria-pressed`). */
+function ToggleRow({ items, label, testId, readOnly }: { items: ReadonlyArray<{ id: string; icon: Icon; label: string; pressed: boolean | 'mixed'; onPress: () => void }>; label: string; testId: string; readOnly: boolean }) {
+  return (
+    <div className="motion-text-toggles" role="group" aria-label={label} data-testid={testId}>
+      {items.map((item) => {
+        const Shown = item.icon
+        return (
+          <button
+            key={item.id}
+            type="button"
+            className="motion-text-toggle"
+            aria-pressed={item.pressed}
+            aria-label={item.label}
+            title={item.label}
+            disabled={readOnly}
+            onClick={item.onPress}
+            data-testid={`${testId}-${item.id}`}
+          >
+            <Shown size={14} aria-hidden="true" />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
- * A text layer's Text section: the content box, then font family (searchable) and style, size,
- * fill, stroke and its width, tracking, leading and alignment, each change one undo step on the
- * whole text (`layer.setText`).
+ * A text layer's Text section: the content box, then the Character settings (font family,
+ * searchable, and style; size and leading, auto or set; tracking and kerning; fill and stroke with
+ * its width; baseline shift and horizontal and vertical scale; faux bold and italic, all caps and
+ * small caps, superscript and subscript) and the Paragraph settings (seven alignments, the left,
+ * right and first-line indents, the space before and after). They show the characters being edited
+ * on the canvas (the selected ones, or at a caret what the next typed text gets), else the whole
+ * text; a setting that differs across them shows as mixed (an empty field with a dash, a striped
+ * swatch, a half-pressed button). A change applies to the same characters, each one undo step
+ * (`layer.setText` with their range).
  */
-export function TextControls({ node, focusNow, onFocused }: { node: TreeNode; focusNow: boolean; onFocused: () => void }) {
+export function TextControls({ node, focusNow, onFocused, selection }: { node: TreeNode; focusNow: boolean; onFocused: () => void; selection: TextSelection | null }) {
   const { t } = useKitEditor()
   const { layer, readOnly } = usePanel()
   const source = (node.children ?? []).find((child) => child.match === 'sourceText')
-  const style = source?.style ?? null
   const fonts = useEngineQuery<Fonts>('text.fonts', {})
   const families = fonts?.families ?? []
-  const styles = families.find((family) => family.family === style?.family)?.styles ?? (style ? [style.style] : [])
-  const font = useSender('layer.setText')
-  const size = useSender('layer.setText')
-  const fill = useSender('layer.setText')
-  const stroke = useSender('layer.setText')
-  const width = useSender('layer.setText')
-  const tracking = useSender('layer.setText')
-  const leading = useSender('layer.setText')
-  const set = (sender: typeof font, params: Record<string, unknown>, gesture?: string) => sender({ layer: layer.id, ...params }, gesture)
+  const send = useSender('layer.setText')
+  const sendScrub = useSender('layer.setText')
+  if (!selection) return <div className="motion-text" data-testid="motion-text-controls">{source ? <ContentBox node={source} focusNow={focusNow} onFocused={onFocused} /> : null}</div>
+  const c = selection.character
+  const p = selection.paragraph
+  const mixed = new Set(selection.mixed)
+  const num = (value: unknown, fallback = 0) => (typeof value === 'number' && Number.isFinite(value) ? value : fallback)
+  const range = selection.range ? { range: selection.range } : {}
+  const set = (params: Record<string, unknown>, gesture?: string) => (gesture ? sendScrub : send)({ layer: layer.id, ...range, ...params }, gesture)
+  const family = typeof c.font === 'string' ? c.font : ''
+  const style = typeof c.style === 'string' ? c.style : ''
+  const styles = families.find((each) => each.family === family)?.styles ?? (style ? [style] : [])
+  const size = num(c.size, 72)
+  const autoLeading = c.leading === 'auto'
+  const leading = autoLeading ? size * 1.2 : num(c.leading, size * 1.2)
+  const kerning = c.kerning === 'optical' ? 'optical' : c.kerning === 'metrics' ? 'metrics' : mixed.has('kerning') ? '' : 'manual'
+  const flag = (key: string): boolean | 'mixed' => (mixed.has(key) ? 'mixed' : c[key] === true)
+  const baseline = typeof c.baseline === 'string' ? c.baseline : 'normal'
+  const field = (key: string, label: string, value: number, options: { min?: number; max?: number; decimals?: number; unit?: string; speed?: number } = {}) => (
+    <Item label={label}>
+      <NumberField
+        value={value}
+        mixed={mixed.has(key)}
+        label={label}
+        min={options.min}
+        max={options.max}
+        decimals={options.decimals ?? 1}
+        unit={options.unit}
+        speed={options.speed}
+        readOnly={readOnly}
+        onCommit={(next) => set({ [key]: next })}
+        onScrub={(next, _final, gesture) => set({ [key]: next }, gesture)}
+        testId={`motion-text-${key}`}
+      />
+    </Item>
+  )
   return (
-    <div className="motion-text" data-testid="motion-text-controls">
+    <div className="motion-text" data-testid="motion-text-controls" data-editing={selection.editing || undefined}>
       {source ? <ContentBox node={source} focusNow={focusNow} onFocused={onFocused} /> : null}
-      {style ? (
-        <div className="motion-text-grid">
-          <Item label={t('text.font')} wide>
-            <Combobox
-              value={style.family}
-              label={t('text.font')}
-              options={families.map((family) => ({ value: family.family, label: family.family, text: family.family }))}
-              disabled={readOnly}
-              onChange={(family) => {
-                if (!family) return
-                const styles = families.find((entry) => entry.family === family)?.styles ?? []
-                set(font, { font: family, style: styles.includes(style.style) ? style.style : (styles[0] ?? 'Regular') })
-              }}
-              testId="motion-text-font"
-            />
-          </Item>
-          <Item label={t('text.style')}>
-            <Select value={style.style} disabled={readOnly} onChange={(event) => set(font, { font: style.family, style: event.target.value })} data-testid="motion-text-style">
-              {styles.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </Select>
-          </Item>
-          <Item label={t('text.size')}>
-            <NumberField value={style.size} label={t('text.size')} min={1} max={5000} decimals={1} unit="px" readOnly={readOnly} onCommit={(next) => set(size, { size: next })} onScrub={(next, _final, gesture) => set(size, { size: next }, gesture)} testId="motion-text-size" />
-          </Item>
-          <Item label={t('text.fill')}>
-            <ColorSwatch value={hexOf(style.fill)} label={t('text.fill')} readOnly={readOnly} onChange={(hex, final) => set(fill, { fill: hex, applyFill: true }, final ? undefined : `fill-${layer.id}`)} testId="motion-text-fill" />
-          </Item>
-          <Item label={t('text.stroke')}>
-            <span className="motion-text-stroke">
-              <ColorSwatch value={hexOf(style.stroke)} label={t('text.stroke')} readOnly={readOnly} onChange={(hex, final) => set(stroke, { stroke: hex, applyStroke: true }, final ? undefined : `stroke-${layer.id}`)} testId="motion-text-stroke" />
-              <NumberField
-                value={style.applyStroke ? style.strokeWidth : 0}
-                label={t('text.strokeWidth')}
-                min={0}
-                max={1000}
-                decimals={1}
-                unit="px"
-                readOnly={readOnly}
-                onCommit={(next) => set(width, { strokeWidth: next, applyStroke: next > 0 })}
-                onScrub={(next, _final, gesture) => set(width, { strokeWidth: next, applyStroke: next > 0 }, gesture)}
-                testId="motion-text-stroke-width"
-              />
-            </span>
-          </Item>
-          <Item label={t('text.tracking')}>
-            <NumberField value={style.tracking} label={t('text.tracking')} min={-1000} max={10000} decimals={0} readOnly={readOnly} onCommit={(next) => set(tracking, { tracking: next })} onScrub={(next, _final, gesture) => set(tracking, { tracking: next }, gesture)} testId="motion-text-tracking" />
-          </Item>
-          <Item label={t('text.leading')}>
-            <NumberField value={style.leading} label={t('text.leading')} min={0} max={5000} decimals={1} unit="px" readOnly={readOnly} onCommit={(next) => set(leading, { leading: next })} onScrub={(next, _final, gesture) => set(leading, { leading: next }, gesture)} testId="motion-text-leading" />
-          </Item>
-          <Item label={t('text.align')}>
-            <Segmented
-              label={t('text.align')}
-              value={style.justify}
-              disabled={readOnly}
-              segments={[
-                { value: 'left', icon: Left, label: t('text.left') },
-                { value: 'center', icon: Center, label: t('text.center') },
-                { value: 'right', icon: Right, label: t('text.right') },
-              ]}
-              onChange={(justify) => set(font, { justify })}
-              testId="motion-text-align"
-            />
-          </Item>
-        </div>
+      {selection.editing ? (
+        <p className="kui-muted motion-text-scope" data-testid="motion-text-scope">
+          {selection.range && selection.range[0] !== selection.range[1] ? t('text.scope.selection', { count: selection.range[1] - selection.range[0] }) : t('text.scope.caret')}
+        </p>
       ) : null}
+      <h4 className="motion-text-heading kui-muted">{t('text.character')}</h4>
+      <div className="motion-text-grid">
+        <Item label={t('text.font')} wide>
+          <Combobox
+            value={mixed.has('font') ? '' : family}
+            label={t('text.font')}
+            options={families.map((each) => ({ value: each.family, label: each.family, text: each.family }))}
+            disabled={readOnly}
+            onChange={(next) => {
+              if (!next) return
+              const nextStyles = families.find((entry) => entry.family === next)?.styles ?? []
+              set({ font: next, style: nextStyles.includes(style) ? style : (nextStyles[0] ?? 'Regular') })
+            }}
+            testId="motion-text-font"
+          />
+        </Item>
+        <Item label={t('text.style')}>
+          <Select value={mixed.has('style') ? '' : style} disabled={readOnly} onChange={(event) => set({ font: family, style: event.target.value })} data-testid="motion-text-style">
+            {mixed.has('style') ? <option value="">{t('text.mixed')}</option> : null}
+            {styles.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </Select>
+        </Item>
+        {field('size', t('text.size'), size, { min: 1, max: 5000, unit: 'px' })}
+        <Item label={t('text.leading')}>
+          <span className="motion-text-pair">
+            <NumberField
+              value={leading}
+              mixed={mixed.has('leading')}
+              label={t('text.leading')}
+              min={0}
+              max={5000}
+              decimals={1}
+              unit="px"
+              readOnly={readOnly}
+              onCommit={(next) => set({ leading: next })}
+              onScrub={(next, _final, gesture) => set({ leading: next }, gesture)}
+              testId="motion-text-leading"
+            />
+            <button
+              type="button"
+              className="motion-text-toggle motion-text-auto"
+              aria-pressed={mixed.has('leading') ? 'mixed' : autoLeading}
+              title={t('text.autoLeading')}
+              disabled={readOnly}
+              onClick={() => set({ leading: autoLeading ? Math.round(leading * 10) / 10 : 'auto' })}
+              data-testid="motion-text-leading-auto"
+            >
+              {t('text.auto')}
+            </button>
+          </span>
+        </Item>
+        {field('tracking', t('text.tracking'), num(c.tracking), { min: -1000, max: 10000, decimals: 0 })}
+        <Item label={t('text.kerning')}>
+          <Select value={kerning} disabled={readOnly} onChange={(event) => set({ kerning: event.target.value === 'manual' ? 0 : event.target.value })} data-testid="motion-text-kerning">
+            {kerning === '' ? <option value="">{t('text.mixed')}</option> : null}
+            <option value="metrics">{t('text.kerning.metrics')}</option>
+            <option value="optical">{t('text.kerning.optical')}</option>
+            <option value="manual">{t('text.kerning.none')}</option>
+          </Select>
+        </Item>
+        <Item label={t('text.fill')}>
+          <span className="motion-text-stroke">
+            <ColorSwatch value={hexOf(c.fill)} mixed={mixed.has('fill')} label={t('text.fill')} readOnly={readOnly} onChange={(hex, final) => set({ fill: hex, applyFill: true }, final ? undefined : `fill-${layer.id}`)} testId="motion-text-fill" />
+            <button
+              type="button"
+              className="motion-text-toggle motion-text-auto"
+              aria-pressed={mixed.has('applyFill') ? 'mixed' : c.applyFill !== false}
+              title={t('text.applyFill')}
+              disabled={readOnly}
+              onClick={() => set({ applyFill: c.applyFill === false })}
+              data-testid="motion-text-apply-fill"
+            >
+              {t('text.on')}
+            </button>
+          </span>
+        </Item>
+        <Item label={t('text.stroke')}>
+          <span className="motion-text-stroke">
+            <ColorSwatch value={hexOf(c.stroke)} mixed={mixed.has('stroke')} label={t('text.stroke')} readOnly={readOnly} onChange={(hex, final) => set({ stroke: hex, applyStroke: true }, final ? undefined : `stroke-${layer.id}`)} testId="motion-text-stroke" />
+            <NumberField
+              value={c.applyStroke === true ? num(c.strokeWidth) : 0}
+              mixed={mixed.has('strokeWidth') || mixed.has('applyStroke')}
+              label={t('text.strokeWidth')}
+              min={0}
+              max={1000}
+              decimals={1}
+              unit="px"
+              readOnly={readOnly}
+              onCommit={(next) => set({ strokeWidth: next, applyStroke: next > 0 })}
+              onScrub={(next, _final, gesture) => set({ strokeWidth: next, applyStroke: next > 0 }, gesture)}
+              testId="motion-text-stroke-width"
+            />
+          </span>
+        </Item>
+        {field('baselineShift', t('text.baselineShift'), num(c.baselineShift), { min: -5000, max: 5000, unit: 'px' })}
+        {field('hScale', t('text.hScale'), num(c.hScale, 100), { min: 1, max: 1000, unit: '%' })}
+        {field('vScale', t('text.vScale'), num(c.vScale, 100), { min: 1, max: 1000, unit: '%' })}
+        <Item label={t('text.styles')} wide>
+          <ToggleRow
+            label={t('text.styles')}
+            testId="motion-text-toggles"
+            readOnly={readOnly}
+            items={TOGGLES.map(([key, icon, label]) => {
+              const pressed = key === 'superscript' ? (mixed.has('baseline') ? 'mixed' : baseline === 'superscript') : key === 'subscript' ? (mixed.has('baseline') ? 'mixed' : baseline === 'subscript') : flag(key)
+              return { id: key, icon, label: t(label), pressed, onPress: () => set({ [key]: pressed !== true }) }
+            })}
+          />
+        </Item>
+      </div>
+      <h4 className="motion-text-heading kui-muted">{t('text.paragraph')}</h4>
+      <div className="motion-text-grid">
+        <Item label={t('text.align')} wide>
+          <ToggleRow
+            label={t('text.align')}
+            testId="motion-text-align"
+            readOnly={readOnly}
+            items={JUSTIFY.map(([value, icon, label]) => ({
+              id: value,
+              icon,
+              label: t(label),
+              pressed: mixed.has('justify') ? false : p.justify === value,
+              onPress: () => set({ justify: value }),
+            }))}
+          />
+        </Item>
+        {paraField('indentLeft', t('text.indentLeft'))}
+        {paraField('indentRight', t('text.indentRight'))}
+        {paraField('indentFirst', t('text.indentFirst'))}
+        {paraField('spaceBefore', t('text.spaceBefore'))}
+        {paraField('spaceAfter', t('text.spaceAfter'))}
+      </div>
     </div>
   )
+
+  function paraField(key: string, label: string) {
+    return (
+      <Item label={label} key={key}>
+        <NumberField
+          value={num(p[key])}
+          mixed={mixed.has(key)}
+          label={label}
+          min={-5000}
+          max={5000}
+          decimals={1}
+          unit="px"
+          readOnly={readOnly}
+          onCommit={(next) => set({ [key]: next })}
+          onScrub={(next, _final, gesture) => set({ [key]: next }, gesture)}
+          testId={`motion-text-${key}`}
+        />
+      </Item>
+    )
+  }
 }

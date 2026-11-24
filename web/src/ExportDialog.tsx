@@ -54,6 +54,8 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
   const [textAsShapes, setTextAsShapes] = useState(false)
   const [warnings, setWarnings] = useState<string[] | null>(null)
   const cancelled = useRef(false)
+  // The last export was stopped: the dialog says so above its settings.
+  const [stopped, setStopped] = useState(false)
   if (!comp) return null
   const w = side(width)
   const h = side(height)
@@ -78,6 +80,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
       frameRate: rate === 'half' ? Math.round((comp.fps / 2) * 1000) / 1000 : null,
     }
     cancelled.current = false
+    setStopped(false)
     const read = (json: string) => JSON.parse(json) as Progress
     try {
       let now = read(await doc.invoke<string>('exportStart', path.split('/').pop() ?? path, JSON.stringify(settings)))
@@ -91,6 +94,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
         toast.info(t('export.cancelled'))
         setBusy(false)
         setProgress(null)
+        setStopped(true)
         return
       }
       const bytes = await doc.invoke<Uint8Array>('exportFinish')
@@ -130,7 +134,11 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
     }
   }
 
-  /** Cancel while rendering stops the render (the loop above ends at the engine's next answer). */
+  /**
+   * While rendering, the left button reads Stop export: it stops the render (the loop above ends
+   * at the engine's next answer) and the dialog goes back to its settings, saying the export was
+   * stopped; otherwise Cancel (and Escape) closes the dialog.
+   */
   const cancel = () => {
     if (busy) cancelled.current = true
     else onClose()
@@ -144,7 +152,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
       actions={
         <>
           <Button onClick={cancel} data-testid="motion-export-dialog-cancel">
-            {t('dialog.cancel')}
+            {busy && progress ? t('export.stop') : t('dialog.cancel')}
           </Button>
           {warnings ? (
             <Button variant="primary" onClick={onClose} data-testid="motion-export-dialog-close">
@@ -165,6 +173,11 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
           void render()
         }}
       >
+        {stopped && !busy ? (
+          <p className="kui-muted motion-export-note" role="status" data-testid="motion-export-stopped">
+            {t('export.stopped')}
+          </p>
+        ) : null}
         <Field label={t('export.format')}>
           <Select value={format} disabled={busy} onChange={(event) => setFormat(event.target.value as Format)} data-testid="motion-export-format">
             {FORMATS.map((each) => (

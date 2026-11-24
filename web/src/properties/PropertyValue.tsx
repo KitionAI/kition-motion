@@ -4,6 +4,7 @@ import { Checkbox, GradientSlider, IconButton, Select, TextInput, useKitEditor }
 import type { MotionLayer } from '../motion'
 import { editableNumbers, type TreeNode } from '../timeline/tree'
 import { NumberField } from '../ValueField'
+import { GradientEditor } from './GradientEditor'
 import { ColorSwatch, hexOf } from './ColorSwatch'
 import type { PropMeta } from './meta'
 import { useSetProp } from './useSetProp'
@@ -92,6 +93,11 @@ export function PropertyValue({ layer, node, meta, time, name, testId, readOnly,
         ) : null}
       </span>
     )
+  }
+  if (node.type === 'gradient') {
+    // The timeline's rows are too narrow for the stops: the Properties panel edits them.
+    if (compact) return null
+    return <GradientEditor value={node.value} name={name} testId={testId} readOnly={readOnly} set={set} />
   }
   if (node.type === 'color') {
     return (

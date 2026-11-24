@@ -242,6 +242,24 @@ async function finishDialog(ctx, leaf, state) {
     if (!(await page.evaluate(() => window.devHost.files.has('Walk preset.ecpreset')))) throw new Error('no preset file beside the project')
     return 'saved Walk preset.ecpreset through the host'
   }
+  if (await field('motion-grid-dialog').count()) {
+    await field('motion-grid-spacing').fill('50')
+    await confirm()
+    await page.waitForTimeout(200)
+    if (await dialogOpen(kit)) throw new Error('Grid Settings stayed open')
+    return 'grid spacing set to 50 px'
+  }
+  if (await field('motion-guide-dialog').count()) {
+    const guides = async () => (await ctx.page.evaluate(async () => window.devHost.connection().ai.run([{ command: 'comp.info', params: {} }], false))).completed[0].result.guides?.length ?? 0
+    const had = await guides()
+    await field('motion-guide-orientation').selectOption('vertical')
+    await field('motion-guide-position').fill('320')
+    await confirm()
+    for (let i = 0; i < 30 && (await guides()) === had; i += 1) await page.waitForTimeout(100)
+    if ((await guides()) !== had + 1) throw new Error('New Guide added no guide')
+    await undo(ctx)
+    return 'a vertical guide at 320 px; undo took it away'
+  }
   if (await field('motion-stretch-dialog').count()) {
     const layer = before.info.layers.find((each) => each.selected)
     await field('motion-stretch-factor').fill('200')

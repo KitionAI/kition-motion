@@ -6,6 +6,7 @@ import { useEffectParams } from '../properties/catalog'
 import { KeyDiamond } from '../properties/KeyDiamond'
 import { propMeta } from '../properties/meta'
 import { PropertyValue } from '../properties/PropertyValue'
+import { ShapeAddMenu } from '../properties/ShapeItems'
 import { useTimeline } from './context'
 import { KeyMark } from './KeyMark'
 import { sideOf, type PropRead } from './interp'
@@ -39,7 +40,7 @@ export const pathId = (path: string) => path.replaceAll('/', '.')
  * on an animated property an edit sets a keyframe here), and its keyframes on the track.
  */
 export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { layer: MotionLayer; twirl: Twirl; toggled: ReadonlySet<string>; onToggle: (path: string) => void; selected: ReadonlySet<string> }) {
-  const { phrase, t } = useKitEditor()
+  const { phrase, t, run } = useKitEditor()
   const { info, view, readOnly } = useTimeline()
   // Expressions that fail now (the engine evaluates them at the current time).
   const failing = useEngineQuery<{ errors?: ExprError[] }>('expr.errors', { time: info.time })
@@ -63,6 +64,10 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
                   {row.open ? <Open size={12} aria-hidden="true" /> : <Closed size={12} aria-hidden="true" />}
                 </button>
                 <span className="motion-row-name">{name}</span>
+                {/* A shape layer's Contents (and each shape group's): Add puts a shape, paint or operator at its end. */}
+                {layer.type === 'Shape' && node.uid != null && (node.path === 'contents' || node.match === 'group') ? (
+                  <ShapeAddMenu layer={layer.id} group={node.path === 'contents' ? undefined : node.uid} testId={`motion-row-shape-add-${id}`} readOnly={readOnly} compact />
+                ) : null}
               </div>
               <div className="motion-row-track" />
             </div>
@@ -88,10 +93,21 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
             />
           ) : null
         return [
-          <div key={node.path} className="motion-row motion-prop-row" data-testid={`motion-prop-row-${id}`}>
+          <div key={node.path} className="motion-row motion-prop-row" data-selected={layer.selectedProps.includes(node.path) || undefined} data-testid={`motion-prop-row-${id}`}>
             <div className="motion-timeline-names motion-prop-names" style={{ paddingLeft: 36 + depth * 14 }}>
-              <KeyDiamond layer={layer.id} path={node.path} name={name} times={times} time={info.time} frame={info.frame} testId={`motion-row-add-key-${id}`} readOnly={readOnly} expression={node.expression !== undefined} />
-              <span className="motion-row-name motion-prop-label">{name}</span>
+              <KeyDiamond layer={layer.id} path={node.path} name={name} times={times} time={info.time} frame={info.frame} testId={`motion-row-add-key-${id}`} readOnly={readOnly} expression={node.expression !== undefined} altAddsExpression />
+              {/* A click on the name selects the property (Shift or Cmd adds it): what Add Expression, Copy and the keyframe commands act on. */}
+              <span
+                className="motion-row-name motion-prop-label"
+                role="button"
+                tabIndex={-1}
+                aria-pressed={layer.selectedProps.includes(node.path)}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => void run('prop.select', { layer: layer.id, path: node.path, add: event.shiftKey || event.metaKey || event.ctrlKey })}
+                data-testid={`motion-prop-name-${id}`}
+              >
+                {name}
+              </span>
               <PropertyValue layer={layer} node={node} meta={meta} time={info.time} name={name} testId={`motion-row-value-${id}`} readOnly={readOnly} compact />
             </div>
             <div className="motion-row-track">

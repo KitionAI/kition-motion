@@ -12,9 +12,11 @@ export function keyAt(times: readonly number[], time: number, frame: number) {
  * hollow when the property is not animated, outlined in the accent colour when it is, filled when
  * it has a keyframe at the current time. A click starts animation on a still property (a keyframe
  * here), adds a keyframe between keyframes, or removes the one here. Alt-click, or 清除动画 in its
- * right-click menu, removes every keyframe (the property keeps its value here). Each is one undo step.
+ * right-click menu, removes every keyframe (the property keeps its value here). On the timeline's
+ * property rows (`altAddsExpression`) Alt-click adds an expression instead, or removes the one
+ * there; the menu still clears the animation. Each is one undo step.
  */
-export function KeyDiamond({ layer, path, name, times, time, frame, testId, readOnly, expression }: { layer: number; path: string; name: string; times: readonly number[]; time: number; frame: number; testId: string; readOnly: boolean; expression?: boolean }) {
+export function KeyDiamond({ layer, path, name, times, time, frame, testId, readOnly, expression, altAddsExpression = false }: { layer: number; path: string; name: string; times: readonly number[]; time: number; frame: number; testId: string; readOnly: boolean; expression?: boolean; altAddsExpression?: boolean }) {
   const { run, t } = useKitEditor()
   const [menu, setMenu] = useState<ContextMenuPoint | null>(null)
   const here = keyAt(times, time, frame)
@@ -29,11 +31,12 @@ export function KeyDiamond({ layer, path, name, times, time, frame, testId, read
         data-animated={animated}
         data-key-here={here || undefined}
         aria-label={label}
-        title={animated ? `${label}${t('clearAnimation.hint')}` : label}
+        title={altAddsExpression ? `${label}${t('expr.altHint')}` : animated ? `${label}${t('clearAnimation.hint')}` : label}
         disabled={readOnly}
         onClick={(event) => {
           if (event.altKey) {
-            if (animated) clear()
+            if (altAddsExpression) void run('prop.setExpression', expression ? { layer, path, expression: '' } : { layer, path, enabled: true })
+            else if (animated) clear()
             return
           }
           void (here ? run('prop.toggleKey', { layer, path }) : run('prop.addKey', { layer, path, time, timeBase: 'comp' }))

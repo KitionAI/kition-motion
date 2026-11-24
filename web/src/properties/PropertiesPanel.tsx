@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
 import type { TreeNode } from '../timeline/tree'
+import type { AlignTo } from '../menus'
+import { AlignSection } from './AlignSection'
 import { EffectsSection } from './EffectsSection'
 import { LayerHeader } from './LayerHeader'
 import { PanelEdge, usePanelWidth } from './PanelEdge'
@@ -9,7 +11,7 @@ import { PanelContext, PropertyChildren, PropertyGroup, hasRows, visible } from 
 import { Section, remember } from './Section'
 import { ShapeControls } from './ShapeSection'
 import { SolidSection } from './SolidSection'
-import { TextControls } from './TextSection'
+import { TextControls, type TextSelection } from './TextSection'
 
 /** How deep the panel reads a layer's property tree (shape groups nest). */
 const TREE_DEPTH = 10
@@ -21,7 +23,7 @@ const PLACED = new Set(['effects', 'transform', 'masks'])
 const TEXT_MORE = new Set(['text/pathOptions', 'text/moreOptions'])
 
 /** The layer type's own section (Text, Contents, Camera Options…) from its top-level group. */
-function TypeSection({ node, layer, focusText, onFocused }: { node: TreeNode; layer: MotionLayer; focusText: boolean; onFocused: () => void }) {
+function TypeSection({ node, layer, focusText, onFocused, text }: { node: TreeNode; layer: MotionLayer; focusText: boolean; onFocused: () => void; text: TextSelection | null }) {
   const { phrase, t } = useKitEditor()
   const scope = layer.type
   if (node.match === 'text') {
@@ -30,7 +32,7 @@ function TypeSection({ node, layer, focusText, onFocused }: { node: TreeNode; la
     const more = (node.children ?? []).filter((child) => TEXT_MORE.has(child.path))
     return (
       <Section scope={scope} id={node.path} title={phrase(node.name)} testId={`motion-section-${node.match}`}>
-        <TextControls node={node} focusNow={focusText} onFocused={onFocused} />
+        <TextControls node={node} focusNow={focusText} onFocused={onFocused} selection={text} />
         <PropertyChildren node={main} scope={scope} depth={0} />
         {more.length ? <PropertyGroup node={{ name: 'More', path: 'text/more', children: more }} label={t('props.more')} scope={scope} depth={0} /> : null}
       </Section>
@@ -49,7 +51,8 @@ function TypeSection({ node, layer, focusText, onFocused }: { node: TreeNode; la
  * Masks when it has any. With several layers selected it shows the first, and says so.
  */
 /** `typingOnCanvas`: the Text tool is out, so a new text layer is typed into on the canvas, not here. */
-export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false }: { info: MotionInfo; onAddEffect: () => void; typingOnCanvas?: boolean }) {
+/** `align`: the Align section's target, the rows that would change nothing now, and how a row runs. */
+export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, align }: { info: MotionInfo; onAddEffect: () => void; typingOnCanvas?: boolean; align: { to: AlignTo; onTo: (to: AlignTo) => void; idle: ReadonlySet<string>; onCommand: (command: string) => void } }) {
   const { t } = useKitEditor()
   // A viewer sees the values but cannot change them or add keyframes.
   const readOnly = useReadOnly()
@@ -57,7 +60,7 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false }: {
   const first = info.transform?.layer
   const layer = first != null ? info.layers.find((item) => item.id === first) : undefined
   const selected = info.layers.filter((item) => item.selected).length
-  const tree = useEngineQuery<{ properties?: TreeNode }>('layer.tree', layer ? { layer: layer.id, depth: TREE_DEPTH, time: info.time } : { layer: -1 })
+  const tree = useEngineQuery<{ properties?: TreeNode; text?: TextSelection }>('layer.tree', layer ? { layer: layer.id, depth: TREE_DEPTH, time: info.time } : { layer: -1 })
   const root = layer && tree?.properties ? tree.properties : null
   const top = root?.children ?? []
   const group = (match: string) => top.find((node) => node.match === match)
@@ -88,7 +91,7 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false }: {
             {top
               .filter((node) => node.children && !PLACED.has(node.match ?? '') && visible(node, layer) && hasRows(node, layer))
               .map((node) => (
-                <TypeSection key={node.path} node={node} layer={layer} focusText={fresh === layer.id} onFocused={focused} />
+                <TypeSection key={node.path} node={node} layer={layer} focusText={fresh === layer.id} onFocused={focused} text={tree?.text ?? null} />
               ))}
             {layer.type === 'Solid' ? <SolidSection /> : null}
             <EffectsSection layer={layer} group={group('effects')} onAdd={onAddEffect} />
@@ -102,6 +105,7 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false }: {
                 <PropertyChildren node={masks} scope={layer.type} depth={0} />
               </Section>
             ) : null}
+            <AlignSection scope="all" alignTo={align.to} onAlignTo={align.onTo} idle={align.idle} onCommand={align.onCommand} readOnly={readOnly} />
           </PanelContext.Provider>
         ) : layer ? null : (
           <p className="kui-muted motion-empty" data-testid="motion-properties-empty">

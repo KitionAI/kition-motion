@@ -1,15 +1,18 @@
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { ChevronDownIcon as Open, ChevronRightIcon as Closed, CircleDotIcon as Solo, LockIcon as Lock, LockOpenIcon as Unlock } from '@kition/tessera/icons/react'
-import { EyeButton, IconButton, RenameField, useKitEditor } from '@kition/sdk/editor'
+import { ChevronDownIcon as Open, ChevronRightIcon as Closed } from '@kition/tessera/icons/react'
+import { RenameField, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
+import type { ColumnId } from './columns'
 import { useTimeline } from './context'
+import { ModeCells, SwitchCells, type SwitchDrag } from './SwitchCells'
 
 /** How far (CSS pixels) a press on a name may wander and still be a click. */
 const CLICK_SLOP = 4
 
 /**
- * A layer's cells left of its track: the eye, solo and lock switches, the twirl that shows its
- * properties under it, its number, and its name.
+ * A layer's cells left of its track: the A/V switches (video, audio, solo, lock), the twirl that
+ * shows its properties under it, its number, its name, then the layer switches and the blending
+ * mode, track matte and parent drop-downs (the columns shown, `columns.ts`).
  * A click selects the layer (Shift or Cmd adds it); a vertical drag reorders it (`onDrag`, with
  * the pointer's y and whether it ended); a double-click renames it in place (Enter commits, Escape
  * cancels); a right-click opens the layer menu.
@@ -24,7 +27,13 @@ export function LayerNames({
   onSelect,
   onDrag,
   onMenu,
+  shown,
+  drag,
+  modes,
 }: {
+  shown: ReadonlySet<ColumnId>
+  drag: SwitchDrag
+  modes: readonly string[]
   layer: MotionLayer
   open: boolean
   onTwirl: () => void
@@ -35,11 +44,10 @@ export function LayerNames({
   onDrag: (y: number, phase: 'move' | 'end' | 'cancel') => void
   onMenu: (event: ReactMouseEvent<HTMLElement>) => void
 }) {
-  const { run, t } = useKitEditor()
-  const { readOnly } = useTimeline()
+  const { t } = useKitEditor()
+  const { readOnly, info } = useTimeline()
   const [text, setText] = useState(layer.name)
   const press = useRef<{ pointerId: number; y: number; moved: boolean } | null>(null)
-  const toggle = (name: 'video' | 'solo' | 'lock') => void run('layer.setSwitch', { layers: [layer.id], switch: name })
 
   const down = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || renaming) return
@@ -76,27 +84,7 @@ export function LayerNames({
       }}
       onContextMenu={onMenu}
     >
-      <span className="motion-switches" onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}>
-        <EyeButton visible={layer.switches.video} label={t('switch.video')} onPress={() => !readOnly && toggle('video')} testId={`motion-switch-video-${layer.id}`} />
-        <IconButton
-          icon={Solo}
-          label={t('switch.solo')}
-          pressed={layer.switches.solo}
-          disabled={readOnly}
-          className="motion-switch"
-          onClick={() => toggle('solo')}
-          data-testid={`motion-switch-solo-${layer.id}`}
-        />
-        <IconButton
-          icon={layer.switches.locked ? Lock : Unlock}
-          label={t('switch.lock')}
-          pressed={layer.switches.locked}
-          disabled={readOnly}
-          className="motion-switch"
-          onClick={() => toggle('lock')}
-          data-testid={`motion-switch-lock-${layer.id}`}
-        />
-      </span>
+      <SwitchCells layer={layer} side="av" shown={shown} drag={drag} readOnly={readOnly} />
       <button
         type="button"
         className="motion-twirl"
@@ -117,6 +105,8 @@ export function LayerNames({
           {layer.name}
         </span>
       )}
+      <SwitchCells layer={layer} side="switches" shown={shown} drag={drag} readOnly={readOnly} />
+      <ModeCells info={info} layer={layer} shown={shown} modes={modes} readOnly={readOnly} />
     </div>
   )
 }

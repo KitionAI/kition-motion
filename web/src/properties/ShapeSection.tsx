@@ -2,6 +2,7 @@ import { PlusIcon as Plus } from '@kition/tessera/icons/react'
 import { Button, useKitEditor } from '@kition/sdk/editor'
 import type { TreeNode } from '../timeline/tree'
 import { PropertyChildren, PropertyGroup, PropertyRow, usePanel } from './PropertyTree'
+import { ShapeAddMenu } from './ShapeItems'
 
 /** The shapes a simple shape layer draws. */
 const SHAPES = new Set(['rect', 'ellipse', 'star'])
@@ -34,7 +35,15 @@ export function ShapeControls({ contents, scope }: { contents: TreeNode; scope: 
   const { run, t } = useKitEditor()
   const { layer, readOnly } = usePanel()
   const simple = simpleShape(contents)
-  if (!simple) return <PropertyChildren node={contents} scope={scope} depth={0} />
+  if (!simple)
+    return (
+      <div className="motion-shape" data-testid="motion-shape-controls">
+        <div className="motion-shape-add">
+          <ShapeAddMenu layer={layer.id} testId="motion-shape-add" readOnly={readOnly} />
+        </div>
+        <PropertyChildren node={contents} scope={scope} depth={0} />
+      </div>
+    )
   const { group, shape, fill, stroke } = simple
   const add = (kind: 'fill' | 'stroke') => void run('layer.addShapeItem', { layer: layer.id, kind, group: group.uid })
   const rows: Array<[TreeNode | undefined, TreeNode | undefined, string]> = [
@@ -52,6 +61,10 @@ export function ShapeControls({ contents, scope }: { contents: TreeNode; scope: 
     <div className="motion-shape" data-testid="motion-shape-controls">
       <div className="motion-props">
         {rows.map(([node, parent, label]) => (node ? <PropertyRow key={node.path} node={node} parent={parent} label={label} /> : null))}
+      </div>
+      <div className="motion-shape-add">
+        {/* Into the shape's group, so an operator added here changes the shape. */}
+        <ShapeAddMenu layer={layer.id} group={group.uid} testId="motion-shape-add" readOnly={readOnly} />
       </div>
       {!fill || !stroke ? (
         <div className="motion-shape-add">

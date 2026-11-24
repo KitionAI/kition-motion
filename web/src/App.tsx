@@ -271,6 +271,19 @@ function codeOf(key: string) {
   return CODES[key] ?? ''
 }
 
+/** Where View ▸ Grid Settings… keeps the grid's spacing, and Save Animation Preset… the folder last used. */
+const GRID_KEY = 'kition-motion.grid-spacing'
+const PRESET_FOLDER_KEY = 'kition-motion.preset-folder'
+/** Where Layer ▸ Align's target (the composition or the selection) is kept. */
+const ALIGN_KEY = 'kition-motion.align-to'
+function storedPresetFolder() {
+  try {
+    return globalThis.localStorage?.getItem(PRESET_FOLDER_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
 /** A time as a file name can have it: `0-00-01-12`. */
 const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).replace(/:/g, '-')
 
@@ -458,9 +471,30 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   useEffect(() => installPointerdownFallback(document), [])
   // View's rulers, guides, grid and safe areas, and what a moved layer snaps to (the engine's Selection tool asks).
   const { overlays, toggle: toggleOverlay } = useOverlays()
-  const [gridSpacing, setGridSpacing] = useState(100)
+  // View ▸ Grid Settings…: the grid's spacing (composition pixels), kept in this browser.
+  const [gridSpacing, setGridSpacing] = useState(() => {
+    const stored = Number(globalThis.localStorage?.getItem(GRID_KEY))
+    return Number.isFinite(stored) && stored >= 2 && stored <= 10000 ? stored : 100
+  })
   // Layer ▸ Align: to the composition, or to the selected layers' bounds.
-  const [alignTo, setAlignTo] = useState<AlignTo>('composition')
+  const [alignTo, setAlignToState] = useState<AlignTo>(() => {
+    try {
+      return globalThis.localStorage?.getItem(ALIGN_KEY) === 'selection' ? 'selection' : 'composition'
+    } catch {
+      return 'composition'
+    }
+  })
+  const setAlignTo = useCallback((next: AlignTo | ((current: AlignTo) => AlignTo)) => {
+    setAlignToState((current) => {
+      const value = typeof next === 'function' ? next(current) : next
+      try {
+        localStorage.setItem(ALIGN_KEY, value)
+      } catch {
+        // Kept for this page only.
+      }
+      return value
+    })
+  }, [])
   // View ▸ Resolution: the engine renders every n-th pixel; the canvas paints again.
   const [preview, setPreview] = useState(() => {
     const stored = Number(globalThis.sessionStorage?.getItem('motion-preview-resolution'))
@@ -480,11 +514,17 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }, [session.doc, preview])
   useEffect(() => {
     if (!session.doc) return
-    void session.doc
-      .invoke<number>('setSnapTargets', overlays.snapGuides, overlays.snapGrid)
-      .then((spacing) => Number.isFinite(spacing) && spacing > 0 && setGridSpacing(spacing))
-      .catch(() => undefined)
+    void session.doc.invoke<number>('setSnapTargets', overlays.snapGuides, overlays.snapGrid).catch(() => undefined)
   }, [session.doc, overlays.snapGuides, overlays.snapGrid])
+  useEffect(() => {
+    if (!session.doc) return
+    void session.doc.invoke<number>('setGridSpacing', gridSpacing).catch(() => undefined)
+    try {
+      localStorage.setItem(GRID_KEY, String(gridSpacing))
+    } catch {
+      // Kept for this page only.
+    }
+  }, [session.doc, gridSpacing])
   // The graph editor's curves: a property's values over time, sampled by the engine.
   const doc = session.doc
   const sampler = useCallback<CurveSampler>(
@@ -561,14 +601,19 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
    * a preset in the workspace and applies it to the selected layers at the current time
    * (`anim.applyPreset`, one undo step).
    */
-  const savePreset = async (name: string) => {
+  const savePreset = async (name: string, inside: string) => {
     const file = `${name}.ecpreset`
     const folder = host.init.document.path.split('/').slice(0, -1).join('/')
+    try {
+      localStorage.setItem(PRESET_FOLDER_KEY, inside)
+    } catch {
+      // Asked again next time.
+    }
     try {
       if ((await run('anim.savePreset', { path: file, name })) === null) return
       const bytes = await session.doc?.invoke<Uint8Array | undefined>('takeFile', file)
       if (!bytes) throw new Error(t('preset.notWritten'))
-      const written = await host.exportFile([folder, file].filter(Boolean).join('/'), bytes)
+      const written = await host.exportFile([folder, inside, file].filter(Boolean).join('/'), bytes)
       toast.success(t('preset.saved', { name: written.split('/').pop() ?? written }))
     } catch (error) {
       toast.error(t('preset.saveFailed'), { description: error instanceof Error ? error.message : String(error) })
@@ -614,7 +659,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'layer.timeStretch': () => void openStretch(),
     'kit:sequence': () => state?.comp && setDialog({ kind: 'sequence', fps: state.comp.fps }),
     [KIT.alignTo]: () => setAlignTo((current) => (current === 'composition' ? 'selection' : 'composition')),
-    'anim.savePreset': () => setDialog({ kind: 'savePreset', name: t('preset.defaultName'), onSave: (name) => void savePreset(name) }),
+    'anim.savePreset': () => setDialog({ kind: 'savePreset', name: t('preset.defaultName'), folder: storedPresetFolder(), onSave: (name, inside) => void savePreset(name, inside) }),
+    [KIT.gridSettings]: () => setDialog({ kind: 'grid', spacing: gridSpacing, onSave: setGridSpacing }),
+    [KIT.newGuide]: () => state?.comp && setDialog({ kind: 'guide', comp: { width: state.comp.width, height: state.comp.height } }),
     'anim.applyPreset': () => void applyPreset(),
     ...Object.fromEntries(INTERPOLATIONS.map((row) => [row.command, () => void run('keys.interpolation', { interpolation: row.interpolation })])),
     'comp.settings': () => void openComp('settings'),
@@ -646,6 +693,12 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   )
   // Rows with nothing to act on are hidden; the predicate changes only when that does.
   const idle = useIdleRows(session.doc, state, playback.playing, alignTo)
+  // The Align section's buttons are off where Layer ▸ Align's rows are hidden.
+  const alignIdle = useMemo(() => {
+    const off = new Set(idle)
+    if (alignTo === 'selection' && (state?.layers.filter((layer) => layer.selected).length ?? 0) < 2) for (const command of Object.keys(KIT_RUNS)) if (command.startsWith('kit:align-')) off.add(command)
+    return off
+  }, [idle, alignTo, state?.layers])
   const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo }, editor.enabled('keys.interpolation'), idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(() => menuRows(effects, overlays, alignTo), [effects, overlays, alignTo])
@@ -664,6 +717,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     ],
     [dispatch, effects, hidden, lastEffect, phrase, rows, t, wholeWorkArea, state],
   )
+
+  // What the active tool says (the engine's words, translated), else how to use the Pen.
+  const anySelected = state?.layers.some((layer) => layer.selected) ?? false
+  const toolHint = tools.status ? phrase(tools.status) : tools.active === 'pen' && !host.readOnly ? t(anySelected ? 'pen.hint.mask' : 'pen.hint.shape') : null
 
   // The timeline's own keys (Delete, Cmd+D, …) come first.
   const timelineKeys: TimelineKeys = useRef(null)
@@ -776,12 +833,26 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               ))}
             </Select>
           ) : null}
+          {toolHint ? (
+            <span className="motion-tool-status" role="status" data-testid="motion-tool-status">
+              {toolHint}
+            </span>
+          ) : null}
           <span data-testid="motion-status">
             {state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : t('noComp')}
           </span>
           </>
         }
-        panels={state ? <PropertiesPanel info={state} onAddEffect={() => setFindEffect(true)} typingOnCanvas={tools.active === 'text' || tools.wantsText} /> : null}
+        panels={
+          state ? (
+            <PropertiesPanel
+              info={state}
+              onAddEffect={() => setFindEffect(true)}
+              typingOnCanvas={tools.active === 'text' || tools.wantsText}
+              align={{ to: alignTo, onTo: setAlignTo, idle: alignIdle, onCommand: dispatch }}
+            />
+          ) : null
+        }
       >
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
         {exporting && state ? <ExportDialog info={state} doc={session.doc} lottie={exporting === 'lottie'} onClose={() => setExporting(false)} /> : null}

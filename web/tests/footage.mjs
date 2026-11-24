@@ -451,8 +451,11 @@ try {
   if (shots) await page.screenshot({ path: `${shots}phase6-export-progress.png` })
   step('the export shows the frames it has rendered, counting up', first?.total > 0 && later?.done > first.done && later.done < later.total, JSON.stringify({ first, later }))
   step('the engine answers while it exports', answered >= 0 && answered < 3000, `${answered} ms`)
+  const stopLabel = (await kit.getByTestId('motion-export-dialog-cancel').textContent()) ?? ''
   await kit.getByTestId('motion-export-dialog-cancel').click()
   await until(async () => (await kit.getByTestId('motion-export-busy').count()) === 0, 100)
+  await until(async () => (await kit.getByTestId('motion-export-stopped').count()) === 1, 50)
+  step('while it renders the button reads 停止导出, and once stopped the dialog says so above its settings', stopLabel.includes('停止导出') && (await kit.getByTestId('motion-export-stopped').count()) === 1 && (await kit.getByTestId('motion-export-dialog-cancel').textContent()) === '取消', stopLabel)
   const stopped = await page.evaluate(() => [...window.devHost.files.keys()].filter((name) => /\.(mp4|webm|gif)$/.test(name)))
   step('Cancel stops the export, writes no file and keeps the dialog', stopped.length === 0 && (await kit.getByTestId('motion-export-dialog').count()) === 1 && (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('已取消导出')), JSON.stringify(stopped))
   await kit.getByTestId('motion-export-range').selectOption('workArea')

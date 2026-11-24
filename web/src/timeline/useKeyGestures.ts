@@ -66,7 +66,13 @@ export function useKeyGestures(rows: RefObject<HTMLDivElement | null>, frame: Ti
       } else if (!all) {
         selecting = run('keys.select', { ...SELECT, keys })
         moving = new Set(ids)
-      } else moving = new Set(selected)
+      } else {
+        // It looks selected, but the editor's copy may be behind the engine (a click elsewhere
+        // just before, not answered yet): it is selected again, the others kept, so the drag
+        // moves it and Delete removes it.
+        selecting = run('keys.select', { ...SELECT, keys, add: true })
+        moving = new Set(selected)
+      }
       const track = mark.closest('.motion-row-track')
       const elements = [...rows.current.querySelectorAll<HTMLElement>('.motion-key')].filter((element) => {
         const its = keysOf(element)

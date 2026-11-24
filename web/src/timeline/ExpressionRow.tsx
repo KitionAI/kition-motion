@@ -9,17 +9,26 @@ export type ExprError = { layer: number; path: string; message: string }
  * language, in English) reworded where its form is known, else kept after a translated headline.
  */
 export function explainError(message: string, t: (key: string, values?: Record<string, string | number>) => string) {
+  // The engine says where: `Error at line 3: ReferenceError: foo is not defined`, or `Error: …`
+  // when it cannot tell the line.
+  const located = /^Error at line (\d+):\s*(.*)$/is.exec(message.trim())
+  const line = located ? Number(located[1]) : null
+  const body = (located ? located[2] : message.trim().replace(/^Error:\s*/i, '')).trim()
   const rules: Array<[RegExp, string]> = [
     [/^ReferenceError:\s*(.+?) is not defined/i, 'expr.error.undefined'],
-    [/^SyntaxError:\s*(.*)$/i, 'expr.error.syntax'],
+    [/^SyntaxError:\s*(.*)$/is, 'expr.error.syntax'],
     [/^TypeError:\s*(.+?) is not a function/i, 'expr.error.notFunction'],
-    [/^TypeError:\s*(.*)$/i, 'expr.error.type'],
+    [/^TypeError:\s*(.*)$/is, 'expr.error.type'],
   ]
+  let said = t('expr.error.other', { detail: body })
   for (const [pattern, key] of rules) {
-    const found = pattern.exec(message.trim())
-    if (found) return t(key, { name: found[1] ?? '', detail: found[1] ?? '' })
+    const found = pattern.exec(body)
+    if (found) {
+      said = t(key, { name: found[1] ?? '', detail: found[1] ?? '' })
+      break
+    }
   }
-  return t('expr.error.other', { detail: message })
+  return line !== null && Number.isFinite(line) ? t('expr.error.atLine', { line, message: said }) : said
 }
 
 /** A value as the row shows it: numbers to two decimals, several joined by commas. */

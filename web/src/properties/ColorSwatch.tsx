@@ -13,7 +13,7 @@ export function hexOf(value: unknown): string {
  * A colour's swatch: a click opens the colour picker (with its hex and RGB fields) in a popover
  * beside it. `onChange` hears every move of the picker (`final: false`) and once more when it ends.
  */
-export function ColorSwatch({ value, label, onChange, testId, readOnly = false }: { value: string; label: string; onChange: (hex: string, final: boolean) => void; testId: string; readOnly?: boolean }) {
+export function ColorSwatch({ value, label, onChange, testId, readOnly = false, mixed = false }: { value: string; label: string; onChange: (hex: string, final: boolean) => void; testId: string; readOnly?: boolean; mixed?: boolean }) {
   const { t } = useKitEditor()
   const [open, setOpen] = useState(false)
   // The picker shows what it was dragged to until the engine's value catches up.
@@ -23,7 +23,15 @@ export function ColorSwatch({ value, label, onChange, testId, readOnly = false }
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild disabled={readOnly}>
-        <button type="button" className="motion-swatch" style={{ background: value }} aria-label={`${label}: ${value}`} title={t('dialog.pickColor')} data-testid={`${testId}-swatch`} />
+        <button
+          type="button"
+          className="motion-swatch"
+          style={{ background: mixed ? undefined : value }}
+          data-mixed={mixed || undefined}
+          aria-label={`${label}: ${mixed ? t('text.mixed') : value}`}
+          title={t('dialog.pickColor')}
+          data-testid={`${testId}-swatch`}
+        />
       </PopoverTrigger>
       <PopoverContent
         className="motion-color-popover"

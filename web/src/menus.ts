@@ -69,6 +69,8 @@ export const KIT = {
   projectPanel: 'kit:project-panel',
   safe: 'kit:safe-areas',
   alignTo: 'kit:align-to',
+  gridSettings: 'kit:grid-settings',
+  newGuide: 'kit:new-guide',
 } as const
 
 /** View's switches (the engine's own rows, answered by the editor) and the overlay each turns on and off. */
@@ -154,7 +156,20 @@ function overlayEntries(overlays: Overlays): Entry[] {
     const key = OVERLAY_ROWS[command]
     return [OVERLAY_LABELS[key][overlays[key] ? 0 : 1], command]
   }
-  return [row('view.rulers'), SEPARATOR, row('view.guides'), row('view.snapToGuides'), row('view.lockGuides'), ['Clear Guides', 'view.clearGuides'], SEPARATOR, row('view.grid'), row('view.snapToGrid'), row(KIT.safe)]
+  return [
+    row('view.rulers'),
+    SEPARATOR,
+    row('view.guides'),
+    ['New Guide…', KIT.newGuide],
+    row('view.snapToGuides'),
+    row('view.lockGuides'),
+    ['Clear Guides', 'view.clearGuides'],
+    SEPARATOR,
+    row('view.grid'),
+    row('view.snapToGrid'),
+    ['Grid Settings…', KIT.gridSettings],
+    row(KIT.safe),
+  ]
 }
 
 /** What Layer ▸ Align lines layers up with: the composition's frame, or the selected layers' bounds. */

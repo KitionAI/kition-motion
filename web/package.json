@@ -19,7 +19,11 @@
     "test:canvas": "node tests/canvas.mjs chromium && node tests/canvas.mjs webkit",
     "test:footage": "node tests/footage.mjs chromium && node tests/footage.mjs webkit",
     "test:curves": "node tests/curves.mjs chromium && node tests/curves.mjs webkit",
-    "test:expressions": "node tests/expressions.mjs chromium && node tests/expressions.mjs webkit"
+    "test:expressions": "node tests/expressions.mjs chromium && node tests/expressions.mjs webkit",
+    "test:switches": "node tests/switches.mjs chromium && node tests/switches.mjs webkit",
+    "test:align": "node tests/align.mjs chromium && node tests/align.mjs webkit",
+    "test:text": "node tests/text.mjs chromium && node tests/text.mjs webkit",
+    "test:shapes": "node tests/shapes.mjs chromium && node tests/shapes.mjs webkit"
   },
   "dependencies": {
     "@kition/sdk": "npm:@kitionstage/sdk@0.5.2-stage.16",

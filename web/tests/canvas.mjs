@@ -210,7 +210,9 @@ try {
   const factor = scaled[0] / 100
   step('the opposite corner stays where it was', nearAll([corner[0] - factor * 150, corner[1] - factor * 100], [700, 100], 2), JSON.stringify(corner))
   if (shots) {
-    await drag([700 + 450, 100 + 300], [1180, 430], { held: [primary] })
+    // From the scaled box's bottom right corner as it is now: a press anywhere else would start a
+    // marquee that deselects the rectangle (and the side handle below would then move it instead).
+    await drag([700 + 300 * factor, 100 + 200 * factor], [1180, 430], { held: [primary] })
     await page.screenshot({ path: `${shots}phase2-scaling.png` })
     await undo()
   }

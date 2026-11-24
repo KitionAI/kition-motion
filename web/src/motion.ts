@@ -3,8 +3,36 @@ import type { KitEngineInfo, RasterRect } from '@kition/sdk/editor'
 /** One animated property of a layer and its key times, in composition seconds. */
 type Animated = { path: string; name: string; times: number[] }
 
-/** A layer's switches the timeline shows: visible (video), solo, locked, and 3D. */
-export type MotionSwitches = { video: boolean; solo: boolean; locked: boolean; threeD: boolean }
+/** A layer's switches, as the timeline's columns show them (`layer.setSwitch` names in the comments). */
+export type MotionSwitches = {
+  video: boolean
+  audio: boolean
+  solo: boolean
+  /** `lock` */
+  locked: boolean
+  shy: boolean
+  /** Collapse Transformations (precomps) or Continuously Rasterize (vector layers). */
+  collapse: boolean
+  /** On at Best quality, off at Draft (`quality`). */
+  quality: boolean
+  /** `fx` */
+  effects: boolean
+  /** On at Frame Mix (`frameBlend`). */
+  frameBlend: boolean
+  motionBlur: boolean
+  adjustment: boolean
+  threeD: boolean
+}
+
+/** A layer's track matte: the layer whose alpha or luma it shows through, inverted or not. */
+export type MotionMatte = { layer: number; kind: 'alpha' | 'alphaInverted' | 'luma' | 'lumaInverted' }
+
+/** The engine's matte labels (`Alpha Inverted Matte`) as `layer.setTrackMatte` takes them. */
+function matteKind(label: string | undefined): MotionMatte['kind'] {
+  const plain = (label ?? '').toLowerCase()
+  const inverted = plain.includes('invert')
+  return plain.includes('luma') ? (inverted ? 'lumaInverted' : 'luma') : inverted ? 'alphaInverted' : 'alpha'
+}
 
 /** One layer of the composition, top first: `in`, `out`, and `start` in composition seconds. */
 export type MotionLayer = {
@@ -22,6 +50,10 @@ export type MotionLayer = {
   blendMode: string
   /** The id of the layer it follows, or null. */
   parent: number | null
+  /** The paths of its properties selected in the timeline (a click on a property's name). */
+  selectedProps: string[]
+  /** Its track matte, or null. */
+  matte: MotionMatte | null
 }
 
 /** One transform property of the selected layer at the current time. */
@@ -31,7 +63,17 @@ export type MotionProperty = { path: string; name: string; type: 'scalar' | 'vec
 export type MotionInfo = {
   /** The picture the canvas shows, in document pixels. Scrolling stops a margin past it. */
   picture: { width: number; height: number }
-  comp: { id: number; name: string; width: number; height: number; fps: number; duration: number; workArea: [number, number] } | null
+  comp: {
+    id: number
+    name: string
+    width: number
+    height: number
+    fps: number
+    duration: number
+    workArea: [number, number]
+    /** The composition's switches: Hide Shy Layers, and whether Motion Blur and Frame Blending render. */
+    switches: { hideShy: boolean; motionBlur: boolean; frameBlending: boolean }
+  } | null
   time: number
   /** One frame, in seconds. */
   frame: number
@@ -44,6 +86,7 @@ type Inspected = {
   comp?: { id?: number; name?: string; width?: number; height?: number; frameRate?: number; duration?: number } | null
   info?: {
     workArea?: [number, number]
+    switches?: { hideShy?: boolean; motionBlur?: boolean; frameBlending?: boolean }
     layers?: Array<{
       id?: number
       index?: number
@@ -53,10 +96,25 @@ type Inspected = {
       out?: number
       start?: number
       selected?: boolean
-      switches?: { video?: boolean; solo?: boolean; locked?: boolean; three_d?: boolean }
+      switches?: {
+        video?: boolean
+        audio?: boolean
+        solo?: boolean
+        locked?: boolean
+        shy?: boolean
+        collapse?: boolean
+        quality?: string
+        effects?: boolean
+        frame_blend?: string
+        motion_blur?: boolean
+        adjustment?: boolean
+        three_d?: boolean
+      }
+      trackMatte?: { layer?: number; kind?: string } | null
       animated?: Animated[]
       blendMode?: string
       parent?: number | null
+      selectedProps?: string[]
     }>
     transform?: { layer?: number; properties?: MotionProperty[] }
   } | null
@@ -78,6 +136,11 @@ export function describe(info: KitEngineInfo): MotionInfo {
           fps,
           duration: comp.duration ?? 0,
           workArea: inspected.info?.workArea ?? [0, comp.duration ?? 0],
+          switches: {
+            hideShy: inspected.info?.switches?.hideShy === true,
+            motionBlur: inspected.info?.switches?.motionBlur !== false,
+            frameBlending: inspected.info?.switches?.frameBlending !== false,
+          },
         }
       : null,
     time: inspected.time ?? 0,
@@ -91,10 +154,25 @@ export function describe(info: KitEngineInfo): MotionInfo {
       out: layer.out ?? 0,
       start: layer.start ?? 0,
       selected: layer.selected === true,
-      switches: { video: layer.switches?.video !== false, solo: layer.switches?.solo === true, locked: layer.switches?.locked === true, threeD: layer.switches?.three_d === true },
+      switches: {
+        video: layer.switches?.video !== false,
+        audio: layer.switches?.audio !== false,
+        solo: layer.switches?.solo === true,
+        locked: layer.switches?.locked === true,
+        shy: layer.switches?.shy === true,
+        collapse: layer.switches?.collapse === true,
+        quality: (layer.switches?.quality ?? 'Best') === 'Best',
+        effects: layer.switches?.effects !== false,
+        frameBlend: (layer.switches?.frame_blend ?? 'Off') !== 'Off',
+        motionBlur: layer.switches?.motion_blur === true,
+        adjustment: layer.switches?.adjustment === true,
+        threeD: layer.switches?.three_d === true,
+      },
+      matte: layer.trackMatte?.layer != null ? { layer: layer.trackMatte.layer, kind: matteKind(layer.trackMatte.kind) } : null,
       animated: layer.animated ?? [],
       blendMode: layer.blendMode ?? 'Normal',
       parent: layer.parent ?? null,
+      selectedProps: layer.selectedProps ?? [],
     })),
     transform: inspected.info?.transform?.layer != null ? { layer: inspected.info.transform.layer, properties: inspected.info.transform.properties ?? [] } : null,
   }

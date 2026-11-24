@@ -31,6 +31,8 @@ export type NumberFieldProps = {
   /** Decimals shown (2 by default). */
   decimals?: number
   unit?: string
+  /** The selection's characters (or layers) differ here: the field is empty, shows a dash, and takes a typed value for all. */
+  mixed?: boolean
 }
 
 let gestures = 0
@@ -40,17 +42,17 @@ let gestures = 0
  * blur, Escape drops the typed text. With `onScrub`, a press dragged left or right scrubs the
  * value (Shift ×10, Alt ×0.1); a press without a drag starts typing.
  */
-export function NumberField({ value, label, onCommit, testId, readOnly, onScrub, speed = 1, min = -Infinity, max = Infinity, decimals = 2, unit }: NumberFieldProps) {
-  const show = (next: number) => String(rounded(next, decimals))
+export function NumberField({ value, label, onCommit, testId, readOnly, onScrub, speed = 1, min = -Infinity, max = Infinity, decimals = 2, unit, mixed = false }: NumberFieldProps) {
+  const show = (next: number) => (mixed && next === value ? '' : String(rounded(next, decimals)))
   const [text, setText] = useState(show(value))
   const scrub = useRef<Scrub | null>(null)
   const input = useRef<HTMLInputElement>(null)
   useEffect(() => {
     if (!scrub.current?.moved) setText(show(value))
-  }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [value, mixed]) // eslint-disable-line react-hooks/exhaustive-deps
   const commit = () => {
     const next = Number(text.trim().replace(',', '.'))
-    if (text.trim() !== '' && Number.isFinite(next) && next !== rounded(value, decimals)) onCommit(Math.min(max, Math.max(min, next)))
+    if (text.trim() !== '' && Number.isFinite(next) && (mixed || next !== rounded(value, decimals))) onCommit(Math.min(max, Math.max(min, next)))
     else setText(show(value))
   }
   const scrubbing = !!onScrub && !readOnly
@@ -61,6 +63,8 @@ export function NumberField({ value, label, onCommit, testId, readOnly, onScrub,
         className="kui-field motion-number"
         aria-label={label}
         value={text}
+        placeholder={mixed ? '—' : undefined}
+        data-mixed={mixed || undefined}
         inputMode="decimal"
         readOnly={readOnly}
         aria-readonly={readOnly}

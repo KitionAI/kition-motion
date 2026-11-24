@@ -621,12 +621,12 @@ features:
     cases: []
     since: "2026-11-23"
   - id: motion.editor.masks
-    title: "The Pen tool (G) on the rail draws a mask on the selected layer (or the one clicked first): a click places a corner, a drag pulls the point's curve handles, a click on the first point closes the mask, Enter keeps it open, Backspace takes the last point back and Escape drops it; the mask is made in one undo step (mask.new). The Selection tool (and the Pen) show the selected layers' masks: a vertex drags, and once picked its curve handles drag (Alt: one handle alone), one undo step a drag (mask.setVertex). The Properties panel sets each mask's mode (from layer.mask.mode's schema), Inverted, feather, opacity and expansion"
+    title: "The Pen tool (G) on the rail draws a mask on the selected layer, a new path into the selected shape layer, or with no layer selected a new shape layer (the status bar says which): a click places a corner, a drag pulls the point's curve handles, a click on the first point closes the mask, Enter keeps it open, Backspace takes the last point back and Escape drops it; the mask is made in one undo step (mask.new). The Selection tool (and the Pen) show the selected layers' masks: a vertex drags, and once picked its curve handles drag (Alt: one handle alone), one undo step a drag (mask.setVertex). The Properties panel sets each mask's mode (from layer.mask.mode's schema), Inverted, feather, opacity and expansion"
     dimension: [function]
     priority: P1
     status: has
     paths: [bindings/wasm/src/tools/pen.rs, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/tools/tests.rs, bindings/wasm/src/param_types.json, bindings/wasm/src/lib.rs, web/src/properties/PropertyTree.tsx, web/src/timeline/tree.ts, web/src/strings.ts, web/tests/canvas.mjs]
-    gap: "No adding or deleting a vertex on an existing mask, no converting a corner to a curve after drawing, no selecting several vertices or moving a whole mask, no mask feather tool and no RotoBezier; mask vertices take a press before the layer's scale handles, so a mask corner on the layer's corner moves the vertex. Gated by web/tests/canvas.mjs and the pen tests in bindings/wasm/src/tools/tests.rs."
+    gap: "Vertex editing (several selected, box, add, delete, convert, whole path) is motion.editor.shape-paths. No mask feather tool and no RotoBezier; mask vertices take a press before the layer's scale handles, so a mask corner on the layer's corner moves the vertex. Gated by web/tests/canvas.mjs and the pen tests in bindings/wasm/src/tools/tests.rs."
     cases: []
     since: "2026-11-23"
   - id: motion.editor.sequenceAlign
@@ -635,7 +635,7 @@ features:
     priority: P2
     status: has
     paths: [web/src/dialogs.tsx, web/src/menus.ts, web/src/App.tsx, web/src/strings.ts, web/tests/menus.mjs]
-    gap: "The align target is the session's choice, not saved; there is no Align panel, only the menu (and Home has no align buttons). Gated by web/tests/menus.mjs (three layers sequenced with a cross dissolve, aligned left to the selection)."
+    gap: "The Align panel is motion.editor.align. Gated by web/tests/menus.mjs (three layers sequenced with a cross dissolve, aligned left to the selection)."
     cases: []
     since: "2026-11-23"
   - id: motion.editor.ime
@@ -654,5 +654,50 @@ features:
     status: has
     paths: [web/src/pointerFallback.ts, web/src/App.tsx, web/tests/footage.mjs]
     gap: "Observed in Playwright's WebKit (events: mousedown, pointerup, mouseup, click and no pointerdown for the first press, then normal); not checked in Safari itself, which shares the engine. Gated by web/tests/footage.mjs in WebKit (the ruler press right after a drop)."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.text-panel
+    title: "A text layer's Text section in the Properties panel has the Character settings (font family, searchable, and style; size; leading, auto or set; tracking; kerning; fill, on or off; stroke and its width; baseline shift; horizontal and vertical scale; faux bold and italic, all caps, small caps, superscript, subscript) and the Paragraph settings (seven alignments, left, right and first-line indents, space before and after). They read back the whole text, or while it is edited on the canvas the selected characters (at a caret, the style the next typed text takes), from layer.tree's text (character, paragraph, mixed, range); a setting that differs across them shows as mixed, and a change applies to the same characters (layer.setText with their range), one undo step each"
+    dimension: [function]
+    priority: P0
+    status: has
+    paths: [web/src/properties/TextSection.tsx, web/src/properties/PropertiesPanel.tsx, web/src/ValueField.tsx, web/src/properties/ColorSwatch.tsx, crates/engine/engine/src/commands/query.rs, crates/engine/engine/src/tests_text_edit.rs, web/src/strings.ts, web/tests/text.mjs]
+    gap: "No OpenType feature, ligature, tsume, vertical or composer controls in the panel (layer.setText takes them; agents use them); a mixed font family shows an empty font box. Gated by web/tests/text.mjs and the layer.tree read-back test in crates/engine/engine/src/tests_text_edit.rs."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.shapes
+    title: "A shape layer's contents are edited by hand: an Add menu (in the Properties panel's Contents section, on each shape group's header, and on the timeline's Contents and shape group rows) adds a group, rectangle, ellipse, polystar, path, fill, stroke, gradient fill or stroke, merge, offset, pucker & bloat, repeater, round corners, trim paths, twist, wiggle or zig zag (layer.addShapeItem); each item's header turns it off, moves it up or down, duplicates or deletes it (prop.setGroupEnabled, prop.moveGroup, prop.duplicateGroup, prop.removeGroup); a gradient's colours are edited as stops (click the bar to add, drag or arrow keys to move, Delete or the bin to remove, colour, location and opacity of the picked stop), and its start and end points drag on the canvas with the Selection tool; one undo step each"
+    dimension: [function]
+    priority: P0
+    status: has
+    paths: [web/src/properties/ShapeItems.tsx, web/src/properties/ShapeSection.tsx, web/src/properties/PropertyTree.tsx, web/src/properties/GradientEditor.tsx, web/src/properties/PropertyValue.tsx, web/src/timeline/PropertyRows.tsx, bindings/wasm/src/tools/gradient.rs, bindings/wasm/src/tools/tests.rs, web/tests/shapes.mjs]
+    gap: "Gradient opacity is one value per colour stop (the engine keeps separate opacity stops; edited here they follow the colour stops); a radial gradient's highlight has no canvas handle. Gated by web/tests/shapes.mjs and the gradient test in bindings/wasm/src/tools/tests.rs."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.shape-paths
+    title: "With the Selection tool (or the Pen) the selected layers' masks and shape paths show their vertices: a click selects one (Shift adds or removes), a drag moves the selected ones, a drag on empty space while vertices are selected boxes vertices in, a press on a segment selects the whole path to drag (the Pen adds a vertex there, mask.insertVertex), Alt-click turns a vertex corner or smooth (mask.convertVertex), a selected vertex's curve handles drag (Alt: one alone), and Delete removes the selected vertices; one undo step each"
+    dimension: [function]
+    priority: P0
+    status: has
+    paths: [bindings/wasm/src/tools/pen.rs, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/tools/tests.rs, web/tests/shapes.mjs]
+    gap: "Vertices of parametric shapes (rectangle, ellipse, polystar) are not editable until converted to a path (no Convert to Bezier in the UI); no vertex snapping; curve handles show for up to 16 selected vertices. Gated by web/tests/shapes.mjs and the shape path test in bindings/wasm/src/tools/tests.rs."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.switches
+    title: "The timeline's columns beside each layer's name: video, audio, solo and lock left of it, then shy, collapse/continuously rasterize, quality, effects, frame blending, motion blur, adjustment layer and 3D layer, then the blending mode, track matte (alpha or luma, inverted or not, of any other layer) and parent drop-downs; the column header's right-click menu (or its Columns button) shows and hides each column, kept in the browser; a press on a switch toggles it and a drag down its column sets every layer passed alike in one undo step (layer.setSwitch merge); the Shy, Motion Blur and Frame Blending headers turn the composition's Hide Shy Layers (hiding the shy layers' rows), motion blur and frame blending on and off (comp.setSwitch, read back in comp.info's switches)"
+    dimension: [function]
+    priority: P0
+    status: has
+    paths: [web/src/timeline/columns.ts, web/src/timeline/SwitchCells.tsx, web/src/timeline/LayerNames.tsx, web/src/timeline/Timeline.tsx, web/src/motion.ts, crates/engine/engine/src/commands/query.rs, bindings/wasm/src/outputs.json, web/tests/switches.mjs]
+    gap: "By default only the A/V switches show (the names column keeps its width); the layer switches, modes and parent are turned on from the Columns menu. Quality toggles Best and Draft (no Wireframe), frame blending toggles Frame Mix (no Pixel Motion). Gated by web/tests/switches.mjs."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.align
+    title: "The Properties panel's Align section, while layers are selected: align to the composition or to the selection (kept in the browser, the same choice as Layer ▸ Align's row), six align and six distribute buttons, each one undo step (layer.align, layer.distribute); a button that would change nothing now is disabled"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/properties/AlignSection.tsx, web/src/properties/PropertiesPanel.tsx, web/src/App.tsx, web/src/menus.ts, web/tests/align.mjs]
+    gap: "Gated by web/tests/align.mjs."
     cases: []
     since: "2026-11-23"

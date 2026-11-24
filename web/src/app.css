@@ -50,7 +50,8 @@
   align-items: center;
   gap: 8px;
   flex: none;
-  width: 320px;
+  /* The names column grows with the switch and mode columns shown (timeline/columns.ts). */
+  width: var(--motion-names-width, 320px);
   padding: 0 12px;
   overflow: hidden;
   box-sizing: border-box;
@@ -79,6 +80,65 @@
 
 .motion-switch[aria-pressed='true'] {
   color: var(--kit-primary);
+}
+
+/* A switch cell: no frame, the icon alone; one that is off (and has no "off" icon of its own) is faint. */
+button.motion-switch {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+
+button.motion-switch:hover:not(:disabled) {
+  background: var(--kit-hover, rgba(127, 127, 127, 0.15));
+}
+
+button.motion-switch:focus-visible {
+  outline: 2px solid var(--kit-primary);
+  outline-offset: -2px;
+}
+
+.motion-switch[data-off-dim][aria-pressed='false'] {
+  opacity: 0.35;
+}
+
+.motion-column-heads .motion-cell-head {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The blending mode, track matte and parent drop-downs right of the layer switches. */
+.motion-mode-cells {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+  align-items: center;
+}
+
+.motion-mode-cells > * {
+  flex: none;
+  width: 100px;
+  min-width: 0;
+}
+
+.motion-cell-select {
+  height: 22px;
+  padding-block: 0;
+  font-size: 12px;
+}
+
+.motion-mode-cells .motion-cell-head {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Where a dragged row lands. */
@@ -184,6 +244,8 @@
 }
 
 .motion-row-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -344,6 +406,11 @@
   flex: 1;
   min-width: 60px;
   color: var(--kit-text-muted);
+  cursor: default;
+}
+
+.motion-prop-label[aria-pressed='true'] {
+  color: var(--kit-text);
 }
 
 .motion-prop-names .motion-prop-values {
@@ -1415,4 +1482,176 @@
   text-decoration: underline;
   white-space: pre;
   pointer-events: none;
+}
+
+/* What the active tool says, in the status bar: one line, cut short when the bar is narrow. */
+.motion-tool-status {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--kit-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The Align section: what to align to, then a row of align buttons and one of distribute buttons. */
+.motion-align {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.motion-align-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.motion-align-row > .kui-muted {
+  flex: 0 0 64px;
+  font-size: 12px;
+}
+
+/* The Character and Paragraph headings, their switches (pressed, not, or half-pressed for mixed), and a field with a toggle beside it. */
+.motion-text-heading {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.motion-text-scope {
+  margin: 0;
+  font-size: 12px;
+}
+
+.motion-text-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.motion-text-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--kit-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.motion-text-toggle:hover:not(:disabled) {
+  border-color: var(--kit-border);
+}
+
+.motion-text-toggle[aria-pressed='true'] {
+  border-color: var(--kit-primary);
+  background: var(--kit-primary-soft);
+  color: var(--kit-primary);
+}
+
+.motion-text-toggle[aria-pressed='mixed'] {
+  border-color: var(--kit-border);
+  border-style: dashed;
+  color: var(--kit-text);
+}
+
+.motion-text-toggle:focus-visible {
+  outline: 2px solid var(--kit-primary);
+  outline-offset: 1px;
+}
+
+.motion-text-pair {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.motion-swatch[data-mixed] {
+  background: repeating-linear-gradient(45deg, var(--kit-surface) 0 4px, var(--kit-border) 4px 8px);
+}
+
+.motion-number[data-mixed]::placeholder {
+  color: var(--kit-text-muted);
+}
+
+/* A group's header: its twirl and name, then (a shape item's) Add menu and buttons at the right. */
+.motion-prop-group-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.motion-prop-group-head > .motion-prop-group-toggle {
+  flex: 1;
+  min-width: 0;
+}
+
+.motion-item-actions {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.motion-item-actions .kui-icon-button,
+.motion-prop-group-head > .kui-icon-button {
+  width: 22px;
+  height: 22px;
+}
+
+.motion-prop-group[data-off] > .motion-prop-group-head > .motion-prop-group-toggle {
+  opacity: 0.5;
+}
+
+/* A gradient's stops: the bar (over a checkerboard for its opacity), the markers under it, the picked stop's fields. */
+.motion-gradient {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.motion-gradient-bar {
+  height: 18px;
+  border: 1px solid var(--kit-border);
+  border-radius: 3px;
+  cursor: copy;
+}
+
+.motion-gradient-stops {
+  position: relative;
+  height: 14px;
+}
+
+.motion-gradient-stop {
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  padding: 0;
+  border: 2px solid var(--kit-surface);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--kit-border);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.motion-gradient-stop[aria-pressed='true'] {
+  box-shadow: 0 0 0 2px var(--kit-primary);
+}
+
+.motion-gradient-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }

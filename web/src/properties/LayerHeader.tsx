@@ -10,7 +10,7 @@ import type { MotionInfo, MotionLayer } from '../motion'
 const GROUP_STARTS = new Set(['Darken', 'Add', 'Overlay', 'Difference', 'Hue', 'Stencil Alpha'])
 
 /** The blending modes `layer.setBlendMode` takes, from its parameter schema, in the engine's order. */
-function blendModes(schema: Record<string, unknown> | null | undefined): string[] {
+export function blendModes(schema: Record<string, unknown> | null | undefined): string[] {
   const mode = (schema as Record<string, { enum?: unknown }> | null | undefined)?.mode
   return Array.isArray(mode?.enum) ? mode.enum.filter((value): value is string => typeof value === 'string') : []
 }

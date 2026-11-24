@@ -9,6 +9,7 @@ import { KeyDiamond } from './KeyDiamond'
 import { propMeta, type EffectParam } from './meta'
 import { PropertyValue } from './PropertyValue'
 import { useOpen } from './Section'
+import { ShapeAddMenu, ShapeItemActions } from './ShapeItems'
 
 /** What every row of the panel reads: the layer shown, the time, and the layer's mask names. */
 export type PanelFrame = { layer: MotionLayer; time: number; frame: number; readOnly: boolean }
@@ -47,7 +48,7 @@ export function PropertyRow({ node, parent, params, label }: { node: TreeNode; p
   const id = propId(node.path)
   const meta = propMeta(node, parent, params)
   // Text keeps its own field below its name; the rest sit beside it.
-  const wide = node.type === 'text' || (node.type === 'scalar' && !!meta?.slider)
+  const wide = node.type === 'text' || node.type === 'gradient' || (node.type === 'scalar' && !!meta?.slider)
   return (
     <div className="motion-prop" data-wide={wide || undefined} data-testid={`motion-prop-${id}`}>
       <KeyDiamond layer={layer.id} path={node.path} name={name} times={keyTimes(layer, node.path)} time={time} frame={frame} testId={`motion-add-key-${id}`} readOnly={readOnly} expression={node.expression !== undefined} />
@@ -60,16 +61,31 @@ export function PropertyRow({ node, parent, params, label }: { node: TreeNode; p
 }
 
 /** A group inside a section: a twirl that opens and closes it (remembered per layer type), then its rows. */
-export function PropertyGroup({ node, scope, depth, byDefault = false, label }: { node: TreeNode; scope: string; depth: number; byDefault?: boolean; label?: string }) {
+/**
+ * `item`: the group is a shape item (a group, shape, paint or operator in a shape layer's
+ * contents) at `index` of `count` siblings: its header has its own buttons (on/off, up, down,
+ * duplicate, delete), and a shape group an Add menu for what goes inside it.
+ */
+export function PropertyGroup({ node, scope, depth, byDefault = false, label, item }: { node: TreeNode; scope: string; depth: number; byDefault?: boolean; label?: string; item?: { index: number; count: number } }) {
   const { phrase } = useKitEditor()
+  const { layer, readOnly } = usePanel()
   const [open, setOpen] = useOpen(scope, node.path, byDefault)
   const name = label ?? phrase(node.name)
+  const id = pathId(node.path)
   return (
-    <div className="motion-prop-group" data-depth={depth} data-testid={`motion-group-${pathId(node.path)}`}>
-      <button type="button" className="motion-prop-group-toggle" aria-expanded={open} onClick={() => setOpen(!open)} data-testid={`motion-group-toggle-${pathId(node.path)}`}>
-        {open ? <Open size={12} aria-hidden="true" /> : <Closed size={12} aria-hidden="true" />}
-        <span>{name}</span>
-      </button>
+    <div className="motion-prop-group" data-depth={depth} data-testid={`motion-group-${id}`} data-off={node.enabled === false || undefined}>
+      <span className="motion-prop-group-head">
+        <button type="button" className="motion-prop-group-toggle" aria-expanded={open} onClick={() => setOpen(!open)} data-testid={`motion-group-toggle-${id}`}>
+          {open ? <Open size={12} aria-hidden="true" /> : <Closed size={12} aria-hidden="true" />}
+          <span>{name}</span>
+        </button>
+        {item && node.uid != null ? (
+          <>
+            {node.match === 'group' ? <ShapeAddMenu layer={layer.id} group={node.uid} testId={`motion-shape-add-${id}`} readOnly={readOnly} compact /> : null}
+            <ShapeItemActions layer={layer.id} uid={node.uid} enabled={node.enabled !== false} index={item.index} count={item.count} name={name} testId={`motion-item-${id}`} readOnly={readOnly} />
+          </>
+        ) : null}
+      </span>
       {open && node.mask ? <MaskSettings node={node} mask={node.mask} /> : null}
       {open ? <PropertyChildren node={node} scope={scope} depth={depth + 1} /> : null}
     </div>
@@ -111,11 +127,19 @@ function MaskSettings({ node, mask }: { node: TreeNode; mask: { mode: string; in
 /** A group's children: properties as rows, groups as nested groups (empty ones left out). */
 export function PropertyChildren({ node, scope, depth, params }: { node: TreeNode; scope: string; depth: number; params?: readonly EffectParam[] }) {
   const { layer } = usePanel()
+  // A shape layer's contents (or a shape group's): every group in it is a shape item, ordered.
+  const items = layer.type === 'Shape' && node.match === 'contents' && node.path.startsWith('contents') ? (node.children ?? []).filter((child) => child.children) : null
   return (
     <div className="motion-props">
       {(node.children ?? [])
-        .filter((child) => visible(child, layer) && (!child.children || hasRows(child, layer)))
-        .map((child) => (child.children ? <PropertyGroup key={child.path} node={child} scope={scope} depth={depth} /> : <PropertyRow key={child.path} node={child} parent={node} params={params} />))}
+        .filter((child) => visible(child, layer) && (!child.children || hasRows(child, layer) || items?.includes(child)))
+        .map((child) =>
+          child.children ? (
+            <PropertyGroup key={child.path} node={child} scope={scope} depth={depth} item={items?.includes(child) ? { index: items.indexOf(child), count: items.length } : undefined} />
+          ) : (
+            <PropertyRow key={child.path} node={child} parent={node} params={params} />
+          ),
+        )}
     </div>
   )
 }
