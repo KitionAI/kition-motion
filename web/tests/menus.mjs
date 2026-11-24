@@ -219,12 +219,19 @@ async function finishDialog(ctx, leaf, state) {
       if (await dialogOpen(kit)) throw new Error('Escape did not close Find Effect')
       return 'lists effects and asks for a selection first'
     }
+    // A CC effect reads in Chinese after its prefix and is still found by its English name.
+    await page.keyboard.type('Ball Action')
+    await page.waitForTimeout(200)
+    const cc = await field('motion-effect-list').locator('[role=option]').first().textContent()
+    if (!cc.includes('CC 球体动作')) throw new Error(`typing Ball Action does not find CC 球体动作: ${cc}`)
+    await page.keyboard.press(`${ctx.primary}+KeyA`)
+    await page.keyboard.press('Backspace')
     await page.keyboard.type('高斯')
     const first = await field('motion-effect-list').locator('[role=option]').first().textContent()
     if (!first.includes('高斯模糊')) throw new Error(`typing 高斯 does not find Gaussian Blur first: ${first}`)
     await confirm()
     if ((await revision()) === startRevision) throw new Error('no effect applied')
-    return 'found 高斯模糊 by typing and applied it'
+    return 'found CC 球体动作 by its English name, then 高斯模糊 by typing, and applied it'
   }
   if (await field('motion-preset-dialog').count()) {
     await field('motion-preset-name').fill('Walk preset')

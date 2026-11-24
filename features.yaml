@@ -558,12 +558,12 @@ features:
     cases: []
     since: "2026-11-23"
   - id: motion.editor.effectNames
-    title: "Effects and their categories read in Chinese in the Effect menu, its ribbon and Find Effect (高斯模糊, 色相/饱和度, 湍流置换 …), bar the CC effects, which keep their English names; Find Effect also finds every effect by its English name, and the most common effect parameters read in Chinese in the Properties panel"
+    title: "Effects and their categories read in Chinese in the Effect menu, its ribbon and Find Effect (高斯模糊, 色相/饱和度, 湍流置换 …), the CC effects with their "CC" prefix kept before a Chinese name (CC 球体动作); Find Effect also finds every effect by its English name, and the most common effect parameters read in Chinese in the Properties panel"
     dimension: [function]
     priority: P2
     status: has
     paths: [web/src/effectNames.ts, web/src/strings.ts, web/src/effects.tsx, web/tests/menus.mjs]
-    gap: "About 1500 less common effect parameters keep their English names. Gated by web/tests/menus.mjs (Find Effect by 高斯)."
+    gap: "About 1500 less common effect parameters keep their English names. Gated by web/tests/menus.mjs (Find Effect by 高斯, and CC Ball Action by its English name)."
     cases: []
     since: "2026-11-23"
   - id: motion.editor.timeStretch

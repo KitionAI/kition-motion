@@ -539,7 +539,7 @@ export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN 
 /**
  * Kition Motion ships no Chinese catalog: the Chinese names of its menus, menu items, Home's
  * buttons, effect categories, effects and their common parameters, property and layer-type
- * names. Effect names not listed here (the CC effects) stay in English.
+ * names. The CC effects keep their "CC" prefix before a Chinese name; an effect not listed stays in English.
  */
 export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
   // Effect names and common effect parameters (effectNames.ts); the entries below win.
