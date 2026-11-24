@@ -93,6 +93,7 @@ impl MotionDocument {
                 }
                 self.pen_down(st, p);
             }
+            Tool::Orbit | Tool::Track | Tool::Dolly => self.camera_down(st, p),
             Tool::Hand | Tool::Zoom => {}
         }
     }
@@ -212,6 +213,7 @@ impl MotionDocument {
             self.begin_move(st, start);
         }
         match &mut st.gesture {
+            Gesture::Camera { .. } => self.camera_drag(st, p),
             Gesture::PenPoint { .. } => Self::pen_drag(st, p),
             Gesture::Vertex { .. } | Gesture::Vertices { .. } | Gesture::VertexBox { .. } => self.path_drag(st, p, mods),
             Gesture::GradientPoint { .. } => self.gradient_drag(st, p),
@@ -367,7 +369,9 @@ impl MotionDocument {
             Gesture::Move { merge, .. } => Some(merge.as_str()),
             Gesture::Scale(s) => Some(s.merge.as_str()),
             Gesture::Rotate(t) => Some(t.merge.as_str()),
-            Gesture::Vertex { merge, .. } | Gesture::Vertices { merge, .. } | Gesture::GradientPoint { merge, .. } => Some(merge.as_str()),
+            Gesture::Vertex { merge, .. } | Gesture::Vertices { merge, .. } | Gesture::GradientPoint { merge, .. } | Gesture::Camera { merge, .. } => {
+                Some(merge.as_str())
+            }
             _ => None,
         };
         // Only a gesture that changed something left its step on top of the history.

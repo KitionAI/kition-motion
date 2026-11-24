@@ -71,6 +71,10 @@ export const KIT = {
   alignTo: 'kit:align-to',
   gridSettings: 'kit:grid-settings',
   newGuide: 'kit:new-guide',
+  roi: 'kit:region-of-interest',
+  clearRoi: 'kit:clear-region-of-interest',
+  skipFrames: 'kit:skip-frames',
+  purgeCache: 'kit:purge-cache',
 } as const
 
 /** View's switches (the engine's own rows, answered by the editor) and the overlay each turns on and off. */
@@ -91,6 +95,23 @@ export const RESOLUTIONS: ReadonlyArray<readonly [command: string, label: string
   ['view.res.third', 'Third', 3],
   ['view.res.quarter', 'Quarter', 4],
 ]
+
+/** View ▸ 3D View's rows (`view.3d.*`) and the view each shows (`view.get3D`'s `view`). */
+export const THREE_D_VIEWS: ReadonlyArray<readonly [command: string, label: string, view: string]> = [
+  ['view.3d.activeCamera', 'Active Camera', 'activeCamera'],
+  ['view.3d.front', 'Front', 'front'],
+  ['view.3d.left', 'Left', 'left'],
+  ['view.3d.top', 'Top', 'top'],
+  ['view.3d.back', 'Back', 'back'],
+  ['view.3d.right', 'Right', 'right'],
+  ['view.3d.bottom', 'Bottom', 'bottom'],
+  ['view.3d.custom1', 'Custom View 1', 'custom1'],
+  ['view.3d.custom2', 'Custom View 2', 'custom2'],
+  ['view.3d.custom3', 'Custom View 3', 'custom3'],
+]
+
+/** What View ▸ 3D View needs to know: whether the composition has 3D layers, the view shown, and whether it has a camera layer. */
+export type ThreeDView = { has3D: boolean; view: string; camera: boolean }
 
 /** A switch's label: what a click on it does now. */
 const OVERLAY_LABELS: Record<keyof Overlays, readonly [on: string, off: string]> = {
@@ -140,6 +161,12 @@ export const TRIED_ROWS: Readonly<Record<string, Record<string, unknown>>> = {
   // Add Expression acts on the properties selected in the timeline: hidden until one is.
   'prop.setExpression': {},
   'layer.freezeFrame': {},
+  // Layer Styles ▸ Remove All: hidden unless a selected layer has a style.
+  'layer.style.removeAll': {},
+  // Enable Time Remapping: hidden unless a footage or composition layer is selected.
+  'layer.enableTimeRemap': {},
+  // Convert to Bezier Path: hidden unless a selected shape layer has a Rectangle, Ellipse or Polystar Path.
+  'path.convertToBezier': {},
 }
 
 /** Layer ▸ Arrange's rows and where each moves the selected layers (`layer.arrange`'s `to`). */
@@ -175,7 +202,7 @@ function overlayEntries(overlays: Overlays): Entry[] {
 /** What Layer ▸ Align lines layers up with: the composition's frame, or the selected layers' bounds. */
 export type AlignTo = 'composition' | 'selection'
 
-const MENUS = (overlays: Overlays, alignTo: AlignTo): ReadonlyArray<readonly [string, readonly Entry[]]> => [
+const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean): ReadonlyArray<readonly [string, readonly Entry[]]> => [
   [
     'File',
     [
@@ -241,6 +268,7 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo): ReadonlyArray<readonly [st
       SEPARATOR,
       ['Pre-compose', 'layer.precompose'],
       ['Mask', [['New Mask', 'layer.addMask']]],
+      ['Mask and Shape Path', [['Convert to Bezier Path', 'path.convertToBezier']]],
       [
         'Layer Styles',
         [
@@ -253,6 +281,8 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo): ReadonlyArray<readonly [st
           ['Color Overlay', 'layer.style.colorOverlay'],
           ['Gradient Overlay', 'layer.style.gradientOverlay'],
           ['Stroke', 'layer.style.stroke'],
+          SEPARATOR,
+          ['Remove All', 'layer.style.removeAll'],
         ],
       ],
       [
@@ -272,6 +302,7 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo): ReadonlyArray<readonly [st
       [
         'Time',
         [
+          [remapOn ? 'Disable Time Remapping' : 'Enable Time Remapping', 'layer.enableTimeRemap', 'Cmd+Alt+T'],
           ['Time Stretch…', 'layer.timeStretch'],
           ['Time-Reverse Layer', 'layer.timeReverse'],
           ['Freeze Frame', 'layer.freezeFrame'],
@@ -350,6 +381,12 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo): ReadonlyArray<readonly [st
       ['Zoom 100%', KIT.zoom100],
       SEPARATOR,
       ['Resolution', RESOLUTIONS.map(([command, label]) => [label, command] as const)],
+      ['3D View', [...THREE_D_VIEWS.map(([command, label]) => [label, command] as const), SEPARATOR, ['Reset 3D View', 'view.reset3DView']]],
+      ['Region of Interest', KIT.roi],
+      ['Clear Region of Interest', KIT.clearRoi],
+      SEPARATOR,
+      [skipFrames ? 'Play Every Frame' : 'Skip Frames to Keep Real Time', KIT.skipFrames],
+      ['Purge Preview Cache', KIT.purgeCache],
       SEPARATOR,
       ...overlayEntries(overlays),
       SEPARATOR,
@@ -367,8 +404,8 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo): ReadonlyArray<readonly [st
 ]
 
 /** Every menu row, in menu order: the Effect menu (every effect the engine has, by category) after Layer. */
-export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo): MenuRow[] {
-  return MENUS(overlays, alignTo).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
+export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo, skipFrames = true, remapOn = false): MenuRow[] {
+  return MENUS(overlays, alignTo, skipFrames, remapOn).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
 }
 
 /** Menus kept in a read-only document. */
@@ -391,10 +428,10 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
  * Video with none hidden, Unlock All with none locked, Trim to Work Area while the work area is
  * the whole composition, Solid Settings unless the selected layer is a solid, effects without a
  * selection, Last Effect until one was applied here, Fit in Window while the view is fitted and
- * Zoom 100% at 100%, the resolution the canvas shows, the Keyframe Interpolation rows without selected keyframes, and the
+ * Zoom 100% at 100%, the resolution the canvas shows, View ▸ 3D View without 3D layers (and the view shown), the Keyframe Interpolation rows without selected keyframes, and the
  * `KIT_RUNS` and `TRIED_ROWS` rows that would change nothing now (`idle`).
  */
-export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean; preview: number; alignTo: AlignTo }, keysSelected: boolean, idle: ReadonlySet<string>) {
+export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean; preview: number; alignTo: AlignTo; threeD: ThreeDView; region: boolean; cached: boolean }, keysSelected: boolean, idle: ReadonlySet<string>) {
   const layers = info?.layers ?? []
   const selected = layers.some((layer) => layer.selected)
   const comp = info?.comp
@@ -410,6 +447,13 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { 
   if (view.actual) hidden.add(KIT.zoom100)
   // The resolution the canvas shows now.
   for (const [command, , divisor] of RESOLUTIONS) if (divisor === view.preview) hidden.add(command)
+  // View ▸ 3D View: only with 3D layers, and not the view shown now; Reset 3D View resets the
+  // view shown (the active camera's needs a camera layer).
+  for (const [command, , shown] of THREE_D_VIEWS) if (!view.threeD?.has3D || shown === view.threeD.view) hidden.add(command)
+  if (!view.threeD?.has3D || (view.threeD.view === 'activeCamera' && !view.threeD.camera)) hidden.add('view.reset3DView')
+  // Clear Region of Interest with none set; Purge Preview Cache with no frame kept.
+  if (!view.region) hidden.add(KIT.clearRoi)
+  if (!view.cached) hidden.add(KIT.purgeCache)
   if (!keysSelected) for (const row of INTERPOLATIONS) hidden.add(row.command)
   for (const command of idle) hidden.add(command)
   // Aligning to the selection needs two or more selected layers.

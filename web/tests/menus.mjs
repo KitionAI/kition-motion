@@ -58,7 +58,7 @@ async function snapshot({ page, kit }) {
   const inspected = await page.evaluate(async () => window.devHost.connection().ai.inspect())
   const enabled = await page.evaluate(async () => (await window.devHost.connection().ai.commands('')).filter((command) => command.enabled !== false).map((command) => command.id).sort().join(' '))
   const files = await page.evaluate(() => [...window.devHost.files.keys()].sort().join(' '))
-  const view = `${await kit.getByTestId('motion-workspace').getAttribute('data-view')} ${await kit.getByTestId('motion-workspace').getAttribute('data-overlays')} ${await kit.getByTestId('motion-workspace').getAttribute('data-resolution')} ${await kit.getByTestId('motion-workspace').getAttribute('data-align-to')}`
+  const view = `${await kit.getByTestId('motion-workspace').getAttribute('data-view')} ${await kit.getByTestId('motion-workspace').getAttribute('data-overlays')} ${await kit.getByTestId('motion-workspace').getAttribute('data-resolution')} ${await kit.getByTestId('motion-workspace').getAttribute('data-align-to')} ${await kit.getByTestId('motion-workspace').getAttribute('data-roi')} ${await kit.getByTestId('motion-workspace').getAttribute('data-skip-frames')} cache:${Number(await kit.getByTestId('motion-workspace').getAttribute('data-cached')) > 0} ${await kit.getByTestId('motion-workspace').getAttribute('data-view3d')}`
   const play = await kit.getByTestId('motion-play').getAttribute('aria-label')
   const render = await kit.getByTestId('motion-render').textContent()
   const d = inspected.details ?? {}

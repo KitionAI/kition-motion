@@ -16,6 +16,7 @@ pub mod descriptions;
 mod design;
 mod field_holds;
 mod files;
+mod frames;
 mod movie;
 mod param_keys;
 mod params;
@@ -168,14 +169,6 @@ impl Importer for LentImporter {
 /// The transform properties a properties panel shows, in After Effects' order.
 const TRANSFORM: [&str; 5] = ["transform/anchor", "transform/position", "transform/scale", "transform/rotation", "transform/opacity"];
 
-/// The last full frame: its project revision, composition time, and pixels.
-struct Cached {
-    key: (u64, Option<u64>, Tick, u32),
-    rgba: Arc<Vec<u8>>,
-    width: u32,
-    height: u32,
-}
-
 /// One open Kition Motion project.
 pub struct MotionDocument {
     session: Session,
@@ -184,7 +177,8 @@ pub struct MotionDocument {
     pool: Arc<MediaPool>,
     /// Footage files already lent to the pool.
     lent: HashSet<String>,
-    frame: RefCell<Option<Cached>>,
+    /// The viewer's frames already drawn (see [`frames`]).
+    frames: RefCell<frames::FrameCache>,
     /// The movie the Export dialog is rendering, a little at a time (kept per thread, see
     /// [`movie::ExportKey`]).
     export: movie::ExportKey,
@@ -195,6 +189,8 @@ pub struct MotionDocument {
     /// View ▸ Resolution: the composition renders every `preview`-th pixel (1 Full, 2 Half,
     /// 3 Third, 4 Quarter) and the picture is that render blown up to the composition's size.
     preview: u32,
+    /// The Pen's option on a shape layer: draw a mask on it (true) or a new shape path in it.
+    pub(crate) pen_masks: bool,
 }
 
 /// A native host (`bindings/headless`) needs the document to be `Send`: checked here, where the
@@ -244,11 +240,12 @@ impl MotionDocument {
             services,
             pool,
             lent: HashSet::new(),
-            frame: RefCell::new(None),
+            frames: RefCell::new(frames::FrameCache::default()),
             export: movie::ExportKey::new(),
             snap_guides: true,
             snap_grid: false,
             preview: 1,
+            pen_masks: false,
         };
         doc.lend_footage();
         doc
@@ -278,30 +275,97 @@ impl MotionDocument {
         self.session.active_comp().map(|comp| (comp.width, comp.height))
     }
 
-    /// The active composition's frame at the current time, full size, over its background colour
-    /// as the viewer shows it.
+    /// What the viewer's frame now depends on besides the project (see [`frames::FrameKey`]).
+    fn frame_key(&self) -> Option<frames::FrameKey> {
+        let comp_id = self.session.active_comp_id()?;
+        let comp = self.session.project.comp(comp_id)?;
+        let time = comp.frame_rate.snap(self.session.time());
+        let view = self
+            .session
+            .view_camera(comp_id)
+            .map(|camera| {
+                let mut bits: Vec<u64> = camera.view.0.iter().flatten().map(|v| v.to_bits()).collect();
+                bits.extend([camera.eye.x, camera.eye.y, camera.eye.z, camera.zoom].iter().map(|v| v.to_bits()));
+                bits.push(u64::from(camera.ortho));
+                bits
+            })
+            .unwrap_or_default();
+        let roi = self.region(comp).map(|r| r.iter().map(|v| v.to_bits()).collect()).unwrap_or_default();
+        Some(frames::FrameKey { comp: comp_id, time, preview: self.preview, view, roi })
+    }
+
+    /// The region of interest the viewer renders (View ▸ Region of Interest), inside the
+    /// composition's frame; none when there is none or it misses the frame.
+    fn region(&self, comp: &kition_motion_project::Comp) -> Option<[f64; 4]> {
+        let [x, y, w, h] = self.session.state.region_of_interest?;
+        let (cw, ch) = (f64::from(comp.width.max(1)), f64::from(comp.height.max(1)));
+        let (x0, y0) = (x.max(0.0).floor(), y.max(0.0).floor());
+        let (x1, y1) = ((x + w).min(cw).ceil(), (y + h).min(ch).ceil());
+        [x0, y0, x1, y1].iter().all(|v| v.is_finite()).then_some(())?;
+        (x1 - x0 >= 1.0 && y1 - y0 >= 1.0).then_some([x0, y0, x1 - x0, y1 - y0])
+    }
+
+    /// The active composition's frame at the current time, at the composition's size, over its
+    /// background colour as the viewer shows it: through the 3D view chosen (View ▸ 3D View), only
+    /// the region of interest rendered (the rest grey), at View ▸ Resolution. A frame drawn
+    /// before (same revision and settings) comes from the frame cache.
     fn frame(&self) -> Result<(Arc<Vec<u8>>, u32, u32), String> {
         let comp_id = self.session.active_comp_id().ok_or("no composition is open")?;
-        let time = self.session.time();
-        let key = (self.session.revision, Some(comp_id.0), time, self.preview);
-        if let Some(cached) = self.frame.borrow().as_ref().filter(|cached| cached.key == key) {
-            return Ok((cached.rgba.clone(), cached.width, cached.height));
+        let key = self.frame_key().ok_or("no composition is open")?;
+        let revision = self.session.revision;
+        if let Some(drawn) = self.frames.borrow_mut().get(revision, &key) {
+            return Ok((drawn.rgba, drawn.width, drawn.height));
         }
+        let started = web_time::Instant::now();
         let comp = self.session.project.comp(comp_id).ok_or("no composition is open")?;
         let scale = 1.0 / f64::from(self.preview.max(1));
-        let mut renderer = Renderer::new(&self.session.project, &*self.session.footage, RenderOpts { scale, ..Default::default() });
+        let roi = self.region(comp);
+        let opts = RenderOpts { scale, view: self.session.view_camera(comp_id), roi, ..Default::default() };
+        let mut renderer = Renderer::new(&self.session.project, &*self.session.footage, opts);
         renderer.expr = self.session.expr.as_deref();
         renderer.cache = Some(&self.session.layer_cache);
-        let image = renderer.comp_frame(comp_id, time);
-        let rendered = image.to_rgba8_over(comp.background);
-        let (rgba, width, height) = if self.preview > 1 {
-            let (width, height) = (comp.width.max(1), comp.height.max(1));
-            (Arc::new(blow_up(&rendered, image.width, image.height, width, height)), width, height)
+        let image = renderer.comp_frame(comp_id, key.time);
+        let mut rendered = image.to_rgba8_over(comp.background);
+        let (mut width, mut height) = (image.width, image.height);
+        if let Some([x, y, _, _]) = roi {
+            // The region drawn where it is in the frame; the rest of the frame grey.
+            let (fw, fh) = (((f64::from(comp.width) * scale).round() as u32).max(1), ((f64::from(comp.height) * scale).round() as u32).max(1));
+            let mut full = [48u8, 48, 48, 255].repeat(fw as usize * fh as usize);
+            let (ox, oy) = ((x * scale).round() as usize, (y * scale).round() as usize);
+            for row in 0..height as usize {
+                let take = (width as usize).min((fw as usize).saturating_sub(ox)) * 4;
+                let from = row * width as usize * 4;
+                let to = ((oy + row) * fw as usize + ox) * 4;
+                if let (Some(dst), Some(src)) = (full.get_mut(to..to + take), rendered.get(from..from + take)) {
+                    dst.copy_from_slice(src);
+                }
+            }
+            rendered = full;
+            (width, height) = (fw, fh);
+        }
+        let (rgba, width, height) = if self.preview > 1 || (roi.is_some() && (width != comp.width || height != comp.height)) {
+            let (to_w, to_h) = (comp.width.max(1), comp.height.max(1));
+            (Arc::new(blow_up(&rendered, width, height, to_w, to_h)), to_w, to_h)
         } else {
-            (Arc::new(rendered), image.width, image.height)
+            (Arc::new(rendered), width, height)
         };
-        *self.frame.borrow_mut() = Some(Cached { key, rgba: rgba.clone(), width, height });
+        let ms = started.elapsed().as_secs_f64() * 1000.0;
+        self.frames.borrow_mut().put(revision, key, rgba.clone(), width, height, ms);
         Ok((rgba, width, height))
+    }
+
+    /// What the frame cache holds for the viewer's settings now (the frames of the active
+    /// composition, by number from its start), how many bytes, and the frames shown, rendered and
+    /// found in the cache since the document opened (playback's frame rate is read from them).
+    pub fn preview_cache(&self) -> Value {
+        let key = self.frame_key();
+        let rate = self.session.active_comp().map(|comp| comp.frame_rate);
+        self.frames.borrow().report(self.session.revision, key.as_ref(), |t| rate.map_or(0, |rate| rate.frame_at(t)))
+    }
+
+    /// View ▸ Purge ▸ Image Cache: drops every frame kept.
+    pub fn purge_preview_cache(&mut self) {
+        self.frames.borrow_mut().clear();
     }
 
     /// What `comp.info` reports for the active composition (layers, timing), with each layer's
@@ -435,6 +499,12 @@ impl MotionDocument {
         Ok(())
     }
 
+    /// The Pen's option on a shape layer: `true` draws a mask on it, `false` (the default) a new
+    /// path in its contents.
+    pub fn set_pen_masks(&mut self, masks: bool) {
+        self.pen_masks = masks;
+    }
+
     /// Stops the export and drops what it wrote; whether one was running.
     pub fn export_cancel(&mut self) -> bool {
         let Some(mut export) = self.export.take() else { return false };
@@ -546,6 +616,9 @@ pub const TRIED_COMMANDS: &[&str] = &[
     "layer.sequence",
     "keys.timeReverse",
     "prop.setExpression",
+    "path.convertToBezier",
+    "layer.style.removeAll",
+    "layer.enableTimeRemap",
 ];
 
 /// The longest stretch of sound [`MotionDocument::mix_audio`] mixes per call, in seconds.
@@ -1271,6 +1344,24 @@ pub mod web {
         #[wasm_bindgen(js_name = setPreviewResolution)]
         pub fn set_preview_resolution(&mut self, divisor: u32) -> Result<(), JsError> {
             self.0.set_preview_resolution(divisor).map_err(|message| JsError::new(&message))
+        }
+
+        /// The Pen's option on a shape layer (see [`MotionDocument::set_pen_masks`]).
+        #[wasm_bindgen(js_name = setPenMasks)]
+        pub fn set_pen_masks(&mut self, masks: bool) {
+            self.0.set_pen_masks(masks)
+        }
+
+        /// The frame cache for the viewer's settings now, as JSON (see [`MotionDocument::preview_cache`]).
+        #[wasm_bindgen(js_name = previewCache)]
+        pub fn preview_cache(&self) -> String {
+            self.0.preview_cache().to_string()
+        }
+
+        /// Drops every frame the cache keeps (see [`MotionDocument::purge_preview_cache`]).
+        #[wasm_bindgen(js_name = purgePreviewCache)]
+        pub fn purge_preview_cache(&mut self) {
+            self.0.purge_preview_cache()
         }
 
         /// Stops the export and keeps no file (see [`MotionDocument::export_cancel`]).

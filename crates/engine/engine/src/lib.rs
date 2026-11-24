@@ -1132,6 +1132,8 @@ mod tests_sequence;
 #[cfg(test)]
 mod tests_settings;
 #[cfg(test)]
+mod tests_shape_convert;
+#[cfg(test)]
 mod tests_stubs;
 #[cfg(test)]
 mod tests_styles;
@@ -1143,6 +1145,8 @@ mod tests_template_props;
 mod tests_template_props_more;
 #[cfg(test)]
 mod tests_text;
+#[cfg(test)]
+mod tests_text_anim_parts;
 #[cfg(test)]
 mod tests_text_edit;
 #[cfg(test)]

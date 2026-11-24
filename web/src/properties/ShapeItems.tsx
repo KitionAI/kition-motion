@@ -1,5 +1,7 @@
 import { ArrowDownIcon, ArrowUpIcon, CopyIcon, EyeIcon, EyeOffIcon, PlusIcon, TrashIcon } from '@kition/tessera/icons/react'
-import { Button, IconButton, MenuButton, MenuItem, MenuSeparator, useKitEditor } from '@kition/sdk/editor'
+import type { TreeNode } from '../timeline/tree'
+import { reveal } from './Section'
+import { Button, ContextMenu, IconButton, MenuButton, MenuItem, MenuSeparator, useKitEditor, type ContextMenuPoint } from '@kition/sdk/editor'
 
 /**
  * What a shape layer's Add menu offers (`layer.addShapeItem`'s kinds), in its order: the shapes,
@@ -32,10 +34,24 @@ export const SHAPE_KINDS: ReadonlyArray<readonly [kind: string, label: string] |
  * The Add menu of a shape layer's contents (or of one of its groups, `group` its uid): a new
  * shape, paint or path operator at the end of that group, one undo step (`layer.addShapeItem`).
  */
-export function ShapeAddMenu({ layer, group, testId, readOnly, compact = false }: { layer: number; group?: number; testId: string; readOnly: boolean; compact?: boolean }) {
+/** The paints: one added goes above the group's existing paints, so it shows in front of them. */
+const PAINTS = new Set(['fill', 'stroke', 'gfill', 'gstroke'])
+
+export function ShapeAddMenu({ layer, group, items, testId, readOnly, compact = false }: { layer: number; group?: number; items?: readonly TreeNode[]; testId: string; readOnly: boolean; compact?: boolean }) {
   const { run, t, phrase } = useKitEditor()
+  const add = async (kind: string) => {
+    const first = PAINTS.has(kind) ? (items ?? []).findIndex((item) => PAINTS.has(item.match ?? '')) : -1
+    const answer = await run('layer.addShapeItem', { layer, kind, ...(group != null ? { group } : {}), ...(first >= 0 ? { index: first + 1 } : {}) })
+    // The new item opens in the panel and scrolls into view.
+    try {
+      const path = (JSON.parse(answer ?? 'null') as { path?: string } | null)?.path
+      if (path) reveal('Shape', path)
+    } catch {
+      // No path in the answer: nothing to reveal.
+    }
+  }
   return (
-    <MenuButton
+    <MenuButton placement="auto"
       align="start"
       trigger={({ open, toggle }) =>
         compact ? (
@@ -52,7 +68,7 @@ export function ShapeAddMenu({ layer, group, testId, readOnly, compact = false }
         entry === '---' ? (
           <MenuSeparator key={`-${at}`} />
         ) : (
-          <MenuItem key={entry[0]} label={phrase(entry[1])} onSelect={() => void run('layer.addShapeItem', { layer, kind: entry[0], ...(group != null ? { group } : {}) })} testId={`${testId}-${entry[0]}`} />
+          <MenuItem key={entry[0]} label={phrase(entry[1])} onSelect={() => void add(entry[0])} testId={`${testId}-${entry[0]}`} />
         ),
       )}
     </MenuButton>
@@ -74,5 +90,22 @@ export function ShapeItemActions({ layer, uid, enabled, index, count, name, test
       <IconButton icon={CopyIcon} label={t('shape.item.duplicate', { name })} disabled={readOnly} onClick={() => void run('prop.duplicateGroup', { layer, prop: uid })} data-testid={`${testId}-duplicate`} />
       <IconButton icon={TrashIcon} label={t('shape.item.remove', { name })} disabled={readOnly} onClick={() => void run('prop.removeGroup', { layer, prop: uid })} data-testid={`${testId}-remove`} />
     </span>
+  )
+}
+
+/** The shape items Convert to Bezier Path turns into a Path item (`path.convertToBezier` with `shape`). */
+export const PARAMETRIC_SHAPES = new Set(['rect', 'ellipse', 'star'])
+
+/**
+ * The right-click menu of a Rectangle, Ellipse or Polystar Path item (its group header in the
+ * Properties panel or its row in the timeline): Convert to Bezier Path, which makes it a Path item
+ * with the same outline whose vertices the Pen and Selection tools edit (one undo step).
+ */
+export function ShapeItemMenu({ layer, uid, name, at, onClose, testId }: { layer: number; uid: number; name: string; at: ContextMenuPoint | null; onClose: () => void; testId: string }) {
+  const { run, phrase } = useKitEditor()
+  return (
+    <ContextMenu at={at} onClose={onClose} label={name} testId={testId}>
+      <MenuItem label={phrase('Convert to Bezier Path')} onSelect={() => void run('path.convertToBezier', { layer, shape: uid })} testId={`${testId}-convert`} />
+    </ContextMenu>
   )
 }

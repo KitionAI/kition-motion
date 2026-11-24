@@ -49,7 +49,7 @@ export function AlignSection({ scope, alignTo, onAlignTo, idle, onCommand, readO
     <IconButton key={command} icon={icon} label={phrase(label)} disabled={readOnly || idle.has(command)} onClick={() => onCommand(command)} data-testid={`motion-align-${command.slice(4)}`} />
   )
   return (
-    <Section scope={scope} id="align" title={t('align.title')} testId="motion-section-align">
+    <Section scope={scope} id="align" title={t('align.title')} testId="motion-section-align" byDefault={false}>
       <div className="motion-align" data-testid="motion-align-panel">
         <div className="motion-align-row">
           <span className="kui-muted">{t('align.to')}</span>

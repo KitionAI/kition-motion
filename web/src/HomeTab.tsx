@@ -5,8 +5,8 @@ import { keyAt } from './properties/KeyDiamond'
 import { NEW_LAYERS } from './Transport'
 import { EFFECT_PREFIX, FIND_EFFECT } from './effects'
 
-/** The layers Home's New Layer menu makes: the transport's, then a camera and a light. */
-const HOME_LAYERS = [...NEW_LAYERS, { id: 'camera', command: 'layer.newCamera', params: {} }, { id: 'light', command: 'layer.newLight', params: {} }] as const
+/** The layers Home's New Layer menu makes: the transport's (a camera and a light among them). */
+const HOME_LAYERS = NEW_LAYERS
 
 /** Effects applied most, by their display names (`effect.apply` looks a name up). */
 const EFFECTS = ['Gaussian Blur', 'Glow', 'Drop Shadow', 'Fill', 'Tint', 'Hue/Saturation']

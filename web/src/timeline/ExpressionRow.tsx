@@ -8,6 +8,19 @@ export type ExprError = { layer: number; path: string; message: string }
  * An expression error in the editor's language: the engine's message (from the expression
  * language, in English) reworded where its form is known, else kept after a translated headline.
  */
+/**
+ * What a syntax error means, in the person's words: the engine wraps the expression in braces
+ * before parsing it, so a brace it did not expect at the end (or an unexpected end) means the
+ * expression stops short; another unexpected token is named as the person typed it.
+ */
+function syntaxDetail(detail: string, t: (key: string, values?: Record<string, string | number>) => string) {
+  if (/unexpected (token\s*'?\}'?|end)|end of (input|file)/i.test(detail)) return t('expr.syntax.incomplete')
+  if (/unterminated (string|template)/i.test(detail)) return t('expr.syntax.string')
+  const token = /unexpected token\s*'([^']+)'/i.exec(detail)?.[1]
+  if (token && token !== '{') return t('expr.syntax.unexpected', { token })
+  return t('expr.syntax.generic')
+}
+
 export function explainError(message: string, t: (key: string, values?: Record<string, string | number>) => string) {
   // The engine says where: `Error at line 3: ReferenceError: foo is not defined`, or `Error: …`
   // when it cannot tell the line.
@@ -24,7 +37,7 @@ export function explainError(message: string, t: (key: string, values?: Record<s
   for (const [pattern, key] of rules) {
     const found = pattern.exec(body)
     if (found) {
-      said = t(key, { name: found[1] ?? '', detail: found[1] ?? '' })
+      said = t(key, { name: found[1] ?? '', detail: key === 'expr.error.syntax' ? syntaxDetail(found[1] ?? '', t) : (found[1] ?? '') })
       break
     }
   }

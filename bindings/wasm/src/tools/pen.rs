@@ -27,6 +27,8 @@ use crate::MotionDocument;
 const MAX_DEPTH: usize = 32;
 /// Curve handles show for at most this many selected vertices.
 const HANDLE_LIMIT: usize = 16;
+/// A path vertex's colour (amber: not the selection blue of the layer's handles).
+const VERTEX: [u8; 4] = [255, 170, 0, 255];
 /// Points sampled per segment to find a press on it.
 const SEGMENT_SAMPLES: usize = 32;
 /// How far (screen pixels) a press travels before it is a drag.
@@ -226,7 +228,8 @@ pub(super) fn path_overlays(session: &Session, out: &mut Vec<ToolOverlay>) {
                     }
                 }
             }
-            out.push(ToolOverlay::Anchor { x: v[0], y: v[1], color: SELECTION, filled: on, size: 6.0 });
+            // Smaller than the transform box's handles and in another colour, so they never read as them.
+            out.push(ToolOverlay::Anchor { x: v[0], y: v[1], color: VERTEX, filled: on, size: 5.0 });
         }
     }
 }
@@ -338,8 +341,12 @@ impl MotionDocument {
         if draft.points.len() < 2 {
             return;
         }
-        let shape_layer =
-            draft.layer.filter(|id| self.session.active_comp().and_then(|c| c.layer(*id)).is_some_and(|l| matches!(l.source, LayerSource::Shape)));
+        // On a shape layer the path is a new shape path, unless the Pen draws masks (the editor's
+        // Pen option, `setPenMasks`).
+        let shape_layer = draft
+            .layer
+            .filter(|_| !self.pen_masks)
+            .filter(|id| self.session.active_comp().and_then(|c| c.layer(*id)).is_some_and(|l| matches!(l.source, LayerSource::Shape)));
         let Some(layer) = draft.layer.filter(|_| shape_layer.is_none()) else {
             let vertices: Vec<Pt> = draft.points.iter().map(|(p, _)| *p).collect();
             let outs: Vec<Pt> = draft.points.iter().map(|(_, t)| *t).collect();

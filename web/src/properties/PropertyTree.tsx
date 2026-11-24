@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { ChevronDownIcon as Open, ChevronRightIcon as Closed } from '@kition/tessera/icons/react'
 import { Checkbox, Select, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
@@ -8,8 +8,9 @@ import { pathId } from '../timeline/PropertyRows'
 import { KeyDiamond } from './KeyDiamond'
 import { propMeta, type EffectParam } from './meta'
 import { PropertyValue } from './PropertyValue'
-import { useOpen } from './Section'
-import { ShapeAddMenu, ShapeItemActions } from './ShapeItems'
+import { takeReveal, useOpen } from './Section'
+import { PARAMETRIC_SHAPES, ShapeAddMenu, ShapeItemActions, ShapeItemMenu } from './ShapeItems'
+import type { ContextMenuPoint } from '@kition/sdk/editor'
 
 /** What every row of the panel reads: the layer shown, the time, and the layer's mask names. */
 export type PanelFrame = { layer: MotionLayer; time: number; frame: number; readOnly: boolean }
@@ -42,17 +43,28 @@ export function propId(path: string) {
  * are its effect's parameters (from `effect.list`), when it belongs to one.
  */
 export function PropertyRow({ node, parent, params, label }: { node: TreeNode; parent?: TreeNode; params?: readonly EffectParam[]; label?: string }) {
-  const { phrase } = useKitEditor()
+  const { phrase, run } = useKitEditor()
   const { layer, time, frame, readOnly } = usePanel()
   const name = label ?? phrase(node.name)
   const id = propId(node.path)
+  const chosen = layer.selectedProps.includes(node.path)
   const meta = propMeta(node, parent, params)
   // Text keeps its own field below its name; the rest sit beside it.
   const wide = node.type === 'text' || node.type === 'gradient' || (node.type === 'scalar' && !!meta?.slider)
   return (
     <div className="motion-prop" data-wide={wide || undefined} data-testid={`motion-prop-${id}`}>
       <KeyDiamond layer={layer.id} path={node.path} name={name} times={keyTimes(layer, node.path)} time={time} frame={frame} testId={`motion-add-key-${id}`} readOnly={readOnly} expression={node.expression !== undefined} />
-      <span className="motion-prop-name kui-muted" title={name}>
+      {/* A click on the name selects the property (Shift or Cmd adds it), as on the timeline. */}
+      <span
+        className="motion-prop-name kui-muted"
+        title={name}
+        role="button"
+        tabIndex={-1}
+        aria-pressed={chosen}
+        data-selected={chosen || undefined}
+        onClick={(event) => void run('prop.select', { layer: layer.id, path: node.path, add: event.shiftKey || event.metaKey || event.ctrlKey })}
+        data-testid={`motion-prop-name-${id}`}
+      >
         {name}
       </span>
       <PropertyValue layer={layer} node={node} meta={meta} time={time} name={name} testId={`motion-value-${id}`} readOnly={readOnly} />
@@ -72,20 +84,39 @@ export function PropertyGroup({ node, scope, depth, byDefault = false, label, it
   const [open, setOpen] = useOpen(scope, node.path, byDefault)
   const name = label ?? phrase(node.name)
   const id = pathId(node.path)
+  // A Rectangle, Ellipse or Polystar Path's header: a right-click converts it to a Bezier path.
+  const [menu, setMenu] = useState<ContextMenuPoint | null>(null)
+  // An item just added from an Add menu scrolls into view.
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (takeReveal(node.path)) box.current?.scrollIntoView({ block: 'nearest' })
+  })
+  const convertible = item != null && node.uid != null && PARAMETRIC_SHAPES.has(node.match ?? '') && !readOnly
   return (
-    <div className="motion-prop-group" data-depth={depth} data-testid={`motion-group-${id}`} data-off={node.enabled === false || undefined}>
-      <span className="motion-prop-group-head">
+    <div ref={box} className="motion-prop-group" data-depth={depth} data-testid={`motion-group-${id}`} data-off={node.enabled === false || undefined}>
+      <span
+        className="motion-prop-group-head"
+        onContextMenu={
+          convertible
+            ? (event) => {
+                event.preventDefault()
+                setMenu({ x: event.clientX, y: event.clientY })
+              }
+            : undefined
+        }
+      >
         <button type="button" className="motion-prop-group-toggle" aria-expanded={open} onClick={() => setOpen(!open)} data-testid={`motion-group-toggle-${id}`}>
           {open ? <Open size={12} aria-hidden="true" /> : <Closed size={12} aria-hidden="true" />}
           <span>{name}</span>
         </button>
         {item && node.uid != null ? (
           <>
-            {node.match === 'group' ? <ShapeAddMenu layer={layer.id} group={node.uid} testId={`motion-shape-add-${id}`} readOnly={readOnly} compact /> : null}
+            {node.match === 'group' ? <ShapeAddMenu layer={layer.id} group={node.uid} items={node.children?.find((child) => child.match === 'contents')?.children} testId={`motion-shape-add-${id}`} readOnly={readOnly} compact /> : null}
             <ShapeItemActions layer={layer.id} uid={node.uid} enabled={node.enabled !== false} index={item.index} count={item.count} name={name} testId={`motion-item-${id}`} readOnly={readOnly} />
           </>
         ) : null}
       </span>
+      {convertible && node.uid != null ? <ShapeItemMenu layer={layer.id} uid={node.uid} name={name} at={menu} onClose={() => setMenu(null)} testId={`motion-item-menu-${id}`} /> : null}
       {open && node.mask ? <MaskSettings node={node} mask={node.mask} /> : null}
       {open ? <PropertyChildren node={node} scope={scope} depth={depth + 1} /> : null}
     </div>

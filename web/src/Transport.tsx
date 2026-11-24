@@ -10,6 +10,8 @@ export const NEW_LAYERS = [
   { id: 'solid', command: 'layer.newSolid', params: {} },
   { id: 'null', command: 'layer.newNull', params: {} },
   { id: 'adjustment', command: 'layer.newAdjustment', params: {} },
+  { id: 'camera', command: 'layer.newCamera', params: {} },
+  { id: 'light', command: 'layer.newLight', params: {} },
 ] as const
 
 /**
@@ -47,6 +49,7 @@ export function Transport({
   onCommand,
   trail,
   onBack,
+  playbackRate,
 }: {
   info: MotionInfo
   playing: boolean
@@ -56,6 +59,8 @@ export function Transport({
   onCommand: (command: string) => void
   trail: readonly number[]
   onBack: (comp: number) => void
+  /** The frames per second playback shows (null before it has measured), and Skip Frames to Keep Real Time. */
+  playbackRate?: { fps: number | null; skip: boolean; onSkip: () => void }
 }) {
   const { run, t } = useKitEditor()
   const readOnly = useReadOnly()
@@ -89,6 +94,24 @@ export function Transport({
         {timecode(info.time, fps)}
       </span>
       <span className="motion-timecode kui-muted">/ {timecode(info.comp?.duration ?? 0, fps)}</span>
+      {playbackRate ? (
+        <>
+          <Button
+            variant="ghost"
+            aria-pressed={playbackRate.skip}
+            title={playbackRate.skip ? t('skipFrames.on') : t('skipFrames.off')}
+            onClick={playbackRate.onSkip}
+            data-testid="motion-skip-frames"
+          >
+            {t('skipFrames.label')}
+          </Button>
+          {playing && playbackRate.fps !== null ? (
+            <span className="motion-fps kui-muted" role="status" data-testid="motion-fps" data-fps={playbackRate.fps.toFixed(2)}>
+              {t('fps.shown', { fps: playbackRate.fps.toFixed(1), of: Math.round(fps * 100) / 100 })}
+            </span>
+          ) : null}
+        </>
+      ) : null}
       <span style={{ flex: 1 }} />
     </div>
   )

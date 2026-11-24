@@ -235,7 +235,7 @@ export function ColumnHeads({ info, side, shown, readOnly }: { info: MotionInfo;
         const Shown = ICONS[column.id][0]
         if (comp && info.comp) {
           const on = info.comp.switches[comp.field]
-          const label = t(`compSwitch.${comp.name}`)
+          const label = `${t(`compSwitch.${comp.name}`)}${t('compSwitch.hint')}`
           return (
             <button
               key={column.id}
@@ -253,7 +253,7 @@ export function ColumnHeads({ info, side, shown, readOnly }: { info: MotionInfo;
           )
         }
         return (
-          <span key={column.id} className="motion-switch motion-cell-head kui-muted" title={t(`switch.${column.id}`)} aria-hidden="true">
+          <span key={column.id} className="motion-switch motion-cell-head kui-muted" role="columnheader" title={t(`switch.${column.id}`)} aria-label={t(`switch.${column.id}`)} data-testid={`motion-column-head-${column.id}`}>
             <Shown size={13} aria-hidden="true" />
           </span>
         )

@@ -669,7 +669,7 @@ pub fn description(id: &str) -> &'static str {
             "Adds a mask to `layer`: `shape` rect, ellipse, rounded, polygon or star; `rect` [x, y, w, h] in layer pixels (default the whole layer); `mode` add, subtract and so on. Use mask commands to edit its path, feather and opacity."
         }
         "layer.addShapeItem" => {
-            "Adds an item to a shape layer's contents: `kind` group, rect, ellipse, star, polygon, path, fill, stroke, gradient fill/stroke, trim, repeater, round corners, offset, pucker, twist, zig zag, wiggle or merge; `group` to nest. Returns {uid, path}."
+            "Adds an item to a shape layer's contents: `kind` group, rect, ellipse, star, polygon, path, fill, stroke, gradient fill/stroke, trim, repeater, round corners, offset, pucker, twist, zig zag, wiggle or merge; `group` to nest; `index` (1-based) to place it in the group (by default last: a paint added above the existing paints shows in front of them). Returns {uid, path}."
         }
         "layer.addTextAnimator" => {
             "Adds a text animator with the given `properties` (position, scale, rotation, opacity, fillColor, tracking, blur, characterOffset…) and a range selector to a text layer; animate the selector to reveal per character. `perChar3d` enables 3D."
@@ -781,7 +781,7 @@ pub fn description(id: &str) -> &'static str {
         "layer.newLight" => {
             "Adds a light layer: `kind` Parallel, Spot (default), Point, Ambient or Environment, with color, intensity, cone, falloff and shadow options. Lights affect 3D layers; Environment lights from an equirectangular image layer."
         }
-        "layer.newModel" => "New 3D model layer from a model footage item (`item`) or a file (`path`, imported first).",
+        "layer.newModel" => "New 3D model layer from a model footage item (`shape`) or a file (`path`, imported first).",
         "layer.newNull" => "A new null at `at` (comp space) named `name`, made unique in the comp (expressions find layers by name). Returns (layer id, name).",
         "layer.newPrimitive" => {
             "Adds a 3D primitive layer: `kind` cube, sphere, plane, torus, cone or cylinder with size options, `position` [x, y, z] and material (`baseColor`, `metallic` and `roughness` as percents 0 to 100, `emissive`, shadows). Switches the comp to Advanced 3D."
@@ -1052,7 +1052,7 @@ pub fn description(id: &str) -> &'static str {
             "Paints one stroke on a layer (adds a Paint effect if needed): `kind` brush, clone or eraser, `points` [[x, y, pressure]] in effect space, at `time`, with colour, size and opacity options; `durationMode` writeOn animates it."
         }
         "path.convertToBezier" => {
-            "Turns RotoBezier masks back into ordinary Bezier masks with editable tangents (for `mask` or the selected ones on `layer`). The shape stays the same."
+            "Turns RotoBezier masks back into ordinary Bezier masks with editable tangents (for `mask` or the selected ones on `layer`). The shape stays the same. On a shape layer, `shape` (the uid of a Rectangle, Ellipse or Polystar Path; without `shape` and `mask`, every one of a layer with no mask to act on) becomes a Path item with the same outline at the current time, whose vertices mask.setVertex and the like then edit (keyframes and expressions of the shape's size, position and radii are dropped); answers {paths: [uid]}."
         }
         "path.freeTransform" => {
             "Free Transform Points: scale / rotate / move the selected vertices (or whole masks) about an anchor (default: the centre of their bounding box), at the current time."
@@ -1147,7 +1147,7 @@ pub fn description(id: &str) -> &'static str {
             "Links one property to another with an expression, as the pick whip does: `target` {layer, path or prop, dimension} sets e.g. thisComp.layer(\"A\").transform.position[0]; `expression` with `range` inserts the reference into existing text."
         }
         "prop.removeGroup" => {
-            "Deletes the property group `prop` (uid) from `layer`, with everything under it: a mask, an effect, a shape group, a text animator or a layer style."
+            "Deletes the property group `prop` (uid) from `layer`, with everything under it: a mask, an effect, a shape group, a text animator, one of its selectors or a layer style; or one property a text animator animates (its uid under the animator's Properties)."
         }
         "prop.renameGroup" => {
             "Renames a property group (`prop` uid: an effect, mask, shape group or text animator) on `layer` to `name`. Expressions referring to the old name aren't updated."

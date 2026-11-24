@@ -1208,7 +1208,14 @@ fn add_shape_item(s: &mut Session, p: &Value) -> Result<Value> {
                 .ok_or_else(|| bad("layer.addShapeItem", "no such group"))?,
             None => contents,
         };
-        target.children.push(g.into());
+        // `index`: its 1-based place in the group (a paint added above the existing paints shows
+        // in front of them); past the end, or absent, it goes last.
+        let at = p
+            .get("index")
+            .and_then(Value::as_u64)
+            .and_then(|i| usize::try_from(i).ok())
+            .map_or(target.children.len(), |i| i.saturating_sub(1).min(target.children.len()));
+        target.children.insert(at, g.into());
         Ok(uid)
     })?;
     // The new item's property path, ready for prop.set / add_keyframe (`contents/trim#2/end`).
@@ -1574,7 +1581,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Add (Shape)",
             [],
             None,
-            "{layer?, kind: group|rect|ellipse|star|polygon|path|fill|stroke|gfill|gstroke|trim|repeater|round|offset|pucker|twist|zigzag|wiggle|merge, group?: uid|path} → {uid, path}",
+            "{layer?, kind: group|rect|ellipse|star|polygon|path|fill|stroke|gfill|gstroke|trim|repeater|round|offset|pucker|twist|zigzag|wiggle|merge, group?: uid|path, index?: 1-based place in the group (default last)} → {uid, path}",
             has_layers,
             add_shape_item
         ),

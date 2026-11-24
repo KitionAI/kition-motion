@@ -267,8 +267,9 @@ try {
   // pointerdown; the editor makes one from its mousedown, pointerFallback.ts).
   const now = await seekRuler(200)
   step('the first press after a drag-and-drop moves the current time', now > 0, String(now))
-  const target = centre(await kit.getByTestId('motion-timeline-rows').boundingBox())
+  // Over the tracks (right of the names and their columns, however wide those are), half way along the ruler.
   const rulerBox = await kit.getByTestId('motion-ruler').boundingBox()
+  const target = { x: rulerBox.x + rulerBox.width / 2, y: centre(await kit.getByTestId('motion-timeline-rows').boundingBox()).y }
   const viewStart = Number(await kit.getByTestId('motion-ruler').getAttribute('data-view-start'))
   const viewSpan = Number(await kit.getByTestId('motion-ruler').getAttribute('data-view-span'))
   const fps = (await details()).comp.frameRate ?? 30
@@ -457,7 +458,7 @@ try {
   await until(async () => (await kit.getByTestId('motion-export-stopped').count()) === 1, 50)
   step('while it renders the button reads 停止导出, and once stopped the dialog says so above its settings', stopLabel.includes('停止导出') && (await kit.getByTestId('motion-export-stopped').count()) === 1 && (await kit.getByTestId('motion-export-dialog-cancel').textContent()) === '取消', stopLabel)
   const stopped = await page.evaluate(() => [...window.devHost.files.keys()].filter((name) => /\.(mp4|webm|gif)$/.test(name)))
-  step('Cancel stops the export, writes no file and keeps the dialog', stopped.length === 0 && (await kit.getByTestId('motion-export-dialog').count()) === 1 && (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('已取消导出')), JSON.stringify(stopped))
+  step('Cancel stops the export, writes no file and keeps the dialog', stopped.length === 0 && (await kit.getByTestId('motion-export-dialog').count()) === 1 && (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('导出已停止，没有写入文件')), JSON.stringify(stopped))
   await kit.getByTestId('motion-export-range').selectOption('workArea')
   await kit.getByTestId('motion-export-size').selectOption('half')
   if (shots) await page.screenshot({ path: `${shots}phase4-export-dialog.png` })
@@ -469,6 +470,29 @@ try {
   })
   step('Render writes an MP4 beside the project', movie?.name === 'Comp 1.mp4' && movie.size > 1000, JSON.stringify(movie))
   step('says which file it wrote, and closes', (await kit.locator('.kui-toast').allTextContents()).some((text) => text.includes('Comp 1.mp4')) && (await kit.getByTestId('motion-export-dialog').count()) === 0)
+  // Stop export, then Cancel pressed again at once: the dialog closes as soon as the render has stopped.
+  const files = async () => (await page.evaluate(() => [...window.devHost.files.keys()])).filter((name) => /\.(mp4|webm|gif)$/.test(name)).length
+  const written = await files()
+  await kit.getByTestId('motion-render').click()
+  await kit.getByTestId('motion-export-dialog-ok').click()
+  await until(async () => (await exportProgress())?.done > 0, 150)
+  await kit.getByTestId('motion-export-dialog-cancel').click()
+  const relabelled = await until(async () => (await kit.getByTestId('motion-export-dialog-cancel').textContent()) === '取消', 30)
+  await kit.getByTestId('motion-export-dialog-cancel').click()
+  await until(async () => (await kit.getByTestId('motion-export-dialog').count()) === 0, 100)
+  step('after 停止导出 the button reads 取消 at once, and one more click on it closes the dialog without a file', relabelled && (await kit.getByTestId('motion-export-dialog').count()) === 0 && (await files()) === written)
+  // Escape while it renders stops the export and closes the dialog; Escape on its settings closes it.
+  await kit.getByTestId('motion-render').click()
+  await kit.getByTestId('motion-export-dialog-ok').click()
+  await until(async () => (await exportProgress())?.done > 0, 150)
+  await page.keyboard.press('Escape')
+  await until(async () => (await kit.getByTestId('motion-export-dialog').count()) === 0, 100)
+  step('Escape while it renders stops it and closes the dialog', (await kit.getByTestId('motion-export-dialog').count()) === 0 && (await files()) === written)
+  await kit.getByTestId('motion-render').click()
+  await kit.getByTestId('motion-export-dialog').waitFor()
+  await page.keyboard.press('Escape')
+  await until(async () => (await kit.getByTestId('motion-export-dialog').count()) === 0, 30)
+  step('Escape closes the Export dialog', (await kit.getByTestId('motion-export-dialog').count()) === 0)
 
   // 14. A file that is not a picture, movie or sound, dropped from the computer: a message, nothing imported.
   const count = (await items()).length

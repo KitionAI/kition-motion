@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { useEngineQuery, useKitEditor, type KitCanvasView } from '@kition/sdk/editor'
+import { ContextMenu, MenuItem, useEngineQuery, useKitEditor, type ContextMenuPoint, type KitCanvasView } from '@kition/sdk/editor'
 import type { ViewStore } from './CanvasScrollbars'
 
 /** What View shows over the composition and what a moved layer snaps to: the person's view, not the document. */
@@ -47,7 +47,7 @@ const GRAB = 4
 type Dragging = { index: number | null; vertical: boolean; position: number; pointerId: number; overRuler: boolean }
 
 /** The view, a frame after the canvas reports it (as the scrollbars read it). */
-function useView(views: ViewStore) {
+export function useView(views: ViewStore) {
   const [view, setView] = useState<KitCanvasView | null>(views.get)
   useEffect(() => {
     let frame = 0
@@ -88,6 +88,8 @@ export function CanvasGuides({ views, comp, overlays, gridSpacing, readOnly }: {
   const info = useEngineQuery<{ guides?: Guide[] }>('comp.info', {})
   const guides = Array.isArray(info?.guides) ? info.guides : []
   const [dragging, setDragging] = useState<Dragging | null>(null)
+  // A guide's right-click menu: Delete Guide, Clear Guides.
+  const [guideMenu, setGuideMenu] = useState<{ index: number; at: ContextMenuPoint } | null>(null)
   const box = useRef<HTMLDivElement>(null)
   if (!view || !(view.zoom > 0)) return null
   const sx = (x: number) => (x - view.x) * view.zoom
@@ -120,7 +122,9 @@ export function CanvasGuides({ views, comp, overlays, gridSpacing, readOnly }: {
     if (!dragging || dragging.pointerId !== event.pointerId) return
     setDragging(null)
     if (cancelled) return
-    const removed = onRuler(event)
+    // Onto a ruler, or out of the composition's frame: the guide goes.
+    const out = compAt(event, dragging.vertical)
+    const removed = onRuler(event) || out < 0 || out > (dragging.vertical ? comp.width : comp.height)
     const orientation = dragging.vertical ? 'vertical' : 'horizontal'
     // Where the pointer is let go (WebKit may not report the last moves before the release).
     const position = compAt(event, dragging.vertical)
@@ -140,6 +144,7 @@ export function CanvasGuides({ views, comp, overlays, gridSpacing, readOnly }: {
   const gridLines = (count: number, spacing: number) => (spacing * view.zoom >= 6 ? Array.from({ length: Math.floor(count / spacing) + 1 }, (_, at) => at * spacing) : [])
   const shown = guides.map((guide, index) => ({ ...guide, index, position: dragging?.index === index ? dragging.position : guide.position }))
   return (
+    <>
     <div
       ref={box}
       className="motion-guides"
@@ -200,6 +205,10 @@ export function CanvasGuides({ views, comp, overlays, gridSpacing, readOnly }: {
                 style={vertical ? { left: at - GRAB, width: 2 * GRAB } : { top: at - GRAB, height: 2 * GRAB }}
                 title={t('guides.dragHint')}
                 onPointerDown={(event) => start(event, guide.index, vertical)}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  setGuideMenu({ index: guide.index, at: { x: event.clientX, y: event.clientY } })
+                }}
                 data-testid={`motion-guide-${guide.index}`}
                 data-position={guide.position}
               />
@@ -225,5 +234,10 @@ export function CanvasGuides({ views, comp, overlays, gridSpacing, readOnly }: {
         </>
       ) : null}
     </div>
+    <ContextMenu at={guideMenu?.at ?? null} onClose={() => setGuideMenu(null)} label={t('guides.menu')} testId="motion-guide-menu">
+      <MenuItem label={t('guides.delete')} onSelect={() => guideMenu && void run('view.removeGuide', { index: guideMenu.index })} testId="motion-guide-menu-delete" />
+      <MenuItem label={t('guides.clear')} onSelect={() => void run('view.clearGuides', {})} testId="motion-guide-menu-clear" />
+    </ContextMenu>
+    </>
   )
 }

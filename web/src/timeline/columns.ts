@@ -32,11 +32,11 @@ export const SWITCH_COLUMNS: readonly SwitchColumn[] = [
 export const COLUMN_IDS: readonly ColumnId[] = [...SWITCH_COLUMNS.map((column) => column.id), 'mode', 'matte', 'parent']
 
 /**
- * Shown until the person changes it: the A/V switches (the names column keeps the width it always
- * had); the layer switches, the modes and the parent are a right-click on the column header (or
- * the Columns button) away, and the last three are in the Properties panel too.
+ * Shown until the person changes it: the A/V switches, the Shy, fx, Motion Blur and 3D switches
+ * and the Parent column (the names column stays readable at 1440 px); the other switches and the
+ * modes are a right-click on the column header (or the Columns button) away.
  */
-const DEFAULT_SHOWN: readonly ColumnId[] = SWITCH_COLUMNS.filter((column) => column.side === 'av').map((column) => column.id)
+const DEFAULT_SHOWN: readonly ColumnId[] = ['video', 'audio', 'solo', 'lock', 'shy', 'effects', 'motionBlur', 'threeD', 'parent']
 
 /** Widths (CSS pixels) of a switch cell and of a drop-down cell; the name column's own width. */
 export const SWITCH_WIDTH = 22
@@ -79,4 +79,34 @@ export function namesWidth(shown: ReadonlySet<ColumnId>) {
   const switches = SWITCH_COLUMNS.filter((column) => shown.has(column.id)).length
   const menus = (['mode', 'matte', 'parent'] as const).filter((id) => shown.has(id)).length
   return NAMES_BASE + switches * SWITCH_WIDTH + menus * MENU_WIDTH
+}
+
+const EXTRA_KEY = 'kition-motion.timeline-names-extra'
+
+/**
+ * The pixels the person dragged the split between the names (with their columns) and the tracks
+ * by, kept in this browser: the names column is its columns' width plus this, at least 160 px and
+ * leaving the tracks at least 200 px of `total`.
+ */
+export function useNamesSplit() {
+  const [extra, setExtraState] = useState(() => {
+    const stored = Number(globalThis.localStorage?.getItem(EXTRA_KEY))
+    return Number.isFinite(stored) ? stored : 0
+  })
+  const setExtra = useCallback((next: number) => {
+    setExtraState(next)
+    try {
+      localStorage.setItem(EXTRA_KEY, String(Math.round(next)))
+    } catch {
+      // Kept for this page only.
+    }
+  }, [])
+  return { extra, setExtra }
+}
+
+/** The names column's width: its columns' plus the dragged `extra`, within `total` (the timeline's width; 0 when unknown). */
+export function splitWidth(shown: ReadonlySet<ColumnId>, extra: number, total: number) {
+  const wanted = namesWidth(shown) + extra
+  const most = total > 0 ? Math.max(160, total - 200) : Infinity
+  return Math.round(Math.min(most, Math.max(160, wanted)))
 }

@@ -347,9 +347,19 @@ try {
   await kit.getByTestId('motion-add-key-position').click()
   await until(async () => (await times(SHAPE, POSITION)).length === 2)
   step('at a keyframe it removes it', (await times(SHAPE, POSITION)).length === 2, JSON.stringify(await times(SHAPE, POSITION)))
+  // Alt-click adds an expression (as on the timeline's stopwatch), and again removes it; the keys stay.
+  const expressionOf = async (path) => (await query('prop.get', { layer: SHAPE, path }))?.expression
   await kit.getByTestId('motion-add-key-position').click({ modifiers: ['Alt'] })
+  await until(async () => typeof (await expressionOf(POSITION)) === 'string')
+  step('Alt-click adds an expression and keeps the keyframes', typeof (await expressionOf(POSITION)) === 'string' && (await times(SHAPE, POSITION)).length === 2, JSON.stringify(await expressionOf(POSITION)))
+  await kit.getByTestId('motion-add-key-position').click({ modifiers: ['Alt'] })
+  await until(async () => typeof (await expressionOf(POSITION)) !== 'string')
+  step('Alt-click again removes it', typeof (await expressionOf(POSITION)) !== 'string' && (await times(SHAPE, POSITION)).length === 2)
+  // 清除动画 in the diamond's menu clears the animation; one undo brings the keyframes back.
+  await kit.getByTestId('motion-add-key-position').click({ button: 'right' })
+  await kit.getByTestId('motion-add-key-position-menu-clear').click()
   await until(async () => (await times(SHAPE, POSITION)).length === 0)
-  step('Alt-click clears the animation', (await times(SHAPE, POSITION)).length === 0, JSON.stringify(await times(SHAPE, POSITION)))
+  step('清除动画 in the diamond’s menu clears the animation', (await times(SHAPE, POSITION)).length === 0, JSON.stringify(await times(SHAPE, POSITION)))
   await undo()
   await until(async () => (await times(SHAPE, POSITION)).length === 2)
   step('one undo brings the keyframes back', (await times(SHAPE, POSITION)).length === 2)

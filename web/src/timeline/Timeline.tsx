@@ -3,7 +3,7 @@ import { Columns3Icon as ColumnsIcon, SplineIcon as Spline } from '@kition/tesse
 import { Scrollbar } from '@kition/tessera/ui'
 import { Button, ContextMenu, Dialog, MenuItem, TextInput, useEngineQuery, useKitEditor, useReadOnly, type ContextMenuPoint } from '@kition/sdk/editor'
 import { blendModes } from '../properties/LayerHeader'
-import { COLUMN_IDS, namesWidth, useColumns } from './columns'
+import { COLUMN_IDS, namesWidth, splitWidth, useColumns, useNamesSplit } from './columns'
 import { ColumnHeads, useSwitchDrag } from './SwitchCells'
 import type { MotionInfo, MotionLayer } from '../motion'
 import { TimelineContext, type TimelineFrame } from './context'
@@ -16,7 +16,7 @@ import { keyId, keysOf, layerKeyMarks, type SelectedKey } from './keys'
 import { LayerNames } from './LayerNames'
 import { MarkerFlags, markerParams, type MarkerRef } from './Markers'
 import { PropertyRows } from './PropertyRows'
-import { Ruler } from './Ruler'
+import { CacheBar, Ruler } from './Ruler'
 import { SOLO_PATHS, type Twirl } from './tree'
 import { useKeyGestures } from './useKeyGestures'
 import { useRowDrag } from './useRowDrag'
@@ -49,7 +49,8 @@ function useWidth() {
  * (useKeyGestures); a click on empty timeline deselects. The timeline zooms and scrolls in time
  * (useTimeView), and the ruler sets the work area.
  */
-export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose, onCommand }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys; onOpenPrecomp: (layer: number) => void; onPrecompose: () => void; onCommand: (command: string) => void }) {
+/** `cached`: the frames the preview's frame cache holds (frame numbers), drawn as a bar along the ruler. */
+export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose, onCommand, cached = [] }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys; onOpenPrecomp: (layer: number) => void; onPrecompose: () => void; onCommand: (command: string) => void; cached?: readonly number[] }) {
   const { run, t, phrase, byId } = useKitEditor()
   // Hide Shy Layers (the composition's switch): the shy layers leave the timeline, not the picture.
   const hideShy = all.comp?.switches.hideShy === true && all.layers.some((layer) => layer.switches.shy)
@@ -212,11 +213,18 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
     setMenu({ at, layer: layer.id, layers: layer.selected ? selected : [layer.id], precomp: layer.type === 'Composition' })
   }
 
+  // The split between the names (with their columns) and the tracks drags; kept in the browser.
+  const split = useNamesSplit()
+  const timelineBox = useRef<HTMLDivElement>(null)
+  const total = timelineBox.current?.getBoundingClientRect().width ?? 0
+  const names = splitWidth(columns.shown, split.extra, total)
+  const splitDrag = useRef<{ pointerId: number; x: number; from: number } | null>(null)
   return (
     <TimelineContext.Provider value={frame}>
       <div
         className="motion-timeline"
-        style={{ '--motion-names-width': `${namesWidth(columns.shown)}px` } as CSSProperties}
+        style={{ '--motion-names-width': `${names}px` } as CSSProperties}
+        ref={timelineBox}
         data-hide-shy={hideShy || undefined}
         data-view={`${view.start} ${view.span}`}
         // A press anywhere but on a marker leaves the marker: Delete is the layers' and keyframes' again.
@@ -249,6 +257,32 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
               }}
               data-testid="motion-column-header"
             >
+              <span
+                className="motion-names-split"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={t('timeline.split')}
+                title={t('timeline.split')}
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return
+                  event.preventDefault()
+                  event.stopPropagation()
+                  event.currentTarget.setPointerCapture(event.pointerId)
+                  splitDrag.current = { pointerId: event.pointerId, x: event.clientX, from: split.extra }
+                }}
+                onPointerMove={(event) => {
+                  const drag = splitDrag.current
+                  if (!drag || drag.pointerId !== event.pointerId) return
+                  // Kept to what the width can be, so a drag back moves it at once.
+                  const wanted = namesWidth(columns.shown) + drag.from + event.clientX - drag.x
+                  split.setExtra(splitWidth(columns.shown, wanted - namesWidth(columns.shown), total) - namesWidth(columns.shown))
+                }}
+                onPointerUp={(event) => {
+                  if (splitDrag.current?.pointerId === event.pointerId) splitDrag.current = null
+                }}
+                onDoubleClick={() => split.setExtra(0)}
+                data-testid="motion-names-split"
+              />
               <ColumnHeads info={info} side="av" shown={columns.shown} readOnly={readOnly} />
               <span className="motion-row-name">{t('layers')}</span>
               <button type="button" className="motion-graph-toggle" aria-pressed={graph} title={t('graph.toggleHint')} onClick={() => setGraph((open) => !open)} data-testid="motion-graph-toggle">
@@ -274,6 +308,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
             </div>
             <Ruler onSeek={onSeek} rulerRef={rulerRef} onWorkArea={(start, end) => void run('comp.workArea', { start, end })}>
               {markerFlags(null)}
+              <CacheBar frames={cached} />
             </Ruler>
           </div>
           {graph ? (
@@ -334,6 +369,14 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
                 ) : null}
               </div>
             ))
+          ) : hideShy ? (
+            // Every layer is shy and Hide Shy Layers is on: say so, with the way to show them.
+            <p className="kui-muted motion-empty" data-testid="motion-all-shy">
+              {t('shy.allHidden', { count: all.layers.length })}{' '}
+              <Button variant="ghost" onClick={() => void run('comp.setSwitch', { switch: 'hideShy', value: false })} data-testid="motion-show-shy">
+                {t('shy.show')}
+              </Button>
+            </p>
           ) : (
             <p className="kui-muted motion-empty">{t('noLayers')}</p>
           )}

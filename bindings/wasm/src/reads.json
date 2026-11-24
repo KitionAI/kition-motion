@@ -343,7 +343,7 @@
   "paint.removeStroke": ["part", "selection"],
   "paint.setCloneSource": ["part", "selection"],
   "paint.stroke": ["part", "selection", "time", "active", "mode"],
-  "path.convertToBezier": ["part", "selection"],
+  "path.convertToBezier": ["part", "selection", "time"],
   "path.freeTransform": ["part", "selection", "time"],
   "path.groupShapes": ["part", "selection"],
   "path.rotoBezier": ["part", "selection"],

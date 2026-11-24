@@ -397,6 +397,34 @@ fn tools_the_pen_with_no_layer_selected_draws_a_new_shape_layer_in_one_undo_step
     assert_eq!(doc.execute("comp.info", json!({})).unwrap()["layers"].as_array().unwrap().len(), before, "one undo takes it away");
 }
 
+#[test]
+fn tools_the_pen_on_a_shape_layer_draws_a_mask_when_its_option_says_so() {
+    let mut doc = doc();
+    let shape = doc.execute("layer.newShape", json!({"kind": "rect"})).unwrap()["layer"].as_u64().unwrap();
+    doc.execute("layer.select", json!({"layers": [shape]})).unwrap();
+    // Path items (groups whose match is `path`), not a mask's Mask Path property.
+    fn items(node: &Value) -> usize {
+        let own = usize::from(node["match"] == "path" && node["children"].is_array());
+        own + node["children"].as_array().map_or(0, |children| children.iter().map(items).sum())
+    }
+    let paths = |doc: &mut MotionDocument| items(&doc.execute("layer.tree", json!({"layer": shape, "depth": 8})).unwrap()["properties"]);
+    let before = paths(&mut doc);
+    doc.set_pen_masks(true);
+    doc.select_tool("pen", 1.0).unwrap();
+    for [x, y] in [[600.0, 300.0], [700.0, 300.0], [700.0, 400.0], [601.0, 301.0]] {
+        click(&mut doc, x, y, ToolMods::default());
+    }
+    assert_eq!(masks_of(&mut doc, shape).len(), 1, "a mask on the shape layer");
+    assert_eq!(paths(&mut doc), before, "no new shape path");
+    doc.set_pen_masks(false);
+    // Clear of the mask's own vertices and segments (a press there edits the mask).
+    for [x, y] in [[300.0, 500.0], [400.0, 500.0], [400.0, 600.0], [301.0, 501.0]] {
+        click(&mut doc, x, y, ToolMods::default());
+    }
+    assert_eq!(masks_of(&mut doc, shape).len(), 1, "no second mask");
+    assert!(paths(&mut doc) > before, "a new shape path instead");
+}
+
 /// The first shape Path item of a layer: its uid, vertices and in tangents (its own space).
 fn shape_path_of(doc: &mut MotionDocument, layer: u64) -> (u64, Vec<[f64; 2]>, Vec<[f64; 2]>) {
     fn find(node: &Value) -> Option<Value> {
@@ -480,4 +508,33 @@ fn tools_a_gradient_fills_start_point_drags_on_the_canvas_in_one_undo_step() {
     assert!(near(&after, &[before[0] + 30.0, before[1] + 10.0]), "{before:?} → {after:?}");
     doc.execute("edit.undo", json!({})).unwrap();
     assert!(near(&value(&mut doc, layer, &path), &before), "one undo puts it back");
+}
+
+#[test]
+fn tools_path_vertices_look_unlike_the_layers_handles_which_hide_while_vertices_are_edited() {
+    use kition_kit::tools::ToolOverlay;
+    let mut doc = doc();
+    doc.select_tool("pen", 1.0).unwrap();
+    for [x, y] in [[800.0, 400.0], [1000.0, 400.0], [1000.0, 600.0], [800.0, 600.0], [801.0, 401.0]] {
+        click(&mut doc, x, y, ToolMods::default());
+    }
+    doc.select_tool("selection", 1.0).unwrap();
+    doc.execute("mask.selectVertices", json!({ "vertices": [] })).unwrap();
+    let box_handles = |doc: &mut MotionDocument| {
+        let answer = doc.state(0.0, 0.0, ToolMods::default(), 1.0);
+        let handles = answer.overlays.iter().filter(|o| matches!(o, ToolOverlay::Anchor { size, .. } if *size >= 7.0)).count();
+        let vertices: Vec<[u8; 4]> = answer
+            .overlays
+            .iter()
+            .filter_map(|o| if let ToolOverlay::Anchor { size, color, .. } = o { (*size < 7.0).then_some(*color) } else { None })
+            .collect();
+        (handles, vertices)
+    };
+    let (handles, vertices) = box_handles(&mut doc);
+    assert_eq!(handles, 8, "the layer's eight scale handles while no vertex is picked");
+    assert_eq!(vertices.len(), 4);
+    assert!(vertices.iter().all(|c| *c != super::SELECTION), "vertices are not drawn in the handles' colour");
+    click(&mut doc, 800.0, 400.0, ToolMods::default());
+    assert_eq!(doc.session.state.selected_vertices.len(), 1);
+    assert_eq!(box_handles(&mut doc).0, 0, "no scale handles while a vertex is picked");
 }

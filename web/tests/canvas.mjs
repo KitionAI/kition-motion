@@ -393,6 +393,26 @@ try {
     await until(async () => (await guides()).length === 0)
     step('View ▸ 清除参考线 removes every guide', (await guides()).length === 0)
     await viewRow('view.rulers')
+    // Without rulers: a guide's right-click menu deletes it, and one dragged out of the picture goes.
+    await page.evaluate(async () => window.devHost.connection().ai.run([{ command: 'view.addGuide', params: { orientation: 'vertical', position: 300 } }], false))
+    await until(async () => (await guides()).length === 1)
+    const strip = kit.getByTestId('motion-guide-0')
+    await strip.waitFor({ timeout: 3000 })
+    await strip.click({ button: 'right' })
+    await kit.getByTestId('motion-guide-menu-delete').click()
+    await until(async () => (await guides()).length === 0)
+    step('a guide’s right-click 删除参考线 removes it without the rulers', (await guides()).length === 0)
+    await page.evaluate(async () => window.devHost.connection().ai.run([{ command: 'view.addGuide', params: { orientation: 'vertical', position: 300 } }], false))
+    await until(async () => (await guides()).length === 1)
+    await strip.waitFor({ timeout: 3000 })
+    const from = await strip.boundingBox()
+    const left = await at(-60, 300)
+    await page.mouse.move(from.x + from.width / 2, from.y + 200)
+    await page.mouse.down()
+    for (let i = 1; i <= 10; i += 1) await page.mouse.move(from.x + from.width / 2 + ((left.x - from.x - from.width / 2) * i) / 10, from.y + 200)
+    await page.mouse.up()
+    await until(async () => (await guides()).length === 0)
+    step('a guide dragged out of the picture is removed', (await guides()).length === 0, JSON.stringify(await guides()))
   }
 
   // 13. Preview resolution: Quarter from the status bar's control draws the picture in blocks,

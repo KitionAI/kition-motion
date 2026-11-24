@@ -1584,6 +1584,10 @@
    "description": "uid|path",
    "type": "integer"
   },
+  "index": {
+   "description": "1-based place in the group (default last)",
+   "type": "integer"
+  },
   "kind": {
    "description": "group|rect|ellipse|star|polygon|path|fill|stroke|gfill|gstroke|trim|repeater|round|offset|pucker|twist|zigzag|wiggle|merge",
    "type": "string"
@@ -3821,6 +3825,9 @@
  },
  "path.convertToBezier": {
   "mask": {
+   "type": "integer"
+  },
+  "shape": {
    "type": "integer"
   }
  },

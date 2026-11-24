@@ -63,7 +63,7 @@ pub(crate) const ROWS: &[(&str, &str)] = &[
     ),
     (
         "path.convertToBezier",
-        "path=mask-options; resolves=selected-vertex masks else shape-path uid probe else explicit/selected/all masks; reads=editor.selected_vertices/selected_props/selected_layers,mask group identity; holds=nonempty targets; checks=mask group under masks only; writes=mask.roto_bezier false; source=commands/paths.rs:masks_for,convert_to_bezier,edit_mask_groups",
+        "path=mask-options; resolves=shape uid (a parametric shape item) else, with no mask target on a shape layer, every parametric shape, else selected-vertex masks else shape-path uid probe else explicit/selected/all masks; reads=editor.selected_vertices/selected_props/selected_layers,mask group identity,editor.time (the shapes' outline now); holds=nonempty targets; checks=mask group under masks only, or a parametric shape item; writes=mask.roto_bezier false, or the shape item replaced by a Path item; source=commands/paths.rs:masks_for,convert_to_bezier,edit_mask_groups,shape_convert.rs:convert",
     ),
     (
         "layer.mask.motionBlur",
@@ -891,7 +891,7 @@ pub(crate) const DECLARATIONS: &[(&str, &str, &str, &str)] = &[
     ("mask.remove", "ps", "layer", "comp:Item,layer:Layer"),
     ("mask.removeAll", "ps", "layer", "comp:Item,layer:Layer"),
     ("path.rotoBezier", "ps", "layer", "comp:Item,layer:Layer,layers:Layer"),
-    ("path.convertToBezier", "ps", "layer", "comp:Item,layer:Layer,layers:Layer"),
+    ("path.convertToBezier", "pst", "layer", "comp:Item,layer:Layer,layers:Layer"),
     ("layer.mask.motionBlur", "ps", "layer", "comp:Item,layer:Layer,layers:Layer"),
     ("layer.mask.featherFalloff", "ps", "layer", "comp:Item,layer:Layer,layers:Layer"),
     ("layer.mask.hideLocked", "p", "", ""),

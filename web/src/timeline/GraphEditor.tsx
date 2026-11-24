@@ -6,6 +6,7 @@ import { sideOf, type PropRead, type Side } from './interp'
 import { keyId } from './keys'
 import { pathId } from './PropertyRows'
 import { useSampler } from './samples'
+import { isThreeD } from './tree'
 
 /** A property the graph shows: an animated property of a selected layer. */
 export type GraphTarget = { layer: MotionLayer; path: string; name: string }
@@ -54,7 +55,7 @@ function numbersOf(value: unknown, dims: number): number[] | null {
 function dimsOf(type: string | undefined, layer: MotionLayer) {
   if (type === 'scalar') return 1
   if (type === 'vec2') return 2
-  if (type === 'vec3') return layer.switches.threeD ? 3 : 2
+  if (type === 'vec3') return isThreeD(layer) ? 3 : 2
   return 0
 }
 
@@ -217,6 +218,8 @@ export function GraphEditor({
   // Each curve's own value range; it stays put while something is dragged, so the drag does not rescale under the pointer.
   const live = useMemo(() => new Map(curves.map((curve) => [curveId(curve), rangeOf(curve, lines.get(curve) ?? [], mode)])), [curves, lines, mode])
   const held = useRef<Map<string, [number, number]> | null>(null)
+  /** The selection the last press on a key sent: the drag's edit runs once it is answered. */
+  const selecting = useRef<Promise<unknown>>(Promise.resolve())
   const ranges = drag && drag.kind !== 'box' && held.current ? held.current : live
   const tall = Math.max(1, height - 2 * PAD)
   const rangeFor = (curve: Curve) => ranges.get(curveId(curve)) ?? [0, 1]
@@ -268,7 +271,11 @@ export function GraphEditor({
     event.stopPropagation()
     own(event)
     const add = event.shiftKey || event.metaKey || event.ctrlKey
-    if (add || !isSelected(curve, key)) void run('keys.select', { keys: [keyRef(curve, key)], timeBase: 'comp', selectProperties: true, ...(add ? { toggle: true } : {}) })
+    // A key that looks selected is selected again (the others kept): the editor's copy may be
+    // behind the engine (a click elsewhere just before, not answered yet). The drag's edit waits
+    // for it.
+    const params = add ? { toggle: true } : isSelected(curve, key) ? { add: true } : {}
+    selecting.current = run('keys.select', { keys: [keyRef(curve, key)], timeBase: 'comp', selectProperties: true, ...params })
     if (readOnly) return
     event.currentTarget.setPointerCapture(event.pointerId)
     held.current = live
@@ -351,7 +358,7 @@ export function GraphEditor({
         params.value = curve.dims === 1 ? value[0] : value
       }
       if (Math.abs(drag.time - key.compTime) > 1e-9) params.newTime = drag.time
-      if (params.value !== undefined || params.newTime !== undefined) void run('keys.set', params)
+      if (params.value !== undefined || params.newTime !== undefined) void selecting.current.then(() => run('keys.set', params))
       return
     }
     const ease = handleEase(drag, key, mode)

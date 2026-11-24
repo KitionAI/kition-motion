@@ -671,16 +671,16 @@ features:
     priority: P0
     status: has
     paths: [web/src/properties/ShapeItems.tsx, web/src/properties/ShapeSection.tsx, web/src/properties/PropertyTree.tsx, web/src/properties/GradientEditor.tsx, web/src/properties/PropertyValue.tsx, web/src/timeline/PropertyRows.tsx, bindings/wasm/src/tools/gradient.rs, bindings/wasm/src/tools/tests.rs, web/tests/shapes.mjs]
-    gap: "Gradient opacity is one value per colour stop (the engine keeps separate opacity stops; edited here they follow the colour stops); a radial gradient's highlight has no canvas handle. Gated by web/tests/shapes.mjs and the gradient test in bindings/wasm/src/tools/tests.rs."
+    gap: "A paint added from the Add menus goes above the group's existing paints (layer.addShapeItem's index), so it shows in front; what is added opens in the panel and scrolls into view; a layer with several items keeps each one-shape group's size, roundness, fill and stroke at the top; a stop added on the gradient bar takes the focus, and Delete in the gradient editor never reaches the layer. Gradient opacity is one value per colour stop (the engine keeps separate opacity stops; edited here they follow the colour stops); a radial gradient's highlight has no canvas handle. Gated by web/tests/shapes.mjs and the gradient test in bindings/wasm/src/tools/tests.rs."
     cases: []
     since: "2026-11-23"
   - id: motion.editor.shape-paths
-    title: "With the Selection tool (or the Pen) the selected layers' masks and shape paths show their vertices: a click selects one (Shift adds or removes), a drag moves the selected ones, a drag on empty space while vertices are selected boxes vertices in, a press on a segment selects the whole path to drag (the Pen adds a vertex there, mask.insertVertex), Alt-click turns a vertex corner or smooth (mask.convertVertex), a selected vertex's curve handles drag (Alt: one alone), and Delete removes the selected vertices; one undo step each"
+    title: "Path vertices are drawn smaller than the layer's handles and in amber, and the layer's transform box hides while one of its vertices is picked. With the Selection tool (or the Pen) the selected layers' masks and shape paths show their vertices: a click selects one (Shift adds or removes), a drag moves the selected ones, a drag on empty space while vertices are selected boxes vertices in, a press on a segment selects the whole path to drag (the Pen adds a vertex there, mask.insertVertex), Alt-click turns a vertex corner or smooth (mask.convertVertex), a selected vertex's curve handles drag (Alt: one alone), and Delete removes the selected vertices; one undo step each"
     dimension: [function]
     priority: P0
     status: has
     paths: [bindings/wasm/src/tools/pen.rs, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/tools/tests.rs, web/tests/shapes.mjs]
-    gap: "Vertices of parametric shapes (rectangle, ellipse, polystar) are not editable until converted to a path (no Convert to Bezier in the UI); no vertex snapping; curve handles show for up to 16 selected vertices. Gated by web/tests/shapes.mjs and the shape path test in bindings/wasm/src/tools/tests.rs."
+    gap: "Vertices of parametric shapes (rectangle, ellipse, polystar) are editable once converted to a path (motion.editor.convert-to-bezier); no vertex snapping; curve handles show for up to 16 selected vertices. Gated by web/tests/shapes.mjs and the shape path test in bindings/wasm/src/tools/tests.rs."
     cases: []
     since: "2026-11-23"
   - id: motion.editor.switches
@@ -689,7 +689,7 @@ features:
     priority: P0
     status: has
     paths: [web/src/timeline/columns.ts, web/src/timeline/SwitchCells.tsx, web/src/timeline/LayerNames.tsx, web/src/timeline/Timeline.tsx, web/src/motion.ts, crates/engine/engine/src/commands/query.rs, bindings/wasm/src/outputs.json, web/tests/switches.mjs]
-    gap: "By default only the A/V switches show (the names column keeps its width); the layer switches, modes and parent are turned on from the Columns menu. Quality toggles Best and Draft (no Wireframe), frame blending toggles Frame Mix (no Pixel Motion). Gated by web/tests/switches.mjs."
+    gap: "By default the A/V switches, Shy, fx, Motion Blur, 3D and Parent show (a layer's name keeps at least 120 px at 1440 px wide); collapse, quality, frame blending, adjustment, the mode and the track matte are turned on from the Columns menu. Quality toggles Best and Draft (no Wireframe), frame blending toggles Frame Mix (no Pixel Motion). Gated by web/tests/switches.mjs."
     cases: []
     since: "2026-11-23"
   - id: motion.editor.align
@@ -701,3 +701,57 @@ features:
     gap: "Gated by web/tests/align.mjs."
     cases: []
     since: "2026-11-23"
+  - id: motion.editor.convert-to-bezier
+    title: "Convert to Bezier Path: a shape layer's Rectangle, Ellipse or Polystar Path (from its header's right-click menu in the Properties panel or its row on the timeline, or every one of the selected layer from Layer ▸ Mask and Shape Path) becomes a Path item with the same outline at the current time (path.convertToBezier with its shape, one undo step), whose vertices the Selection tool and the Pen then edit. The vertex commands find a shape Path item by its uid before reading the number as a mask index"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [crates/engine/engine/src/commands/shape_convert.rs, crates/engine/engine/src/commands/paths.rs, crates/engine/engine/src/commands/mask.rs, crates/engine/engine/src/tests_shape_convert.rs, web/src/properties/ShapeItems.tsx, web/src/properties/PropertyTree.tsx, web/src/timeline/PropertyRows.tsx, web/src/menus.ts, web/tests/shapes.mjs]
+    gap: "The outline is the one at the current time: keyframes and expressions on the shape's size, position, radii and roundness are dropped. Gated by web/tests/shapes.mjs and crates/engine/engine/src/tests_shape_convert.rs (with the regression test for a shape path uid that is also a mask index)."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.three-d
+    title: "3D by hand: the New Layer menu (transport and Home) adds a camera and a light, their Camera Options, Point of Interest and Light Options in the Properties panel; a 3D layer (or a camera or light) shows Z position, Orientation and X, Y and Z Rotation in the panel and on the timeline; the status bar's 3D view menu and View ▸ 3D View show the Active Camera, Front, Left, Top, Back, Right, Bottom or Custom View 1-3, and Reset 3D View resets the one shown; the viewer renders through the view chosen; the Orbit, Pan and Dolly camera tools on the rail (C cycles them) move the active camera layer (one undo step per drag, camera.orbit, camera.pan, camera.dolly) or, in another view, the view itself"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [bindings/wasm/src/tools/camera.rs, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/lib.rs, web/src/App.tsx, web/src/menus.ts, web/src/Transport.tsx, web/src/HomeTab.tsx, web/src/timeline/tree.ts, web/tests/threeD.mjs]
+    gap: "No 3D gizmo (axis arrows and rotation rings) on the canvas: 3D layers move with the Selection tool in x and y and by their values in z; the camera tools have no Unified Camera tool or per-tool cursor icons; no 2- or 4-view layouts. Gated by web/tests/threeD.mjs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.preview
+    title: "Preview: the viewer keeps the frames it draws (a frame cache of one project revision, its composition, frame, resolution, 3D view and region of interest, up to 400 MB, the frames used longest ago dropped first), so a second playback shows them without rendering; the kept frames show as a bar along the ruler's foot, an edit empties it and View ▸ Purge Preview Cache drops it; playback sends the time with a repaint only and shows the frame rate it reaches in the transport; Skip frames (the transport's switch, View's row, kept in the browser) keeps real time by skipping frames, or plays every frame; the status bar's Region button (View ▸ Region of Interest) draws a region of interest with a drag on the canvas, outside which the viewer renders nothing (grey), Escape stops drawing and a second click clears it (view.setRegionOfInterest)"
+    dimension: [function, performance]
+    priority: P1
+    status: has
+    paths: [bindings/wasm/src/frames.rs, bindings/wasm/src/lib.rs, web/src/App.tsx, web/src/RegionOfInterest.tsx, web/src/timeline/Ruler.tsx, web/src/Transport.tsx, web/src/menus.ts, web/tests/preview.mjs]
+    gap: "The cache fills only as frames are shown (no render-ahead RAM preview); the region of interest is the session's and not saved with the project. Gated by web/tests/preview.mjs and the cache tests in bindings/wasm/src/frames.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.text-animators
+    title: "Text animators by hand: the Text section's Animate menu adds an animator animating one property (position, scale, rotation, opacity, anchor, skew, all transform, fill and stroke colour, stroke width, tracking, line spacing, character offset, blur) with a Range Selector; each animator in the panel (and on the timeline) shows its selectors (Start, End, Offset and Advanced: units, based on characters, words or lines, mode, amount, shape, smoothness, ease, randomize) and properties, keyframable; its Add menu adds a property or a Range, Wiggly or Expression selector, its Remove menu removes the animator or one selector or property (prop.removeGroup, which takes an animator's property too); the Presets menu applies a built-in text animation (fade up characters, typewriter, blur slide, bounce in words, drop in lines, tracking in, blur in, scramble, letterpress, jitter) from the current time; one undo step each"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/properties/TextAnimators.tsx, web/src/properties/PropertiesPanel.tsx, crates/engine/engine/src/commands/prop_groups.rs, crates/engine/engine/src/tests_text_anim_parts.rs, web/src/strings.ts, web/tests/animators.mjs]
+    gap: "Animators keep their engine names (Animator 1, Range Selector 1) and cannot be renamed or reordered here; the presets take their default timing (no options dialog). Gated by web/tests/animators.mjs and crates/engine/engine/src/tests_text_anim_parts.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.layer-styles
+    title: "Layer styles by hand: the Properties panel's Layer Styles section adds drop shadow, inner shadow, outer and inner glow, bevel and emboss, satin, colour and gradient overlay and stroke (as Layer ▸ Layer Styles does), shows each with its parameters (keyframable, also on the timeline) and Blending Options, turns each off and on and removes it or all of them (layer.style.add, layer.style.toggle, layer.style.remove, layer.style.removeAll); one undo step each"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/properties/LayerStylesSection.tsx, web/src/properties/PropertiesPanel.tsx, web/src/menus.ts, web/src/strings.ts, web/tests/layerStyles.mjs]
+    gap: "No reordering of styles and no Layer Style Options dialog. Gated by web/tests/layerStyles.mjs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.time-remap
+    title: "Time remapping by hand: a footage or composition layer's Time section in the Properties panel (and Layer ▸ Time, Cmd+Alt+T) enables time remapping (Time Remap keyed at the in and out points, keyframable in the panel and on the timeline) and removes it, freezes the frame at the current time, and time-reverses the layer (layer.enableTimeRemap, layer.freezeFrame, layer.timeReverse); one undo step each"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/properties/TimeSection.tsx, web/src/properties/PropertiesPanel.tsx, web/src/menus.ts, web/src/App.tsx, web/tests/layerStyles.mjs]
+    gap: "No Freeze on Last Frame button (the engine's layer.freezeOnLastFrame is for agents). Gated by web/tests/layerStyles.mjs."
+    cases: []
+    since: "2026-11-24"

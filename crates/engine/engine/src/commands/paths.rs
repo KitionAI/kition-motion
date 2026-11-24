@@ -109,6 +109,19 @@ fn roto_bezier(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn convert_to_bezier(s: &mut Session, p: &Value) -> Result<Value> {
+    // A shape layer's Rectangle, Ellipse or Polystar Path (`shape`), or, on a layer with no mask
+    // to act on, every one of them: a Path item with the same outline.
+    if p.get("shape").is_some_and(|v| !v.is_null()) {
+        return super::shape_convert::convert(s, p);
+    }
+    // No mask to act on: none targeted, or only shape paths (their vertices selected).
+    let no_mask = masks_for(s, p).map_or(true, |(cid, targets)| {
+        let comp = s.project.comp(cid);
+        !targets.iter().any(|(lid, uid)| comp.and_then(|c| c.layer(*lid)).and_then(|l| l.props.sub("masks")).is_some_and(|m| m.find_group(*uid).is_some()))
+    });
+    if p.get("mask").is_none() && no_mask && super::shape_convert::has_parametric(s, p) {
+        return super::shape_convert::convert(s, p);
+    }
     edit_mask_groups(s, p, "Convert To Bezier Path", |g| {
         if let GroupKind::Mask { roto_bezier, .. } = &mut g.kind {
             *roto_bezier = false;
@@ -450,7 +463,15 @@ fn ungroup_shapes(s: &mut Session, p: &Value) -> Result<Value> {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!("path.rotoBezier", "RotoBezier", ["Layer", "Mask and Shape Path"], None, "{layer?, mask?, value?}", has_layers, roto_bezier),
-        cmd!("path.convertToBezier", "Convert To Bezier Path", ["Layer", "Mask and Shape Path"], None, "{layer?, mask?}", has_layers, convert_to_bezier),
+        cmd!(
+            "path.convertToBezier",
+            "Convert To Bezier Path",
+            ["Layer", "Mask and Shape Path"],
+            None,
+            "{layer?, mask?, shape?: uid (a shape layer's Rectangle, Ellipse or Polystar Path)}",
+            has_layers,
+            convert_to_bezier
+        ),
         cmd!("path.groupShapes", "Group Shapes", ["Layer"], Some("Cmd+G"), "{layer?, items?: [uid]}", has_shape_items, group_shapes),
         cmd!("path.ungroupShapes", "Ungroup Shapes", ["Layer"], Some("Cmd+Shift+G"), "{layer?, items?: [group uid]}", has_shape_items, ungroup_shapes),
         cmd!(

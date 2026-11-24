@@ -35,6 +35,14 @@ try {
   const start = await text()
   step('the Text section reads the whole text’s settings back', (await kit.getByTestId('motion-text-size').inputValue()) === String(Math.round(start.character.size * 10) / 10) && start.range === null, JSON.stringify(start.character).slice(0, 160))
 
+  // The font search matches the start of a word of the family's name: “Ser” finds Noto Serif alone.
+  await kit.getByTestId('motion-text-font').locator('[role=combobox]').click()
+  await page.keyboard.type('Ser')
+  await page.waitForTimeout(300)
+  const found = await kit.locator('.kui-combobox-panel [cmdk-item], .kui-combobox-panel [role=option]').allTextContents()
+  step('the font search “Ser” lists the families with a word starting so', found.length >= 1 && found.every((name) => /(^|[\s-])ser/i.test(name)), JSON.stringify(found))
+  await page.keyboard.press('Escape')
+
   // 1. Character settings on the whole text.
   await kit.getByTestId('motion-text-toggles-fauxBold').click()
   await until(async () => (await text()).character.fauxBold === true)
@@ -99,6 +107,20 @@ try {
   await kit.getByTestId('motion-text-toggles-fauxItalic').click()
   await until(async () => (await text(made.id))?.character.fauxItalic === true)
   step('Faux Italic applies to the selected characters', (await text(made.id))?.character.fauxItalic === true)
+  // The fill swatch opens its picker and it stays open while the text is edited.
+  await kit.getByTestId('motion-text-fill-swatch').click()
+  await page.waitForTimeout(600)
+  step('while editing, the fill swatch’s colour picker stays open', await kit.getByTestId('motion-text-fill-popover').isVisible().catch(() => false))
+  const hex = kit.getByTestId('motion-text-fill-picker-hex')
+  await hex.fill('#ff3300')
+  await hex.press('Enter')
+  const coloured = async () => {
+    const fill = (await text(made.id))?.character.fill ?? []
+    return [1, 0.2, 0].every((part, at) => Math.abs((fill[at] ?? -1) - part) < 0.01)
+  }
+  await until(coloured)
+  step('and colours the selected characters', await coloured(), JSON.stringify((await text(made.id))?.character.fill))
+  await page.keyboard.press('Escape')
   await kit.getByTestId('motion-tool-selection').click()
   await until(async () => (await text(made.id))?.editing === false)
   const whole = await text(made.id)

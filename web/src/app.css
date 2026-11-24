@@ -1498,6 +1498,7 @@ button.motion-switch:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 0 12px 4px;
 }
 
 .motion-align-row {
@@ -1654,4 +1655,161 @@ button.motion-switch:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* The preview's frame cache: a thin bar along the ruler's foot over the kept frames. */
+.motion-cache-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  pointer-events: none;
+}
+
+.motion-cache-run {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--kit-primary);
+  opacity: 0.75;
+}
+
+/* View ▸ Region of Interest: the region drawn and outlined over the picture. */
+.motion-roi {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+  outline: none;
+}
+
+.motion-roi[data-drawing] {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.motion-roi > svg {
+  position: absolute;
+  inset: 0;
+}
+
+.motion-roi-box {
+  fill: none;
+  stroke: var(--kit-primary);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+/* The playback frame rate and the frame cache's size beside the transport's buttons. */
+.motion-fps {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A layer style in the Properties panel: its on/off and remove buttons beside its group's head. */
+.motion-style {
+  position: relative;
+}
+
+.motion-style[data-off] > .motion-prop-group {
+  opacity: 0.55;
+}
+
+.motion-style-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: inline-flex;
+  gap: 2px;
+}
+
+/* A row of buttons in a section (Time: remap, freeze, reverse). */
+.motion-section-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+/* A text animator in the Properties panel: its name, Add and Remove menus, then its groups. */
+.motion-animator {
+  margin-top: 6px;
+  border-top: 1px solid var(--kit-border);
+  padding-top: 4px;
+}
+
+.motion-animator-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.motion-animator-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Two or three numbers side by side keep room for a sign and three digits (-100). */
+.motion-prop-values > .motion-number-wrap {
+  min-width: 52px;
+}
+
+/* A column header that turns a composition switch on and off: a button, pressed while on. */
+.motion-comp-switch {
+  border: 1px solid var(--kit-border);
+  border-radius: var(--kit-radius-control);
+  background: var(--kit-surface);
+  cursor: pointer;
+}
+
+.motion-comp-switch[aria-pressed='true'] {
+  border-color: var(--kit-primary);
+  background: var(--kit-primary-soft);
+  color: var(--kit-primary);
+}
+
+/* A shape group's quick settings when the layer has several items: its name over them. */
+.motion-shape-quick {
+  margin-bottom: 6px;
+}
+
+.motion-shape-quick-name {
+  display: block;
+  padding: 2px 0;
+  font-size: 11px;
+}
+
+/* A property's name in the Properties panel selects it (as on the timeline): shown selected. */
+.motion-prop-name[role='button'] {
+  cursor: pointer;
+}
+
+.motion-prop-name[data-selected] {
+  color: var(--kit-primary);
+}
+
+/* The split between the layer names (with their columns) and the tracks: drag it, double-click resets it. */
+.motion-timeline-head .motion-timeline-names {
+  position: relative;
+}
+
+.motion-names-split {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.motion-names-split:hover {
+  background: var(--kit-primary-soft);
 }

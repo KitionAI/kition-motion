@@ -97,3 +97,27 @@ export function Ruler({ onSeek, onWorkArea, rulerRef, children }: { onSeek: (sec
     </div>
   )
 }
+
+/**
+ * The frames the preview has kept (its frame cache): a thin bar along the ruler's foot over each
+ * stretch of kept frames, so the person sees what plays back in real time. `frames` are frame
+ * numbers from the composition's start.
+ */
+export function CacheBar({ frames }: { frames: readonly number[] }) {
+  const { info, view } = useTimeline()
+  const { t } = useKitEditor()
+  const fps = info.comp?.fps ?? 30
+  const runs: Array<[number, number]> = []
+  for (const frame of frames) {
+    const last = runs[runs.length - 1]
+    if (last && frame === last[1] + 1) last[1] = frame
+    else runs.push([frame, frame])
+  }
+  return (
+    <span className="motion-cache-bar" data-testid="motion-cache-bar" data-frames={frames.length} title={t('cache.title', { count: frames.length })} aria-hidden="true">
+      {runs.map(([from, to]) => (
+        <span key={from} className="motion-cache-run" style={{ left: leftOf(view, from / fps), width: `${((to - from + 1) / fps / view.span) * 100}%` }} />
+      ))}
+    </span>
+  )
+}

@@ -43,8 +43,14 @@ pub(crate) fn is_path_group(g: &PropGroup) -> bool {
     matches!(g.get("path").map(|p| &p.value), Some(KV::Path(_))) && (matches!(g.kind, kition_motion_project::GroupKind::Mask { .. }) || g.match_id == "path")
 }
 
-/// A mask (uid, 1-based index or name) or, by uid, a shape layer's Path item.
+/// A mask (uid, 1-based index or name) or, by uid, a shape layer's Path item. A uid comes first:
+/// a shape Path item whose uid is also a valid mask index is that Path item, not a mask.
 pub(crate) fn path_group<'a>(props: &'a mut PropGroup, key: &Value) -> Option<&'a mut PropGroup> {
+    if let Some(uid) = key.as_u64()
+        && props.find_group(uid).is_some_and(is_path_group)
+    {
+        return props.find_group_mut(uid);
+    }
     if let Some(i) = props.sub("masks").and_then(|m| mask_index(m, key)) {
         return props.sub_mut("masks")?.children.get_mut(i)?.as_group_mut();
     }

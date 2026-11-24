@@ -54,6 +54,9 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
   const [textAsShapes, setTextAsShapes] = useState(false)
   const [warnings, setWarnings] = useState<string[] | null>(null)
   const cancelled = useRef(false)
+  // Close once the render has stopped (Escape, or Cancel pressed again while it was stopping).
+  const closeWhenStopped = useRef(false)
+  const [stopping, setStopping] = useState(false)
   // The last export was stopped: the dialog says so above its settings.
   const [stopped, setStopped] = useState(false)
   if (!comp) return null
@@ -80,6 +83,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
       frameRate: rate === 'half' ? Math.round((comp.fps / 2) * 1000) / 1000 : null,
     }
     cancelled.current = false
+    closeWhenStopped.current = false
     setStopped(false)
     const read = (json: string) => JSON.parse(json) as Progress
     try {
@@ -93,8 +97,10 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
         await doc.invoke<boolean>('exportCancel')
         toast.info(t('export.cancelled'))
         setBusy(false)
+        setStopping(false)
         setProgress(null)
         setStopped(true)
+        if (closeWhenStopped.current) onClose()
         return
       }
       const bytes = await doc.invoke<Uint8Array>('exportFinish')
@@ -105,6 +111,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
       await doc.invoke<boolean>('exportCancel').catch(() => false)
       toast.error(t('renderFailed'), { description: error instanceof Error ? error.message : String(error) })
       setBusy(false)
+      setStopping(false)
       setProgress(null)
     }
   }
@@ -137,22 +144,29 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
   /**
    * While rendering, the left button reads Stop export: it stops the render (the loop above ends
    * at the engine's next answer) and the dialog goes back to its settings, saying the export was
-   * stopped; otherwise Cancel (and Escape) closes the dialog.
+   * stopped; otherwise Cancel (and Escape) closes the dialog. Once Stop export is pressed the
+   * button reads Cancel at once: pressed again before the engine has stopped, the dialog closes as
+   * soon as it has. Escape while rendering stops and closes.
    */
-  const cancel = () => {
-    if (busy) cancelled.current = true
-    else onClose()
+  const cancel = (close = false) => {
+    if (!busy) {
+      onClose()
+      return
+    }
+    if (close || cancelled.current) closeWhenStopped.current = true
+    cancelled.current = true
+    setStopping(true)
   }
 
   return (
     <Dialog
       title={t('export.title')}
       testId="motion-export-dialog"
-      onClose={cancel}
+      onClose={() => cancel(true)}
       actions={
         <>
-          <Button onClick={cancel} data-testid="motion-export-dialog-cancel">
-            {busy && progress ? t('export.stop') : t('dialog.cancel')}
+          <Button onClick={() => cancel()} data-testid="motion-export-dialog-cancel">
+            {busy && progress && !stopping ? t('export.stop') : t('dialog.cancel')}
           </Button>
           {warnings ? (
             <Button variant="primary" onClick={onClose} data-testid="motion-export-dialog-close">

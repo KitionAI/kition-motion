@@ -36,6 +36,11 @@ export function ColorSwatch({ value, label, onChange, testId, readOnly = false, 
       <PopoverContent
         className="motion-color-popover"
         align="start"
+        onFocusOutside={(event) => {
+          // While text is edited on the canvas the editor gives its hidden text field the focus
+          // back after every click: that is no reason to close the picker.
+          if (event.target instanceof Element && event.target.classList.contains('kui-text-sink')) event.preventDefault()
+        }}
         onEscapeKeyDown={(event) => {
           // Escape closes the picker only, not a dialog it is in.
           event.stopPropagation()

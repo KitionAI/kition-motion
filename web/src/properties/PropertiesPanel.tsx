@@ -5,6 +5,8 @@ import type { TreeNode } from '../timeline/tree'
 import type { AlignTo } from '../menus'
 import { AlignSection } from './AlignSection'
 import { EffectsSection } from './EffectsSection'
+import { LayerStylesSection } from './LayerStylesSection'
+import { TimeSection } from './TimeSection'
 import { LayerHeader } from './LayerHeader'
 import { PanelEdge, usePanelWidth } from './PanelEdge'
 import { PanelContext, PropertyChildren, PropertyGroup, hasRows, visible } from './PropertyTree'
@@ -12,12 +14,13 @@ import { Section, remember } from './Section'
 import { ShapeControls } from './ShapeSection'
 import { SolidSection } from './SolidSection'
 import { TextControls, type TextSelection } from './TextSection'
+import { TextAnimateMenus, TextAnimators } from './TextAnimators'
 
 /** How deep the panel reads a layer's property tree (shape groups nest). */
 const TREE_DEPTH = 10
 
 /** Top-level groups drawn in their own places rather than as the layer type's section. */
-const PLACED = new Set(['effects', 'transform', 'masks'])
+const PLACED = new Set(['effects', 'transform', 'masks', 'layerStyles'])
 
 /** A text layer's rarely used groups, behind a closed "More" group. */
 const TEXT_MORE = new Set(['text/pathOptions', 'text/moreOptions'])
@@ -28,12 +31,14 @@ function TypeSection({ node, layer, focusText, onFocused, text }: { node: TreeNo
   const scope = layer.type
   if (node.match === 'text') {
     // The content box and the character settings first; Source Text is the box.
-    const main = { ...node, children: (node.children ?? []).filter((child) => !TEXT_MORE.has(child.path) && child.match !== 'sourceText') }
+    const main = { ...node, children: (node.children ?? []).filter((child) => !TEXT_MORE.has(child.path) && child.match !== 'sourceText' && child.path !== 'text/animators') }
     const more = (node.children ?? []).filter((child) => TEXT_MORE.has(child.path))
+    const animators = (node.children ?? []).find((child) => child.path === 'text/animators')
     return (
-      <Section scope={scope} id={node.path} title={phrase(node.name)} testId={`motion-section-${node.match}`}>
+      <Section scope={scope} id={node.path} title={phrase(node.name)} testId={`motion-section-${node.match}`} actions={<TextAnimateMenus layer={layer.id} />}>
         <TextControls node={node} focusNow={focusText} onFocused={onFocused} selection={text} />
         <PropertyChildren node={main} scope={scope} depth={0} />
+        {animators ? <TextAnimators node={animators} scope={scope} /> : null}
         {more.length ? <PropertyGroup node={{ name: 'More', path: 'text/more', children: more }} label={t('props.more')} scope={scope} depth={0} /> : null}
       </Section>
     )
@@ -88,13 +93,17 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
         {layer && root ? (
           <PanelContext.Provider value={{ layer, time: info.time, frame: info.frame, readOnly }}>
             <LayerHeader info={info} layer={layer} readOnly={readOnly} count={selected} />
+            {/* Align near the top, closed until opened (its state remembered), so it is reached without scrolling. */}
+            <AlignSection scope="all" alignTo={align.to} onAlignTo={align.onTo} idle={align.idle} onCommand={align.onCommand} readOnly={readOnly} />
             {top
               .filter((node) => node.children && !PLACED.has(node.match ?? '') && visible(node, layer) && hasRows(node, layer))
               .map((node) => (
                 <TypeSection key={node.path} node={node} layer={layer} focusText={fresh === layer.id} onFocused={focused} text={tree?.text ?? null} />
               ))}
             {layer.type === 'Solid' ? <SolidSection /> : null}
+            <TimeSection layer={layer} remap={group('timeRemap')} />
             <EffectsSection layer={layer} group={group('effects')} onAdd={onAddEffect} />
+            <LayerStylesSection layer={layer} group={group('layerStyles')} />
             {transform ? (
               <Section scope={layer.type} id="transform" title={t('props.transform')} testId="motion-section-transform">
                 <PropertyChildren node={transform} scope={layer.type} depth={0} />
@@ -105,7 +114,6 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
                 <PropertyChildren node={masks} scope={layer.type} depth={0} />
               </Section>
             ) : null}
-            <AlignSection scope="all" alignTo={align.to} onAlignTo={align.onTo} idle={align.idle} onCommand={align.onCommand} readOnly={readOnly} />
           </PanelContext.Provider>
         ) : layer ? null : (
           <p className="kui-muted motion-empty" data-testid="motion-properties-empty">

@@ -58,3 +58,24 @@ export function Section({ scope, id, title, children, byDefault = true, actions,
     </section>
   )
 }
+
+/** A group the panel shows next and scrolls to (an item just added from an Add menu). */
+let pendingReveal: string | null = null
+
+/**
+ * Opens every group from the section down to the group at `path` (of layer type `scope`) and has
+ * it scroll into view once the panel draws it: what was just added is shown, not left inside
+ * closed groups.
+ */
+export function reveal(scope: string, path: string) {
+  const parts = path.split('/')
+  for (let at = 1; at <= parts.length; at += 1) remember(`${scope}:${parts.slice(0, at).join('/')}`, true)
+  pendingReveal = path
+}
+
+/** Whether `path` is the group to reveal now (taken once). */
+export function takeReveal(path: string) {
+  if (pendingReveal !== path) return false
+  pendingReveal = null
+  return true
+}

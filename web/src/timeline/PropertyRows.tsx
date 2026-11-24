@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronDownIcon as Open, ChevronRightIcon as Closed } from '@kition/tessera/icons/react'
 import { useEngineQuery, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
@@ -6,7 +6,8 @@ import { useEffectParams } from '../properties/catalog'
 import { KeyDiamond } from '../properties/KeyDiamond'
 import { propMeta } from '../properties/meta'
 import { PropertyValue } from '../properties/PropertyValue'
-import { ShapeAddMenu } from '../properties/ShapeItems'
+import { PARAMETRIC_SHAPES, ShapeAddMenu, ShapeItemMenu } from '../properties/ShapeItems'
+import type { ContextMenuPoint } from '@kition/sdk/editor'
 import { useTimeline } from './context'
 import { KeyMark } from './KeyMark'
 import { sideOf, type PropRead } from './interp'
@@ -47,6 +48,8 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
   const paramsOf = useEffectParams()
   const tree = useEngineQuery<{ properties?: TreeNode }>('layer.tree', { layer: layer.id, depth: TREE_DEPTH, time: info.time })
   const parents = useMemo(() => (tree?.properties ? parentsOf(tree.properties) : new Map<string, TreeNode>()), [tree])
+  // A Rectangle, Ellipse or Polystar Path row's right-click menu (Convert to Bezier Path).
+  const [shapeMenu, setShapeMenu] = useState<{ uid: number; name: string; id: string; at: ContextMenuPoint } | null>(null)
   if (!tree?.properties) return null
   const rows = propertyRows(tree.properties, layer, twirl, toggled)
   return (
@@ -58,7 +61,20 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
         const id = `${layer.id}-${pathId(node.path)}`
         if (row.kind === 'group') {
           return (
-            <div key={node.path} className="motion-row motion-prop-row" data-testid={`motion-group-${id}`}>
+            <div
+              key={node.path}
+              className="motion-row motion-prop-row"
+              data-testid={`motion-group-${id}`}
+              onContextMenu={
+                layer.type === 'Shape' && node.uid != null && PARAMETRIC_SHAPES.has(node.match ?? '') && !readOnly
+                  ? (event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      setShapeMenu({ uid: node.uid ?? 0, name, id, at: { x: event.clientX, y: event.clientY } })
+                    }
+                  : undefined
+              }
+            >
               <div className="motion-timeline-names motion-prop-names" style={{ paddingLeft: 36 + depth * 14 }}>
                 <button type="button" className="motion-twirl" aria-expanded={row.open} aria-label={name} onClick={() => onToggle(node.path)} data-testid={`motion-twirl-${id}`}>
                   {row.open ? <Open size={12} aria-hidden="true" /> : <Closed size={12} aria-hidden="true" />}
@@ -66,7 +82,7 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
                 <span className="motion-row-name">{name}</span>
                 {/* A shape layer's Contents (and each shape group's): Add puts a shape, paint or operator at its end. */}
                 {layer.type === 'Shape' && node.uid != null && (node.path === 'contents' || node.match === 'group') ? (
-                  <ShapeAddMenu layer={layer.id} group={node.path === 'contents' ? undefined : node.uid} testId={`motion-row-shape-add-${id}`} readOnly={readOnly} compact />
+                  <ShapeAddMenu layer={layer.id} group={node.path === 'contents' ? undefined : node.uid} items={node.path === 'contents' ? node.children : node.children?.find((child) => child.match === 'contents')?.children} testId={`motion-row-shape-add-${id}`} readOnly={readOnly} compact />
                 ) : null}
               </div>
               <div className="motion-row-track" />
@@ -95,7 +111,7 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
         return [
           <div key={node.path} className="motion-row motion-prop-row" data-selected={layer.selectedProps.includes(node.path) || undefined} data-testid={`motion-prop-row-${id}`}>
             <div className="motion-timeline-names motion-prop-names" style={{ paddingLeft: 36 + depth * 14 }}>
-              <KeyDiamond layer={layer.id} path={node.path} name={name} times={times} time={info.time} frame={info.frame} testId={`motion-row-add-key-${id}`} readOnly={readOnly} expression={node.expression !== undefined} altAddsExpression />
+              <KeyDiamond layer={layer.id} path={node.path} name={name} times={times} time={info.time} frame={info.frame} testId={`motion-row-add-key-${id}`} readOnly={readOnly} expression={node.expression !== undefined} />
               {/* A click on the name selects the property (Shift or Cmd adds it): what Add Expression, Copy and the keyframe commands act on. */}
               <span
                 className="motion-row-name motion-prop-label"
@@ -118,6 +134,7 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
           expression,
         ]
       })}
+      {shapeMenu ? <ShapeItemMenu layer={layer.id} uid={shapeMenu.uid} name={shapeMenu.name} at={shapeMenu.at} onClose={() => setShapeMenu(null)} testId={`motion-row-item-menu-${shapeMenu.id}`} /> : null}
     </>
   )
 }

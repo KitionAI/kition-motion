@@ -60,6 +60,12 @@ try {
   await kit.getByTestId('motion-shape-add-trim').click()
   await until(async () => (await items(SHAPE, inner)).includes('trim'))
   step('Add ▸ Trim Paths in the Properties panel adds it to the shape’s group', (await items(SHAPE, inner)).includes('trim'), JSON.stringify(await items(SHAPE, inner)))
+  // It opens in the panel (the groups above it open) and is scrolled into view.
+  const trimGroup = kit.getByTestId('motion-group-contents.group.contents.trim')
+  await trimGroup.waitFor({ timeout: 5000 }).catch(() => null)
+  const panelBox = await kit.getByTestId('motion-properties-body').boundingBox()
+  const trimBox = await trimGroup.boundingBox().catch(() => null)
+  step('the new Trim Paths shows open in the panel, scrolled into view', !!trimBox && trimBox.y >= panelBox.y - 1 && trimBox.y < panelBox.y + panelBox.height && (await kit.getByTestId('motion-group-toggle-contents.group.contents.trim').getAttribute('aria-expanded')) === 'true', JSON.stringify({ trimBox, panelBox }))
   await h.undo()
   await until(async () => !(await items(SHAPE, inner)).includes('trim'))
   step('one undo takes it away', !(await items(SHAPE, inner)).includes('trim'))
@@ -68,9 +74,18 @@ try {
   await kit.getByTestId(`motion-twirl-layer-${SHAPE}`).click()
   await kit.getByTestId(`motion-row-shape-add-${SHAPE}-contents`).waitFor({ timeout: 5000 })
   await kit.getByTestId(`motion-row-shape-add-${SHAPE}-contents`).click()
+  // Opened low in the window, the menu opens upward where there is more room: it stays inside the window.
+  const menuBox = await kit.locator('.kui-popover[role=menu]').last().boundingBox()
+  const tall = page.viewportSize().height
+  step('the timeline’s Add menu stays inside the window, showing most of its items', !!menuBox && menuBox.y >= 0 && menuBox.y + menuBox.height <= tall && menuBox.height > 300, JSON.stringify(menuBox))
   await kit.getByTestId(`motion-row-shape-add-${SHAPE}-contents-repeater`).click()
   await until(async () => (await items(SHAPE, 'contents')).includes('repeater'))
   step('the timeline’s Contents row ▸ Repeater adds one to the layer’s contents', (await items(SHAPE, 'contents')).includes('repeater'), JSON.stringify(await items(SHAPE, 'contents')))
+
+  // With two items in the layer, the shape group's size, roundness and fill stay at the top.
+  const groupUid = find(await tree(SHAPE), 'contents/group')?.uid
+  await kit.getByTestId(`motion-shape-quick-${groupUid}`).waitFor({ timeout: 5000 }).catch(() => null)
+  step('with a second item the group’s quick settings (size, fill) stay in the panel', (await kit.getByTestId(`motion-shape-quick-${groupUid}`).count()) === 1 && (await kit.getByTestId(`motion-shape-quick-${groupUid}`).locator('[data-testid^="motion-prop-"]').count()) >= 2)
 
   // 3. Item buttons in the Properties panel: up, off, delete.
   const order = await items(SHAPE, 'contents')
@@ -95,6 +110,8 @@ try {
   await kit.getByTestId('motion-shape-add').click()
   await kit.getByTestId('motion-shape-add-gfill').click()
   await until(async () => (await items(SHAPE, inner)).includes('gfill'))
+  const painted = await items(SHAPE, inner)
+  step('a new Gradient Fill goes above the existing Fill, so it shows in front', painted.indexOf('gfill') >= 0 && painted.indexOf('gfill') < painted.indexOf('fill'), JSON.stringify(painted))
   const colors = `${inner}/gfill/colors`
   const stops = async () => find(await tree(SHAPE), colors)?.value?.v?.colors ?? []
   for (const toggle of ['contents', 'contents.group', 'contents.group.contents', 'contents.group.contents.gfill']) {
@@ -109,6 +126,13 @@ try {
   await page.mouse.click(bar.x + bar.width / 2, bar.y + bar.height / 2)
   await until(async () => (await stops()).length === 3)
   step('a click on the gradient bar adds a stop there', (await stops()).length === 3 && near((await stops())[1][0], 0.5, 0.02), JSON.stringify(await stops()))
+  // Delete straight after: the new stop has the focus, so it goes and the layer stays.
+  await until(async () => (await kit.getByTestId(`${editor}-stop-1`).evaluate((element) => element === element.ownerDocument.activeElement).catch(() => false)), 30)
+  await page.keyboard.press('Delete')
+  await until(async () => (await stops()).length === 2)
+  step('Delete right after adding a stop removes that stop, not the layer', (await stops()).length === 2 && (await h.layer(SHAPE)) != null, JSON.stringify(await stops()))
+  await h.undo()
+  await until(async () => (await stops()).length === 3)
   const marker = await h.centre(kit.getByTestId(`${editor}-stop-1`))
   await h.drag(marker, { x: bar.x + bar.width * 0.25, y: marker.y })
   await until(async () => near((await stops())[1]?.[0], 0.25, 0.03))
@@ -196,6 +220,62 @@ try {
   await until(async () => !near((await shapePath(pathLayer.id))?.vertices?.[0]?.[1], pre.vertices[0][1], 0.5))
   now = await shapePath(pathLayer.id)
   step('a drag on a segment moves the whole path', now.vertices.length === pre.vertices.length && now.vertices.every((v, i) => near(v[0], pre.vertices[i][0]) && near(v[1], pre.vertices[i][1] + 50, 2)), `${JSON.stringify(pre.vertices)} → ${JSON.stringify(now.vertices)}`)
+
+  // 7. Convert to Bezier Path: the drawn rectangle's Rectangle Path, from its header's right-click
+  // menu in the Properties panel, becomes a Path whose corner drags on the canvas; and from
+  // Layer ▸ 蒙版和形状路径.
+  await kit.getByTestId(`motion-layer-${rect}`).locator('.motion-row-name').click()
+  await until(async () => (await h.layer(rect))?.selected && !(await h.layer(pathLayer.id))?.selected)
+  const rectHead = kit.getByTestId(`motion-group-${inner.replaceAll('/', '.')}.rect`).locator('.motion-prop-group-head').first()
+  await rectHead.waitFor()
+  await rectHead.click({ button: 'right', position: { x: 30, y: 8 } })
+  await kit.getByTestId(`motion-item-menu-${inner.replaceAll('/', '.')}.rect-convert`).click()
+  await until(async () => (await items(rect, inner)).includes('path'))
+  step('转换为贝塞尔曲线路径 in the Rectangle Path’s menu makes it a Path', (await items(rect, inner)).includes('path') && !(await items(rect, inner)).includes('rect'), JSON.stringify(await items(rect, inner)))
+  const corners = await shapePath(rect)
+  const origin = (await h.query('prop.get', { layer: rect, path: 'transform/position' })).value
+  const anchor = (await h.query('prop.get', { layer: rect, path: 'transform/anchor' })).value
+  const corner = [origin[0] - anchor[0] + corners.vertices[0][0], origin[1] - anchor[1] + corners.vertices[0][1]]
+  await kit.getByTestId('motion-tool-selection').click()
+  await click(...corner)
+  await dragComp(corner, [corner[0] - 30, corner[1] - 20])
+  await until(async () => !near((await shapePath(rect))?.vertices?.[0]?.[0], corners.vertices[0][0], 0.5))
+  const dragged = await shapePath(rect)
+  step('its corner vertex then drags on its own', near(dragged.vertices[0][0], corners.vertices[0][0] - 30, 2) && near(dragged.vertices[0][1], corners.vertices[0][1] - 20, 2) && near(dragged.vertices[2][0], corners.vertices[2][0], 0.5), `${JSON.stringify(corners.vertices)} → ${JSON.stringify(dragged.vertices)}`)
+  await h.undo()
+  await until(async () => near((await shapePath(rect))?.vertices?.[0]?.[0], corners.vertices[0][0], 0.5))
+  await h.undo()
+  await until(async () => (await items(rect, inner)).includes('rect'))
+  step('two undos bring the Rectangle Path back', (await items(rect, inner)).includes('rect'))
+  // The row shows once the editor has asked the engine that it would change something (a moment after the undo).
+  const submenu = kit.locator('[role=menu] [role=menuitem]', { hasText: '蒙版和形状路径' }).first()
+  await until(async () => {
+    await kit.getByTestId('motion-menu-Layer').click()
+    if (await submenu.isVisible().catch(() => false)) return true
+    await page.keyboard.press('Escape')
+    return false
+  }, 30)
+  await submenu.hover()
+  await kit.locator('[role=menu] [data-testid="motion-cmd-path.convertToBezier"]').first().click()
+  await until(async () => (await items(rect, inner)).includes('path'))
+  step('Layer ▸ 蒙版和形状路径 ▸ 转换为贝塞尔曲线路径 converts it too', (await items(rect, inner)).includes('path') && !(await items(rect, inner)).includes('rect'), JSON.stringify(await items(rect, inner)))
+
+  // 8. The Pen on a shape layer: its hint says the path joins the layer; with Draw mask on it masks it.
+  await kit.getByTestId('motion-tool-selection').click()
+  await kit.getByTestId(`motion-layer-${SHAPE}`).locator('.motion-row-name').click()
+  await until(async () => (await h.layers()).filter((layer) => layer.selected).map((layer) => layer.id).join() === String(SHAPE))
+  await kit.getByTestId('motion-tool-pen').click()
+  const pathHint = (await kit.getByTestId('motion-tool-status').textContent().catch(() => '')) ?? ''
+  step('on a shape layer the Pen says its path becomes a new path in the layer', pathHint.includes('新路径'), pathHint)
+  await kit.getByTestId('motion-pen-mask').click()
+  await until(async () => (await kit.getByTestId('motion-pen-mask').getAttribute('aria-pressed')) === 'true')
+  const maskHint = (await kit.getByTestId('motion-tool-status').textContent().catch(() => '')) ?? ''
+  const masks = async () => (find(await tree(SHAPE), 'masks')?.children ?? []).length
+  const hadMasks = await masks()
+  for (const [x, y] of [[150, 620], [250, 620], [250, 700], [151, 621]]) await click(x, y)
+  await until(async () => (await masks()) === hadMasks + 1)
+  step('with 画蒙版 on, the Pen draws a mask on the shape layer', (await masks()) === hadMasks + 1 && maskHint.includes('蒙版'), maskHint)
+  await kit.getByTestId('motion-pen-mask').click()
 } catch (error) {
   h.crashed(error)
 } finally {

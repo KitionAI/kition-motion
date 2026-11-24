@@ -114,6 +114,18 @@ try {
   const said = (await kit.getByTestId(`${row}-error`).textContent().catch(() => '')) ?? ''
   step('a failing expression shows its error in Chinese', said.includes('表达式出错') && said.includes('nothingHere'), said)
   step('the error is reworded (not defined) and keeps its line number', said.includes('没有定义') && said.includes('第 1 行') && !said.includes('Error at line'), said)
+  // A syntax error is said in Chinese, about what the person typed (not the engine's own wrapping).
+  await field.click()
+  await field.fill('time * 90 +')
+  await field.press('Enter')
+  await until(async () => ((await kit.getByTestId(`${row}-error`).textContent().catch(() => '')) ?? '').includes('没写完'))
+  const syntax = (await kit.getByTestId(`${row}-error`).textContent().catch(() => '')) ?? ''
+  step('an expression that stops short says so in Chinese, without the engine’s words or a brace', syntax.includes('没写完') && !/[{}]|unexpected|token/i.test(syntax), syntax)
+  await field.click()
+  await field.fill('nothingHere * 2')
+  await field.press('Enter')
+  await until(async () => ((await kit.getByTestId(`${row}-error`).textContent().catch(() => '')) ?? '').includes('没有定义'))
+  await until(async () => (await prop(SHAPE, ROTATION))?.expressionEnabled === true)
 
   // 4. The switch turns it off and on.
   await kit.getByTestId(`${row}-switch`).click()
@@ -176,6 +188,17 @@ try {
   await undo()
   await until(async () => (await solidKeys()) === keysBefore)
   step('one undo takes it off', (await solidKeys()) === keysBefore)
+
+  // A property's name in the Properties panel selects it too: Alt+Shift+= then adds its expression.
+  await open()
+  await kit.getByTestId(`motion-layer-${SHAPE}`).click()
+  await kit.getByTestId('motion-prop-name-rotation').click()
+  await until(async () => (await layer(SHAPE))?.selectedProps?.includes(ROTATION))
+  step('a click on 旋转 in the Properties panel selects the property', (await layer(SHAPE))?.selectedProps?.includes(ROTATION) && (await kit.getByTestId('motion-prop-name-rotation').getAttribute('aria-pressed')) === 'true')
+  await kit.locator('.kui-app').focus()
+  await page.keyboard.press('Alt+Shift+Equal')
+  await until(async () => typeof (await prop(SHAPE, ROTATION))?.expression === 'string')
+  step('and Alt+Shift+= adds an expression to it', typeof (await prop(SHAPE, ROTATION))?.expression === 'string')
 
   // The help docs' picture of the interface: a layer selected, twirled open with its expression row.
   if (shots) {

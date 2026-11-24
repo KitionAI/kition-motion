@@ -26,6 +26,21 @@ import { useSender } from './useSetProp'
 
 type Fonts = { families?: Array<{ family: string; styles: string[] }> }
 
+/**
+ * The families a font search shows: those whose name, or a word of it, starts with the query
+ * (case aside), the names starting with it first; every family for an empty query.
+ */
+export function fontMatches<F extends { family: string }>(families: readonly F[], query: string): F[] {
+  const wanted = query.trim().toLowerCase()
+  if (!wanted) return [...families]
+  const rank = (family: string) => {
+    const name = family.toLowerCase()
+    if (name.startsWith(wanted)) return 0
+    return name.split(/[\s\-_]+/).some((word) => word.startsWith(wanted)) ? 1 : 2
+  }
+  return families.filter((each) => rank(each.family) < 2).sort((a, b) => rank(a.family) - rank(b.family))
+}
+
 let sessions = 0
 
 /** The text box: the content, live while typing (one undo step per visit), committed on blur or Cmd+Enter. */
@@ -181,6 +196,8 @@ export function TextControls({ node, focusNow, onFocused, selection }: { node: T
   const source = (node.children ?? []).find((child) => child.match === 'sourceText')
   const fonts = useEngineQuery<Fonts>('text.fonts', {})
   const families = fonts?.families ?? []
+  // The font search: words of a family's name that start with what is typed, whole-name prefixes first.
+  const [fontQuery, setFontQuery] = useState('')
   const send = useSender('layer.setText')
   const sendScrub = useSender('layer.setText')
   if (!selection) return <div className="motion-text" data-testid="motion-text-controls">{source ? <ContentBox node={source} focusNow={focusNow} onFocused={onFocused} /> : null}</div>
@@ -231,7 +248,8 @@ export function TextControls({ node, focusNow, onFocused, selection }: { node: T
           <Combobox
             value={mixed.has('font') ? '' : family}
             label={t('text.font')}
-            options={families.map((each) => ({ value: each.family, label: each.family, text: each.family }))}
+            options={fontMatches(families, fontQuery).map((each) => ({ value: each.family, label: each.family, text: each.family }))}
+            onSearch={setFontQuery}
             disabled={readOnly}
             onChange={(next) => {
               if (!next) return
@@ -301,7 +319,7 @@ export function TextControls({ node, focusNow, onFocused, selection }: { node: T
               onClick={() => set({ applyFill: c.applyFill === false })}
               data-testid="motion-text-apply-fill"
             >
-              {t('text.on')}
+              {mixed.has('applyFill') ? '—' : c.applyFill === false ? t('text.off') : t('text.on')}
             </button>
           </span>
         </Item>

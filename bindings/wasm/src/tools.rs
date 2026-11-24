@@ -14,6 +14,7 @@
 //! the project, and lives beside the document in this thread ([`STATE`]): an editor runs one
 //! document per worker.
 
+mod camera;
 mod geometry;
 mod gradient;
 mod pen;
@@ -34,10 +35,13 @@ use crate::MotionDocument;
 use geometry::{LayerBox, Pt};
 
 /// The tools on the rail, in its order: (id, label, shortcut, icon).
-const TOOLS: [(Tool, &str, &str, &str, &str); 7] = [
+const TOOLS: [(Tool, &str, &str, &str, &str); 10] = [
     (Tool::Selection, "selection", "Selection Tool", "V", "tool-selection"),
     (Tool::Hand, "hand", "Hand Tool", "H", "tool-hand"),
     (Tool::Zoom, "zoom", "Zoom Tool", "Z", "tool-zoom"),
+    (Tool::Orbit, "orbit", "Orbit Camera Tool", "C", "tool-rotate-camera"),
+    (Tool::Track, "track", "Pan Camera Tool", "C", "tool-move"),
+    (Tool::Dolly, "dolly", "Dolly Camera Tool", "C", "tool-scale-camera"),
     (Tool::Rectangle, "rectangle", "Rectangle Tool", "Q", "tool-rect"),
     (Tool::Ellipse, "ellipse", "Ellipse Tool", "Q", "tool-ellipse"),
     (Tool::Text, "text", "Text Tool", "T", "tool-type"),
@@ -54,6 +58,10 @@ pub(crate) enum Tool {
     Ellipse,
     Text,
     Pen,
+    /// The camera tools (see [`camera`]).
+    Orbit,
+    Track,
+    Dolly,
 }
 
 impl Tool {
@@ -97,6 +105,8 @@ pub(crate) enum Gesture {
     GradientPoint { layer: LayerId, path: String, merge: String },
     /// A box over path vertices from `start`; `base` stays selected (Shift).
     VertexBox { start: Pt, end: Pt, base: Vec<kition_motion_engine::VertexRef> },
+    /// Orbiting, panning or dollying the view of the 3D layers; `last` is where it was applied.
+    Camera { last: Pt, merge: String },
 }
 
 /// The tools' state for the open document.
@@ -200,7 +210,8 @@ fn cross(p: Pt, arm: f64, color: [u8; 4], out: &mut Vec<ToolOverlay>) {
 /// The selection's overlays: each selected layer's box, its handles, its rotation knob and its
 /// anchor point (handles for 2D layers only).
 fn selection_overlays(session: &Session, zoom: f64, out: &mut Vec<ToolOverlay>) {
-    for b in selected_boxes(session) {
+    // A layer whose path vertices are being edited shows its vertices, not its transform box.
+    for b in selected_boxes(session).into_iter().filter(|b| !session.state.selected_vertices.iter().any(|v| v.layer == b.id)) {
         out.push(ToolOverlay::Path { d: quad_path(&b.corners()), color: SELECTION, width: 1.0, dashed: false });
         if b.flat {
             let (base, tip) = geometry::knob(&b, zoom);
@@ -340,6 +351,7 @@ impl MotionDocument {
         }
         let cursor = match st.tool {
             Tool::Rectangle | Tool::Ellipse | Tool::Pen => "crosshair".to_owned(),
+            Tool::Orbit | Tool::Track | Tool::Dolly => if matches!(st.gesture, Gesture::Camera { .. }) { "grabbing" } else { "grab" }.to_owned(),
             Tool::Text => "text".to_owned(),
             _ if editing && matches!(st.gesture, Gesture::TextDrag { .. }) => "text".to_owned(),
             _ => st.cursor.clone(),

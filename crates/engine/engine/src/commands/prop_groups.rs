@@ -50,7 +50,29 @@ fn set_enabled(s: &mut Session, p: &Value) -> Result<Value> {
     })
 }
 
+/// The animated property `uid` of a text animator of the layer `p` names: (comp, layer, the
+/// animator's Properties group), or None.
+fn animator_property(s: &Session, p: &Value) -> Option<(ItemId, LayerId, Uid, Uid)> {
+    let uid = p.get("prop").and_then(Value::as_u64)?;
+    let (cid, lid) = layer_p(s, p, "prop.removeGroup").ok()?;
+    let animators = s.project.comp(cid)?.layer(lid)?.props.group("text/animators")?;
+    let holder = animators.groups().find_map(|animator| {
+        animator.groups().find(|g| g.match_id == "properties" && g.children.iter().any(|c| matches!(c, Node::Prop(prop) if prop.uid == uid)))
+    })?;
+    Some((cid, lid, holder.uid, uid))
+}
+
 fn remove(s: &mut Session, p: &Value) -> Result<Value> {
+    // One property a text animator animates (its Properties group holds properties, not groups).
+    if let Some((cid, lid, holder, uid)) = animator_property(s, p) {
+        s.edit("Delete", None, |proj, st| {
+            let g = layer_mut(proj, cid, lid)?.props.find_group_mut(holder).ok_or_else(|| bad("prop.removeGroup", "the animator has gone"))?;
+            g.children.retain(|n| n.uid() != uid);
+            st.selected_props.retain(|(_, u)| *u != uid);
+            Ok(())
+        })?;
+        return Ok(Value::Null);
+    }
     let (cid, lid, uid) = group_ref(s, p, "prop.removeGroup", true)?;
     remove_groups(s, cid, &[(lid, uid)], "Delete")?;
     Ok(Value::Null)
@@ -236,7 +258,15 @@ pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!("prop.renameGroup", "Rename Property Group", [], None, "{layer?, prop: uid, name}", has_layers, rename),
         cmd!("prop.setGroupEnabled", "Enable Property Group", [], None, "{layer?, prop: uid, value?}", has_layers, set_enabled),
-        cmd!("prop.removeGroup", "Delete Property Group", [], None, "{layer?, prop: uid}", has_layers, remove),
+        cmd!(
+            "prop.removeGroup",
+            "Delete Property Group",
+            [],
+            None,
+            "{layer?, prop: uid (a group, or a property a text animator animates)}",
+            has_layers,
+            remove
+        ),
         cmd!("prop.duplicateGroup", "Duplicate Property Group", [], None, "{layer?, prop: uid} → {prop: new uid}", has_layers, duplicate),
         cmd!("prop.moveGroup", "Reorder Property Group", [], None, "{layer?, prop: uid, index (1-based among its siblings)}", has_layers, move_to),
     ]

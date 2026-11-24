@@ -3407,7 +3407,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `mask` integer
   - `path` string, read by the command beside its listed parameters
   - `value` boolean
-- `path.convertToBezier` (writes): Turns RotoBezier masks back into ordinary Bezier masks with editable tangents (for `mask` or the selected ones on `layer`). The shape stays the same.
+- `path.convertToBezier` (writes): Turns RotoBezier masks back into ordinary Bezier masks with editable tangents (for `mask` or the selected ones on `layer`). The shape stays the same. On a shape layer, `shape` (a Rectangle, Ellipse or Polystar Path's uid; without `shape` and `mask`, every one of a layer with no mask to act on) becomes a Path item with the same outline at the current time.
   - `layer` integer
   - `mask` integer
 - `path.setFirstVertex` (writes): Makes one vertex (the single selected vertex, or `layer`, `mask` uid and `index`) the first vertex of its mask path; this changes how mask interpolation and stroke start points line up.

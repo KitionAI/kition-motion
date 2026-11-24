@@ -82,6 +82,29 @@ export async function start(which) {
       const box = await locator.boundingBox().catch(() => null)
       return box ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : null
     },
+    /** A composition point on the page, from the canvas's view. */
+    async at(cx, cy) {
+      const [zoom, x, y] = (await kit.getByTestId('motion-workspace').getAttribute('data-view')).split(' ').map(Number)
+      const surface = await kit.getByTestId('kit-canvas-surface').boundingBox()
+      return { x: surface.x + (cx - x) * zoom, y: surface.y + (cy - y) * zoom }
+    },
+    /** The colour the canvas shows at a composition point, [r, g, b]. */
+    async rgb(cx, cy) {
+      const p = await h.at(cx, cy)
+      const shot = await page.screenshot({ clip: { x: Math.round(p.x), y: Math.round(p.y), width: 1, height: 1 } })
+      return page.evaluate(async (data) => {
+        const image = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob())
+        const canvas = new OffscreenCanvas(1, 1)
+        const context = canvas.getContext('2d')
+        context.drawImage(image, 0, 0)
+        return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)]
+      }, shot.toString('base64'))
+    },
+    /** What the engine's frame cache reported last (the workspace's `data-preview`): frames kept, shown, rendered, found in the cache, and render milliseconds. */
+    async cache() {
+      const [cached, shown, rendered, hits, renderMs] = ((await kit.getByTestId('motion-workspace').getAttribute('data-preview')) ?? '').split(' ').map(Number)
+      return { cached, shown, rendered, hits, renderMs }
+    },
     crashed(error) {
       failures += 1
       console.log(`FAIL ran to the end - ${error instanceof Error ? (error.stack ?? error.message).split('\n').slice(0, 3).join(' ') : String(error)}`)

@@ -68,9 +68,14 @@ export function groupOpen(path: string, toggled: boolean) {
   return OPEN_BY_DEFAULT.has(path) !== toggled
 }
 
+/** Whether a layer is in 3D: its 3D switch is on, or it is a camera or a light (always 3D). */
+export function isThreeD(layer: MotionLayer) {
+  return layer.switches.threeD || layer.type === 'Camera' || layer.type === 'Light'
+}
+
 /** Whether a 2D layer shows the node (a 3D layer shows everything). */
 export function shown(node: TreeNode, layer: MotionLayer) {
-  return layer.switches.threeD || !THREE_D_ONLY.has(node.path)
+  return isThreeD(layer) || !THREE_D_ONLY.has(node.path)
 }
 
 /** Whether a group has anything to show (an empty Masks or Effects group is not drawn). */
@@ -115,7 +120,7 @@ export function editableNumbers(node: TreeNode, layer: MotionLayer): number[] | 
   if (node.type === 'scalar' && typeof node.value === 'number') return [node.value]
   if ((node.type === 'vec2' || node.type === 'vec3') && Array.isArray(node.value) && node.value.every((part) => typeof part === 'number')) {
     const parts = node.value as number[]
-    return layer.switches.threeD ? parts : parts.slice(0, 2)
+    return isThreeD(layer) ? parts : parts.slice(0, 2)
   }
   return null
 }

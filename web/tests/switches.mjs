@@ -20,10 +20,22 @@ try {
   await h.open()
   const order = (await h.layers()).map((layer) => layer.id)
 
-  // 1. The columns: the A/V switches left of the names by default; the layer switches are shown
-  // one by one from the header's Columns menu.
-  const avOnly = (await cell('video', SHAPE).count()) === 1 && (await cell('shy', SHAPE).count()) === 0
-  step('by default the A/V switches show and the layer switches wait in the Columns menu', avOnly)
+  // 1. The columns: by default the A/V switches, Shy, fx, Motion Blur, 3D and Parent; the other
+  // layer switches are shown one by one from the header's Columns menu.
+  const byDefault = ['video', 'audio', 'solo', 'lock', 'shy', 'effects', 'motionBlur', 'threeD']
+  const shownFirst = []
+  for (const id of byDefault) if ((await cell(id, SHAPE).count()) === 1) shownFirst.push(id)
+  const waiting = []
+  for (const id of ['collapse', 'quality', 'frameBlend', 'adjustment']) if ((await cell(id, SHAPE).count()) === 0) waiting.push(id)
+  const parentShown = (await kit.getByTestId(`motion-cell-parent-${SHAPE}`).count()) === 1
+  step('by default the A/V, Shy, fx, Motion Blur and 3D switches and Parent show, and the other switches wait in the Columns menu', shownFirst.length === byDefault.length && waiting.length === 4 && parentShown, JSON.stringify({ shownFirst, waiting, parentShown }))
+  // Every column header says what it is; the composition-wide ones say so.
+  const heads = await kit.locator('[data-testid^="motion-column-head-"]').evaluateAll((all) => all.map((head) => head.getAttribute('aria-label') ?? ''))
+  const compLabel = (await kit.getByTestId('motion-comp-switch-hideShy').getAttribute('aria-label')) ?? ''
+  step('the column headers have names, and Hide Shy Layers says it is the whole composition’s', heads.length >= 4 && heads.every((label) => label.length > 1) && compLabel.includes('整个合成') && ((await kit.getByTestId('motion-columns-button').getAttribute('aria-label')) ?? '').length > 0, JSON.stringify({ heads, compLabel }))
+  // The layer names stay readable beside them at 1440 px.
+  const nameBox = await kit.getByTestId(`motion-name-${SHAPE}`).evaluate((element) => ({ width: element.clientWidth, needs: element.scrollWidth }))
+  step('a layer’s name keeps at least 120 px beside the default columns and shows whole', nameBox.width >= 120 && nameBox.needs <= nameBox.width, JSON.stringify(nameBox))
   for (const id of ['shy', 'collapse', 'quality', 'effects', 'frameBlend', 'motionBlur', 'adjustment', 'threeD']) {
     if ((await cell(id, SHAPE).count()) === 1) continue
     await kit.getByTestId('motion-columns-button').click()
@@ -98,11 +110,9 @@ try {
   await kit.getByTestId('motion-columns-button').click()
   await kit.getByTestId('motion-column-toggle-matte').click()
   await kit.getByTestId('motion-columns-button').click()
-  await kit.getByTestId('motion-column-toggle-parent').click()
-  await kit.getByTestId('motion-columns-button').click()
   await kit.getByTestId('motion-column-toggle-audio').click()
   await until(async () => (await cell('audio', SHAPE).count()) === 0)
-  step('the Columns button’s menu shows Track Matte and Parent and hides Audio', (await kit.getByTestId(`motion-cell-matte-${SHAPE}`).count()) === 1 && (await kit.getByTestId(`motion-cell-parent-${SHAPE}`).count()) === 1 && (await cell('audio', SHAPE).count()) === 0)
+  step('the Columns button’s menu shows Track Matte (Parent shows by default) and hides Audio', (await kit.getByTestId(`motion-cell-matte-${SHAPE}`).count()) === 1 && (await kit.getByTestId(`motion-cell-parent-${SHAPE}`).count()) === 1 && (await cell('audio', SHAPE).count()) === 0)
   await kit.getByTestId(`motion-cell-matte-${SHAPE}`).selectOption(`lumaInverted:${SOLID}`)
   await until(async () => (await h.layer(SHAPE)).trackMatte?.layer === SOLID)
   const matte = (await h.layer(SHAPE)).trackMatte
@@ -112,6 +122,31 @@ try {
   step('the Parent column sets the parent', (await h.layer(SHAPE)).parent === SOLID)
   await h.open()
   step('the columns shown stay after a reload', (await kit.getByTestId(`motion-cell-mode-${SHAPE}`).count()) === 1 && (await cell('audio', SHAPE).count()) === 0)
+
+  // 7. The split between the names and the tracks drags (the tracks get wider), and stays after a reload.
+  const rulerBefore = (await kit.getByTestId('motion-ruler').boundingBox()).width
+  const split = await h.centre(kit.getByTestId('motion-names-split'))
+  await h.drag(split, { x: split.x - 120, y: split.y })
+  await until(async () => (await kit.getByTestId('motion-ruler').boundingBox()).width > rulerBefore + 60)
+  const rulerAfter = (await kit.getByTestId('motion-ruler').boundingBox()).width
+  step('dragging the names/tracks split left widens the tracks', rulerAfter > rulerBefore + 60, `${rulerBefore} → ${rulerAfter}`)
+  await h.open()
+  step('and the split stays after a reload', Math.abs((await kit.getByTestId('motion-ruler').boundingBox()).width - rulerAfter) < 4)
+  await kit.getByTestId('motion-names-split').dblclick()
+  await until(async () => Math.abs((await kit.getByTestId('motion-ruler').boundingBox()).width - rulerBefore) < 4)
+  step('a double-click on it puts it back', Math.abs((await kit.getByTestId('motion-ruler').boundingBox()).width - rulerBefore) < 4)
+
+  // 8. Every layer shy and Hide Shy Layers on: the timeline says they are hidden, and shows them again.
+  const ids = (await h.layers()).map((layer) => layer.id)
+  await h.drag(await h.centre(cell('shy', ids[0])), await h.centre(cell('shy', ids[ids.length - 1])), Math.max(10, ids.length * 4))
+  await until(async () => (await h.layers()).every((layer) => layer.switches.shy))
+  await kit.getByTestId('motion-comp-switch-hideShy').click()
+  await kit.getByTestId('motion-all-shy').waitFor({ timeout: 5000 }).catch(() => null)
+  const said = (await kit.getByTestId('motion-all-shy').textContent().catch(() => '')) ?? ''
+  step('with every layer shy and hidden the timeline says so instead of “no layers”', said.includes(String(ids.length)) && said.includes('消隐'), said)
+  await kit.getByTestId('motion-show-shy').click()
+  await until(async () => (await kit.getByTestId(`motion-layer-${SHAPE}`).count()) === 1)
+  step('its 显示它们 button turns Hide Shy Layers off and the rows come back', (await compSwitches())?.hideShy === false && (await kit.getByTestId(`motion-layer-${SHAPE}`).count()) === 1)
 } catch (error) {
   h.crashed(error)
 } finally {

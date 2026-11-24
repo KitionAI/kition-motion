@@ -26,7 +26,7 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, type AlignTo, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
+import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -40,18 +40,29 @@ import { EffectCatalog } from './properties/catalog'
 import { ProjectPanel, useProjectPanel } from './ProjectPanel'
 import { ExportDialog } from './ExportDialog'
 import { CanvasGuides, OVERLAY_KEYS, useOverlays } from './CanvasGuides'
+import { RegionOfInterest, type Region } from './RegionOfInterest'
 import { installPointerdownFallback } from './pointerFallback'
 import { ITEM_MIME, parseAnswer, relativePath, useFootage } from './footage'
 import { EDITOR_KEYS, pressed } from './keys'
 import { INTERPOLATIONS } from './timeline/interp'
 import { SamplerContext, type CurveSampler } from './timeline/samples'
+import { isThreeD } from './timeline/tree'
 
-/** Plays the composition from the current time against the wall clock; frames the engine cannot render in time are skipped, as a preview does. */
-function usePlayback(run: (command: string, params: Record<string, unknown>) => Promise<unknown>, time: number, duration: number) {
+/**
+ * Plays the composition from the current time. With `skip` (Skip Frames to Keep Real Time, the
+ * default) it keeps to the wall clock: frames the engine cannot render in time are skipped. Without
+ * it every frame is shown, one after another, as fast as the engine draws them (slower than real
+ * time when they take long). While it plays, the time goes to the engine with a repaint only (no
+ * full refresh of the editor's state each frame); `at` is the time shown, for the playhead and the
+ * timecode, and the editor's state catches up when playback stops.
+ */
+function usePlayback(run: (command: string, params?: Record<string, unknown>, damage?: null, options?: { refresh?: 'all' | 'repaint' | 'none' }) => Promise<unknown>, time: number, duration: number, frame: number, skip: boolean, paint: () => Promise<unknown>) {
   const [playing, setPlaying] = useState(false)
-  const latest = useRef({ time, duration })
-  latest.current = { time, duration }
+  const [at, setAt] = useState<number | null>(null)
+  const latest = useRef({ time, duration, frame, skip, paint })
+  latest.current = { time, duration, frame, skip, paint }
   const origin = useRef<{ wall: number; time: number } | null>(null)
+  const last = useRef<number | null>(null)
   const stop = useCallback(() => {
     origin.current = null
     setPlaying(false)
@@ -63,22 +74,47 @@ function usePlayback(run: (command: string, params: Record<string, unknown>) => 
     }
     const from = latest.current.time >= latest.current.duration - 1e-3 ? 0 : latest.current.time
     origin.current = { wall: performance.now(), time: from }
+    last.current = null
     setPlaying(true)
   }, [playing, stop])
   useEffect(() => {
-    if (!playing) return undefined
+    if (!playing) {
+      // The editor's state catches up with the last frame shown.
+      if (last.current !== null) {
+        const time = last.current
+        last.current = null
+        void run('time.set', { time })
+          .catch(() => undefined)
+          .finally(() => setAt(null))
+      }
+      return undefined
+    }
     let stopped = false
     let busy = false
+    // Without skipping: the frame shown last, the next one follows it.
+    let shown = origin.current?.time ?? 0
+    let first = true
     const step = async () => {
       if (stopped || !origin.current) return
-      const at = origin.current.time + (performance.now() - origin.current.wall) / 1000
-      if (at >= latest.current.duration) {
+      const { duration, frame, skip } = latest.current
+      const next = skip ? origin.current.time + (performance.now() - origin.current.wall) / 1000 : first ? shown : shown + frame
+      if (next >= duration - (skip ? 0 : frame / 2)) {
         stop()
         return
       }
       if (!busy) {
         busy = true
-        await run('time.set', { time: at }).catch(stop)
+        first = false
+        try {
+          await run('time.set', { time: next }, null, { refresh: 'repaint' })
+          last.current = next
+          shown = next
+          if (!stopped) setAt(next)
+          // Every frame shown: the next waits until this one is painted.
+          if (!skip) await latest.current.paint()
+        } catch {
+          stop()
+        }
         busy = false
       }
       requestAnimationFrame(() => void step())
@@ -88,7 +124,49 @@ function usePlayback(run: (command: string, params: Record<string, unknown>) => 
       stopped = true
     }
   }, [playing, run, stop])
-  return { playing, toggle, stop, origin }
+  return { playing, toggle, stop, origin, at }
+}
+
+/** What the engine's frame cache reports (`previewCache`). */
+type PreviewCache = { cached: number[]; bytes: number; shown: number; rendered: number; hits: number; renderMs: number }
+
+/**
+ * The frames the preview keeps (drawn as a bar over the ruler), asked again a moment after each
+ * change and twice a second while playing; and, while playing, the frames per second the viewer
+ * really shows (frames drawn, from the cache or rendered, over the wall clock).
+ */
+function usePreviewCache(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, state: unknown, playing: boolean) {
+  const [cache, setCache] = useState<PreviewCache | null>(null)
+  const [fps, setFps] = useState<number | null>(null)
+  const ask = useCallback(async () => {
+    if (!doc) return null
+    const answer = await doc.invoke<string>('previewCache').catch(() => null)
+    if (!answer) return null
+    const next = JSON.parse(answer) as PreviewCache
+    setCache((before) => (before && before.cached.join() === next.cached.join() && before.bytes === next.bytes && before.shown === next.shown ? before : next))
+    return next
+  }, [doc])
+  useEffect(() => {
+    const timer = window.setTimeout(() => void ask(), 250)
+    return () => window.clearTimeout(timer)
+  }, [ask, state])
+  useEffect(() => {
+    if (!playing) return undefined
+    let first: { shown: number; at: number } | null = null
+    const timer = window.setInterval(async () => {
+      const now = await ask()
+      if (!now) return
+      const at = performance.now()
+      if (first && at - first.at > 250) setFps(((now.shown - first.shown) * 1000) / (at - first.at))
+      if (!first) first = { shown: now.shown, at }
+    }, 500)
+    return () => {
+      window.clearInterval(timer)
+    }
+  }, [playing, ask])
+  // For the browser tests and the measurements: frames kept, shown, rendered, found in the cache, render milliseconds.
+  const stats = cache ? `${cache.cached.length} ${cache.shown} ${cache.rendered} ${cache.hits} ${Math.round(cache.renderMs)}` : undefined
+  return { cached: cache?.cached ?? [], fps, refresh: ask, stats }
 }
 
 /**
@@ -273,6 +351,8 @@ function codeOf(key: string) {
 
 /** Where View ▸ Grid Settings… keeps the grid's spacing, and Save Animation Preset… the folder last used. */
 const GRID_KEY = 'kition-motion.grid-spacing'
+/** Where Skip Frames to Keep Real Time is kept. */
+const SKIP_KEY = 'kition-motion.skip-frames'
 const PRESET_FOLDER_KEY = 'kition-motion.preset-folder'
 /** Where Layer ▸ Align's target (the composition or the selection) is kept. */
 const ALIGN_KEY = 'kition-motion.align-to'
@@ -389,7 +469,29 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const [timelineHeight, setTimelineHeight] = useTimelineHeight()
   // Moving through time is not an edit: it goes to the engine without the editor's notices.
   const runQuietly = session.run
-  const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0)
+  // Composition ▸ Preview ▸ Skip Frames to Keep Real Time (on by default), kept in this browser.
+  const [skipFrames, setSkipFrames] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem(SKIP_KEY) !== 'false'
+    } catch {
+      return true
+    }
+  })
+  const toggleSkipFrames = useCallback(() => {
+    setSkipFrames((current) => {
+      try {
+        localStorage.setItem(SKIP_KEY, String(!current))
+      } catch {
+        // Kept for this page only.
+      }
+      return !current
+    })
+  }, [])
+  const paintNow = useCallback(async () => canvas.current?.retryRender(), [])
+  const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0, state?.frame ?? 1 / 30, skipFrames, paintNow)
+  const frameCache = usePreviewCache(session.doc, state, playback.playing)
+  // While playing, the transport and the timeline show the time playback has reached.
+  const shownState = useMemo(() => (state && playback.at !== null ? { ...state, time: playback.at } : state), [state, playback.at])
   useSpaceTap(playback.toggle)
   const audioCount = useCallback((count: number) => workspace.current?.setAttribute('data-audio', String(count)), [])
   usePreviewAudio(session.doc, playback.playing, playback.playing ? (playback.origin.current?.time ?? null) : null, state?.comp?.duration ?? 0, audioCount)
@@ -525,6 +627,37 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       // Kept for this page only.
     }
   }, [session.doc, gridSpacing])
+  // View ▸ 3D View: whether the composition has 3D layers, the view shown, and whether it has a
+  // camera layer (`view.get3D`), asked again whenever the state changes.
+  const has3D = state?.layers.some(isThreeD) ?? false
+  const [view3d, setView3d] = useState<ThreeDView>({ has3D: false, view: 'activeCamera', camera: false })
+  useEffect(() => {
+    if (!session.doc || !state?.comp) return undefined
+    let current = true
+    void query<{ view?: string; activeCameraLayer?: unknown }>('view.get3D', {}).then((answer) => {
+      if (!current || !answer) return
+      const next = { has3D, view: answer.view ?? 'activeCamera', camera: answer.activeCameraLayer != null }
+      setView3d((before) => (before.has3D === next.has3D && before.view === next.view && before.camera === next.camera ? before : next))
+    })
+    return () => {
+      current = false
+    }
+  }, [session.doc, state, has3D, query])
+  /**
+   * The camera tools move a Front, Left, Top or Custom view without an edit, which the canvas
+   * does not repaint for by itself: it paints again after each of their drags' moves (once per
+   * frame) and after the release.
+   */
+  const cameraTool = tools.active === 'orbit' || tools.active === 'track' || tools.active === 'dolly'
+  const repaintSoon = useRef(0)
+  const repaintAfterCamera = (event: { buttons: number; type: string }) => {
+    if (!cameraTool || view3d.view === 'activeCamera' || (event.buttons === 0 && event.type !== 'pointerup')) return
+    if (repaintSoon.current) return
+    repaintSoon.current = window.setTimeout(() => {
+      repaintSoon.current = 0
+      void canvas.current?.retryRender()
+    }, 30)
+  }
   // The graph editor's curves: a property's values over time, sampled by the engine.
   const doc = session.doc
   const sampler = useCallback<CurveSampler>(
@@ -614,7 +747,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       const bytes = await session.doc?.invoke<Uint8Array | undefined>('takeFile', file)
       if (!bytes) throw new Error(t('preset.notWritten'))
       const written = await host.exportFile([folder, inside, file].filter(Boolean).join('/'), bytes)
-      toast.success(t('preset.saved', { name: written.split('/').pop() ?? written }))
+      // Named with the folder it went into, inside the project folder (Presets/Moves/Slide in.ecpreset).
+      const shown = [inside.replace(/^\/+|\/+$/g, ''), written.split('/').pop() ?? written].filter(Boolean).join('/')
+      toast.success(t('preset.saved', { name: shown }))
     } catch (error) {
       toast.error(t('preset.saveFailed'), { description: error instanceof Error ? error.message : String(error) })
     }
@@ -632,11 +767,39 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     }
     if ((await run('anim.applyPreset', { path: relativePath(folder, path) })) !== null) toast.success(t('preset.applied', { name: path.split('/').pop() ?? path }))
   }
+  // The Pen's option on a shape layer: draw a mask on it instead of a new path in it.
+  const [penMasks, setPenMasks] = useState(false)
+  useEffect(() => {
+    if (!session.doc) return
+    void session.doc.invoke('setPenMasks', penMasks).catch(() => undefined)
+  }, [session.doc, penMasks])
+  // View ▸ Region of Interest: drawn with a drag over the composition; the viewer then renders
+  // only inside it.
+  const [region, setRegion] = useState<Region | null>(null)
+  const [drawingRegion, setDrawingRegion] = useState(false)
+  const setRegionOfInterest = (rect: Region | null) => {
+    setDrawingRegion(false)
+    void run('view.setRegionOfInterest', { rect }).then((done) => {
+      if (done !== null) setRegion(rect)
+    })
+  }
+  const toggleRegion = () => {
+    if (region) setRegionOfInterest(null)
+    else setDrawingRegion((now) => !now)
+  }
+  useEffect(() => {
+    if (drawingRegion) workspace.current?.querySelector<HTMLElement>('[data-testid="motion-roi-layer"]')?.focus({ preventScroll: true })
+  }, [drawingRegion])
+  const purgeCache = () => void session.doc?.invoke('purgePreviewCache').then(() => frameCache.refresh())
   /** Commands the editor answers itself (the rest go to the engine as they are). */
   const own: Record<string, () => void> = {
     ...Object.fromEntries(Object.entries(OVERLAY_ROWS).map(([command, key]) => [command, () => toggleOverlay(key)])),
     ...Object.fromEntries(RESOLUTIONS.map(([command, , divisor]) => [command, () => setPreview(divisor)])),
     'playback.toggle': playback.toggle,
+    [KIT.roi]: () => setDrawingRegion((now) => !now),
+    [KIT.clearRoi]: () => setRegionOfInterest(null),
+    [KIT.skipFrames]: toggleSkipFrames,
+    [KIT.purgeCache]: purgeCache,
     'file.exportMovie': () => state?.comp && setExporting('movie'),
     'file.exportLottie': () => state?.comp && setExporting('lottie'),
     'file.import': () => void footage.importPicked(),
@@ -699,9 +862,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     if (alignTo === 'selection' && (state?.layers.filter((layer) => layer.selected).length ?? 0) < 2) for (const command of Object.keys(KIT_RUNS)) if (command.startsWith('kit:align-')) off.add(command)
     return off
   }, [idle, alignTo, state?.layers])
-  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo }, editor.enabled('keys.interpolation'), idle)
+  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo, threeD: view3d, region: region !== null, cached: frameCache.cached.length > 0 }, editor.enabled('keys.interpolation'), idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
-  const rows = useMemo(() => menuRows(effects, overlays, alignTo), [effects, overlays, alignTo])
+  // Layer ▸ Time ▸ Enable or Disable Time Remapping, by the first selected layer.
+  const remapOn = state?.layers.find((layer) => layer.selected)?.animated.some((property) => property.path === 'timeRemap') ?? false
+  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn), [effects, overlays, alignTo, skipFrames, remapOn])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
   const allowed = useMemo(() => shortcutCommands(rows), [rows])
   const hiddenCommands = useCallback((command: string) => !allowed.has(command), [allowed])
@@ -720,7 +885,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
 
   // What the active tool says (the engine's words, translated), else how to use the Pen.
   const anySelected = state?.layers.some((layer) => layer.selected) ?? false
-  const toolHint = tools.status ? phrase(tools.status) : tools.active === 'pen' && !host.readOnly ? t(anySelected ? 'pen.hint.mask' : 'pen.hint.shape') : null
+  // On a selected shape layer the Pen draws a new path in it, or a mask with its option on.
+  const shapeSelected = state?.layers.find((layer) => layer.selected)?.type === 'Shape'
+  const penHint = !anySelected ? 'pen.hint.shape' : shapeSelected && !penMasks ? 'pen.hint.path' : 'pen.hint.mask'
+  const toolHint = tools.status ? phrase(tools.status) : tools.active === 'pen' && !host.readOnly ? t(penHint) : null
 
   // The timeline's own keys (Delete, Cmd+D, …) come first.
   const timelineKeys: TimelineKeys = useRef(null)
@@ -833,6 +1001,42 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               ))}
             </Select>
           ) : null}
+          {state?.comp ? (
+            <Button
+              variant="ghost"
+              aria-pressed={region !== null || drawingRegion}
+              title={region ? t('roi.clear') : drawingRegion ? t('roi.hint') : t('roi.draw')}
+              onClick={toggleRegion}
+              data-testid="motion-roi"
+              data-region={region ? region.join(' ') : undefined}
+            >
+              {t('roi.label')}
+            </Button>
+          ) : null}
+          {state?.comp && view3d.has3D ? (
+            <Select
+              className="motion-3d-view"
+              value={view3d.view}
+              aria-label={t('view3d.label')}
+              title={t('view3d.label')}
+              onChange={(event) => {
+                const row = THREE_D_VIEWS.find(([, , view]) => view === event.target.value)
+                if (row) void run(row[0], {})
+              }}
+              data-testid="motion-3d-view"
+            >
+              {THREE_D_VIEWS.map(([command, label, view]) => (
+                <option key={command} value={view}>
+                  {phrase(label)}
+                </option>
+              ))}
+            </Select>
+          ) : null}
+          {tools.active === 'pen' && shapeSelected && !host.readOnly ? (
+            <Button variant="ghost" aria-pressed={penMasks} title={t('pen.maskOption.hint')} onClick={() => setPenMasks((now) => !now)} data-testid="motion-pen-mask">
+              {t('pen.maskOption')}
+            </Button>
+          ) : null}
           {toolHint ? (
             <span className="motion-tool-status" role="status" data-testid="motion-tool-status">
               {toolHint}
@@ -865,12 +1069,19 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           data-overlays={OVERLAY_KEYS.filter((key) => overlays[key]).join(' ')}
           data-resolution={preview}
           data-align-to={alignTo}
+          data-view3d={view3d.has3D ? view3d.view : undefined}
+          data-roi={region ? region.join(' ') : drawingRegion ? 'drawing' : undefined}
+          data-skip-frames={skipFrames}
+          data-cached={frameCache.cached.length}
+          data-preview={frameCache.stats}
         >
           <div
             className="motion-main"
             ref={main}
             style={{ '--motion-timeline-height': `${timelineHeight}px` } as CSSProperties}
             onKeyDown={keepTypedKeys}
+            onPointerMoveCapture={repaintAfterCamera}
+            onPointerUpCapture={repaintAfterCamera}
             onPointerDownCapture={(event) => {
               const box = event.currentTarget.getBoundingClientRect()
               lastPress.current = { x: event.clientX - box.left, y: event.clientY - box.top }
@@ -940,14 +1151,25 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               {/* The scrollbars: there only while the composition and its margin are longer than the view. */}
               <CanvasScrollbars views={views} content={(view) => picturePanBounds(picture?.width ?? 0, picture?.height ?? 0, view.zoom)} canvas={canvas} />
               {state?.comp ? <CanvasGuides views={views} comp={state.comp} overlays={overlays} gridSpacing={gridSpacing} readOnly={host.readOnly === true} /> : null}
+              {state?.comp ? <RegionOfInterest views={views} comp={state.comp} region={region} drawing={drawingRegion} onDrawn={setRegionOfInterest} onCancel={() => setDrawingRegion(false)} /> : null}
             </KitDocumentCanvas>
             {/* The transport and the timeline are the kit's own bars: Focus shows the composition alone. */}
             {state ? (
               <FrameChrome>
                 <Splitter height={timelineHeight} onHeight={setTimelineHeight} main={main} />
-                <Transport info={state} playing={playback.playing} onPlay={playback.toggle} onSeek={seek} onStep={step} onCommand={dispatch} trail={trail} onBack={(comp) => void run('comp.open', { comp })} />
+                <Transport
+                  info={shownState ?? state}
+                  playing={playback.playing}
+                  onPlay={playback.toggle}
+                  onSeek={seek}
+                  onStep={step}
+                  onCommand={dispatch}
+                  trail={trail}
+                  onBack={(comp) => void run('comp.open', { comp })}
+                  playbackRate={{ fps: frameCache.fps, skip: skipFrames, onSkip: toggleSkipFrames }}
+                />
                 <Timeline
-                  info={state}
+                  info={shownState ?? state}
                   onSeek={(seconds) => {
                     playback.stop()
                     seek(seconds)
@@ -956,6 +1178,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
                   onOpenPrecomp={openPrecomp}
                   onPrecompose={() => void precompose()}
                   onCommand={dispatch}
+                  cached={frameCache.cached}
                 />
               </FrameChrome>
             ) : null}

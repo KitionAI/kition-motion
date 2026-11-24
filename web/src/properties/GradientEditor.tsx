@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { TrashIcon } from '@kition/tessera/icons/react'
 import { IconButton, useKitEditor } from '@kition/sdk/editor'
 import { NumberField } from '../ValueField'
@@ -66,6 +66,19 @@ export function GradientEditor({ value, name, testId, readOnly, set }: { value: 
   const bar = useRef<HTMLDivElement>(null)
   const drag = useRef<{ pointerId: number; index: number; gesture: string; moved: boolean; x: number } | null>(null)
   const shown = moving ?? stops
+  // A stop just added on the bar takes the focus once the engine has it, so Delete and the
+  // arrow keys act on it.
+  const focusAt = useRef<number | null>(null)
+  const stopsRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const at = focusAt.current
+    if (at === null) return
+    const index = shown.findIndex((one) => Math.abs(one.at - at) < 1e-6)
+    if (index < 0) return
+    focusAt.current = null
+    setPicked(index)
+    stopsRef.current?.querySelectorAll<HTMLButtonElement>('.motion-gradient-stop')[index]?.focus({ preventScroll: true })
+  })
   const current = Math.min(picked, shown.length - 1)
   const stop = shown[current]
   const css = `linear-gradient(to right, ${[...shown].sort((a, b) => a.at - b.at).map((one) => `${one.hex}${Math.round(one.alpha * 255).toString(16).padStart(2, '0')} ${(one.at * 100).toFixed(2)}%`).join(', ')})`
@@ -94,12 +107,24 @@ export function GradientEditor({ value, name, testId, readOnly, set }: { value: 
     }
   }
   return (
-    <div className="motion-gradient" data-testid={testId}>
+    <div
+      className="motion-gradient"
+      data-testid={testId}
+      onKeyDown={(event) => {
+        // Delete and Backspace inside the gradient editor are its own: never the layer's.
+        if (event.key !== 'Delete' && event.key !== 'Backspace') return
+        event.stopPropagation()
+        if (event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable="true"]')) return
+        event.preventDefault()
+        remove(current)
+      }}
+    >
       <div
         ref={bar}
         className="motion-gradient-bar"
         style={{ backgroundImage: `${css}, repeating-conic-gradient(#999 0 25%, #fff 0 50%)`, backgroundSize: 'auto, 10px 10px' }}
         role="presentation"
+        tabIndex={-1}
         title={t('gradient.addHint')}
         onClick={(event) => {
           if (readOnly) return
@@ -107,10 +132,11 @@ export function GradientEditor({ value, name, testId, readOnly, set }: { value: 
           const next = [...shown, sample(shown, at)].sort((a, b) => a.at - b.at)
           change(next)
           setPicked(next.findIndex((one) => one.at === at))
+          focusAt.current = at
         }}
         data-testid={`${testId}-bar`}
       />
-      <div className="motion-gradient-stops">
+      <div className="motion-gradient-stops" ref={stopsRef}>
         {shown.map((one, index) => (
           <button
             key={index}

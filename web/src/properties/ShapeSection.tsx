@@ -17,7 +17,12 @@ type Simple = { group: TreeNode; shape: TreeNode; fill?: TreeNode; stroke?: Tree
 export function simpleShape(contents: TreeNode): Simple | null {
   const items = contents.children ?? []
   if (items.length !== 1 || items[0].match !== 'group') return null
-  const group = items[0]
+  return simpleGroup(items[0])
+}
+
+/** A shape group drawing one rectangle, ellipse, polygon or star: its parts, or null. */
+function simpleGroup(group: TreeNode): Simple | null {
+  if (group.match !== 'group') return null
   const inner = (group.children ?? []).find((child) => child.match === 'contents')?.children ?? []
   const shapes = inner.filter((child) => PATHS.has(child.match ?? ''))
   if (shapes.length !== 1 || !SHAPES.has(shapes[0].match ?? '')) return null
@@ -26,27 +31,9 @@ export function simpleShape(contents: TreeNode): Simple | null {
 
 const child = (node: TreeNode | undefined, match: string) => node?.children?.find((item) => item.match === match)
 
-/**
- * A shape layer's Contents section: for one rectangle, ellipse, polygon or star, its size (or
- * radius and points), roundness, fill colour and opacity, and stroke colour and width, with Add
- * fill and Add stroke when it has none; then every item of its contents in a closed group.
- */
-export function ShapeControls({ contents, scope }: { contents: TreeNode; scope: string }) {
-  const { run, t } = useKitEditor()
-  const { layer, readOnly } = usePanel()
-  const simple = simpleShape(contents)
-  if (!simple)
-    return (
-      <div className="motion-shape" data-testid="motion-shape-controls">
-        <div className="motion-shape-add">
-          <ShapeAddMenu layer={layer.id} testId="motion-shape-add" readOnly={readOnly} />
-        </div>
-        <PropertyChildren node={contents} scope={scope} depth={0} />
-      </div>
-    )
-  const { group, shape, fill, stroke } = simple
-  const add = (kind: 'fill' | 'stroke') => void run('layer.addShapeItem', { layer: layer.id, kind, group: group.uid })
-  const rows: Array<[TreeNode | undefined, TreeNode | undefined, string]> = [
+/** The quick settings of a shape group drawing one shape: (property, its parent, label). */
+function quickRows({ shape, fill, stroke }: Simple, t: (key: string) => string): Array<[TreeNode | undefined, TreeNode | undefined, string]> {
+  return [
     [child(shape, 'size'), shape, t('shape.size')],
     [child(shape, 'roundness'), shape, t('shape.roundness')],
     [child(shape, 'points'), shape, t('shape.points')],
@@ -57,14 +44,49 @@ export function ShapeControls({ contents, scope }: { contents: TreeNode; scope: 
     [child(stroke, 'color'), stroke, t('shape.strokeColor')],
     [child(stroke, 'width'), stroke, t('shape.strokeWidth')],
   ]
+}
+
+/** A group's own items (what is in its Contents). */
+const itemsOf = (group: TreeNode) => (group.children ?? []).find((item) => item.match === 'contents')?.children
+
+/**
+ * A shape layer's Contents section: for one rectangle, ellipse, polygon or star, its size (or
+ * radius and points), roundness, fill colour and opacity, and stroke colour and width, with Add
+ * fill and Add stroke when it has none; with several items, the same settings for each group that
+ * draws one shape, under its name; then every item of its contents in a group.
+ */
+export function ShapeControls({ contents, scope }: { contents: TreeNode; scope: string }) {
+  const { run, t } = useKitEditor()
+  const { layer, readOnly } = usePanel()
+  const simple = simpleShape(contents)
+  if (!simple) {
+    const groups = (contents.children ?? []).flatMap((group) => {
+      const parts = simpleGroup(group)
+      return parts ? [[group, parts] as const] : []
+    })
+    return (
+      <div className="motion-shape" data-testid="motion-shape-controls">
+        {groups.map(([group, parts]) => (
+          <div key={group.path} className="motion-shape-quick" data-testid={`motion-shape-quick-${group.uid}`}>
+            <span className="motion-shape-quick-name kui-muted">{group.name}</span>
+            <div className="motion-props">{quickRows(parts, t).map(([node, parent, label]) => (node ? <PropertyRow key={node.path} node={node} parent={parent} label={label} /> : null))}</div>
+          </div>
+        ))}
+        <div className="motion-shape-add">
+          <ShapeAddMenu layer={layer.id} items={contents.children} testId="motion-shape-add" readOnly={readOnly} />
+        </div>
+        <PropertyChildren node={contents} scope={scope} depth={0} />
+      </div>
+    )
+  }
+  const { group, fill, stroke } = simple
+  const add = (kind: 'fill' | 'stroke') => void run('layer.addShapeItem', { layer: layer.id, kind, group: group.uid })
   return (
     <div className="motion-shape" data-testid="motion-shape-controls">
-      <div className="motion-props">
-        {rows.map(([node, parent, label]) => (node ? <PropertyRow key={node.path} node={node} parent={parent} label={label} /> : null))}
-      </div>
+      <div className="motion-props">{quickRows(simple, t).map(([node, parent, label]) => (node ? <PropertyRow key={node.path} node={node} parent={parent} label={label} /> : null))}</div>
       <div className="motion-shape-add">
         {/* Into the shape's group, so an operator added here changes the shape. */}
-        <ShapeAddMenu layer={layer.id} group={group.uid} testId="motion-shape-add" readOnly={readOnly} />
+        <ShapeAddMenu layer={layer.id} group={group.uid} items={itemsOf(group)} testId="motion-shape-add" readOnly={readOnly} />
       </div>
       {!fill || !stroke ? (
         <div className="motion-shape-add">

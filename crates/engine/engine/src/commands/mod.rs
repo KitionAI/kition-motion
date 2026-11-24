@@ -62,6 +62,7 @@ pub mod roto_cmds;
 mod scene_detect;
 pub mod scripts;
 mod settings;
+pub mod shape_convert;
 pub mod shape_stroke;
 pub mod shape_tool;
 mod stubs;

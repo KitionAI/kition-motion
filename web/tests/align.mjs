@@ -25,6 +25,11 @@ try {
   await kit.getByTestId('motion-section-align').waitFor()
   if ((await kit.getByTestId('motion-align-panel').count()) === 0) await kit.getByTestId('motion-section-align-toggle').click()
   step('with a layer selected the Properties panel has the Align section', (await kit.getByTestId('motion-align-panel').count()) === 1)
+  // Near the top of the panel (reached without scrolling), its labels inside the panel's padding.
+  const body = await kit.getByTestId('motion-properties-body').boundingBox()
+  const section = await kit.getByTestId('motion-section-align').boundingBox()
+  const label = await kit.getByTestId('motion-align-panel').locator('.kui-muted').first().boundingBox()
+  step('the Align section shows without scrolling, its labels clear of the panel’s edge', section.y + 20 < body.y + body.height && label.x >= body.x + 8, JSON.stringify({ body, section, label }))
 
   // 1. To the composition: the square's left edge to the comp's.
   const before = await position(SHAPE)
