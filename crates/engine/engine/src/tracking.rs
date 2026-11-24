@@ -407,13 +407,18 @@ impl Session {
 
     fn poll_track_apply(&mut self) -> bool {
         let Some(job) = &self.track_job else { return false };
+        // Whether it had finished, read before its frames are taken: the worker pushes its last
+        // frame before it says it has finished, so a job seen finished here has no frame left to
+        // push. (Read after, a last frame pushed between the two was dropped with the job: the
+        // flaky `tests_track::transform_rotation_scale_and_background_job`.)
+        let mut finished = job.is_finished();
         let mut frames = std::mem::take(&mut *lock(&job.shared.frames));
         if let Err(error) = job.basis.validate(self) {
             job.cancel();
             lock(&job.shared.state).error = Some(error.to_string());
             frames.clear();
+            finished = job.is_finished();
         }
-        let finished = job.is_finished();
         let changed = !frames.is_empty();
         if changed {
             write_frames(Arc::make_mut(&mut self.project), job, &frames);

@@ -30,6 +30,15 @@ fn list(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn summary(s: &mut Session, _: &Value) -> Result<Value> {
+    // How many layers (in every composition) use each item as their source.
+    let mut uses: std::collections::HashMap<kition_motion_project::ItemId, usize> = std::collections::HashMap::new();
+    for (_, comp) in s.project.comps() {
+        for l in &comp.layers {
+            if let Some(item) = l.source.item() {
+                *uses.entry(item).or_default() += 1;
+            }
+        }
+    }
     let items: Vec<Value> = s
         .project
         .items
@@ -42,9 +51,36 @@ fn summary(s: &mut Session, _: &Value) -> Result<Value> {
             if let Some(d) = i.duration() {
                 o["duration"] = json!(d.seconds());
             }
-            if let ItemKind::Comp(c) = &i.kind {
-                o["layers"] = json!(c.layers.len());
-                o["frameRate"] = json!(c.frame_rate.as_f64());
+            if !i.is_folder() {
+                o["uses"] = json!(uses.get(&i.id).copied().unwrap_or(0));
+            }
+            match &i.kind {
+                ItemKind::Comp(c) => {
+                    o["layers"] = json!(c.layers.len());
+                    o["frameRate"] = json!(c.frame_rate.as_f64());
+                }
+                // Footage: its file and how it is interpreted (File ▸ Interpret Footage).
+                ItemKind::Footage(f) => {
+                    if f.has_video && !matches!(f.kind, kition_motion_project::FootageKind::Still) {
+                        o["frameRate"] = json!(f.frame_rate.as_f64());
+                    }
+                    o["footage"] = json!({
+                        "path": f.path,
+                        "missing": f.missing,
+                        "hasVideo": f.has_video,
+                        "hasAudio": f.has_audio,
+                        "alpha": match f.alpha {
+                            kition_motion_project::AlphaMode::Straight => "straight",
+                            kition_motion_project::AlphaMode::Premultiplied => "premultiplied",
+                            kition_motion_project::AlphaMode::Ignore => "ignore",
+                        },
+                        "loop": f.loop_count,
+                        "pixelAspect": f.pixel_aspect,
+                        "nativeFrameRate": f.native_rate.unwrap_or(f.frame_rate).as_f64(),
+                        "conformed": f.native_rate.is_some_and(|native| native != f.frame_rate),
+                    });
+                }
+                _ => {}
             }
             o
         })
@@ -58,6 +94,8 @@ fn summary(s: &mut Session, _: &Value) -> Result<Value> {
         "activeComp": s.state.active_comp.map(|c| c.0),
         "time": s.time().seconds(),
         "selectedLayers": s.state.selected_layers.iter().map(|l| l.0).collect::<Vec<_>>(),
+        // The Project panel's selected items (`project.select`), in the order they were selected.
+        "selection": s.state.project_selection.iter().map(|i| i.0).collect::<Vec<_>>(),
         "undo": s.history.undo.iter().map(|u| u.0.clone()).collect::<Vec<_>>(),
     }))
 }

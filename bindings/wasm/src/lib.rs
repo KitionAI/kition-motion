@@ -14,6 +14,7 @@ mod collab;
 mod conformance;
 pub mod descriptions;
 mod design;
+mod editor_reads;
 mod field_holds;
 mod files;
 mod frames;
@@ -191,6 +192,12 @@ pub struct MotionDocument {
     preview: u32,
     /// The Pen's option on a shape layer: draw a mask on it (true) or a new shape path in it.
     pub(crate) pen_masks: bool,
+    /// The project as it was when the Render Queue panel's Render was pressed: every job of
+    /// that run renders from it (see [`editor_reads`]).
+    render_snapshot: Option<Arc<kition_motion_project::Project>>,
+    /// What the canvas tools name a new shape layer (`形状图层` in Chinese), numbered; `None`: the
+    /// engine's English name. The editor sets it in its language (`setLayerNames`).
+    pub(crate) shape_layer_name: Option<String>,
 }
 
 /// A native host (`bindings/headless`) needs the document to be `Send`: checked here, where the
@@ -246,6 +253,8 @@ impl MotionDocument {
             snap_grid: false,
             preview: 1,
             pen_masks: false,
+            render_snapshot: None,
+            shape_layer_name: None,
         };
         doc.lend_footage();
         doc
@@ -434,6 +443,10 @@ impl MotionDocument {
     /// [`MotionDocument::render_movie`] takes them), from a copy of the project, so the document
     /// and its Render Queue are left as they are. Nothing has rendered yet.
     fn new_export(&self, path: &str, settings: &str) -> Result<movie::Export, String> {
+        // A Render Queue panel job (`{"queueItem": id}`) renders from the queue's copy.
+        if let Some(item) = movie::queue_item(settings) {
+            return self.new_queue_export(item, path);
+        }
         let comp = self.session.active_comp_id().ok_or("no composition is open")?;
         let mut scratch = Self::new_session(&self.services, &self.pool);
         scratch.state = self.session.state.clone();
@@ -619,6 +632,10 @@ pub const TRIED_COMMANDS: &[&str] = &[
     "path.convertToBezier",
     "layer.style.removeAll",
     "layer.enableTimeRemap",
+    "file.removeUnusedFootage",
+    "keys.exponentialScale",
+    "prop.convertExpressionToKeyframes",
+    "view.reset3DView",
 ];
 
 /// The longest stretch of sound [`MotionDocument::mix_audio`] mixes per call, in seconds.
@@ -1362,6 +1379,41 @@ pub mod web {
         #[wasm_bindgen(js_name = purgePreviewCache)]
         pub fn purge_preview_cache(&mut self) {
             self.0.purge_preview_cache()
+        }
+
+        /// The Render Queue panel's Render: a copy of the project for its jobs; answers the ids
+        /// to render as JSON (see [`MotionDocument::render_snapshot`]).
+        #[wasm_bindgen(js_name = renderSnapshot)]
+        pub fn render_snapshot(&mut self) -> String {
+            self.0.render_snapshot().to_string()
+        }
+
+        /// Drops the render queue's copy (see [`MotionDocument::drop_render_snapshot`]).
+        #[wasm_bindgen(js_name = dropRenderSnapshot)]
+        pub fn drop_render_snapshot(&mut self) -> bool {
+            self.0.drop_render_snapshot()
+        }
+
+        /// What the canvas tools name new layers, as JSON `{shape}` (see [`MotionDocument::set_layer_names`]).
+        #[wasm_bindgen(js_name = setLayerNames)]
+        pub fn set_layer_names(&mut self, names: &str) {
+            self.0.set_layer_names(names)
+        }
+
+        /// The colour the viewer shows at a composition pixel, `[r, g, b, a]` (0 to 255); empty off
+        /// the picture (see [`MotionDocument::pixel_at`]).
+        #[wasm_bindgen(js_name = pixelAt)]
+        pub fn pixel_at(&self, x: f64, y: f64) -> Vec<u8> {
+            self.0.pixel_at(x, y).map(|pixel| pixel.to_vec()).unwrap_or_default()
+        }
+
+        /// A layer's sound as peaks over its span, as JSON (see [`MotionDocument::layer_waveform`]).
+        #[wasm_bindgen(js_name = layerWaveform)]
+        pub fn layer_waveform(&self, layer: f64, count: u32) -> Result<String, JsError> {
+            if !(layer >= 0.0 && layer.fract() == 0.0 && layer < 9.0e15) {
+                return Err(JsError::new("the layer must be a layer id"));
+            }
+            self.0.layer_waveform(layer as u64, count).map(|wave| wave.to_string()).map_err(|message| JsError::new(&message))
         }
 
         /// Stops the export and keeps no file (see [`MotionDocument::export_cancel`]).

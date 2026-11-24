@@ -124,7 +124,8 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
           <PanelContext.Provider value={{ layer, time: info.time, frame: info.frame, readOnly }}>
             <LayerHeader info={info} layer={layer} readOnly={readOnly} count={selected} />
             {/* Align near the top, closed until opened (its state remembered), so it is reached without scrolling. */}
-            <AlignSection scope="all" alignTo={align.to} onAlignTo={align.onTo} idle={align.idle} onCommand={align.onCommand} readOnly={readOnly} />
+ {/* Cameras and lights have no picture to line up. */}
+            {layer.type === 'Camera' || layer.type === 'Light' ? null : <AlignSection scope="all" alignTo={align.to} onAlignTo={align.onTo} idle={align.idle} onCommand={align.onCommand} readOnly={readOnly} />}
             {top
               .filter((node) => node.children && !PLACED.has(node.match ?? '') && visible(node, layer) && hasRows(node, layer))
               .map((node) => (

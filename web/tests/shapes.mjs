@@ -57,6 +57,7 @@ try {
   await kit.getByTestId(`motion-layer-${SHAPE}`).locator('.motion-row-name').click()
   await until(async () => (await h.layer(SHAPE))?.selected)
   await kit.getByTestId('motion-shape-add').click()
+  await kit.getByTestId('motion-shape-add-menu-operations').hover()
   await kit.getByTestId('motion-shape-add-trim').click()
   await until(async () => (await items(SHAPE, inner)).includes('trim'))
   step('Add ▸ Trim Paths in the Properties panel adds it to the shape’s group', (await items(SHAPE, inner)).includes('trim'), JSON.stringify(await items(SHAPE, inner)))
@@ -77,7 +78,16 @@ try {
   // Opened low in the window, the menu opens upward where there is more room: it stays inside the window.
   const menuBox = await kit.locator('.kui-popover[role=menu]').last().boundingBox()
   const tall = page.viewportSize().height
-  step('the timeline’s Add menu stays inside the window, showing most of its items', !!menuBox && menuBox.y >= 0 && menuBox.y + menuBox.height <= tall && menuBox.height > 300, JSON.stringify(menuBox))
+  // Its rows are three submenus (shapes, paints, path operations): it shows all of them, nothing to scroll.
+  const scrolls = await kit.locator('.kui-popover[role=menu]').last().evaluate((menu) => menu.scrollHeight > menu.clientHeight + 1)
+  step('the timeline’s Add menu stays inside the window, showing all its items', !!menuBox && menuBox.y >= 0 && menuBox.y + menuBox.height <= tall && !scrolls, JSON.stringify(menuBox))
+  const opsRow = kit.getByTestId(`motion-row-shape-add-${SHAPE}-contents-menu-operations`)
+  await opsRow.hover()
+  const opsMenu = opsRow.locator('xpath=..').locator(':scope > [role=menu]')
+  await opsMenu.waitFor()
+  const operations = await opsMenu.boundingBox()
+  const opsScroll = await opsMenu.evaluate((menu) => menu.scrollHeight > menu.clientHeight + 1)
+  step('its path operations open beside it, inside the window, all shown', !!operations && operations.y >= 0 && operations.y + operations.height <= tall && !opsScroll, JSON.stringify(operations))
   await kit.getByTestId(`motion-row-shape-add-${SHAPE}-contents-repeater`).click()
   await until(async () => (await items(SHAPE, 'contents')).includes('repeater'))
   step('the timeline’s Contents row ▸ Repeater adds one to the layer’s contents', (await items(SHAPE, 'contents')).includes('repeater'), JSON.stringify(await items(SHAPE, 'contents')))
@@ -108,6 +118,7 @@ try {
 
   // 4. A gradient fill: stops added, dragged and removed in the panel.
   await kit.getByTestId('motion-shape-add').click()
+  await kit.getByTestId('motion-shape-add-menu-paints').hover()
   await kit.getByTestId('motion-shape-add-gfill').click()
   await until(async () => (await items(SHAPE, inner)).includes('gfill'))
   const painted = await items(SHAPE, inner)
@@ -156,6 +167,7 @@ try {
   await until(async () => (await h.layers()).length === before.length + 1)
   const rect = (await h.layers()).find((layer) => !before.includes(layer.id)).id
   await kit.getByTestId('motion-shape-add').click()
+  await kit.getByTestId('motion-shape-add-menu-paints').hover()
   await kit.getByTestId('motion-shape-add-gfill').click()
   await until(async () => (await items(rect, inner)).includes('gfill'))
   const startPath = `${inner}/gfill/start`

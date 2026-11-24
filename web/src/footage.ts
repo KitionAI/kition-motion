@@ -15,10 +15,29 @@ export const IMPORT_TYPES = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'mp4', 
 /** The MIME type a project item carries while it is dragged onto the timeline or the composition. */
 export const ITEM_MIME = 'application/x-kition-motion-item'
 
-/** A project item as `project.summary` lists it. */
-export type ProjectItem = { id: number; name: string; type: string; parent: number | null; size?: [number, number]; duration?: number; frameRate?: number; layers?: number }
+/** A footage item's file and how it is interpreted (File ▸ Interpret Footage), as `project.summary` lists it. */
+export type FootageInfo = {
+  path: string
+  missing: boolean
+  hasVideo: boolean
+  hasAudio: boolean
+  alpha: 'straight' | 'premultiplied' | 'ignore'
+  loop: number
+  pixelAspect: number
+  /** The file's own frame rate. */
+  nativeFrameRate: number
+  /** Whether it plays at another rate than the file's (`frameRate`). */
+  conformed: boolean
+}
 
-export type ProjectSummary = { activeComp?: number | null; items?: ProjectItem[] }
+/** A project item as `project.summary` lists it; `uses` counts the layers (in every composition) using it. */
+export type ProjectItem = { id: number; name: string; type: string; parent: number | null; size?: [number, number]; duration?: number; frameRate?: number; layers?: number; uses?: number; footage?: FootageInfo }
+
+/** `selection`: the Project panel's selected items (the engine's, `project.select`). */
+export type ProjectSummary = { activeComp?: number | null; items?: ProjectItem[]; selection?: number[] }
+
+/** The MIME type project items carry while they are dragged inside the Project panel (into a folder): their ids, as JSON. */
+export const ITEMS_MIME = 'application/x-kition-motion-items'
 
 /** Items a composition can hold as layers (the rest are folders). */
 export const isLayerSource = (item: ProjectItem) => item.type !== 'Folder'
@@ -120,5 +139,30 @@ export function useFootage({ host, run, t }: { host: HostConnection; run: (comma
   /** A project item as a new layer of the active composition (one undo step). */
   const place = useCallback((item: number, placement: Placement) => void run('layer.addItem', { item, ...placement }), [run])
 
-  return { importPicked, importDropped, importPaths, place }
+  /**
+   * Replace Footage ▸ File…: a file the person picks in the workspace takes footage `item`'s
+   * place, in every layer using it (one undo step). Answers whether it was replaced.
+   */
+  const replacePicked = useCallback(
+    async (item: number, name: string) => {
+      if (!host.init.capabilities.includes('pick-file')) {
+        toast.error(t('import.noPicker'))
+        return false
+      }
+      let path: string | null = null
+      try {
+        path = await host.pick('replace', IMPORT_TYPES)
+      } catch (error) {
+        toast.error(t('replace.failed', { name }), { description: error instanceof Error ? error.message : String(error) })
+        return false
+      }
+      if (!path) return false
+      const done = (await run('file.replaceFootage', { item, path: relativePath(folder, path) })) !== null
+      if (done) toast.success(t('replace.done', { name, file: path.split('/').pop() ?? path }))
+      return done
+    },
+    [folder, host, run, t],
+  )
+
+  return { importPicked, importDropped, importPaths, place, replacePicked }
 }

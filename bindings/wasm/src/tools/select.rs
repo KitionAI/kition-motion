@@ -358,7 +358,11 @@ impl MotionDocument {
                     let _ = self.tool_run("edit.deselectAll", json!({}));
                 }
                 let centre = [(b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0];
-                match self.tool_run("shape.newShape", json!({ "kind": kind, "size": [w, h], "position": centre })) {
+                let mut params = json!({ "kind": kind, "size": [w, h], "position": centre });
+                if let Some(name) = self.new_shape_layer_name() {
+                    params["name"] = json!(name);
+                }
+                match self.tool_run("shape.newShape", params) {
                     Ok(_) => {
                         st.tool = Tool::Selection;
                         st.cursor = "default".into();

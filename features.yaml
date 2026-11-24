@@ -764,3 +764,48 @@ features:
     gap: "Enter does not start path editing (it renames the layer); the text selection box does not follow characters an animator moves; the fonts are the engine's bundled faces and the CJK fallback the editor gives it: the Kit UI protocol has no way for a host to offer its installed fonts. Gated by web/tests/handFixes.mjs, web/tests/expressions.mjs and the path tests in bindings/wasm/src/tools/tests.rs."
     cases: []
     since: "2026-11-24"
+  - id: motion.editor.project-panel
+    title: "The Project panel by hand: folders (New Folder from its header, its menus and File ▸ New, named in the editor's language and renamed at once; items dragged onto a folder go in, onto the list's empty space out to the top; a folder opens and closes by its twirl, a double-click and Left/Right; Delete removes it with what is in it), a search box filtering by name (Escape clears it and gives the list the keys), several items selected (Cmd or Ctrl-click, Shift-click, Shift with the arrows, Cmd+A; the engine's project.select, so File's commands act on it), the selected item's details under the list (type, size, duration, frame rate, how many layers use it, and for footage its alpha, loop, pixel aspect and a missing file), Interpret Footage (frame rate: the file's or conformed; alpha straight, premultiplied, ignored or guessed; loop; pixel aspect ratio), Replace Footage through the host's picker, New Composition from Selection (one composition holding several items), Add to Render Queue for compositions, Remove Unused Footage (also File ▸ Dependencies, hidden while all is used), Reveal Layer Source in Project (Layer menu and a layer's menu: the folders open, the item is selected and scrolled to), Enter or F2 renames, Delete asks first when layers use what goes; one undo step each. project.summary says how many layers use each item, each footage item's interpretation and the panel's selection"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/ProjectPanel.tsx, web/src/footage.ts, web/src/dialogs.tsx, web/src/App.tsx, web/src/menus.ts, web/src/timeline/LayerMenu.tsx, web/src/timeline/Timeline.tsx, crates/engine/engine/src/commands/query.rs, bindings/wasm/src/outputs.json, web/tests/project.mjs]
+    gap: "No proxies, labels, comments or columns in the panel; Interpret Footage leaves fields, colour profile, timecode and the matte colour to agents (file.interpretFootage). Gated by web/tests/project.mjs and web/tests/footage.mjs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.render-queue
+    title: "The Render Queue panel (File ▸ Render Queue, under the Project panel): the project's render jobs (renderQueue.*) in order, each with a Render box, its composition, output file, format, size, frame rate and stretch; added from File ▸ Export ▸ Add to Render Queue and a composition's menu in the Project panel with the output settings used last; moved up and down, duplicated and removed (one undo step each); a job's settings dialog sets its stretch (whole composition, work area, or from a timecode to a timecode), format (MP4, WebM, GIF), size (full, half, third, quarter or a width and height), frame rate and file name and folder, with named presets kept in this browser. Render runs the jobs one after another on the stepped export with each job's frames, time taken and time left, Stop (the job rendering; the next goes on) and Stop All, and each job's result (the file written beside the project, or why it failed). The rule for edits during a render: Render takes a copy of the project (renderSnapshot) and every job of that run renders from it; the editor stays usable (the engine is left idle between steps, so held keys and edits get their turn) and the jobs of the run cannot be moved or removed until it ends"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/RenderQueue.tsx, web/src/App.tsx, web/src/menus.ts, bindings/wasm/src/editor_reads.rs, bindings/wasm/src/movie.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/commands/render_queue.rs, web/tests/renderQueue.mjs]
+    gap: "Only formats written as one file render here (MP4, WebM, GIF); a job an agent set to an image sequence or another codec says so and is not rendered. Render settings beyond these (quality, effects, motion blur, templates) stay with agents (renderQueue.setRenderSettings). Gated by web/tests/renderQueue.mjs and the queue test in bindings/wasm/src/editor_reads.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.keyframe-assistants
+    title: "Keyframe assistants by hand: a double-click on a keyframe (or Edit Value… in its menu) types its value (each part) and time in (keys.set, one undo step); the keyframe menu and Animation have Toggle Hold, Rove Across Time (for keyframes moving through space, saying when it is on), Time-Reverse Keyframes, Select Equal, Previous and Following Keyframes; Animation ▸ Keyframe Assistant has Exponential Scale (two Scale keyframes) and Convert Expression to Keyframes (the selected properties with an expression), each shown only where it would change something; J and K go to the previous and next keyframe"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/timeline/KeyMenu.tsx, web/src/timeline/Timeline.tsx, web/src/dialogs.tsx, web/src/menus.ts, web/src/App.tsx, bindings/wasm/src/lib.rs, web/tests/keyframes.mjs]
+    gap: "No Wiggler, Smoother or Motion Sketch panels (keys.wiggle, keys.smooth and motion.sketch are for agents). Gated by web/tests/keyframes.mjs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.info-audio
+    title: "Info and audio: the status bar reads the composition pixel under the pointer and the colour the viewer shows there (pixelAt), in 0-255 or percent (a click switches, kept in this browser); L shows a layer's Audio Levels, LL its waveform too (layerWaveform: its sound on its own, with its levels, from in to out point, muted or not), and an open Audio group shows it; while it plays the transport's meters show the left and right peaks at the playhead (-60 dB to 0 dB) with a held peak; muting a layer, soloing another or changing levels while it plays is heard at once (what was mixed ahead is mixed again)"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/audio.tsx, web/src/App.tsx, web/src/Transport.tsx, web/src/timeline/PropertyRows.tsx, web/src/timeline/tree.ts, web/src/timeline/Timeline.tsx, web/src/timeline/samples.ts, web/src/keys.ts, bindings/wasm/src/editor_reads.rs, web/tests/info.mjs]
+    gap: "The colour is the viewer's (composited over the background, at the preview resolution): the alpha is that of the picture shown. Waveforms read up to 600 s of a layer. Gated by web/tests/info.mjs and the tests in bindings/wasm/src/editor_reads.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.hand-fixes-7d
+    title: "The phase 7c audit's fixes: Escape ends path editing and V right after the Pen gives the transform box; a new light sits far in front, a little above the middle, so a layer turned 40° stays readable; a text layer typed into from the panel is named after its whole first line until renamed; new shape (the menus and the Pen and shape tools), null and adjustment layers have the editor language's names; the shape Add menus are three submenus (shapes, paints, path operations) that fit the window; the Pen's hints are short enough for the status bar; a new text animator comes into view; cameras and lights have no Align section; Loop has its label; View ▸ 3D View shows Alt+Shift+1, 2, 3; Reset 3D View shows on the active camera only when it would move it; the names split's grip is easier to see; New Folder has no key (scripts/shortcuts.mjs --check fails when two actions share a key); Shift+8, the keypad's * and an input method's ＊ add a marker"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/App.tsx, web/src/menus.ts, web/src/keys.ts, web/src/strings.ts, web/src/app.css, web/src/Transport.tsx, web/src/HomeTab.tsx, web/src/properties/ShapeItems.tsx, web/src/properties/TextAnimators.tsx, web/src/properties/PropertiesPanel.tsx, web/scripts/shortcuts.mjs, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/pen.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/editor_reads.rs, crates/engine/engine/src/commands/layer.rs, crates/engine/engine/src/commands/text_edit.rs, crates/engine/engine/src/tests_text_edit.rs, web/tests/fixes7c.mjs]
+    gap: "Gated by web/tests/fixes7c.mjs, web/tests/shapes.mjs, the test:shortcuts check, the Pen test in bindings/wasm/src/tools/tests.rs and the text naming test in crates/engine/engine/src/tests_text_edit.rs."
+    cases: []
+    since: "2026-11-24"

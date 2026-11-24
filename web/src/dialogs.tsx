@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { Button, Checkbox, Dialog, Field, Select, TextInput, formatTimecode, parseHex, parseTimecode, rgbToHex, useKitEditor } from '@kition/sdk/editor'
 import { ColorSwatch } from './properties/ColorSwatch'
+import type { ProjectItem } from './footage'
 
 /** A colour as the engine gives it: [r, g, b] from 0 to 1. */
 export type Rgb = readonly [number, number, number]
@@ -26,6 +27,8 @@ export type MotionDialog =
   | { kind: 'sequence'; fps: number }
   | { kind: 'grid'; spacing: number; onSave: (spacing: number) => void }
   | { kind: 'guide'; comp: { width: number; height: number } }
+  | { kind: 'interpret'; item: ProjectItem }
+  | { kind: 'keyValue'; layer: number; path: string; name: string; time: number; value: unknown; fps: number; duration: number }
 
 /** The first selected keyframe's speed (units per second) and influence (%) on each side, for Keyframe Velocity. */
 export type VelocityValues = { inSpeed: number; inInfluence: number; outSpeed: number; outInfluence: number }
@@ -561,6 +564,147 @@ function SequenceDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { ki
   )
 }
 
+/** Pixel aspect ratios footage is often made with: [label key, ratio]. */
+const PIXEL_ASPECTS: ReadonlyArray<readonly [string, number]> = [
+  ['square', 1],
+  ['ntsc', 0.9091],
+  ['ntscWide', 1.2121],
+  ['pal', 1.094],
+  ['palWide', 1.4587],
+  ['hdv', 1.3333],
+  ['dvcpro', 1.5],
+  ['anamorphic', 2],
+]
+
+/**
+ * Interpret Footage: the frame rate it plays at (the file's, or conformed to another), how its
+ * alpha is read (straight, premultiplied, ignored, or guessed from the picture), how many times it
+ * loops, and its pixel aspect ratio. One undo step (`file.interpretFootage`); layers that ran to
+ * the footage's end still do.
+ */
+function InterpretDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'interpret' }>; onDone: () => void }) {
+  const { run, t } = useKitEditor()
+  const item = dialog.item
+  const footage = item.footage
+  const moving = item.frameRate != null
+  const pictures = footage?.hasVideo ?? false
+  const [conform, setConform] = useState(footage?.conformed ?? false)
+  const [rate, setRate] = useState(String(Math.round((item.frameRate ?? 30) * 1000) / 1000))
+  const [alpha, setAlpha] = useState<string>(footage?.alpha ?? 'straight')
+  const [loop, setLoop] = useState(String(footage?.loop ?? 1))
+  const start = footage?.pixelAspect ?? 1
+  const known = PIXEL_ASPECTS.find(([, ratio]) => Math.abs(ratio - start) < 1e-3)
+  const [aspect, setAspect] = useState(String(known ? known[1] : start))
+  const fps = numberIn(rate, 0.01, 999)
+  const loops = numberIn(loop, 1, 9999)
+  const valid = (!conform || fps !== null) && loops !== null && Number.isInteger(loops)
+  return (
+    <FormDialog
+      title={t('dialog.interpret', { name: item.name })}
+      testId="motion-interpret-dialog"
+      onSubmit={() => {
+        if (!valid) return
+        void run('file.interpretFootage', {
+          items: [item.id],
+          ...(moving ? { frameRate: conform && fps !== null ? fps : 'file' } : {}),
+          ...(pictures ? { alpha, pixelAspect: Number(aspect) } : {}),
+          loop: loops,
+        })
+        onDone()
+      }}
+      onClose={onDone}
+      valid={valid}
+    >
+      {moving ? (
+        <>
+          <Field label={t('interpret.frameRate')}>
+            {({ id }) => (
+              <Select id={id} value={conform ? 'conform' : 'file'} onChange={(event) => setConform(event.target.value === 'conform')} data-testid="motion-interpret-rate-mode">
+                <option value="file">{t('interpret.rate.file', { fps: Math.round((footage?.nativeFrameRate ?? item.frameRate ?? 30) * 1000) / 1000 })}</option>
+                <option value="conform">{t('interpret.rate.conform')}</option>
+              </Select>
+            )}
+          </Field>
+          {conform ? <TextRow label={t('interpret.conformTo')} value={rate} onChange={setRate} error={fps === null ? t('dialog.badNumber') : null} testId="motion-interpret-rate" unit={t('interpret.fps')} /> : null}
+        </>
+      ) : null}
+      {pictures ? (
+        <>
+          <Field label={t('interpret.alpha')}>
+            {({ id }) => (
+              <Select id={id} value={alpha} onChange={(event) => setAlpha(event.target.value)} data-testid="motion-interpret-alpha">
+                {['straight', 'premultiplied', 'ignore', 'guess'].map((mode) => (
+                  <option key={mode} value={mode}>
+                    {t(`interpret.alpha.${mode}`)}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field label={t('interpret.pixelAspect')}>
+            {({ id }) => (
+              <Select id={id} value={aspect} onChange={(event) => setAspect(event.target.value)} data-testid="motion-interpret-aspect">
+                {known ? null : <option value={String(start)}>{t('interpret.aspect.other', { ratio: Math.round(start * 10000) / 10000 })}</option>}
+                {PIXEL_ASPECTS.map(([key, ratio]) => (
+                  <option key={key} value={String(ratio)}>
+                    {t(`interpret.aspect.${key}`, { ratio })}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        </>
+      ) : null}
+      <TextRow label={t('interpret.loop')} value={loop} onChange={setLoop} error={loops === null || !Number.isInteger(loops) ? t('interpret.badLoop') : null} testId="motion-interpret-loop" unit={t('interpret.times')} />
+    </FormDialog>
+  )
+}
+
+/**
+ * A keyframe's value and time typed in (a double-click on the keyframe, or Edit Value… on its
+ * menu): each of a number's parts (x, y, z), and the time as timecode. One undo step (`keys.set`
+ * with the new value and time).
+ */
+function KeyValueDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'keyValue' }>; onDone: () => void }) {
+  const { run, t } = useKitEditor()
+  const numbers = typeof dialog.value === 'number' ? [dialog.value] : Array.isArray(dialog.value) && dialog.value.every((part) => typeof part === 'number') ? (dialog.value as number[]) : null
+  const [parts, setParts] = useState(() => (numbers ?? []).map((part) => String(Math.round(part * 1000) / 1000)))
+  const [time, setTime] = useState(formatTimecode(dialog.time, dialog.fps))
+  const seconds = parseTimecode(time, dialog.fps, false, dialog.time)
+  const values = parts.map((part) => numberIn(part, -1e9, 1e9))
+  const timeOk = seconds !== null && seconds >= 0 && seconds <= dialog.duration
+  const valid = timeOk && values.every((value) => value !== null)
+  const names = ['X', 'Y', 'Z', 'W']
+  return (
+    <FormDialog
+      title={t('dialog.keyValue', { name: dialog.name })}
+      testId="motion-key-dialog"
+      onSubmit={() => {
+        if (!valid || seconds === null) return
+        const value = numbers == null ? undefined : typeof dialog.value === 'number' ? values[0] : values
+        void run('keys.set', { layer: dialog.layer, path: dialog.path, time: dialog.time, timeBase: 'comp', ...(Math.abs(seconds - dialog.time) > 1e-6 ? { newTime: seconds } : {}), ...(value !== undefined ? { value } : {}) })
+        onDone()
+      }}
+      onClose={onDone}
+      valid={valid}
+    >
+      {parts.map((part, at) => (
+        <TextRow
+          key={at}
+          label={parts.length > 1 ? t('keyValue.part', { part: names[at] ?? String(at + 1) }) : t('keyValue.value')}
+          value={part}
+          onChange={(text) => setParts((now) => now.map((each, index) => (index === at ? text : each)))}
+          error={values[at] === null ? t('dialog.badNumber') : null}
+          testId={`motion-key-value-${at}`}
+          autoFocus={at === 0}
+        />
+      ))}
+      {numbers == null ? <p className="kui-muted">{t('keyValue.notNumber')}</p> : null}
+      <TextRow label={t('keyValue.time')} value={time} onChange={setTime} error={timeOk ? null : t('dialog.badTime', { end: formatTimecode(dialog.duration, dialog.fps) })} testId="motion-key-time" autoFocus={numbers == null} />
+    </FormDialog>
+  )
+}
+
 /** The open dialog, if any; each runs one engine command (one undo step) when confirmed. */
 export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialog | null; onClose: () => void; onSeek: (seconds: number) => void }) {
   // A new dialog (even of the same kind) starts from its own values.
@@ -602,5 +746,9 @@ export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialo
       return <GridDialog key={key} dialog={dialog} onDone={onClose} />
     case 'guide':
       return <GuideDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'interpret':
+      return <InterpretDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'keyValue':
+      return <KeyValueDialog key={key} dialog={dialog} onDone={onClose} />
   }
 }

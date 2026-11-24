@@ -596,6 +596,21 @@ fn tools_a_box_corner_on_a_vertex_scales_when_dragged_and_a_double_click_edits_t
 }
 
 #[test]
+fn tools_selection_picked_after_the_pen_shows_the_new_layers_box_not_its_vertices() {
+    use kition_kit::tools::ToolOverlay;
+    let mut doc = doc();
+    doc.select_tool("pen", 1.0).unwrap();
+    for [x, y] in [[800.0, 400.0], [1000.0, 400.0], [1000.0, 600.0], [801.0, 401.0]] {
+        click(&mut doc, x, y, ToolMods::default());
+    }
+    doc.select_tool("selection", 1.0).unwrap();
+    let handles =
+        doc.state(0.0, 0.0, ToolMods::default(), 1.0).overlays.iter().filter(|o| matches!(o, ToolOverlay::Anchor { size, .. } if *size >= 7.0)).count();
+    assert!(doc.session.state.selected_vertices.is_empty(), "V after the Pen picked vertices");
+    assert_eq!(handles, 8, "V after the Pen shows the transform box");
+}
+
+#[test]
 fn tools_in_a_3d_view_the_boxes_follow_the_view_and_2d_layers_are_not_picked() {
     let mut doc = doc();
     let flat = solid(&mut doc, "Flat");

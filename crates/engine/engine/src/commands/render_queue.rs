@@ -508,6 +508,17 @@ fn item_json(s: &Session, it: &RenderQueueItem, index: usize) -> Value {
         o.insert("width".into(), json!(w));
         o.insert("height".into(), json!(h));
         o.insert("frames".into(), json!(frames));
+        // The stretch rendered and its frame rate, in seconds and frames per second.
+        if let Some(c) = comp {
+            let (a, b) = it.settings.span(c);
+            let kind = match it.settings.time_span {
+                TimeSpan::WorkArea => "workArea",
+                TimeSpan::LengthOfComp => "comp",
+                TimeSpan::Custom { .. } => "custom",
+            };
+            o.insert("span".into(), json!({"kind": kind, "start": a.seconds(), "end": b.seconds()}));
+            o.insert("frameRate".into(), json!(it.settings.rate(c).as_f64()));
+        }
     }
     v
 }

@@ -22,7 +22,8 @@ function rowsOf(path: readonly string[], entries: readonly Entry[]): MenuRow[] {
     const [label, second, given] = entry
     if (typeof second !== 'string') return rowsOf([...path, label], second)
     const shortcut = given ?? SHORTCUT_OVERRIDES[second]
-    return [{ path, label, command: second, ...(shortcut ? { shortcut } : {}) }]
+    // An empty override: no key (not the engine command's).
+    return [{ path, label, command: second, ...(shortcut !== undefined ? { shortcut } : {}) }]
   })
 }
 
@@ -38,6 +39,8 @@ export const SHORTCUT_OVERRIDES: Readonly<Record<string, string>> = {
   'keys.toggleHold': 'Cmd+Alt+Shift+H',
   // Cmd+R reloads the page in a browser before the editor could take it.
   'view.rulers': 'Cmd+Alt+Shift+R',
+  // The engine's Cmd+Alt+Shift+N is New Mask's here: New Folder has no key.
+  'project.newFolder': '',
 }
 
 /**
@@ -53,7 +56,7 @@ export const EXTRA_SHORTCUTS = ['keys.nudgeForward', 'keys.nudgeBackward', 'keys
  * command shows no result in this editor or replaces the project (New Project, Cmd+Alt+N).
  */
 export function shortcutCommands(rows: readonly MenuRow[]): ReadonlySet<string> {
-  return new Set([...rows.map((row) => row.command).filter((command) => !command.startsWith('kit:') && command !== SEPARATOR && !SHORTCUT_OVERRIDES[command]), ...EXTRA_SHORTCUTS])
+  return new Set([...rows.map((row) => row.command).filter((command) => !command.startsWith('kit:') && command !== SEPARATOR && !(command in SHORTCUT_OVERRIDES)), ...EXTRA_SHORTCUTS])
 }
 
 /** The kit's own rows (`kit:` commands): the editor runs them, not the engine. */
@@ -75,6 +78,10 @@ export const KIT = {
   clearRoi: 'kit:clear-region-of-interest',
   skipFrames: 'kit:skip-frames',
   purgeCache: 'kit:purge-cache',
+  addToQueue: 'kit:add-to-render-queue',
+  rove: 'kit:rove-across-time',
+  convertExpression: 'kit:convert-expression',
+  renderQueue: 'kit:render-queue',
 } as const
 
 /** View's switches (the engine's own rows, answered by the editor) and the overlay each turns on and off. */
@@ -109,6 +116,9 @@ export const THREE_D_VIEWS: ReadonlyArray<readonly [command: string, label: stri
   ['view.3d.custom2', 'Custom View 2', 'custom2'],
   ['view.3d.custom3', 'Custom View 3', 'custom3'],
 ]
+
+/** The 3D views' keys that work in every browser (the editor's own, keys.ts), shown in the menu. */
+const VIEW_KEYS: Readonly<Record<string, string>> = { 'view.3d.front': 'Alt+Shift+1', 'view.3d.custom1': 'Alt+Shift+2', 'view.3d.activeCamera': 'Alt+Shift+3' }
 
 /** What View ▸ 3D View needs to know: whether the composition has 3D layers, the view shown, and whether it has a camera layer. */
 export type ThreeDView = { has3D: boolean; view: string; camera: boolean }
@@ -167,6 +177,12 @@ export const TRIED_ROWS: Readonly<Record<string, Record<string, unknown>>> = {
   'layer.enableTimeRemap': {},
   // Convert to Bezier Path: hidden unless a selected shape layer has a Rectangle, Ellipse or Polystar Path.
   'path.convertToBezier': {},
+  // Reset 3D View on the active camera: hidden unless the camera layer would change (the other views always reset).
+  'view.reset3DView': {},
+  // Remove Unused Footage: hidden while every footage item and solid is used.
+  'file.removeUnusedFootage': {},
+  // Exponential Scale: hidden unless two Scale keyframes are selected.
+  'keys.exponentialScale': {},
 }
 
 /** Layer ▸ Arrange's rows and where each moves the selected layers (`layer.arrange`'s `to`). */
@@ -208,14 +224,21 @@ const NO_STYLES: ReadonlySet<string> = new Set()
 /** A Layer ▸ Layer Styles row: marked (Added) when the selected layer has the style (choosing it again turns it on). */
 const styleLabel = (label: string, id: string, styled: ReadonlySet<string>) => (styled.has(id) ? `${label} (Added)` : label)
 
-const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean, styled: ReadonlySet<string>): ReadonlyArray<readonly [string, readonly Entry[]]> => [
+/** What the Animation menu knows of the selected keyframes: whether any moves through space (Rove Across Time applies) and whether they all rove. */
+export type SelectedKeys = { spatial: boolean; roving: boolean }
+const NO_KEYS: SelectedKeys = { spatial: false, roving: false }
+
+const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean, styled: ReadonlySet<string>, keys: SelectedKeys): ReadonlyArray<readonly [string, readonly Entry[]]> => [
   [
     'File',
     [
       ['Import…', 'file.import', 'Cmd+I'],
+      ['New', [['New Folder', 'project.newFolder']]],
+      ['Dependencies', [['Remove Unused Footage', 'file.removeUnusedFootage']]],
       SEPARATOR,
       ['Export…', 'file.exportMovie'],
-      ['Export', [['Lottie JSON…', 'file.exportLottie']]],
+      ['Export', [['Lottie JSON…', 'file.exportLottie'], ['Add to Render Queue', KIT.addToQueue]]],
+      ['Render Queue', KIT.renderQueue],
       ['Save Frame As PNG…', KIT.saveFrame],
     ],
   ],
@@ -273,6 +296,7 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
       ['Rename…', 'layer.rename'],
       SEPARATOR,
       ['Pre-compose', 'layer.precompose'],
+      ['Reveal Layer Source in Project', 'layer.revealSource'],
       ['Mask', [['New Mask', 'layer.addMask']]],
       ['Mask and Shape Path', [['Convert to Bezier Path', 'path.convertToBezier']]],
       [
@@ -368,8 +392,14 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
       ['Easy Ease In', 'keys.easyEaseIn'],
       ['Easy Ease Out', 'keys.easyEaseOut'],
       ['Toggle Hold Keyframe', 'keys.toggleHold'],
+      [keys.roving ? 'Rove Across Time (On)' : 'Rove Across Time', KIT.rove],
       ['Time-Reverse Keyframes', 'keys.timeReverse'],
       ['Sequence Layers…', 'kit:sequence'],
+      ['Keyframe Assistant', [['Exponential Scale', 'keys.exponentialScale'], ['Convert Expression to Keyframes', KIT.convertExpression]]],
+      SEPARATOR,
+      ['Select Equal Keyframes', 'keys.selectEqual'],
+      ['Select Previous Keyframes', 'keys.selectPrevious'],
+      ['Select Following Keyframes', 'keys.selectFollowing'],
       SEPARATOR,
       ['Separate Dimensions', 'prop.separateDimensions'],
       ['Add Expression', 'prop.setExpression'],
@@ -387,7 +417,8 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
       ['Zoom 100%', KIT.zoom100],
       SEPARATOR,
       ['Resolution', RESOLUTIONS.map(([command, label]) => [label, command] as const)],
-      ['3D View', [...THREE_D_VIEWS.map(([command, label]) => [label, command] as const), SEPARATOR, ['Reset 3D View', 'view.reset3DView']]],
+      // The menu shows the keys that work in a browser (Alt+Shift+1, 2, 3; F10 to F12 are often the browser's or the system's).
+      ['3D View', [...THREE_D_VIEWS.map(([command, label]) => (VIEW_KEYS[command] ? ([label, command, VIEW_KEYS[command]] as const) : ([label, command] as const))), SEPARATOR, ['Reset 3D View', 'view.reset3DView']]],
       ['Region of Interest', KIT.roi],
       ['Clear Region of Interest', KIT.clearRoi],
       SEPARATOR,
@@ -410,8 +441,8 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
 ]
 
 /** Every menu row, in menu order: the Effect menu (every effect the engine has, by category) after Layer. */
-export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo, skipFrames = true, remapOn = false, styled: ReadonlySet<string> = NO_STYLES): MenuRow[] {
-  return MENUS(overlays, alignTo, skipFrames, remapOn, styled).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
+export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo, skipFrames = true, remapOn = false, styled: ReadonlySet<string> = NO_STYLES, keys: SelectedKeys = NO_KEYS): MenuRow[] {
+  return MENUS(overlays, alignTo, skipFrames, remapOn, styled, keys).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
 }
 
 /** Menus kept in a read-only document. */
@@ -437,7 +468,7 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
  * Zoom 100% at 100%, the resolution the canvas shows, View ▸ 3D View without 3D layers (and the view shown), the Keyframe Interpolation rows without selected keyframes, and the
  * `KIT_RUNS` and `TRIED_ROWS` rows that would change nothing now (`idle`).
  */
-export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean; preview: number; alignTo: AlignTo; threeD: ThreeDView; region: boolean; cached: boolean }, keysSelected: boolean, idle: ReadonlySet<string>) {
+export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean; preview: number; alignTo: AlignTo; threeD: ThreeDView; region: boolean; cached: boolean; keys?: SelectedKeys; convertible?: boolean }, keysSelected: boolean, idle: ReadonlySet<string>) {
   const layers = info?.layers ?? []
   const selected = layers.some((layer) => layer.selected)
   const comp = info?.comp
@@ -447,6 +478,8 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { 
   if (!layers.some((layer) => !layer.switches.video)) hidden.add('layer.showAllVideo')
   if (!layers.some((layer) => layer.switches.locked)) hidden.add('layer.unlockAll')
   if (layers.find((layer) => layer.selected)?.type !== 'Solid') hidden.add('layer.settings')
+  if (!['Footage', 'Composition', 'Solid'].includes(layers.find((layer) => layer.selected)?.type ?? '')) hidden.add('layer.revealSource')
+  if (!comp) hidden.add(KIT.addToQueue)
   if (!comp || (comp.workArea[0] <= 1e-6 && comp.workArea[1] >= comp.duration - 1e-6)) hidden.add('comp.trimToWorkArea')
   if (!selected || !lastEffect) hidden.add('effect.applyLast')
   if (view.fitted) hidden.add(KIT.zoomFit)
@@ -456,12 +489,17 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { 
   // View ▸ 3D View: only with 3D layers, and not the view shown now; Reset 3D View resets the
   // view shown (the active camera's needs a camera layer).
   for (const [command, , shown] of THREE_D_VIEWS) if (!view.threeD?.has3D || shown === view.threeD.view) hidden.add(command)
-  if (!view.threeD?.has3D || (view.threeD.view === 'activeCamera' && !view.threeD.camera)) hidden.add('view.reset3DView')
+  // On the active camera, Reset 3D View resets the camera layer: shown only when that would change it.
+  if (!view.threeD?.has3D || (view.threeD.view === 'activeCamera' && (!view.threeD.camera || idle.has('view.reset3DView')))) hidden.add('view.reset3DView')
   // Clear Region of Interest with none set; Purge Preview Cache with no frame kept.
   if (!view.region) hidden.add(KIT.clearRoi)
   if (!view.cached) hidden.add(KIT.purgeCache)
   if (!keysSelected) for (const row of INTERPOLATIONS) hidden.add(row.command)
-  for (const command of idle) hidden.add(command)
+  // Rove Across Time: only for keyframes that move a layer through space.
+  if (!keysSelected || !view.keys?.spatial) hidden.add(KIT.rove)
+  // Convert Expression to Keyframes: only while a property with an expression is selected.
+  if (!view.convertible) hidden.add(KIT.convertExpression)
+  for (const command of idle) if (command !== 'view.reset3DView') hidden.add(command)
   // Aligning to the selection needs two or more selected layers.
   if (view.alignTo === 'selection' && layers.filter((layer) => layer.selected).length < 2) for (const command of Object.keys(KIT_RUNS)) if (command.startsWith('kit:align-')) hidden.add(command)
   const key = [...hidden].sort().join(' ') + (selected ? '' : ' effects')

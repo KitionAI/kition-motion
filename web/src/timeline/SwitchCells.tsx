@@ -222,7 +222,7 @@ export function ModeCells({ info, layer, shown, modes, readOnly }: { info: Motio
  * headers turn the composition's switch on and off: Hide Shy Layers, and whether motion blur and
  * frame blending render), and the drop-down columns' names.
  */
-export function ColumnHeads({ info, side, shown, readOnly }: { info: MotionInfo; side: SwitchColumn['side'] | 'modes'; shown: ReadonlySet<ColumnId>; readOnly: boolean }) {
+export function ColumnHeads({ info, side, shown, readOnly, text = false }: { info: MotionInfo; side: SwitchColumn['side'] | 'modes'; shown: ReadonlySet<ColumnId>; readOnly: boolean; text?: boolean }) {
   const { run, t } = useKitEditor()
   if (side === 'modes') {
     const names = (['mode', 'matte', 'parent'] as const).filter((id) => shown.has(id))
@@ -259,13 +259,13 @@ export function ColumnHeads({ info, side, shown, readOnly }: { info: MotionInfo;
               onClick={() => void run('comp.setSwitch', { switch: comp.name, value: !on })}
               data-testid={`motion-comp-switch-${comp.name}`}
             >
-              <Shown size={13} aria-hidden="true" />
+              {text ? <span className="motion-column-short">{t(`column.short.${column.id}`)}</span> : <Shown size={13} aria-hidden="true" />}
             </button>
           )
         }
         return (
           <span key={column.id} className="motion-switch motion-cell-head kui-muted" role="columnheader" title={t(`switch.${column.id}`)} aria-label={t(`switch.${column.id}`)} data-testid={`motion-column-head-${column.id}`}>
-            <Shown size={13} aria-hidden="true" />
+            {text ? <span className="motion-column-short">{t(`column.short.${column.id}`)}</span> : <Shown size={13} aria-hidden="true" />}
           </span>
         )
       })}

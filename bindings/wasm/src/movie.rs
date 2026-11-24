@@ -135,6 +135,16 @@ const FORMATS: [&str; 3] = ["h264", "webm", "gif"];
 /// The size of a custom output, in pixels on each side.
 const SIZE: std::ops::RangeInclusive<u64> = 16..=8192;
 
+/// The render queue item an export renders when its settings are `{"queueItem": id}` (the Render
+/// Queue panel's jobs), else `None`.
+pub(crate) fn queue_item(settings: &str) -> Option<u64> {
+    let settings = settings.trim();
+    if !settings.starts_with('{') {
+        return None;
+    }
+    serde_json::from_str::<Value>(settings).ok()?.get("queueItem")?.as_u64()
+}
+
 /// The `renderQueue.add` parameters that render comp `comp` to `path` with `settings`: a format
 /// name, or a JSON object `{format, span: "comp"|"workArea", size: "full"|"half"|{width, height},
 /// frameRate: fps|null}`. Anything else is refused with what it takes.

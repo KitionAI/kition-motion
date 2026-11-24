@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject } from 'react'
 import { Columns3Icon as ColumnsIcon, SplineIcon as Spline } from '@kition/tessera/icons/react'
 import { Scrollbar } from '@kition/tessera/ui'
-import { Button, ContextMenu, Dialog, MenuItem, TextInput, useEngineQuery, useKitEditor, useReadOnly, type ContextMenuPoint } from '@kition/sdk/editor'
+import { Button, ContextMenu, Dialog, MenuItem, MenuSeparator, TextInput, useEngineQuery, useKitEditor, useReadOnly, type ContextMenuPoint } from '@kition/sdk/editor'
 import { blendModes } from '../properties/LayerHeader'
 import { COLUMN_IDS, namesWidth, splitWidth, useColumns, useNamesSplit } from './columns'
 import { ColumnHeads, useSwitchDrag } from './SwitchCells'
 import type { MotionInfo, MotionLayer } from '../motion'
 import { TimelineContext, type TimelineFrame } from './context'
 import { LayerBar } from './LayerBar'
-import { LayerMenu, type LayerMenuTarget } from './LayerMenu'
+import { HAS_SOURCE, LayerMenu, type LayerMenuTarget } from './LayerMenu'
 import { GraphEditor, type GraphTarget } from './GraphEditor'
 import { KeyMark } from './KeyMark'
 import { KeyMenu } from './KeyMenu'
@@ -50,7 +50,7 @@ function useWidth() {
  * (useTimeView), and the ruler sets the work area.
  */
 /** `cached`: the frames the preview's frame cache holds (frame numbers), drawn as a bar along the ruler. */
-export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose, onCommand, cached = [] }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys; onOpenPrecomp: (layer: number) => void; onPrecompose: () => void; onCommand: (command: string) => void; cached?: readonly number[] }) {
+export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose, onCommand, onRevealSource, cached = [] }: { info: MotionInfo; onSeek: (seconds: number) => void; keys: TimelineKeys; onOpenPrecomp: (layer: number) => void; onPrecompose: () => void; onCommand: (command: string) => void; onRevealSource: (layer: number) => void; cached?: readonly number[] }) {
   const { run, t, phrase, byId } = useKitEditor()
   // Hide Shy Layers (the composition's switch): the shy layers leave the timeline, not the picture.
   const hideShy = all.comp?.switches.hideShy === true && all.layers.some((layer) => layer.switches.shy)
@@ -119,6 +119,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
       return next.set(layer, paths)
     })
   /** U, P, S, R, T: the selected layers (all, with none selected) show only those properties; the same key again closes them. */
+  const lastL = useRef(0)
   const solo = (key: string, paths: Twirl & { kind: 'only' }) => {
     // The selection as the person's last click left it, though the engine may not have answered yet.
     const now = clicked.current ?? selected
@@ -180,6 +181,15 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
       else time.zoomOut()
       return true
     }
+    // L: Audio Levels; L again soon after: Audio Levels and the waveform (LL).
+    if (pressed(K.levels, event)) {
+      const now = performance.now()
+      const twice = now - lastL.current < 500
+      lastL.current = twice ? 0 : now
+      if (twice) solo('KeyLL', { kind: 'only', key: 'KeyLL', paths: ['audio/levels'], waveform: true })
+      else solo('KeyL', { kind: 'only', key: 'KeyL', paths: ['audio/levels'] })
+      return true
+    }
     if (pressed(K.animated, event)) {
       solo('KeyU', { kind: 'only', key: 'KeyU', paths: 'animated' })
       return true
@@ -210,7 +220,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
   }
   const openMenu = (layer: MotionLayer, at: { x: number; y: number }) => {
     if (!layer.selected) void run('layer.select', { layers: [layer.id] })
-    setMenu({ at, layer: layer.id, layers: layer.selected ? selected : [layer.id], precomp: layer.type === 'Composition' })
+    setMenu({ at, layer: layer.id, layers: layer.selected ? selected : [layer.id], precomp: layer.type === 'Composition', source: HAS_SOURCE.has(layer.type) })
   }
 
   // The split between the names (with their columns) and the tracks drags; kept in the browser.
@@ -238,6 +248,22 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
           className="motion-timeline-rows"
           {...gestures.handlers}
           // A right-click on a keyframe: its menu, on the selection (the keyframe joins it first unless it is in it).
+          // A double-click on a property's keyframe: its value and time, typed in.
+          onDoubleClick={(event) => {
+            // The rows hold the pointer during a press (the key gestures), so the double-click's
+            // target is the rows: the mark is the one under the pointer.
+            const mark =
+              (event.target instanceof Element ? event.target.closest<HTMLElement>('.motion-key') : null) ??
+              document
+                .elementsFromPoint(event.clientX, event.clientY)
+                .map((element) => element.closest<HTMLElement>('.motion-key'))
+                .find((element) => element != null) ??
+              null
+            if (!mark || keysOf(mark).length !== 1) return
+            event.stopPropagation()
+            const marked = keysOf(mark)
+            void run('keys.select', { keys: marked, timeBase: 'comp', selectProperties: true }).then((done) => done !== null && onCommand('kit:edit-key'))
+          }}
           onContextMenu={(event) => {
             const mark = event.target instanceof Element ? event.target.closest<HTMLElement>('.motion-key') : null
             if (!mark) return
@@ -283,7 +309,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
                 onDoubleClick={() => split.setExtra(0)}
                 data-testid="motion-names-split"
               />
-              <ColumnHeads info={info} side="av" shown={columns.shown} readOnly={readOnly} />
+              <ColumnHeads info={info} side="av" shown={columns.shown} readOnly={readOnly} text={columns.text} />
               <span className="motion-row-name">{t('layers')}</span>
               <button type="button" className="motion-graph-toggle" aria-pressed={graph} title={t('graph.toggleHint')} onClick={() => setGraph((open) => !open)} data-testid="motion-graph-toggle">
                 <Spline size={12} aria-hidden="true" />
@@ -303,7 +329,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
               >
                 <ColumnsIcon size={13} aria-hidden="true" />
               </button>
-              <ColumnHeads info={info} side="switches" shown={columns.shown} readOnly={readOnly} />
+              <ColumnHeads info={info} side="switches" shown={columns.shown} readOnly={readOnly} text={columns.text} />
               <ColumnHeads info={info} side="modes" shown={columns.shown} readOnly={readOnly} />
             </div>
             <Ruler onSeek={onSeek} rulerRef={rulerRef} onWorkArea={(start, end) => void run('comp.workArea', { start, end })}>
@@ -394,8 +420,10 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
           {COLUMN_IDS.map((id) => (
             <MenuItem key={id} label={t(`column.${id}`)} checked={columns.shown.has(id)} onSelect={() => columns.toggle(id)} testId={`motion-column-toggle-${id}`} />
           ))}
+          <MenuSeparator />
+          <MenuItem label={t('columns.text')} checked={columns.text} onSelect={columns.toggleText} testId="motion-column-text" />
         </ContextMenu>
-        <LayerMenu target={menu} onClose={() => setMenu(null)} onRename={(layer) => setRenaming(layer)} onOpen={onOpenPrecomp} onPrecompose={onPrecompose} />
+        <LayerMenu target={menu} onClose={() => setMenu(null)} onRename={(layer) => setRenaming(layer)} onOpen={onOpenPrecomp} onPrecompose={onPrecompose} onReveal={onRevealSource} />
         {naming ? (
           <Dialog
             title={t('marker.rename')}

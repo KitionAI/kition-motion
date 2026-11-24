@@ -136,6 +136,9 @@ pub(crate) struct ToolState {
     path_edit: Vec<LayerId>,
     /// Whether the status bar says paths are being edited ([`PATH_EDIT_HINT`]).
     path_hint: bool,
+    /// The Pen has just finished drawing a path (nothing else done with it since): the Selection
+    /// tool picked next shows the layers' transform boxes, not the new path's vertices.
+    pen_drew: bool,
 }
 
 /// The status bar while paths are being edited with the Selection tool (the editor also lets
@@ -156,6 +159,7 @@ impl Default for ToolState {
             pen: None,
             path_edit: Vec::new(),
             path_hint: false,
+            pen_drew: false,
         }
     }
 }
@@ -438,6 +442,15 @@ impl KitTools for MotionDocument {
             if tool != Tool::Pen {
                 st.pen = None;
             }
+            // Selection picked right after the Pen drew a path (V), or picked again while paths
+            // are edited (the editor does that for Escape), is the plain one: the layers'
+            // transform boxes, not the paths' vertices (a double-click on a path edits it again).
+            // After the Pen added a vertex to a path, its vertices stay picked.
+            if tool == Tool::Selection && (st.tool == Tool::Selection || st.pen_drew) {
+                st.path_edit.clear();
+                self.clear_vertices();
+            }
+            st.pen_drew = false;
             st.tool = tool;
             st.cursor = "default".into();
             self.respond(st, None)
@@ -447,6 +460,10 @@ impl KitTools for MotionDocument {
     fn pointer(&mut self, event: &ToolPointer) -> Result<ToolResponse, String> {
         if !(event.x.is_finite() && event.y.is_finite()) {
             return Err("the pointer is not at a finite position".into());
+        }
+        // A press after the Pen drew: the path is being worked on now.
+        if matches!(event.action, PointerAction::Down) {
+            with_state(|st| st.pen_drew = false);
         }
         Ok(with_state(|st| {
             st.zoom = zoom_of(event.zoom);

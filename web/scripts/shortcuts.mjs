@@ -1,5 +1,7 @@
 // Prints every shortcut the editor binds, as Markdown grouped by area, with the zh-CN names:
 // node scripts/shortcuts.mjs > shortcuts.md   (needs the engine built: pnpm engine)
+// node scripts/shortcuts.mjs --check   fails (and names them) when two actions share a key where both
+// work at once: the menus, the commands outside them, the canvas tools and the editor's own keys.
 // Read from the code's own tables, so it cannot drift from what the keys do: the menus
 // (src/menus.ts, each row's own shortcut or else its engine command's, SHORTCUT_OVERRIDES, and
 // EXTRA_SHORTCUTS), the canvas tools (the engine's tools()), the timeline's and the editor's own
@@ -49,6 +51,30 @@ try {
       return command?.shortcut ? [[keysCell([command.shortcut]), phrase(command.title)]] : []
     }),
   )
+  // Two actions on one key in the same place: the menus, the commands outside them, the tools and the editor's keys all work at once.
+  const norm = (key) => key.toLowerCase().replace(/\s+/g, '').split('+').sort().join('+')
+  const bound = new Map()
+  const bind = (key, action) => {
+    const list = bound.get(norm(key)) ?? new Set()
+    list.add(action)
+    bound.set(norm(key), list)
+  }
+  for (const row of menus.menuRows([], overlays, 'composition')) {
+    if (row.command === '---') continue
+    const shortcut = row.shortcut ?? (row.command.startsWith('kit:') ? undefined : commands.get(row.command)?.shortcut)
+    if (shortcut) bind(shortcut, row.command)
+  }
+  for (const id of menus.EXTRA_SHORTCUTS) if (commands.get(id)?.shortcut) bind(commands.get(id).shortcut, id)
+  // Tools sharing a letter take turns (C, Q): one action, the next tool.
+  for (const tool of tools) if (tool.shortcut) bind(tool.shortcut, `tools:${tool.shortcut}`)
+  for (const [name, binding] of Object.entries(keys.EDITOR_KEYS)) for (const key of binding.keys) bind(key, binding.command ?? `editor:${name}`)
+  const clashes = [...bound].filter(([, actions]) => actions.size > 1)
+  if (process.argv.includes('--check')) {
+    for (const [key, actions] of clashes) console.error(`${key}: ${[...actions].join(', ')}`)
+    console.log(clashes.length ? `${clashes.length} keys do two things at once` : 'no key does two things at once')
+    process.exitCode = clashes.length ? 1 : 0
+    process.exit()
+  }
   table('画布工具', tools.filter((tool) => tool.shortcut).map((tool) => [keysCell([tool.shortcut]), phrase(tool.label)]))
   table('时间轴（焦点在时间轴上时）', Object.values(keys.TIMELINE_KEYS).map((binding) => [keysCell(binding.keys), binding.zh]))
   table('编辑器', Object.values(keys.EDITOR_KEYS).map((binding) => [keysCell(binding.keys), binding.zh]))

@@ -44,6 +44,8 @@ export const MENU_WIDTH = 104
 export const NAMES_BASE = 232
 
 const KEY = 'kition-motion.timeline-columns'
+/** Where "Column names as text" is kept. */
+const TEXT_KEY = 'kition-motion.timeline-column-text'
 
 function stored(): ReadonlySet<ColumnId> {
   try {
@@ -71,7 +73,25 @@ export function useColumns() {
       return next
     })
   }, [])
-  return { shown, toggle }
+  // The switch columns' heads as short names instead of icons (the Columns menu's last row).
+  const [text, setText] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem(TEXT_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+  const toggleText = useCallback(() => {
+    setText((now) => {
+      try {
+        localStorage.setItem(TEXT_KEY, String(!now))
+      } catch {
+        // Kept for this page only.
+      }
+      return !now
+    })
+  }, [])
+  return { shown, toggle, text, toggleText }
 }
 
 /** The names column's width with these columns shown. */

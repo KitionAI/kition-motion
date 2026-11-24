@@ -33,7 +33,7 @@ export function HomeTab({ info, onCommand, wholeWorkArea, lastEffect }: { info: 
           ))}
         </RibbonMenu>
         <CommandButton command="layer.newText" params={{ text: 'Text' }} icon={Type} primary />
-        <CommandButton command="layer.newShape" params={{ kind: 'rect' }} icon={Square} primary />
+        <CommandButton command="layer.newShape" params={{ kind: 'rect' }} icon={Square} primary onRun={onCommand} />
         <CommandButton command="layer.precompose" icon={Layers} primary />
         <CommandButton command="layer.addMask" icon={SquareDashed} />
       </RibbonGroup>

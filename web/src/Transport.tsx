@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { ArrowLeftIcon as Back, RepeatIcon as Repeat, ChevronRightIcon as Into, PauseIcon as Pause, PlayIcon as Play, PlusIcon as Plus, SkipBackIcon as SkipBack, SkipForwardIcon as SkipForward, StepBackIcon as StepBack, StepForwardIcon as StepForward } from '@kition/tessera/icons/react'
 import { Button, IconButton, MenuButton, MenuItem, useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import { timecode, type MotionInfo } from './motion'
@@ -5,7 +6,7 @@ import { CompSwitcher } from './CompSwitcher'
 
 /** The layers the add menu makes, as engine commands. */
 /** The new layers the editor makes itself (`ownLayer`): a solid asks in a dialog; a camera and a light get Chinese names, the light a sensible kind and place. */
-export const OWN_NEW_LAYERS: ReadonlySet<string> = new Set(['layer.newSolid', 'layer.newCamera', 'layer.newLight'])
+export const OWN_NEW_LAYERS: ReadonlySet<string> = new Set(['layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment'])
 export const NEW_LAYERS = [
   { id: 'text', command: 'layer.newText', params: { text: 'Text' } },
   { id: 'shape', command: 'layer.newShape', params: { kind: 'rect' } },
@@ -53,6 +54,7 @@ export function Transport({
   onBack,
   playbackRate,
   loop,
+  meters,
 }: {
   info: MotionInfo
   playing: boolean
@@ -66,6 +68,8 @@ export function Transport({
   playbackRate?: { fps: number | null; skip: boolean; onSkip: () => void }
   /** Loop: playback goes round the work area (on by default). */
   loop?: { on: boolean; onToggle: () => void }
+  /** The audio meters, shown while it plays. */
+  meters?: ReactNode
 }) {
   const { run, t } = useKitEditor()
   const readOnly = useReadOnly()
@@ -103,8 +107,10 @@ export function Transport({
       {loop ? (
         <Button variant="ghost" className="motion-toggle" aria-pressed={loop.on} aria-label={t('loop.label')} title={loop.on ? t('loop.on') : t('loop.off')} onClick={loop.onToggle} data-testid="motion-loop">
           <Repeat size={14} aria-hidden="true" />
+          {t('loop.label')}
         </Button>
       ) : null}
+      {meters}
       {playbackRate ? (
         <>
           <Button

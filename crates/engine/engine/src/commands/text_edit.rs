@@ -86,7 +86,7 @@ fn session_on(s: &mut Session, lid: LayerId) -> TextEdit {
     }
 }
 
-fn first_line_name(text: &str) -> String {
+pub(crate) fn first_line_name(text: &str) -> String {
     text.lines().next().unwrap_or("").chars().take(40).collect()
 }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChevronDownIcon as Open, ChevronRightIcon as Closed } from '@kition/tessera/icons/react'
 import { useEngineQuery, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
@@ -15,6 +15,51 @@ import { keyTimes } from './keys'
 import { effectOf, parentsOf, propertyRows, type TreeNode, type Twirl } from './tree'
 import { ExpressionRow, explainError, type ExprError } from './ExpressionRow'
 import { leftOf } from './view'
+import { useWaveformReader, type Waveform } from './samples'
+
+/** How many peaks a waveform is drawn with. */
+const PEAKS = 800
+
+/**
+ * A layer's sound drawn on its track from its in point to its out point (the engine's
+ * `layerWaveform`, heard on its own with its levels, muted or not), asked again a moment after
+ * each change. `data-peaks` and `data-loudest` say what it drew.
+ */
+function WaveformTrack({ layer, version }: { layer: MotionLayer; version: unknown }) {
+  const read = useWaveformReader()
+  const { view } = useTimeline()
+  const [wave, setWave] = useState<Waveform | null>(null)
+  useEffect(() => {
+    let current = true
+    const timer = window.setTimeout(() => {
+      void read(layer.id, PEAKS).then((answer) => current && setWave(answer))
+    }, 150)
+    return () => {
+      current = false
+      window.clearTimeout(timer)
+    }
+  }, [read, layer.id, version])
+  if (!wave) return null
+  const left = leftOf(view, wave.from)
+  const right = leftOf(view, wave.to)
+  const count = wave.peaks.length
+  const points = count ? wave.peaks.map((peak, at) => `${(at / Math.max(1, count - 1)) * 100},${50 - peak * 48}`).join(' ') + ' ' + [...wave.peaks].reverse().map((peak, at) => `${((count - 1 - at) / Math.max(1, count - 1)) * 100},${50 + peak * 48}`).join(' ') : ''
+  return (
+    <svg
+      className="motion-waveform"
+      style={{ left, width: `calc(${right} - ${left})` }}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      data-testid={`motion-waveform-${layer.id}`}
+      data-peaks={count}
+      data-loudest={count ? Math.max(...wave.peaks).toFixed(3) : '0'}
+    >
+      <line x1="0" y1="50" x2="100" y2="50" />
+      {count ? <polygon points={points} /> : null}
+    </svg>
+  )
+}
 
 /** An animated property's keyframes on its track, each shaped by its interpolation (`prop.get`). */
 function PropertyKeys({ layer, path, times, selected, name, row }: { layer: number; path: string; times: number[]; selected: ReadonlySet<string>; name: string; row: string }) {
@@ -59,6 +104,19 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
         // Group and property names are the engine's English ones, translated where the editor knows them.
         const name = phrase(node.name)
         const id = `${layer.id}-${pathId(node.path)}`
+        if (row.kind === 'waveform') {
+          return (
+            <div key={`${node.path}~wave`} className="motion-row motion-prop-row motion-wave-row" data-testid={`motion-waveform-row-${layer.id}`}>
+              <div className="motion-timeline-names motion-prop-names" style={{ paddingLeft: 36 + depth * 14 }}>
+                <span className="motion-row-name">{t('timeline.waveform')}</span>
+              </div>
+              <div className="motion-row-track">
+                <WaveformTrack layer={layer} version={`${layer.in} ${layer.out} ${layer.start} ${JSON.stringify(node.children?.map((child) => child.value))} ${JSON.stringify(layer.animated.find((property) => property.path === 'audio/levels')?.times)}`} />
+                <span className="motion-playhead" style={{ left: leftOf(view, info.time) }} aria-hidden="true" />
+              </div>
+            </div>
+          )
+        }
         if (row.kind === 'group') {
           return (
             <div

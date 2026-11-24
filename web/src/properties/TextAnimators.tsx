@@ -134,6 +134,8 @@ export function TextAnimators({ node, scope }: { node: TreeNode; scope: string }
     window.setTimeout(() => {
       if (lastInput > since) return
       const field = document.querySelector<HTMLInputElement>(`[data-testid="motion-prop-${propId(property.path)}"] input`)
+      // The whole animator block (its selector and hint too) comes into view, then its field.
+      document.querySelector(`[data-uid="${wanted.animator}"].motion-animator`)?.scrollIntoView({ block: 'nearest' })
       field?.scrollIntoView({ block: 'nearest' })
       field?.focus({ preventScroll: true })
       field?.select()

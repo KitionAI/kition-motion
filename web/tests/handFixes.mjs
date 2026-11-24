@@ -134,6 +134,7 @@ try {
   await h.open()
   await pick(SHAPE)
   await kit.getByTestId('motion-shape-add').click()
+  await kit.getByTestId('motion-shape-add-menu-paints').hover()
   await kit.getByTestId('motion-shape-add-gfill').click()
   const quick = kit.getByTestId('motion-shape-controls')
   await until(async () => (await quick.locator('[data-testid="motion-value-quick.contents.group.contents.gfill.colors"]').count()) === 1)

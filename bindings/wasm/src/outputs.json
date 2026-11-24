@@ -1060,7 +1060,7 @@
   "type": "object"
  },
  "effect.warning": {
-  "description": "{effect, warning: string|null} \u2014 what Effect Controls warns about (an OCIO config it can't read, transforms it passes through)",
+  "description": "{effect, warning: string|null} — what Effect Controls warns about (an OCIO config it can't read, transforms it passes through)",
   "type": "json"
  },
  "engine.batch": {
@@ -3259,6 +3259,9 @@
       "duration": {
        "type": "number"
       },
+      "footage": {
+       "type": "json"
+      },
       "frameRate": {
        "type": "number"
       },
@@ -3285,6 +3288,9 @@
       },
       "type": {
        "type": "string"
+      },
+      "uses": {
+       "type": "integer"
       }
      },
      "type": "object"
@@ -3316,6 +3322,12 @@
     "type": "object"
    },
    "selectedLayers": {
+    "items": {
+     "type": "integer"
+    },
+    "type": "array"
+   },
+   "selection": {
     "items": {
      "type": "integer"
     },
@@ -3852,7 +3864,7 @@
   "type": "json"
  },
  "scriptWindow.get": {
-  "description": "{id, title, kind, root: {id, type, name, text, value, checked, items, selection, bounds, enabled, draw (onDraw paint list), children\u2026}}",
+  "description": "{id, title, kind, root: {id, type, name, text, value, checked, items, selection, bounds, enabled, draw (onDraw paint list), children…}}",
   "type": "json"
  },
  "scriptWindow.list": {

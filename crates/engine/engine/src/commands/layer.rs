@@ -1259,14 +1259,13 @@ fn set_text(s: &mut Session, p: &Value) -> Result<Value> {
             KV::Str(t) => TextDoc::plain(&t),
             _ => TextDoc::default(),
         };
+        let before = super::text_edit::first_line_name(&doc.text);
         apply_text_params("layer.setText", p, &mut doc, range.clone())?;
         pr.set_value_at(lt, KV::Text(Box::new(doc.clone())));
-        if let Some(first) = doc.text.lines().next()
-            && str_p(p, "text").is_some()
-            && !first.is_empty()
-            && (l.name.starts_with("Text") || l.name.is_empty())
-        {
-            l.name = first.chars().take(40).collect();
+        // Named after its text (the whole first line, as it is typed) until renamed by hand.
+        let after = super::text_edit::first_line_name(&doc.text);
+        if str_p(p, "text").is_some() && !after.is_empty() && after != l.name && (l.name == before || l.name.starts_with("Text") || l.name.is_empty()) {
+            l.name = after;
         }
         Ok(())
     })?;

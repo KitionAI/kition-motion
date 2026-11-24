@@ -1,24 +1,40 @@
 import { ArrowDownIcon, ArrowUpIcon, CopyIcon, EyeIcon, EyeOffIcon, PlusIcon, TrashIcon } from '@kition/tessera/icons/react'
 import type { TreeNode } from '../timeline/tree'
 import { reveal } from './Section'
-import { Button, ContextMenu, IconButton, MenuButton, MenuItem, MenuSeparator, useKitEditor, type ContextMenuPoint } from '@kition/sdk/editor'
+import { Button, ContextMenu, IconButton, MenuButton, MenuItem, SubMenu, useKitEditor, type ContextMenuPoint } from '@kition/sdk/editor'
 
 /**
- * What a shape layer's Add menu offers (`layer.addShapeItem`'s kinds), in its order: the shapes,
- * the paints, then the path operators, each named by the engine's English (translated by PHRASES).
+ * What a shape layer's Add menu offers (`layer.addShapeItem`'s kinds), in three submenus so the
+ * menu fits any window: the shapes, the paints and the path operations (`id` names the submenu in
+ * test ids), each kind named by the engine's English (translated by PHRASES).
  */
-export const SHAPE_KINDS: ReadonlyArray<readonly [kind: string, label: string] | '---'> = [
-  ['group', 'Group (empty)'],
-  ['rect', 'Rectangle'],
-  ['ellipse', 'Ellipse'],
-  ['star', 'Polystar'],
-  ['path', 'Path'],
-  '---',
-  ['fill', 'Fill'],
-  ['stroke', 'Stroke'],
-  ['gfill', 'Gradient Fill'],
-  ['gstroke', 'Gradient Stroke'],
-  '---',
+export const SHAPE_MENUS: ReadonlyArray<{ id: string; label: string; kinds: ReadonlyArray<readonly [kind: string, label: string]> }> = [
+  {
+    id: 'shapes',
+    label: 'Shapes',
+    kinds: [
+      ['group', 'Group (empty)'],
+      ['rect', 'Rectangle'],
+      ['ellipse', 'Ellipse'],
+      ['star', 'Polystar'],
+      ['path', 'Path'],
+    ],
+  },
+  {
+    id: 'paints',
+    label: 'Paints',
+    kinds: [
+      ['fill', 'Fill'],
+      ['stroke', 'Stroke'],
+      ['gfill', 'Gradient Fill'],
+      ['gstroke', 'Gradient Stroke'],
+    ],
+  },
+  { id: 'operations', label: 'Path Operations', kinds: [] },
+]
+
+/** Every kind of the Add menu, in its order. */
+const OPERATIONS: ReadonlyArray<readonly [kind: string, label: string]> = [
   ['merge', 'Merge Paths'],
   ['offset', 'Offset Paths'],
   ['pucker', 'Pucker & Bloat'],
@@ -29,6 +45,7 @@ export const SHAPE_KINDS: ReadonlyArray<readonly [kind: string, label: string] |
   ['wiggle', 'Wiggle Paths'],
   ['zigzag', 'Zig Zag'],
 ]
+const MENUS = SHAPE_MENUS.map((menu) => (menu.id === 'operations' ? { ...menu, kinds: OPERATIONS } : menu))
 
 /**
  * The Add menu of a shape layer's contents (or of one of its groups, `group` its uid): a new
@@ -64,13 +81,13 @@ export function ShapeAddMenu({ layer, group, items, testId, readOnly, compact = 
         )
       }
     >
-      {SHAPE_KINDS.map((entry, at) =>
-        entry === '---' ? (
-          <MenuSeparator key={`-${at}`} />
-        ) : (
-          <MenuItem key={entry[0]} label={phrase(entry[1])} onSelect={() => void add(entry[0])} testId={`${testId}-${entry[0]}`} />
-        ),
-      )}
+      {MENUS.map((menu) => (
+        <SubMenu key={menu.id} label={phrase(menu.label)} path={`${testId}/${menu.id}`} uiId={`${testId}-${menu.id}`} testId={`${testId}-menu-${menu.id}`}>
+          {menu.kinds.map(([kind, label]) => (
+            <MenuItem key={kind} label={phrase(label)} onSelect={() => void add(kind)} testId={`${testId}-${kind}`} />
+          ))}
+        </SubMenu>
+      ))}
     </MenuButton>
   )
 }

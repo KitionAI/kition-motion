@@ -26,7 +26,7 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
+import { ARRANGE, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -43,10 +43,12 @@ import { ExportDialog } from './ExportDialog'
 import { CanvasGuides, OVERLAY_KEYS, useOverlays } from './CanvasGuides'
 import { RegionOfInterest, type Region } from './RegionOfInterest'
 import { installPointerdownFallback } from './pointerFallback'
-import { ITEM_MIME, parseAnswer, relativePath, useFootage } from './footage'
+import { ITEM_MIME, parseAnswer, relativePath, useFootage, type ProjectItem, type ProjectSummary } from './footage'
+import { RenderQueuePanel, compsOf, useRenderQueue } from './RenderQueue'
 import { EDITOR_KEYS, pressed } from './keys'
+import { AudioMeters, createMeterFeed, usePreviewAudio } from './audio'
 import { INTERPOLATIONS } from './timeline/interp'
-import { SamplerContext, type CurveSampler } from './timeline/samples'
+import { SamplerContext, WaveformContext, type CurveSampler, type Waveform, type WaveformReader } from './timeline/samples'
 import { isThreeD } from './timeline/tree'
 
 /**
@@ -218,62 +220,6 @@ function useIdleRows(doc: { invoke: <T>(name: string, ...args: unknown[]) => Pro
   return idle
 }
 
-/** How much sound (seconds) preview playback asks the engine for at a time, and how far ahead it keeps. */
-const AUDIO_CHUNK = 1
-const AUDIO_AHEAD = 2
-
-/**
- * The composition's sound while it plays: the engine mixes it (`mixAudio`, every audible layer
- * with its levels) a second at a time, a little ahead, and the page plays it from the time
- * playback started, against the same clock. Nothing is asked for again once the engine answers
- * that nothing is audible. `scheduled` counts the stretches handed to the speakers (the footage
- * test reads it from the workspace's `data-audio`).
- */
-function usePreviewAudio(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, playing: boolean, from: number | null, duration: number, scheduled: (count: number) => void, round: number) {
-  useEffect(() => {
-    if (!playing || !doc || from === null || typeof AudioContext === 'undefined') return undefined
-    const context = new AudioContext()
-    const started = context.currentTime
-    let stopped = false
-    let mixed = 0
-    let count = 0
-    const pump = async () => {
-      while (!stopped && from + mixed < duration - 1e-6) {
-        if (mixed - (context.currentTime - started) > AUDIO_AHEAD) {
-          await new Promise((resolve) => window.setTimeout(resolve, 200))
-          continue
-        }
-        const length = Math.min(AUDIO_CHUNK, duration - (from + mixed))
-        const samples = await doc.invoke<Float32Array>('mixAudio', from + mixed, length, context.sampleRate).catch(() => null)
-        if (stopped || !samples?.length) return
-        const frames = Math.floor(samples.length / 2)
-        const buffer = context.createBuffer(2, frames, context.sampleRate)
-        const left = buffer.getChannelData(0)
-        const right = buffer.getChannelData(1)
-        for (let index = 0; index < frames; index += 1) {
-          left[index] = samples[index * 2]
-          right[index] = samples[index * 2 + 1]
-        }
-        const source = context.createBufferSource()
-        source.buffer = buffer
-        source.connect(context.destination)
-        // A stretch that arrives late starts part of the way in, so the sound keeps to the picture.
-        const at = started + mixed
-        const late = Math.max(0, context.currentTime - at)
-        if (late < length) source.start(Math.max(at, context.currentTime), late)
-        mixed += length
-        count += 1
-        scheduled(count)
-      }
-    }
-    void pump()
-    return () => {
-      stopped = true
-      void context.close()
-    }
-  }, [doc, playing, from, duration, scheduled, round])
-}
-
 /** A composition without a work area plays all of it. */
 const NO_WORK_AREA: readonly [number, number] = [0, Number.POSITIVE_INFINITY]
 
@@ -390,6 +336,8 @@ const LOOP_KEY = 'kition-motion.loop'
 const PRESET_FOLDER_KEY = 'kition-motion.preset-folder'
 /** Where Layer ▸ Align's target (the composition or the selection) is kept. */
 const ALIGN_KEY = 'kition-motion.align-to'
+/** Where the status bar's colour readout keeps its units (0-255 or percent). */
+const INFO_KEY = 'kition-motion.info-units'
 function storedPresetFolder() {
   try {
     return globalThis.localStorage?.getItem(PRESET_FOLDER_KEY) ?? ''
@@ -406,7 +354,7 @@ const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).re
  * ones it asks values for in its own dialogs, Pre-compose (which then offers to open the new
  * composition), and the ones given another shortcut (`SHORTCUT_OVERRIDES`).
  */
-const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'anim.savePreset', 'anim.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
+const OWN_SHORTCUTS = ['project.newFolder', 'comp.new', 'comp.settings', 'layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'anim.savePreset', 'anim.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -574,7 +522,12 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const shownState = useMemo(() => (state && playback.at !== null ? { ...state, time: playback.at } : state), [state, playback.at])
   useSpaceTap(playback.toggle)
   const audioCount = useCallback((count: number) => workspace.current?.setAttribute('data-audio', String(count)), [])
-  usePreviewAudio(session.doc, playback.playing, playback.playing ? (playback.origin.current?.time ?? null) : null, loop ? Math.min(state?.comp?.duration ?? 0, workArea[1]) : (state?.comp?.duration ?? 0), audioCount, playback.rounds)
+  // The meters read the mixed sound's peaks at the time playback shows.
+  const meterFeed = useMemo(createMeterFeed, [])
+  const shownTime = useRef<number | null>(null)
+  shownTime.current = playback.playing ? playback.at : null
+  meterFeed.at = () => shownTime.current
+  usePreviewAudio(session.doc, playback.playing, playback.playing ? (playback.origin.current?.time ?? null) : null, loop ? Math.min(state?.comp?.duration ?? 0, workArea[1]) : (state?.comp?.duration ?? 0), audioCount, playback.rounds, state, meterFeed)
   // The Export dialog, open on a movie format or on Lottie (File ▸ Export ▸ Lottie JSON…).
   const [exporting, setExporting] = useState<false | 'movie' | 'lottie'>(false)
   const project = useProjectPanel()
@@ -582,6 +535,30 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const step = (frames: number) => void runQuietly('time.step', { frames }).catch(() => undefined)
   const { run, query } = editor
   const footage = useFootage({ host, run, t })
+  // Reveal Layer Source in Project: the item the Project panel shows and selects.
+  const [reveal, setReveal] = useState<{ item: number } | null>(null)
+  const revealSource = async (layer?: number) => {
+    const answer = parseAnswer<{ item?: number }>(await run('layer.revealSource', layer != null ? { layer } : {}))
+    if (answer?.item == null) return
+    project.show()
+    setReveal({ item: answer.item })
+  }
+  // The Render Queue: its panel under the Project panel, and its runs (which go on with the panel closed).
+  const renderQueue = useRenderQueue({ doc: session.doc, host, run, t })
+  const [queueOpen, setQueueOpen] = useState(false)
+  /** Add to Render Queue: jobs for `comps` (ids), with the settings used last; the panel opens. */
+  const addToQueue = async (comps: number[]) => {
+    const summary = await query<ProjectSummary>('project.summary', {})
+    const found = compsOf(summary).filter((item) => comps.includes(item.id))
+    if (!found.length) return
+    setQueueOpen(true)
+    await renderQueue.add(found.map((item) => ({ id: item.id, name: item.name, width: item.size?.[0] ?? 1920, height: item.size?.[1] ?? 1080 })))
+  }
+  /** A new folder from File ▸ New ▸ Folder, at the top of the project (the panel shows it). */
+  const newFolder = async () => {
+    project.show()
+    await run('project.newFolder', { name: await unusedName(t('project.folderName')) })
+  }
   /** Footage, a solid or a composition from the project as a layer at the current time (one undo step). */
   const placeItem = (item: number, position?: [number, number]) => footage.place(item, { time: state?.time ?? 0, ...(position ? { position } : {}) })
   /** The composition time under a page x on the timeline (its ruler's stretch of time), on a frame; null off it. */
@@ -744,6 +721,50 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     async (layer, path, from, to, count) => (doc ? (JSON.parse(await doc.invoke<string>('curveSamples', layer, path, from, to, count)) as unknown[]) : null),
     [doc],
   )
+  // The timeline's waveform rows: a layer's sound as peaks (the engine's `layerWaveform`).
+  const waveform = useCallback<WaveformReader>(async (layer, count) => (doc ? (JSON.parse(await doc.invoke<string>('layerWaveform', layer, count)) as Waveform) : null), [doc])
+  // The status bar's readout: the composition pixel under the pointer and its colour (the
+  // engine's `pixelAt`, one question at a time, the latest point next), in 0-255 or percent.
+  const [pointer, setPointer] = useState<{ x: number; y: number; rgba: number[] | null } | null>(null)
+  const [percent, setPercent] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem(INFO_KEY) === 'percent'
+    } catch {
+      return false
+    }
+  })
+  const togglePercent = () =>
+    setPercent((now) => {
+      try {
+        localStorage.setItem(INFO_KEY, now ? 'bytes' : 'percent')
+      } catch {
+        // Kept for this page only.
+      }
+      return !now
+    })
+  const pointerAsk = useRef<{ busy: boolean; next: [number, number] | null }>({ busy: false, next: null })
+  const readPointer = (event: { clientX: number; clientY: number; target: EventTarget | null }) => {
+    if (event.target instanceof Element && event.target.closest('.motion-timeline, .motion-transport, .motion-splitter')) return
+    const view = canvas.current?.view()
+    const element = workspace.current?.querySelector('[data-testid="kit-canvas-surface"]')
+    if (!view || !element || !state?.comp) return
+    const rect = element.getBoundingClientRect()
+    if (event.clientX < rect.left || event.clientY < rect.top || event.clientX > rect.right || event.clientY > rect.bottom) return
+    const ask = pointerAsk.current
+    ask.next = [view.x + (event.clientX - rect.left) / view.zoom, view.y + (event.clientY - rect.top) / view.zoom]
+    if (ask.busy) return
+    ask.busy = true
+    void (async () => {
+      while (ask.next) {
+        const [x, y] = ask.next
+        ask.next = null
+        // While it plays the engine is busy with frames: the position only.
+        const rgba = playback.playing || !session.doc ? null : await session.doc.invoke<Uint8Array>('pixelAt', x, y).catch(() => null)
+        setPointer({ x: Math.floor(x), y: Math.floor(y), rgba: rgba && rgba.length === 4 ? [...rgba] : null })
+      }
+      ask.busy = false
+    })()
+  }
   const [findEffect, setFindEffect] = useState(false)
   // Every effect the engine has, for the Effect menu; and whether one was applied here (Last Effect).
   const [effects, setEffects] = useState<MotionEffect[]>([])
@@ -807,6 +828,13 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     const [inside, outside] = [side(first.inEase), side(first.outEase)]
     setDialog({ kind: 'velocity', units: first.units ?? '', values: { inSpeed: inside.speed, inInfluence: inside.influence, outSpeed: outside.speed, outInfluence: outside.influence } })
   }
+  /** The keyframe value dialog, on the one selected keyframe (a double-click on it, or its menu's Edit Value…). */
+  const openKeyValue = async () => {
+    const keys = await query<Array<{ layer: number; path?: string; name?: string; compTime: number; value: unknown }>>('keys.info', {})
+    const key = Array.isArray(keys) && keys.length === 1 ? keys[0] : null
+    if (!key || !state?.comp || !key.path) return
+    setDialog({ kind: 'keyValue', layer: key.layer, path: key.path, name: key.name ?? key.path, time: key.compTime, value: key.value, fps: state.comp.fps, duration: state.comp.duration })
+  }
   /** Time Stretch, from the first selected layer's stretch and length. */
   const openStretch = async () => {
     const selected = state?.layers.filter((layer) => layer.selected) ?? []
@@ -854,6 +882,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     }
     if ((await run('anim.applyPreset', { path: relativePath(folder, path) })) !== null) toast.success(t('preset.applied', { name: path.split('/').pop() ?? path }))
   }
+  // What the canvas tools name the shape layers they make, in the editor's language.
+  useEffect(() => {
+    if (!session.doc) return
+    void session.doc.invoke('setLayerNames', JSON.stringify({ shape: t('layerName.shape') })).catch(() => undefined)
+  }, [session.doc, t])
   // The Pen's option on a shape layer: draw a mask on it instead of a new path in it.
   const [penMasks, setPenMasks] = useState(false)
   useEffect(() => {
@@ -891,7 +924,23 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [KIT.clearRoi]: () => setRegionOfInterest(null),
     [KIT.skipFrames]: toggleSkipFrames,
     [KIT.purgeCache]: purgeCache,
-    'file.exportMovie': () => state?.comp && setExporting('movie'),
+    'file.exportMovie': () => {
+      if (renderQueue.rendering) toast.info(t('queue.busy'))
+      else if (state?.comp) setExporting('movie')
+    },
+    [KIT.addToQueue]: () => state?.comp && void addToQueue([state.comp.id]),
+    [KIT.renderQueue]: () => setQueueOpen((now) => !now),
+    [KIT.rove]: () => void run('keys.interpolation', { roving: !keyState.roving }),
+    'kit:edit-key': () => void openKeyValue(),
+    // One undo step per property (each its own `prop.convertExpressionToKeyframes`).
+    [KIT.convertExpression]: () => convertible.forEach((each) => void run('prop.convertExpressionToKeyframes', each)),
+    'layer.revealSource': () => void revealSource(),
+    'project.newFolder': () => void newFolder(),
+    'file.removeUnusedFootage': () =>
+      void run('file.removeUnusedFootage', {}).then((answer) => {
+        const removed = parseAnswer<{ removed?: number }>(answer)
+        if (removed) toast.success(t('project.removedUnused', { count: removed.removed ?? 0 }))
+      }),
     'file.exportLottie': () => state?.comp && setExporting('lottie'),
     'file.import': () => void footage.importPicked(),
     'layer.precompose': () => void precompose(),
@@ -923,13 +972,17 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     // A new drop shadow is seen at once, even on a dark background (one already there is only turned on).
     'layer.style.dropShadow': () => void run('layer.style.dropShadow', styled.has('dropShadow') ? {} : { params: DROP_SHADOW }),
     'layer.newCamera': () => void run('layer.newCamera', { name: unusedLayerName(t('layerName.camera')) }),
-    // A point light in front of the composition's middle: a 3D layer facing the camera stays lit
-    // (a spot light off to one side left it nearly black).
+    // A point light far in front of the composition, a little above its middle: its light reaches
+    // every 3D layer from nearly straight on, so one turned 40° still shows (a light close in front
+    // lit a turned layer off to one side almost black, a spot light off to one side even more).
     'layer.newLight': () => {
       const comp = state?.comp
       if (!comp) return
-      void run('layer.newLight', { kind: 'Point', name: unusedLayerName(t('layerName.light')), position: [comp.width / 2, comp.height / 2, -comp.width / 2] })
+      void run('layer.newLight', { kind: 'Point', name: unusedLayerName(t('layerName.light')), position: [comp.width / 2, comp.height * 0.3, -comp.width * 2] })
     },
+    'layer.newShape': () => void run('layer.newShape', { kind: 'rect', name: unusedLayerName(t('layerName.shape')) }),
+    'layer.newNull': () => void run('layer.newNull', { name: unusedLayerName(t('layerName.null')) }),
+    'layer.newAdjustment': () => void run('layer.newAdjustment', { name: unusedLayerName(t('layerName.adjustment')) }),
     'layer.settings': () => void openSolid('settings'),
     'time.set': () => state?.comp && setDialog({ kind: 'time', time: state.time, fps: state.comp.fps, duration: state.comp.duration }),
     'layer.rename': () => {
@@ -963,7 +1016,45 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     if (alignTo === 'selection' && (state?.layers.filter((layer) => layer.selected).length ?? 0) < 2) for (const command of Object.keys(KIT_RUNS)) if (command.startsWith('kit:align-')) off.add(command)
     return off
   }, [idle, alignTo, state?.layers])
-  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo, threeD: view3d, region: region !== null, cached: frameCache.cached.length > 0 }, editor.enabled('keys.interpolation'), idle)
+  // The selected keyframes, for Rove Across Time: whether any moves through space, and whether they all rove.
+  const keysSelected = editor.enabled('keys.interpolation')
+  const [keyState, setKeyState] = useState<SelectedKeys>({ spatial: false, roving: false })
+  useEffect(() => {
+    if (!keysSelected || playback.playing) {
+      setKeyState((before) => (before.spatial || before.roving ? { spatial: false, roving: false } : before))
+      return undefined
+    }
+    let current = true
+    void query<Array<{ spatial?: string | null; roving?: boolean }>>('keys.info', {}).then((keys) => {
+      if (!current || !Array.isArray(keys)) return
+      const moving = keys.filter((key) => typeof key.spatial === 'string')
+      const next = { spatial: moving.length > 0, roving: moving.length > 0 && moving.every((key) => key.roving === true) }
+      setKeyState((before) => (before.spatial === next.spatial && before.roving === next.roving ? before : next))
+    })
+    return () => {
+      current = false
+    }
+  }, [state, keysSelected, playback.playing, query])
+  // Animation ▸ Keyframe Assistant ▸ Convert Expression to Keyframes: the selected properties whose expression it would turn into keyframes.
+  const [convertible, setConvertible] = useState<Array<{ layer: number; path: string }>>([])
+  useEffect(() => {
+    const doc = session.doc
+    const chosen = (state?.layers ?? []).flatMap((layer) => (layer.selected ? layer.selectedProps.map((path) => ({ layer: layer.id, path })) : []))
+    if (!doc || playback.playing || !chosen.length) {
+      setConvertible((before) => (before.length ? [] : before))
+      return undefined
+    }
+    let current = true
+    void Promise.all(chosen.map((each) => doc.invoke<boolean>('wouldChange', 'prop.convertExpressionToKeyframes', JSON.stringify(each)).catch(() => false))).then((answers) => {
+      if (!current) return
+      const next = chosen.filter((_, at) => answers[at])
+      setConvertible((before) => (JSON.stringify(before) === JSON.stringify(next) ? before : next))
+    })
+    return () => {
+      current = false
+    }
+  }, [session.doc, state, playback.playing])
+  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo, threeD: view3d, region: region !== null, cached: frameCache.cached.length > 0, keys: keyState, convertible: convertible.length > 0 }, keysSelected, idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
   // The first selected layer's layer styles: Layer ▸ Layer Styles marks them (Added).
   const firstSelected = state?.layers.find((layer) => layer.selected)?.id
@@ -985,7 +1076,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }, [firstSelected, state, query])
   // Layer ▸ Time ▸ Enable or Disable Time Remapping, by the first selected layer.
   const remapOn = state?.layers.find((layer) => layer.selected)?.animated.some((property) => property.path === 'timeRemap') ?? false
-  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled), [effects, overlays, alignTo, skipFrames, remapOn, styled])
+  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled, keyState), [effects, overlays, alignTo, skipFrames, remapOn, styled, keyState])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
   const allowed = useMemo(() => shortcutCommands(rows), [rows])
   const hiddenCommands = useCallback((command: string) => !allowed.has(command), [allowed])
@@ -1013,6 +1104,12 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const timelineKeys: TimelineKeys = useRef(null)
   const keyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!state) return false
+    // Escape while paths are edited ends the editing (the status bar says so). The tools take
+    // Escape only while busy or typing: picking the Selection tool again ends it in the engine.
+    if (event.key === 'Escape' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && tools.status === PATH_EDIT_HINT) {
+      tools.select('selection')
+      return true
+    }
     const command = event.metaKey || event.ctrlKey
     const plain = !command && !event.altKey && !event.shiftKey
     // T follows where the person last pressed (or where the focus is): after a press on the
@@ -1083,6 +1180,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     <KitEditorProvider editor={editor} tools={tools}>
       <EffectCatalog.Provider value={effects}>
       <SamplerContext.Provider value={sampler}>
+      <WaveformContext.Provider value={waveform}>
       <EditorFrame
         tabs={tabs}
         defaultTab="home"
@@ -1092,15 +1190,31 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               <PanelLeftIcon size={14} aria-hidden="true" />
               {t('project.title')}
             </Button>
-            <Button variant="ghost" disabled={!state?.comp} onClick={() => setExporting('movie')} data-testid="motion-render">
+            <Button variant="ghost" disabled={!state?.comp} onClick={() => dispatch('file.exportMovie')} data-testid="motion-render">
               <Download size={14} aria-hidden="true" />
               {t('renderMovie')}
             </Button>
           </>
         }
         sidebar={
-          state && project.open ? (
-            <ProjectPanel info={state} width={project.width} onWidth={project.setWidth} onImport={() => void footage.importPicked()} onNewComp={() => void openComp('new')} onPlace={(item) => placeItem(item)} />
+          state && (project.open || queueOpen) ? (
+            <div className="motion-sidebar" style={{ width: project.width }}>
+              {project.open ? (
+                <ProjectPanel
+                  info={state}
+                  width={project.width}
+                  onWidth={project.setWidth}
+                  onImport={() => void footage.importPicked()}
+                  onNewComp={() => void openComp('new')}
+                  onPlace={(item) => placeItem(item)}
+                  onReplace={(item: ProjectItem) => void footage.replacePicked(item.id, item.name)}
+                  onInterpret={(item: ProjectItem) => setDialog({ kind: 'interpret', item })}
+                  onQueue={(comps) => void addToQueue(comps)}
+                  reveal={reveal}
+                />
+              ) : null}
+              {queueOpen ? <RenderQueuePanel queue={renderQueue} onClose={() => setQueueOpen(false)} /> : null}
+            </div>
           ) : null
         }
         canvas={canvas}
@@ -1168,6 +1282,29 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               {toolHint}
             </span>
           ) : null}
+          {pointer && state?.comp ? (
+            <Button
+              variant="ghost"
+              className="motion-info"
+              aria-pressed={percent}
+              aria-label={t('info.label')}
+              title={t('info.toggle', { units: t(percent ? 'info.units.bytes' : 'info.units.percent') })}
+              onClick={togglePercent}
+              data-testid="motion-info"
+              data-x={pointer.x}
+              data-y={pointer.y}
+              data-rgba={pointer.rgba?.join(' ')}
+            >
+              <span>{t('info.position', { x: pointer.x, y: pointer.y })}</span>
+              {pointer.rgba ? (
+                <>
+                  <span className="motion-info-swatch" style={{ background: `rgb(${pointer.rgba[0]} ${pointer.rgba[1]} ${pointer.rgba[2]})` }} aria-hidden="true" />
+                  {/* R G B A, short so the tool's hint keeps its room (the tooltip names them). */}
+                  <span>{(pointer.rgba ?? []).map((value) => (percent ? `${Math.round((value / 255) * 100)}%` : String(value))).join(' ')}</span>
+                </>
+              ) : null}
+            </Button>
+          ) : null}
           <span className="motion-summary" title={state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : undefined} data-testid="motion-status">
             {state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : t('noComp')}
           </span>
@@ -1207,7 +1344,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             ref={main}
             style={{ '--motion-timeline-height': `${timelineHeight}px` } as CSSProperties}
             onKeyDown={keepTypedKeys}
-            onPointerMoveCapture={repaintAfterCamera}
+            onPointerMoveCapture={(event) => {
+              repaintAfterCamera(event)
+              readPointer(event)
+            }}
             onPointerUpCapture={repaintAfterCamera}
             onPointerDownCapture={(event) => {
               const box = event.currentTarget.getBoundingClientRect()
@@ -1295,6 +1435,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
                   onBack={(comp) => void run('comp.open', { comp })}
                   playbackRate={{ fps: frameCache.fps, skip: skipFrames, onSkip: toggleSkipFrames }}
                   loop={{ on: loop, onToggle: toggleLoop }}
+                  meters={<AudioMeters feed={meterFeed} playing={playback.playing} />}
                 />
                 <Timeline
                   info={shownState ?? state}
@@ -1306,6 +1447,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
                   onOpenPrecomp={openPrecomp}
                   onPrecompose={() => void precompose()}
                   onCommand={dispatch}
+                  onRevealSource={(layer) => void revealSource(layer)}
                   cached={frameCache.cached}
                 />
               </FrameChrome>
@@ -1313,6 +1455,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           </div>
         </div>
       </EditorFrame>
+      </WaveformContext.Provider>
       </SamplerContext.Provider>
       </EffectCatalog.Provider>
     </KitEditorProvider>

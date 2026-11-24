@@ -341,6 +341,7 @@ impl MotionDocument {
         if draft.points.len() < 2 {
             return;
         }
+        st.pen_drew = true;
         // On a shape layer the path is a new shape path, unless the Pen draws masks (the editor's
         // Pen option, `setPenMasks`).
         let shape_layer = draft
@@ -354,6 +355,8 @@ impl MotionDocument {
             let mut params = json!({ "vertices": vertices, "inTangents": ins, "outTangents": outs, "closed": closed, "space": "comp" });
             if let Some(id) = shape_layer {
                 params["layer"] = json!(id.0);
+            } else if let Some(name) = self.new_shape_layer_name() {
+                params["name"] = json!(name);
             }
             if let Err(error) = self.tool_run("shape.newPath", params) {
                 st.status = Some(error);

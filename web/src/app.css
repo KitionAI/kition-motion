@@ -1505,15 +1505,18 @@ button.motion-switch:focus-visible {
 }
 
 .kui-app .kui-status-bar > .motion-summary {
-  flex-shrink: 1;
-  min-width: 4em;
+  /* The first to give way when the bar is full (before the tool's hint and the readout). */
+  flex-shrink: 20;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 /* What the active tool says, in the status bar: one line, cut short when the bar is narrow. */
 .kui-app .kui-status-bar > .motion-tool-status {
-  flex: 1 1 0;
+  /* Its own width first (the spacer after it takes what is left), shrinking with an ellipsis only
+     once the readout and the summary have given way. */
+  flex: 0 0.001 auto;
   min-width: 3em;
   overflow: hidden;
   color: var(--kit-text-muted);
@@ -1868,9 +1871,11 @@ button.motion-switch:focus-visible {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 4px;
-  width: 1px;
-  background: var(--kit-border);
+  left: 3px;
+  width: 3px;
+  border-radius: 1px;
+  background: var(--kit-border-strong, var(--kit-text-muted));
+  opacity: 0.55;
 }
 
 .motion-names-split::after {
@@ -1881,7 +1886,7 @@ button.motion-switch:focus-visible {
   width: 3px;
   height: 13px;
   margin-top: -6px;
-  background: radial-gradient(circle, var(--kit-text-muted) 1px, transparent 1.2px) 0 0 / 3px 5px repeat-y;
+  background: radial-gradient(circle, var(--kit-text) 1.2px, transparent 1.4px) 0 0 / 3px 5px repeat-y;
 }
 
 .motion-names-split:hover,
@@ -1922,4 +1927,245 @@ button.motion-switch:focus-visible {
   margin: 4px 0 2px;
   font-size: 11px;
   line-height: 1.4;
+}
+
+/* The left column: the Project panel and, under it, the Render Queue. */
+.motion-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.motion-sidebar > .motion-project {
+  flex: 1 1 60%;
+  width: auto !important;
+}
+
+.motion-project-search {
+  flex: none;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--kit-border);
+}
+
+.motion-project-search input {
+  width: 100%;
+}
+
+.motion-project-twirl {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  color: var(--kit-text-muted);
+}
+
+.motion-project-list[data-drop],
+.motion-project-row[data-drop] {
+  outline: 1px dashed var(--kit-primary);
+  outline-offset: -1px;
+  background: var(--kit-primary-soft);
+}
+
+.motion-project-row[data-missing] .motion-project-name {
+  color: var(--kit-danger, #c0392b);
+  font-style: italic;
+}
+
+/* The selected item's details under the list. */
+.motion-project-info {
+  flex: none;
+  padding: 6px 10px 8px;
+  border-top: 1px solid var(--kit-border);
+  font-size: 11px;
+}
+
+.motion-project-info-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.motion-project-info dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.motion-project-info dl > div {
+  display: contents;
+}
+
+.motion-project-info dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The Render Queue panel: its jobs, each with its buttons, details and progress. */
+.motion-queue {
+  display: flex;
+  flex: 1 1 40%;
+  flex-direction: column;
+  min-height: 140px;
+  border-top: 1px solid var(--kit-border);
+  border-right: 1px solid var(--kit-border);
+}
+
+.motion-queue-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  /* Clear of the scroll bar: WebKit gives a press there to the scroller. */
+  padding: 0 16px 0 0;
+}
+
+.motion-queue-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 4px 6px 8px;
+  border-bottom: 1px solid var(--kit-border);
+}
+
+.motion-queue-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.motion-queue-comp {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.motion-queue-tools {
+  display: inline-flex;
+  flex: none;
+}
+
+.motion-queue-detail,
+.motion-queue-status {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.motion-queue-status[data-state='failed'],
+.motion-queue-status[data-state='unsupported'] {
+  color: var(--kit-danger, #c0392b);
+}
+
+/* The transport's audio meters while it plays: left over right, -60 dB to 0 dB, with a hold mark. */
+.motion-meters {
+  display: inline-flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  width: 64px;
+  height: 18px;
+  margin: 0 6px;
+}
+
+.motion-meters[data-idle] {
+  visibility: hidden;
+}
+
+.motion-meter {
+  position: relative;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--kit-surface-muted);
+  overflow: hidden;
+}
+
+.motion-meter::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--level, 0) * 100%);
+  background: linear-gradient(90deg, #3fb950 0%, #3fb950 70%, #d29922 85%, #f85149 100%) 0 0 / 64px 100%;
+}
+
+.motion-meter::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--hold, 0) * 100% - 2px);
+  width: 2px;
+  background: var(--kit-text);
+}
+
+.motion-meter[data-clip]::after {
+  background: #f85149;
+}
+
+/* An audio layer's waveform row (LL): its sound from in point to out point. */
+.motion-waveform {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  height: calc(100% - 4px);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.motion-waveform polygon {
+  fill: var(--kit-primary);
+  opacity: 0.75;
+}
+
+.motion-waveform line {
+  stroke: var(--kit-primary);
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.motion-wave-row .motion-row-track {
+  height: 40px;
+}
+
+.motion-wave-row {
+  min-height: 40px;
+}
+
+/* The status bar's readout of the position and colour under the pointer. */
+.kui-app .kui-status-bar > .motion-info {
+  /* Gives way (cut at its end) before the tool's hint does; its position stays readable. */
+  flex: 0 1000 auto;
+  min-width: 5.5em;
+  overflow: hidden;
+}
+
+.motion-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.motion-info-swatch {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--kit-border);
+  border-radius: 2px;
+}
+
+/* A switch column's head as a short name (Columns ▸ Column names as text). */
+.motion-column-short {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }

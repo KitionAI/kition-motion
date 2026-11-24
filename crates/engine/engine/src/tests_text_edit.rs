@@ -306,3 +306,20 @@ fn layer_tree_reads_back_the_edited_selections_style_and_marks_mixed_settings() 
     assert_eq!(text["character"]["size"].as_f64(), Some(12.0), "{text}");
     assert_eq!(text["range"], json!([5, 5]));
 }
+
+/// A new text layer typed into from the panel (`layer.setText` per keystroke) is named after its
+/// whole first line, not after the first character; renamed by hand, it keeps that name.
+#[test]
+fn a_text_layer_typed_into_keeps_its_name_following_the_whole_text_until_renamed() {
+    let (mut s, t) = session("");
+    let name = |s: &mut Session| {
+        s.execute("comp.info", json!({})).unwrap()["layers"].as_array().unwrap().iter().find(|l| l["id"] == t).unwrap()["name"].as_str().unwrap().to_string()
+    };
+    for typed in ["H", "He", "Hel", "Hello", "Hello world"] {
+        s.execute("layer.setText", json!({"layer": t, "text": typed})).unwrap();
+    }
+    assert_eq!(name(&mut s), "Hello world");
+    s.execute("layer.rename", json!({"layer": t, "name": "Title"})).unwrap();
+    s.execute("layer.setText", json!({"layer": t, "text": "Hello world!"})).unwrap();
+    assert_eq!(name(&mut s), "Title", "renamed by hand, the name stays");
+}

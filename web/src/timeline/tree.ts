@@ -44,10 +44,13 @@ export type TextStyle = {
 }
 
 /** What a layer's twirl shows: its whole property tree, or only some properties (After Effects' U, P, S, R, T). */
-export type Twirl = { kind: 'tree' } | { kind: 'only'; key: string; paths: readonly string[] | 'animated' }
+export type Twirl = { kind: 'tree' } | { kind: 'only'; key: string; paths: readonly string[] | 'animated'; waveform?: boolean }
 
 /** One row under a layer: a group that opens and closes, or a property. */
-export type PropertyRow = { kind: 'group'; node: TreeNode; depth: number; open: boolean } | { kind: 'property'; node: TreeNode; depth: number }
+export type PropertyRow = { kind: 'group'; node: TreeNode; depth: number; open: boolean } | { kind: 'property'; node: TreeNode; depth: number } | { kind: 'waveform'; node: TreeNode; depth: number }
+
+/** A layer's Audio group: its Waveform row shows under Audio Levels (LL, or the group twirled open). */
+const AUDIO = 'audio'
 
 /** The properties the solo keys show (P, S, R, T), as After Effects shows them for a 2D layer. */
 export const SOLO_PATHS: Record<string, readonly string[]> = {
@@ -96,6 +99,9 @@ export function propertyRows(root: TreeNode, layer: MotionLayer, twirl: Twirl, t
       }
     }
     visit(root)
+    // LL: the Audio Levels and, under them, the layer's waveform.
+    const audio = twirl.waveform ? root.children?.find((child) => child.path === AUDIO) : undefined
+    if (audio) rows.push({ kind: 'waveform', node: audio, depth: 0 })
     return rows
   }
   const visit = (node: TreeNode, depth: number) => {
@@ -109,6 +115,7 @@ export function propertyRows(root: TreeNode, layer: MotionLayer, twirl: Twirl, t
       const open = groupOpen(child.path, toggled.has(child.path))
       rows.push({ kind: 'group', node: child, depth, open })
       if (open) visit(child, depth + 1)
+      if (open && child.path === AUDIO) rows.push({ kind: 'waveform', node: child, depth: depth + 1 })
     }
   }
   visit(root, 0)
