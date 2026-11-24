@@ -255,6 +255,24 @@ try {
   await until(async () => (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === 0)
   step('a click on empty space clears them', (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === 0)
 
+  // A busy page takes a drag's moves and its release in one go, before the moves are drawn (the
+  // WebKit run on Linux selected 1 of 6): the box still reaches where the pointer was let go. The
+  // mouse's own pointer (id 1) sends them in one task, after the press has been drawn.
+  await kit.getByTestId('motion-graph-svg').evaluate(async (svg) => {
+    const r = svg.getBoundingClientRect()
+    const [from, to] = [{ x: r.right - 3, y: r.top + 3 }, { x: r.left - 12, y: r.bottom - 3 }]
+    const send = (type, x, y) =>
+      svg.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y }))
+    send('pointerdown', from.x, from.y)
+    await new Promise((done) => setTimeout(done, 50))
+    for (let i = 1; i <= 10; i += 1) send('pointermove', from.x + ((to.x - from.x) * i) / 10, from.y + ((to.y - from.y) * i) / 10)
+    send('pointerup', to.x, to.y)
+  })
+  await until(async () => (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === (await kit.locator('.motion-graph-key').count()))
+  step('a box whose moves and release come at once selects every key in it too', (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === (await kit.locator('.motion-graph-key').count()), `${await kit.locator('.motion-graph-key[aria-selected="true"]').count()} of ${await kit.locator('.motion-graph-key').count()}`)
+  await page.mouse.click(area.x + area.width - 3, area.y + 3)
+  await until(async () => (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === 0)
+
   // A key dragged past its property's range stops at it: Opacity cannot pass 100.
   const opacityLast = kit.getByTestId(`motion-graph-key-${SHAPE}-transform.opacity-0-2000`)
   const fromLast = await centre(opacityLast)

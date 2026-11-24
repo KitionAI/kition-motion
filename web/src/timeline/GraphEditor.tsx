@@ -205,7 +205,14 @@ export function GraphEditor({
   }, [])
   const count = Math.round(Math.min(600, Math.max(48, width / 3)))
   const curves = useCurves(targets, view.start, view.start + view.span, count, revision)
-  const [drag, setDrag] = useState<Drag | null>(null)
+  const [drag, showDrag] = useState<Drag | null>(null)
+  // The drag as the pointer has left it: a busy page takes several moves and the release in one go,
+  // before the moves' render, so the handlers read this and not the drag of the last render.
+  const dragNow = useRef<Drag | null>(null)
+  const setDrag = (next: Drag | null) => {
+    dragNow.current = next
+    showDrag(next)
+  }
   const lines = useMemo(() => new Map(curves.map((curve) => [curve, linesOf(curve, mode)])), [curves, mode])
   // Each curve's own value range; it stays put while something is dragged, so the drag does not rescale under the pointer.
   const live = useMemo(() => new Map(curves.map((curve) => [curveId(curve), rangeOf(curve, lines.get(curve) ?? [], mode)])), [curves, lines, mode])
@@ -275,26 +282,32 @@ export function GraphEditor({
     setDrag({ kind: 'box', pointerId: event.pointerId, x0: px, y0: py, x1: px, y1: py, add: event.shiftKey || event.metaKey || event.ctrlKey })
   }
 
-  const move = (event: ReactPointerEvent<SVGElement>) => {
-    if (!drag || drag.pointerId !== event.pointerId) return
+  /** `drag` taken to where the pointer of `event` is. */
+  const movedTo = (drag: Drag, event: ReactPointerEvent<SVGElement>): Drag => {
     const { px, py } = local(event)
-    if (drag.kind === 'box') {
-      setDrag({ ...drag, x1: px, y1: py })
-      return
-    }
+    if (drag.kind === 'box') return { ...drag, x1: px, y1: py }
     if (drag.kind === 'key') {
       const moved = drag.moved || Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > CLICK_SLOP
-      if (!moved) return
-      setDrag({ ...drag, moved, time: Math.max(0, snapIn(frame, secondsAt(px))), value: mode === 'value' ? valueAt(drag.curve, py) : drag.value })
-      return
+      if (!moved) return drag
+      return { ...drag, moved, time: Math.max(0, snapIn(frame, secondsAt(px))), value: mode === 'value' ? valueAt(drag.curve, py) : drag.value }
     }
-    setDrag({ ...drag, time: secondsAt(px), value: valueAt(drag.curve, py) })
+    return { ...drag, time: secondsAt(px), value: valueAt(drag.curve, py) }
+  }
+
+  const move = (event: ReactPointerEvent<SVGElement>) => {
+    const current = dragNow.current
+    if (!current || current.pointerId !== event.pointerId) return
+    const next = movedTo(current, event)
+    if (next !== current) setDrag(next)
   }
 
   const release = (event: ReactPointerEvent<SVGElement>, cancelled: boolean) => {
-    if (!drag || drag.pointerId !== event.pointerId) return
+    const current = dragNow.current
+    if (!current || current.pointerId !== event.pointerId) return
     setDrag(null)
     if (cancelled) return
+    // Where the pointer was let go, whether or not its last moves have been drawn.
+    const drag = movedTo(current, event)
     if (drag.kind === 'box') {
       const [left, right] = [Math.min(drag.x0, drag.x1), Math.max(drag.x0, drag.x1)]
       const [top, bottom] = [Math.min(drag.y0, drag.y1), Math.max(drag.y0, drag.y1)]
