@@ -620,3 +620,12 @@ features:
     gap: "The .lottie (zipped) form is not offered; the list of what could not travel is the engine's English text. Gated by web/tests/menus.mjs (the file parses and has layers)."
     cases: []
     since: "2026-11-23"
+  - id: motion.editor.masks
+    title: "The Pen tool (G) on the rail draws a mask on the selected layer (or the one clicked first): a click places a corner, a drag pulls the point's curve handles, a click on the first point closes the mask, Enter keeps it open, Backspace takes the last point back and Escape drops it; the mask is made in one undo step (mask.new). The Selection tool (and the Pen) show the selected layers' masks: a vertex drags, and once picked its curve handles drag (Alt: one handle alone), one undo step a drag (mask.setVertex). The Properties panel sets each mask's mode (from layer.mask.mode's schema), Inverted, feather, opacity and expansion"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [bindings/wasm/src/tools/pen.rs, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/tools/tests.rs, bindings/wasm/src/param_types.json, bindings/wasm/src/lib.rs, web/src/properties/PropertyTree.tsx, web/src/timeline/tree.ts, web/src/strings.ts, web/tests/canvas.mjs]
+    gap: "No adding or deleting a vertex on an existing mask, no converting a corner to a curve after drawing, no selecting several vertices or moving a whole mask, no mask feather tool and no RotoBezier; mask vertices take a press before the layer's scale handles, so a mask corner on the layer's corner moves the vertex. Gated by web/tests/canvas.mjs and the pen tests in bindings/wasm/src/tools/tests.rs."
+    cases: []
+    since: "2026-11-23"

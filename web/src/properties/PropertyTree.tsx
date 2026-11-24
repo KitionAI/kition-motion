@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import { ChevronDownIcon as Open, ChevronRightIcon as Closed } from '@kition/tessera/icons/react'
-import { Select, useKitEditor } from '@kition/sdk/editor'
+import { Checkbox, Select, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
 import { keyTimes } from '../timeline/keys'
 import { shown, type TreeNode } from '../timeline/tree'
@@ -70,7 +70,40 @@ export function PropertyGroup({ node, scope, depth, byDefault = false, label }: 
         {open ? <Open size={12} aria-hidden="true" /> : <Closed size={12} aria-hidden="true" />}
         <span>{name}</span>
       </button>
+      {open && node.mask ? <MaskSettings node={node} mask={node.mask} /> : null}
       {open ? <PropertyChildren node={node} scope={scope} depth={depth + 1} /> : null}
+    </div>
+  )
+}
+
+/** The modes `layer.mask.mode` takes, from its parameter schema, in the engine's order. */
+function maskModes(schema: Record<string, unknown> | null | undefined): string[] {
+  const mode = (schema as Record<string, { enum?: unknown }> | null | undefined)?.mode
+  return Array.isArray(mode?.enum) ? mode.enum.filter((value): value is string => typeof value === 'string') : []
+}
+
+/** A mask's mode and Inverted, above its feather, opacity and expansion; each change one undo step. */
+function MaskSettings({ node, mask }: { node: TreeNode; mask: { mode: string; inverted: boolean } }) {
+  const { run, t, phrase, byId } = useKitEditor()
+  const { layer, readOnly } = usePanel()
+  const id = pathId(node.path)
+  return (
+    <div className="motion-prop motion-mask-settings" data-testid={`motion-mask-${id}`}>
+      <span className="motion-prop-name kui-muted">{t('mask.mode')}</span>
+      <Select
+        value={mask.mode}
+        disabled={readOnly}
+        aria-label={t('mask.mode')}
+        onChange={(event) => void run('layer.mask.mode', { layer: layer.id, mask: node.uid, mode: event.target.value })}
+        data-testid={`motion-mask-mode-${id}`}
+      >
+        {maskModes(byId.get('layer.mask.mode')?.schema).map((mode) => (
+          <option key={mode} value={mode}>
+            {phrase(mode)}
+          </option>
+        ))}
+      </Select>
+      <Checkbox label={t('mask.inverted')} checked={mask.inverted} disabled={readOnly} onChange={(value) => void run('layer.mask.invert', { layer: layer.id, mask: node.uid, value })} testId={`motion-mask-invert-${id}`} />
     </div>
   )
 }

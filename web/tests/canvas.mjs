@@ -116,7 +116,7 @@ try {
 
   // 1. The rail and the default tool.
   const rail = await kit.locator('[data-testid^="motion-tool-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')))
-  step('the tool rail lists Selection, Hand, Zoom, Rectangle, Ellipse and Text', ['selection', 'hand', 'zoom', 'rectangle', 'ellipse', 'text'].every((id) => rail.includes(`motion-tool-${id}`)), rail.join(' '))
+  step('the tool rail lists Selection, Hand, Zoom, Rectangle, Ellipse, Text and Pen', ['selection', 'hand', 'zoom', 'rectangle', 'ellipse', 'text', 'pen'].every((id) => rail.includes(`motion-tool-${id}`)), rail.join(' '))
   step('Selection is the tool the editor opens with', (await active()) === 'selection', await active())
 
   // 2. Clicks select the topmost layer under the pointer, as the timeline shows.
@@ -216,6 +216,7 @@ try {
   await until(async () => nearAll(await value(rect.id, 'transform/scale'), [100, 100]))
   step('one undo puts the scale back', nearAll(await value(rect.id, 'transform/scale'), [100, 100]) && nearAll(await value(rect.id, 'transform/position'), home))
   await drag([1000, 200], [1060, 200], { held: [primary] })
+  await until(async () => !nearAll(await value(rect.id, 'transform/scale'), [100, 100]))
   const wide = await value(rect.id, 'transform/scale')
   step('a side handle scales one axis', near(wide[0], 120, 1.5) && near(wide[1], 100), JSON.stringify(wide))
   await undo()
@@ -409,6 +410,76 @@ try {
     let back = blocky
     await until(async () => (back = await area()) === full)
     step('View ▸ 分辨率 ▸ 完整 draws it in full again, and the menu hides the resolution in use', back === full && quarterRow === 0 && (await kit.getByTestId('motion-resolution').inputValue()) === '1')
+  }
+
+  // 14. Masks: the Pen (G) draws a closed mask on the selected layer (corners by clicks, a curve
+  // by a drag, closed on the first point), the Selection tool drags its vertex, and the Properties
+  // panel sets its mode and Inverted; each one undo step.
+  {
+    await page.evaluate(async () => window.devHost.connection().ai.run([{ command: 'layer.newSolid', params: { name: 'Mask test', width: 300, height: 200, color: '#33aa66' } }], false))
+    await until(async () => (await layers()).some((each) => each.name === 'Mask test'))
+    const MASKED = (await layers()).find((each) => each.name === 'Mask test').id
+    await kit.getByTestId(`motion-layer-${MASKED}`).click()
+    await until(async () => same(await selection(), [MASKED]))
+    const masksOf = async () => {
+      const tree = await query('layer.tree', { layer: MASKED })
+      const group = tree.properties.children.find((child) => child.match === 'masks')
+      return (group?.children ?? []).map((mask) => ({ uid: mask.uid, path: mask.path, mode: mask.mask?.mode, inverted: mask.mask?.inverted, shape: mask.children.find((child) => child.match === 'path')?.value?.v }))
+    }
+    const rail = await kit.locator('[data-testid^="motion-tool-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')))
+    step('the rail has the Pen', rail.includes('motion-tool-pen'), rail.join(' '))
+    await focusEditor()
+    await page.keyboard.press('KeyG')
+    await until(async () => (await active()) === 'pen')
+    step('G picks the Pen', (await active()) === 'pen', await active())
+    // The solid spans (490, 260)–(790, 460) around the composition's centre (640, 360).
+    await click(540, 300)
+    await click(740, 300)
+    await drag([740, 420], [770, 440])
+    await click(540, 420)
+    if (shots) await page.screenshot({ path: `${shots}phase6-mask-pen.png` })
+    step('nothing is made before the path is closed', (await masksOf()).length === 0)
+    await click(541, 301)
+    await until(async () => (await masksOf()).length === 1)
+    const made = (await masksOf())[0]
+    step('a click on the first point closes the mask, with the dragged point curved', made?.shape?.closed === true && made.shape.vertices.length === 4 && Math.abs(made.shape.out_tangents[2][0]) > 5, JSON.stringify(made?.shape))
+    await undo()
+    await until(async () => (await masksOf()).length === 0)
+    step('one undo takes the mask away', (await masksOf()).length === 0)
+    await page.keyboard.press(`${primary}+Shift+KeyZ`)
+    await until(async () => (await masksOf()).length === 1)
+    // The Selection tool drags the mask's vertex, not the layer.
+    await kit.getByTestId('motion-tool-selection').click()
+    const position = await value(MASKED, 'transform/position')
+    const first = (await masksOf())[0].shape.vertices[1]
+    const layerLeft = position[0] - 150
+    const layerTop = position[1] - 100
+    await drag([layerLeft + first[0], layerTop + first[1]], [layerLeft + first[0] + 30, layerTop + first[1] + 20])
+    await until(async () => (await masksOf())[0].shape.vertices[1][0] > first[0] + 10)
+    const after = (await masksOf())[0].shape.vertices[1]
+    step('the Selection tool drags a mask vertex, the layer stays', after[0] > first[0] + 10 && nearAll(await value(MASKED, 'transform/position'), position), `${JSON.stringify(first)} → ${JSON.stringify(after)}`)
+    await undo()
+    await until(async () => near((await masksOf())[0].shape.vertices[1][0], first[0]))
+    step('one undo puts the vertex back', near((await masksOf())[0].shape.vertices[1][0], first[0]))
+    // The Properties panel: the mask's mode and Inverted.
+    const id = (await masksOf())[0].path.replaceAll('/', '.')
+    const toggle = kit.getByTestId(`motion-group-toggle-${id}`)
+    await toggle.waitFor({ timeout: 5000 }).catch(() => null)
+    if ((await toggle.count()) && (await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click()
+    const modeSelect = kit.getByTestId(`motion-mask-mode-${id}`)
+    await modeSelect.waitFor({ timeout: 5000 }).catch(() => null)
+    const modes = (await modeSelect.count()) ? await modeSelect.locator('option').allTextContents() : []
+    step('the mask’s modes read in Chinese', modes.includes('相减') && modes.includes('相加'), modes.join(' '))
+    if (modes.length) await modeSelect.selectOption('Subtract')
+    await until(async () => (await masksOf())[0].mode === 'Subtract')
+    step('choosing 相减 sets the mask to Subtract', (await masksOf())[0].mode === 'Subtract')
+    await kit.getByTestId(`motion-mask-invert-${id}`).click()
+    await until(async () => (await masksOf())[0].inverted === true)
+    step('反转 inverts it', (await masksOf())[0].inverted === true)
+    await undo()
+    await undo()
+    await until(async () => (await masksOf())[0].mode === 'Add' && (await masksOf())[0].inverted === false)
+    step('two undos put mode and Inverted back', (await masksOf())[0].mode === 'Add' && (await masksOf())[0].inverted === false)
   }
 
   step('no page errors', errors.length === 0, errors.join(' | '))

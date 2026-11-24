@@ -228,7 +228,8 @@ fn tools_text_tool_types_a_new_layer_and_edits_an_existing_one() {
 fn tools_refuse_hostile_events_without_a_panic() {
     let mut doc = doc();
     assert!(doc.pointer(&event(PointerAction::Down, f64::NAN, 1.0, ToolMods::default())).is_err());
-    assert!(doc.select_tool("pen", 1.0).is_err());
+    // An id no tool has (the Pen is one now).
+    assert!(doc.select_tool("lasso", 1.0).is_err());
     let _ = doc.pointer(&ToolPointer { zoom: 0.0, ..event(PointerAction::Move, 1e300, -1e300, ToolMods::default()) }).unwrap();
     let _ = doc.state(f64::INFINITY, 0.0, ToolMods::default(), f64::NAN);
     let _ = doc.key("Escape", ToolMods::default(), -1.0).unwrap();
@@ -271,4 +272,93 @@ fn tools_a_moved_layer_snaps_to_a_guide_and_to_the_grid_while_they_are_on() {
     assert_eq!(spacing, 100.0);
     drag(&mut doc, [960.0, 540.0], [1097.0, 540.0], ToolMods::default());
     assert!(near(&value(&mut doc, layer, "transform/position"), &[1100.0, 540.0]), "the left edge snaps onto the grid line at 1000");
+}
+
+/// The masks of a layer: per mask its vertices, its out tangents and whether it is closed.
+fn masks_of(doc: &mut MotionDocument, layer: u64) -> Vec<(Vec<[f64; 2]>, Vec<[f64; 2]>, bool)> {
+    let tree = doc.execute("layer.tree", json!({ "layer": layer })).unwrap();
+    let masks = tree["properties"]["children"].as_array().unwrap().iter().find(|g| g["match"] == "masks").cloned().unwrap_or(json!({}));
+    let pts = |v: &Value| v.as_array().map(|a| a.iter().map(|p| [p[0].as_f64().unwrap(), p[1].as_f64().unwrap()]).collect()).unwrap_or_default();
+    masks["children"]
+        .as_array()
+        .map(|list| {
+            list.iter()
+                .map(|mask| {
+                    let value = mask["children"].as_array().unwrap().iter().find(|p| p["match"] == "path").unwrap()["value"].clone();
+                    let path = value["v"].clone();
+                    assert!(path.get("vertices").is_some(), "a path: {path}");
+                    (pts(&path["vertices"]), pts(&path["out_tangents"]), path["closed"].as_bool().unwrap_or(false))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn key(doc: &mut MotionDocument, name: &str) {
+    doc.key(name, ToolMods::default(), 1.0).unwrap();
+}
+
+#[test]
+fn tools_the_pen_draws_a_closed_mask_on_the_selected_layer_in_one_undo_step() {
+    let mut doc = doc();
+    let layer = solid(&mut doc, "Masked");
+    click(&mut doc, 960.0, 540.0, ToolMods::default());
+    assert_eq!(selected(&doc), vec![layer]);
+    doc.select_tool("pen", 1.0).unwrap();
+    assert_eq!(doc.tool(), "pen");
+    // Three corners, a drag that curves the fourth point, and a click on the first point closes it.
+    click(&mut doc, 880.0, 500.0, ToolMods::default());
+    click(&mut doc, 1040.0, 500.0, ToolMods::default());
+    click(&mut doc, 1040.0, 580.0, ToolMods::default());
+    drag(&mut doc, [880.0, 580.0], [900.0, 600.0], ToolMods::default());
+    assert!(masks_of(&mut doc, layer).is_empty(), "nothing is made until the path is finished");
+    click(&mut doc, 881.0, 501.0, ToolMods::default());
+    let masks = masks_of(&mut doc, layer);
+    assert_eq!(masks.len(), 1, "{masks:?}");
+    let (vertices, outs, closed) = &masks[0];
+    assert!(closed);
+    // The solid's layer space starts at its top left (860, 490).
+    assert!(near(&vertices[0], &[20.0, 10.0]) && near(&vertices[2], &[180.0, 90.0]), "{vertices:?}");
+    assert!(near(&outs[3], &[20.0, 20.0]) && near(&outs[0], &[0.0, 0.0]), "the dragged point has handles, the corners none: {outs:?}");
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert!(masks_of(&mut doc, layer).is_empty(), "one undo takes the mask away");
+}
+
+#[test]
+fn tools_the_pen_keeps_an_open_path_on_enter_drops_it_on_escape_and_a_vertex_drags() {
+    let mut doc = doc();
+    let layer = solid(&mut doc, "Masked");
+    click(&mut doc, 960.0, 540.0, ToolMods::default());
+    doc.select_tool("pen", 1.0).unwrap();
+    click(&mut doc, 880.0, 500.0, ToolMods::default());
+    click(&mut doc, 1000.0, 520.0, ToolMods::default());
+    key(&mut doc, "Escape");
+    assert!(masks_of(&mut doc, layer).is_empty(), "Escape drops the drawing");
+    click(&mut doc, 880.0, 500.0, ToolMods::default());
+    click(&mut doc, 1000.0, 520.0, ToolMods::default());
+    click(&mut doc, 1020.0, 560.0, ToolMods::default());
+    key(&mut doc, "Backspace");
+    key(&mut doc, "Enter");
+    let masks = masks_of(&mut doc, layer);
+    assert_eq!(masks.len(), 1);
+    assert!(!masks[0].2, "Enter keeps it open");
+    assert_eq!(masks[0].0.len(), 2, "Backspace took the last point back");
+    // With the Selection tool the mask's vertex drags (and the layer stays put).
+    doc.select_tool("selection", 1.0).unwrap();
+    let position = value(&mut doc, layer, "transform/position");
+    drag(&mut doc, [1000.0, 520.0], [1010.0, 540.0], ToolMods::default());
+    let moved = masks_of(&mut doc, layer);
+    assert!(near(&moved[0].0[1], &[150.0, 50.0]), "{:?}", moved[0].0);
+    assert!(near(&value(&mut doc, layer, "transform/position"), &position), "the layer did not move");
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert!(near(&masks_of(&mut doc, layer)[0].0[1], &[140.0, 30.0]), "one undo puts the vertex back");
+}
+
+#[test]
+fn tools_the_pen_without_a_layer_says_what_to_do() {
+    let mut doc = doc();
+    doc.select_tool("pen", 1.0).unwrap();
+    let answer = doc.pointer(&event(PointerAction::Down, 100.0, 100.0, ToolMods::default())).unwrap();
+    doc.pointer(&event(PointerAction::Up, 100.0, 100.0, ToolMods::default())).unwrap();
+    assert!(format!("{:?}", answer.requests).contains("Select the layer to mask first"), "{:?}", answer.requests);
 }

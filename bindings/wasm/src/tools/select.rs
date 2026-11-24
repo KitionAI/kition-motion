@@ -85,6 +85,13 @@ impl MotionDocument {
                 st.gesture = Gesture::Draw { start: p, end: p, square: mods.shift, centred: mods.alt };
             }
             Tool::Text => text::text_down(self, st, p),
+            Tool::Pen => {
+                // A mask's vertex or handle drags when no mask is being drawn; any other press draws.
+                if st.pen.is_none() && self.vertex_down(st, p) {
+                    return;
+                }
+                self.pen_down(st, p);
+            }
             Tool::Hand | Tool::Zoom => {}
         }
     }
@@ -98,6 +105,11 @@ impl MotionDocument {
             self.end_text(st);
         }
         let zoom = st.zoom;
+        // A selected layer's mask vertices (and the picked vertex's handles) first.
+        if self.vertex_down(st, p) {
+            return;
+        }
+        st.vertex = None;
         // A selected layer's handles first (Shift held from the start keeps a corner's
         // proportions), then, without Shift, its rotation zones.
         let boxes = selected_boxes(&self.session);
@@ -194,6 +206,8 @@ impl MotionDocument {
             self.begin_move(st, start);
         }
         match &mut st.gesture {
+            Gesture::PenPoint { .. } => Self::pen_drag(st, p),
+            Gesture::Vertex { .. } => self.vertex_drag(st, p, mods),
             Gesture::Move { start, applied, layers, features, targets, merge } => {
                 let mut d = [p[0] - start[0], p[1] - start[1]];
                 if mods.shift {

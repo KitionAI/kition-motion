@@ -1472,6 +1472,14 @@ mod tests {
     }
 
     #[test]
+    fn the_mask_mode_schema_lists_every_mode_the_engine_takes() {
+        let modes: Vec<String> =
+            param_types()["layer.mask.mode"]["mode"]["enum"].as_array().unwrap().iter().map(|mode| mode.as_str().unwrap().to_owned()).collect();
+        let labels: Vec<&str> = kition_motion_engine::project::MaskMode::ALL.iter().map(|mode| mode.label()).collect();
+        assert_eq!(modes, labels, "the schema's order is the engine's");
+    }
+
+    #[test]
     fn an_export_renders_a_batch_at_a_time_and_reports_its_frames() {
         let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
         doc.execute("comp.settings", json!({ "duration": 1.0 })).unwrap();

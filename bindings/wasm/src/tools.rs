@@ -15,6 +15,7 @@
 //! document per worker.
 
 mod geometry;
+mod pen;
 mod select;
 mod text;
 
@@ -32,13 +33,14 @@ use crate::MotionDocument;
 use geometry::{LayerBox, Pt};
 
 /// The tools on the rail, in its order: (id, label, shortcut, icon).
-const TOOLS: [(Tool, &str, &str, &str, &str); 6] = [
+const TOOLS: [(Tool, &str, &str, &str, &str); 7] = [
     (Tool::Selection, "selection", "Selection Tool", "V", "tool-selection"),
     (Tool::Hand, "hand", "Hand Tool", "H", "tool-hand"),
     (Tool::Zoom, "zoom", "Zoom Tool", "Z", "tool-zoom"),
     (Tool::Rectangle, "rectangle", "Rectangle Tool", "Q", "tool-rect"),
     (Tool::Ellipse, "ellipse", "Ellipse Tool", "Q", "tool-ellipse"),
     (Tool::Text, "text", "Text Tool", "T", "tool-type"),
+    (Tool::Pen, "pen", "Pen Tool", "G", "tool-pen"),
 ];
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -50,6 +52,7 @@ pub(crate) enum Tool {
     Rectangle,
     Ellipse,
     Text,
+    Pen,
 }
 
 impl Tool {
@@ -82,6 +85,10 @@ pub(crate) enum Gesture {
     Draw { start: Pt, end: Pt, square: bool, centred: bool },
     /// Selecting text in the edited layer from character `anchor`.
     TextDrag { anchor: usize },
+    /// The Pen's press that placed a point at `start`: a drag pulls its curve handles.
+    PenPoint { start: Pt },
+    /// Dragging a mask vertex or one of its curve handles.
+    Vertex { vertex: pen::VertexRef, part: pen::VertexPart, merge: String },
 }
 
 /// The tools' state for the open document.
@@ -98,6 +105,10 @@ pub(crate) struct ToolState {
     /// The typing session's `merge` key: text typed into one layer is one undo step.
     typing: Option<String>,
     status: Option<String>,
+    /// The mask the Pen is drawing.
+    pen: Option<pen::PenDraft>,
+    /// The mask vertex picked last (its curve handles show).
+    vertex: Option<pen::VertexRef>,
 }
 
 impl Default for ToolState {
@@ -111,6 +122,8 @@ impl Default for ToolState {
             serial: 0,
             typing: None,
             status: None,
+            pen: None,
+            vertex: None,
         }
     }
 }
@@ -286,8 +299,15 @@ impl MotionDocument {
         let editing = self.session.state.text_edit.is_some();
         if editing {
             text::overlays(&self.session, zoom, &mut overlays);
-        } else if matches!(st.tool, Tool::Selection | Tool::Rectangle | Tool::Ellipse | Tool::Text) {
+        } else if matches!(st.tool, Tool::Selection | Tool::Rectangle | Tool::Ellipse | Tool::Text | Tool::Pen) {
             selection_overlays(&self.session, zoom, &mut overlays);
+        }
+        // The selected layers' masks, editable with the Selection tool and the Pen.
+        if !editing && matches!(st.tool, Tool::Selection | Tool::Pen) {
+            pen::mask_overlays(&self.session, st.vertex, &mut overlays);
+        }
+        if let Some(draft) = st.pen.as_ref().filter(|_| st.tool == Tool::Pen) {
+            pen::draft_overlays(draft, &mut overlays);
         }
         match &st.gesture {
             Gesture::Marquee { start, end, .. } => overlays.push(ToolOverlay::Marquee { x0: start[0], y0: start[1], x1: end[0], y1: end[1] }),
@@ -308,12 +328,13 @@ impl MotionDocument {
             requests.push(ToolRequest::Status { text });
         }
         let cursor = match st.tool {
-            Tool::Rectangle | Tool::Ellipse => "crosshair".to_owned(),
+            Tool::Rectangle | Tool::Ellipse | Tool::Pen => "crosshair".to_owned(),
             Tool::Text => "text".to_owned(),
             _ if editing && matches!(st.gesture, Gesture::TextDrag { .. }) => "text".to_owned(),
             _ => st.cursor.clone(),
         };
-        ToolResponse { requests, overlays, cursor, busy: !matches!(st.gesture, Gesture::Idle) || editing, wants_text: editing }
+        let busy = !matches!(st.gesture, Gesture::Idle) || editing || pen::drawing(st);
+        ToolResponse { requests, overlays, cursor, busy, wants_text: editing }
     }
 
     /// Ends text editing, if any.
@@ -356,6 +377,10 @@ impl KitTools for MotionDocument {
             st.snaps.clear();
             if tool != st.tool && tool != Tool::Text {
                 self.end_text(st);
+            }
+            // A mask left half drawn is dropped with its tool.
+            if tool != Tool::Pen {
+                st.pen = None;
             }
             st.tool = tool;
             st.cursor = "default".into();
@@ -407,6 +432,21 @@ impl KitTools for MotionDocument {
             st.zoom = zoom_of(zoom);
             if self.session.state.text_edit.is_some() && matches!(st.gesture, Gesture::Idle | Gesture::TextDrag { .. }) {
                 text::key(self, st, key, mods);
+            } else if pen::drawing(st) {
+                // Enter keeps the drawn path as an open mask, Escape drops it, Backspace takes the last point back.
+                match key {
+                    "Enter" => self.pen_finish(st, false),
+                    "Escape" | "Esc" => {
+                        st.pen = None;
+                        st.gesture = Gesture::Idle;
+                    }
+                    "Backspace" | "Delete" => {
+                        if let Some(draft) = st.pen.as_mut() {
+                            draft.points.pop();
+                        }
+                    }
+                    _ => {}
+                }
             } else if matches!(key, "Escape" | "Esc") {
                 self.cancel(st);
             }

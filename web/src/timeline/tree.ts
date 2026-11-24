@@ -20,6 +20,8 @@ export type TreeNode = {
   range?: { min: number | null; max: number | null; sliderMin: number | null; sliderMax: number | null; decimals: number }
   /** A text property's character and paragraph settings at the asked time. */
   style?: TextStyle
+  /** A mask group's mode and whether it is inverted. */
+  mask?: { mode: string; inverted: boolean }
   /** The property's expression, when it has one, and whether it is on. */
   expression?: string
   expressionEnabled?: boolean

@@ -2020,6 +2020,19 @@
  "layer.mask.mode": {
   "mask": {
    "type": "integer"
+  },
+  "mode": {
+   "description": "the mask's mode, in the order the menu lists them",
+   "enum": [
+    "None",
+    "Add",
+    "Subtract",
+    "Intersect",
+    "Lighten",
+    "Darken",
+    "Difference"
+   ],
+   "type": "string"
   }
  },
  "layer.mask.motionBlur": {
