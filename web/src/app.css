@@ -1718,12 +1718,19 @@ button.motion-switch:focus-visible {
 }
 
 .motion-style-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 1;
-  display: inline-flex;
+  display: flex;
+  justify-content: flex-end;
   gap: 2px;
+  /* Clear of the panel's scroll bar. */
+  padding-right: 14px;
+  margin-bottom: -28px;
+  pointer-events: none;
+}
+
+.motion-style-actions > * {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 /* A row of buttons in a section (Time: remap, freeze, reverse). */

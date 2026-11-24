@@ -66,7 +66,11 @@ try {
   step('the timeline lists Layer Styles under the layer', (await kit.getByTestId(`motion-group-${SHAPE}-layerStyles`).count()) === 1)
   await kit.getByTestId(`motion-twirl-layer-${SHAPE}`).click()
 
-  // 6. Removed by its trash button; one undo brings it back.
+  // 6. Removed by its trash button; one undo brings it back. (The layer selected again first: the
+  // twirl's clicks may have left the selection to a slow engine.)
+  await kit.getByTestId(`motion-layer-${SHAPE}`).locator('.motion-row-name').click()
+  await until(async () => (await h.layer(SHAPE))?.selected)
+  await kit.getByTestId('motion-style-remove-dropShadow').waitFor({ timeout: 5000 }).catch(() => null)
   await kit.getByTestId('motion-style-remove-dropShadow').click()
   await until(async () => !(await styles(SHAPE)).includes('dropShadow'))
   step('the trash button removes the drop shadow', !(await styles(SHAPE)).includes('dropShadow') && (await styles(SHAPE)).includes('stroke'), JSON.stringify(await styles(SHAPE)))

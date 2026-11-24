@@ -50,7 +50,10 @@ try {
   await kit.getByTestId(`motion-layer-${SHAPE}`).locator('.motion-row-name').click()
   await kit.getByTestId('motion-prop-orientation').waitFor({ timeout: 5000 }).catch(() => null)
   step('a 3D layer shows Orientation and X and Y Rotation in the panel', (await kit.getByTestId('motion-prop-orientation').count()) === 1 && (await kit.getByTestId('motion-prop-rotationX').count()) === 1 && (await kit.getByTestId('motion-prop-rotationY').count()) === 1)
+  // The Z field shows once the engine's answer has made the layer 3D and selected; typed into then.
   const z = kit.getByTestId('motion-value-position-2')
+  await until(async () => (await z.inputValue()) === String((await value(SHAPE, 'transform/position'))[2]) && (await h.layer(SHAPE)).selected)
+  await page.waitForTimeout(300)
   await z.click()
   await z.fill('-200')
   await z.press('Enter')
