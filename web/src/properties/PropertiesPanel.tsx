@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
+import { Select, useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
 import type { TreeNode } from '../timeline/tree'
 import type { AlignTo } from '../menus'
@@ -15,6 +15,7 @@ import { ShapeControls } from './ShapeSection'
 import { SolidSection } from './SolidSection'
 import { TextControls, type TextSelection } from './TextSection'
 import { TextAnimateMenus, TextAnimators } from './TextAnimators'
+import { cameraOrLight } from '../timeline/SwitchCells'
 
 /** How deep the panel reads a layer's property tree (shape groups nest). */
 const TREE_DEPTH = 10
@@ -26,7 +27,31 @@ const PLACED = new Set(['effects', 'transform', 'masks', 'layerStyles'])
 const TEXT_MORE = new Set(['text/pathOptions', 'text/moreOptions'])
 
 /** The layer type's own section (Text, Contents, Camera Options…) from its top-level group. */
-function TypeSection({ node, layer, focusText, onFocused, text }: { node: TreeNode; layer: MotionLayer; focusText: boolean; onFocused: () => void; text: TextSelection | null }) {
+/** The light types `layer.lightSettings` takes, in the order the Light Type menu lists them. */
+const LIGHT_KINDS = ['Parallel', 'Spot', 'Point', 'Ambient'] as const
+
+/** A light's type above its options: a change rebuilds its options and keeps the shared values (one undo step). */
+function LightType({ layer, kind }: { layer: number; kind: string }) {
+  const { run, t } = useKitEditor()
+  const readOnly = useReadOnly()
+  const kinds: readonly string[] = LIGHT_KINDS.includes(kind as (typeof LIGHT_KINDS)[number]) ? LIGHT_KINDS : [...LIGHT_KINDS, kind]
+  return (
+    <div className="motion-prop" data-testid="motion-light-type-row">
+      <span className="motion-prop-name kui-muted">{t('light.type')}</span>
+      <span className="motion-prop-values">
+        <Select value={kind} aria-label={t('light.type')} disabled={readOnly} onChange={(event) => void run('layer.lightSettings', { layer, kind: event.target.value })} data-testid="motion-light-type">
+          {kinds.map((each) => (
+            <option key={each} value={each}>
+              {t(`light.kind.${each}`)}
+            </option>
+          ))}
+        </Select>
+      </span>
+    </div>
+  )
+}
+
+function TypeSection({ node, layer, focusText, onFocused, text, lightKind }: { node: TreeNode; layer: MotionLayer; focusText: boolean; onFocused: () => void; text: TextSelection | null; lightKind?: string }) {
   const { phrase, t } = useKitEditor()
   const scope = layer.type
   if (node.match === 'text') {
@@ -45,6 +70,11 @@ function TypeSection({ node, layer, focusText, onFocused, text }: { node: TreeNo
   }
   return (
     <Section scope={scope} id={node.path} title={phrase(node.name)} testId={`motion-section-${node.match}`}>
+      {node.match === 'lightOptions' && lightKind ? (
+        <div className="motion-props">
+          <LightType layer={layer.id} kind={lightKind} />
+        </div>
+      ) : null}
       {node.match === 'contents' ? <ShapeControls contents={node} scope={scope} /> : <PropertyChildren node={node} scope={scope} depth={0} />}
     </Section>
   )
@@ -65,7 +95,7 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
   const first = info.transform?.layer
   const layer = first != null ? info.layers.find((item) => item.id === first) : undefined
   const selected = info.layers.filter((item) => item.selected).length
-  const tree = useEngineQuery<{ properties?: TreeNode; text?: TextSelection }>('layer.tree', layer ? { layer: layer.id, depth: TREE_DEPTH, time: info.time } : { layer: -1 })
+  const tree = useEngineQuery<{ properties?: TreeNode; text?: TextSelection; lightKind?: string }>('layer.tree', layer ? { layer: layer.id, depth: TREE_DEPTH, time: info.time } : { layer: -1 })
   const root = layer && tree?.properties ? tree.properties : null
   const top = root?.children ?? []
   const group = (match: string) => top.find((node) => node.match === match)
@@ -98,12 +128,13 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
             {top
               .filter((node) => node.children && !PLACED.has(node.match ?? '') && visible(node, layer) && hasRows(node, layer))
               .map((node) => (
-                <TypeSection key={node.path} node={node} layer={layer} focusText={fresh === layer.id} onFocused={focused} text={tree?.text ?? null} />
+                <TypeSection key={node.path} node={node} layer={layer} focusText={fresh === layer.id} onFocused={focused} text={tree?.text ?? null} lightKind={tree?.lightKind} />
               ))}
             {layer.type === 'Solid' ? <SolidSection /> : null}
             <TimeSection layer={layer} remap={group('timeRemap')} />
-            <EffectsSection layer={layer} group={group('effects')} onAdd={onAddEffect} />
-            <LayerStylesSection layer={layer} group={group('layerStyles')} />
+            {/* A camera or a light has no pixels: no effects or layer styles. */}
+            {cameraOrLight(layer) ? null : <EffectsSection layer={layer} group={group('effects')} onAdd={onAddEffect} />}
+            {cameraOrLight(layer) ? null : <LayerStylesSection layer={layer} group={group('layerStyles')} />}
             {transform ? (
               <Section scope={layer.type} id="transform" title={t('props.transform')} testId="motion-section-transform">
                 <PropertyChildren node={transform} scope={layer.type} depth={0} />

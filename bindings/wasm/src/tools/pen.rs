@@ -383,7 +383,7 @@ impl MotionDocument {
     }
 
     /// Sets the engine's vertex selection (none, one, or several).
-    fn select_vertices(&mut self, vertices: &[EngineVertex], add: bool, toggle: bool) {
+    pub(super) fn select_vertices(&mut self, vertices: &[EngineVertex], add: bool, toggle: bool) {
         let list: Vec<Value> = vertices.iter().map(vertex_json).collect();
         let _ = self.tool_run("mask.selectVertices", json!({ "vertices": list, "add": add, "toggle": toggle }));
     }
@@ -448,7 +448,11 @@ impl MotionDocument {
                 let merge = st.merge_key("path-move");
                 st.gesture = Gesture::Vertices { start: p, last: p, moved: false, alone: None, merge };
             }
-            None if !selected.is_empty() && st.tool == Tool::Selection => {
+            // With vertices picked or the paths being edited, a press elsewhere boxes vertices (a
+            // click there ends path editing).
+            None if st.tool == Tool::Selection
+                && (!selected.is_empty() || st.path_edit.iter().any(|layer| self.session.state.selected_layers.contains(layer))) =>
+            {
                 let base = if mods.shift { selected } else { Vec::new() };
                 st.gesture = Gesture::VertexBox { start: p, end: p, base };
             }
@@ -535,6 +539,7 @@ impl MotionDocument {
             Gesture::Vertices { moved: false, alone: Some(vertex), .. } => self.select_vertices(&[vertex], false, false),
             Gesture::VertexBox { start, .. } if distance(start, p) * st.zoom < DRAG_START => {
                 self.clear_vertices();
+                st.path_edit.clear();
                 let hit = with_ctx(&self.session, |ctx| geometry::pick(ctx, p, &geometry::any_layer)).flatten();
                 match hit {
                     Some(id) => {
@@ -547,6 +552,22 @@ impl MotionDocument {
             }
             _ => {}
         }
+    }
+}
+
+/// The vertex of the selected layers' paths under `p` (not a handle or a segment), if any.
+pub(super) fn vertex_under(session: &Session, p: Pt, zoom: f64) -> Option<EngineVertex> {
+    match path_hit(&paths(session), &[], p, zoom) {
+        Some(PathHit::Vertex(vertex)) => Some(vertex),
+        _ => None,
+    }
+}
+
+/// The selected layer whose path (a vertex or a segment) is under `p`, if any.
+pub(super) fn path_layer_under(session: &Session, p: Pt, zoom: f64) -> Option<LayerId> {
+    match path_hit(&paths(session), &[], p, zoom)? {
+        PathHit::Vertex(vertex) | PathHit::Handle(vertex, _) => Some(vertex.layer),
+        PathHit::Segment { layer, .. } => Some(layer),
     }
 }
 

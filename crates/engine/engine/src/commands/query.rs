@@ -213,6 +213,10 @@ fn layer_tree(s: &mut Session, p: &Value) -> Result<Value> {
     let mut o = layer_json(l, idx);
     o["time"] = json!(t.seconds());
     o["properties"] = group_json(&l.props, "", l, t, 0, depth);
+    // A light's type (Parallel, Spot, Point, Ambient, Environment): its settings depend on it.
+    if let kition_motion_project::LayerSource::Light { kind } = l.source {
+        o["lightKind"] = json!(kind.label());
+    }
     if let Some(kition_motion_project::Value::Text(doc)) = l.props.prop("text/sourceText").map(|p| p.value_at(l.layer_time(t))) {
         let edit = s.state.text_edit.as_ref().filter(|e| e.layer == lid);
         o["text"] = text_selection(&doc, edit);

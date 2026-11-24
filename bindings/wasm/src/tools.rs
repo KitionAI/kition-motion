@@ -20,6 +20,7 @@ mod gradient;
 mod pen;
 mod select;
 mod text;
+mod view3d;
 
 use std::cell::RefCell;
 
@@ -105,8 +106,12 @@ pub(crate) enum Gesture {
     GradientPoint { layer: LayerId, path: String, merge: String },
     /// A box over path vertices from `start`; `base` stays selected (Shift).
     VertexBox { start: Pt, end: Pt, base: Vec<kition_motion_engine::VertexRef> },
-    /// Orbiting, panning or dollying the view of the 3D layers; `last` is where it was applied.
-    Camera { last: Pt, merge: String },
+    /// A press on a box corner that is also a path vertex, not yet a drag: a drag scales the
+    /// layer from the corner, a click selects the vertex (and edits the path).
+    Corner { start: Pt, layer_box: Box<geometry::LayerBox>, handle: geometry::Handle, vertex: kition_motion_engine::VertexRef },
+    /// Orbiting, panning or dollying the view of the 3D layers from `start`; `last` is where it
+    /// was applied, `axis` the direction a Shift-drag keeps to (true: across).
+    Camera { start: Pt, last: Pt, axis: Option<bool>, merge: String },
 }
 
 /// The tools' state for the open document.
@@ -125,7 +130,17 @@ pub(crate) struct ToolState {
     status: Option<String>,
     /// The path the Pen is drawing.
     pen: Option<pen::PenDraft>,
+    /// The layers whose paths are being edited (a double-click on a path, or a vertex picked):
+    /// their transform boxes hide and a press on the canvas is the paths'. Escape, or a click on
+    /// empty space, ends it.
+    path_edit: Vec<LayerId>,
+    /// Whether the status bar says paths are being edited ([`PATH_EDIT_HINT`]).
+    path_hint: bool,
 }
+
+/// The status bar while paths are being edited with the Selection tool (the editor also lets
+/// Escape reach the tool while it shows).
+pub(crate) const PATH_EDIT_HINT: &str = "Editing the path: drag its vertices or edges; Esc or a click on empty space ends it";
 
 impl Default for ToolState {
     fn default() -> Self {
@@ -139,6 +154,8 @@ impl Default for ToolState {
             typing: None,
             status: None,
             pen: None,
+            path_edit: Vec::new(),
+            path_hint: false,
         }
     }
 }
@@ -163,12 +180,13 @@ fn with_state<R>(f: impl FnOnce(&mut ToolState) -> R) -> R {
     out
 }
 
-/// The active composition at the current time, for hit tests and boxes.
+/// The active composition at the current time, for hit tests and boxes, seen through the 3D view
+/// the viewer shows (Front, Top, a custom view: [`geometry::layer_box`] projects through it).
 pub(crate) fn with_ctx<R>(session: &Session, f: impl FnOnce(&EvalCtx) -> R) -> Option<R> {
     let cid = session.active_comp_id()?;
     let comp = session.project.comp(cid)?;
     let ctx = EvalCtx { footage: Some(session.footage.as_ref()), expr: session.expr.as_deref(), ..EvalCtx::new(&session.project, cid, comp, session.time()) };
-    Some(f(&ctx))
+    Some(geometry::through_view(session.view_camera(cid), || f(&ctx)))
 }
 
 /// The selected layers' boxes, topmost first.
@@ -209,9 +227,9 @@ fn cross(p: Pt, arm: f64, color: [u8; 4], out: &mut Vec<ToolOverlay>) {
 
 /// The selection's overlays: each selected layer's box, its handles, its rotation knob and its
 /// anchor point (handles for 2D layers only).
-fn selection_overlays(session: &Session, zoom: f64, out: &mut Vec<ToolOverlay>) {
-    // A layer whose path vertices are being edited shows its vertices, not its transform box.
-    for b in selected_boxes(session).into_iter().filter(|b| !session.state.selected_vertices.iter().any(|v| v.layer == b.id)) {
+fn selection_overlays(session: &Session, path_edit: &[LayerId], zoom: f64, out: &mut Vec<ToolOverlay>) {
+    // A layer whose paths are being edited shows its vertices, not its transform box.
+    for b in selected_boxes(session).into_iter().filter(|b| !session.state.selected_vertices.iter().any(|v| v.layer == b.id) && !path_edit.contains(&b.id)) {
         out.push(ToolOverlay::Path { d: quad_path(&b.corners()), color: SELECTION, width: 1.0, dashed: false });
         if b.flat {
             let (base, tip) = geometry::knob(&b, zoom);
@@ -298,6 +316,11 @@ fn hover_cursor(session: &Session, p: Pt, zoom: f64) -> String {
 }
 
 impl MotionDocument {
+    /// Whether paths are being edited: a vertex is picked, or a selected layer is in path editing.
+    pub(crate) fn editing_paths(&self, st: &ToolState) -> bool {
+        !self.session.state.selected_vertices.is_empty() || st.path_edit.iter().any(|layer| self.session.state.selected_layers.contains(layer))
+    }
+
     /// Runs an engine command for a tool, as the editor would.
     pub(crate) fn tool_run(&mut self, command: &str, params: Value) -> Result<Value, String> {
         KitDocument::execute(self, command, params)
@@ -316,12 +339,14 @@ impl MotionDocument {
         if editing {
             text::overlays(&self.session, zoom, &mut overlays);
         } else if matches!(st.tool, Tool::Selection | Tool::Rectangle | Tool::Ellipse | Tool::Text | Tool::Pen) {
-            selection_overlays(&self.session, zoom, &mut overlays);
+            selection_overlays(&self.session, &st.path_edit, zoom, &mut overlays);
         }
         // The selected layers' masks and shape paths, editable with the Selection tool and the Pen.
         if !editing && matches!(st.tool, Tool::Selection | Tool::Pen) {
             pen::path_overlays(&self.session, &mut overlays);
         }
+        // A 3D view other than the camera's: the ground, the 3D layers' outlines, cameras and lights.
+        view3d::overlays(&self.session, &mut overlays);
         // The selected shape layers' gradients, their points dragged with the Selection tool.
         if !editing && st.tool == Tool::Selection {
             gradient::overlays(&self.session, &mut overlays);
@@ -341,6 +366,14 @@ impl MotionDocument {
             }
             Gesture::Move { .. } => snap_overlays(&self.session, &st.snaps, zoom, &mut overlays),
             _ => {}
+        }
+        // Path editing started or ended: the status bar says so (an empty status clears it).
+        let editing_paths = st.tool == Tool::Selection && !editing && self.editing_paths(st);
+        if editing_paths != st.path_hint {
+            st.path_hint = editing_paths;
+            if st.status.is_none() {
+                st.status = Some(if editing_paths { PATH_EDIT_HINT } else { "" }.to_owned());
+            }
         }
         let mut requests = Vec::new();
         if let Some(tool) = switch_to {
@@ -440,7 +473,13 @@ impl KitTools for MotionDocument {
                     None
                 }
                 PointerAction::DoubleClick => {
-                    if st.tool == Tool::Selection && !text::double_click(self, st, p) {
+                    // On a selected layer's path: edit its vertices (its transform box hides).
+                    if st.tool == Tool::Selection
+                        && self.session.state.text_edit.is_none()
+                        && let Some(layer) = pen::path_layer_under(&self.session, p, st.zoom)
+                    {
+                        st.path_edit = vec![layer];
+                    } else if st.tool == Tool::Selection && !text::double_click(self, st, p) {
                         select::open_precomp(self, st, p);
                     }
                     None
@@ -471,7 +510,13 @@ impl KitTools for MotionDocument {
                     _ => {}
                 }
             } else if matches!(key, "Escape" | "Esc") {
-                self.cancel(st);
+                // Escape with no gesture under way ends path editing; during one, undoes it.
+                if matches!(st.gesture, Gesture::Idle) && self.editing_paths(st) {
+                    st.path_edit.clear();
+                    self.clear_vertices();
+                } else {
+                    self.cancel(st);
+                }
             }
             self.respond(st, None)
         }))

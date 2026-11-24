@@ -27,7 +27,8 @@
     "test:threeD": "node tests/threeD.mjs chromium && node tests/threeD.mjs webkit",
     "test:preview": "node tests/preview.mjs chromium && node tests/preview.mjs webkit",
     "test:animators": "node tests/animators.mjs chromium && node tests/animators.mjs webkit",
-    "test:layerStyles": "node tests/layerStyles.mjs chromium && node tests/layerStyles.mjs webkit"
+    "test:layerStyles": "node tests/layerStyles.mjs chromium && node tests/layerStyles.mjs webkit",
+    "test:handFixes": "node tests/handFixes.mjs chromium && node tests/handFixes.mjs webkit"
   },
   "dependencies": {
     "@kition/sdk": "npm:@kitionstage/sdk@0.5.2-stage.16",

@@ -42,11 +42,12 @@ export function propId(path: string) {
  * One property: its keyframe diamond, its name (translated), and its value control. `params`
  * are its effect's parameters (from `effect.list`), when it belongs to one.
  */
-export function PropertyRow({ node, parent, params, label }: { node: TreeNode; parent?: TreeNode; params?: readonly EffectParam[]; label?: string }) {
+/** `idPrefix`: a second row of the same property elsewhere in the panel (a shape's quick settings) keeps its test ids apart. */
+export function PropertyRow({ node, parent, params, label, idPrefix = '' }: { node: TreeNode; parent?: TreeNode; params?: readonly EffectParam[]; label?: string; idPrefix?: string }) {
   const { phrase, run } = useKitEditor()
   const { layer, time, frame, readOnly } = usePanel()
   const name = label ?? phrase(node.name)
-  const id = propId(node.path)
+  const id = `${idPrefix}${propId(node.path)}`
   const chosen = layer.selectedProps.includes(node.path)
   const meta = propMeta(node, parent, params)
   // Text keeps its own field below its name; the rest sit beside it.

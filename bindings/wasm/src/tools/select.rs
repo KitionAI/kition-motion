@@ -107,12 +107,25 @@ impl MotionDocument {
             self.end_text(st);
         }
         let zoom = st.zoom;
+        // Not editing paths, a box corner that is also a vertex is the box's when dragged (the
+        // layer scales) and the vertex's when clicked (it is picked: the path is being edited).
+        if !self.editing_paths(st)
+            && !mods.shift
+            && !mods.alt
+            && let Some(vertex) = super::pen::vertex_under(&self.session, p, zoom)
+            && let Some((layer_box, handle)) =
+                selected_boxes(&self.session).into_iter().filter(|b| b.flat).find_map(|b| geometry::handle_at(&b, p, zoom).map(|h| (b, h)))
+        {
+            st.gesture = Gesture::Corner { start: p, layer_box: Box::new(layer_box), handle, vertex };
+            return;
+        }
         // The selected layers' masks and shape paths first (their vertices, the selected ones'
         // handles, their segments; with vertices selected, a box over them).
         if self.path_down(st, p, mods) {
             return;
         }
         self.clear_vertices();
+        st.path_edit.clear();
         // A selected shape layer's gradient points.
         if self.gradient_down(st, p) {
             return;
@@ -206,6 +219,15 @@ impl MotionDocument {
 
     pub(super) fn pointer_drag(&mut self, st: &mut ToolState, p: Pt, mods: ToolMods) {
         let zoom = st.zoom;
+        // A corner that is also a vertex, dragged: the layer scales from it.
+        if let Gesture::Corner { start, .. } = st.gesture {
+            if distance(start, p) * zoom < DRAG_START {
+                return;
+            }
+            if let Gesture::Corner { layer_box, handle, .. } = std::mem::take(&mut st.gesture) {
+                self.begin_scale(st, *layer_box, handle);
+            }
+        }
         if let Gesture::Press { start, .. } = st.gesture {
             if distance(start, p) * zoom < DRAG_START {
                 return;
@@ -213,7 +235,7 @@ impl MotionDocument {
             self.begin_move(st, start);
         }
         match &mut st.gesture {
-            Gesture::Camera { .. } => self.camera_drag(st, p),
+            Gesture::Camera { .. } => self.camera_drag(st, p, mods),
             Gesture::PenPoint { .. } => Self::pen_drag(st, p),
             Gesture::Vertex { .. } | Gesture::Vertices { .. } | Gesture::VertexBox { .. } => self.path_drag(st, p, mods),
             Gesture::GradientPoint { .. } => self.gradient_drag(st, p),
@@ -290,7 +312,7 @@ impl MotionDocument {
                 let anchor = *anchor;
                 text::drag_select(self, anchor, p);
             }
-            Gesture::Idle | Gesture::Press { .. } => {}
+            Gesture::Idle | Gesture::Press { .. } | Gesture::Corner { .. } => {}
         }
     }
 
@@ -350,6 +372,11 @@ impl MotionDocument {
             }
             Gesture::TextDrag { .. } => {
                 st.gesture = Gesture::Idle;
+                None
+            }
+            // A corner that is also a vertex, clicked: the vertex is picked.
+            Gesture::Corner { vertex, .. } => {
+                self.select_vertices(&[vertex], false, false);
                 None
             }
             path @ (Gesture::Vertices { .. } | Gesture::VertexBox { .. }) => {

@@ -202,7 +202,13 @@ function overlayEntries(overlays: Overlays): Entry[] {
 /** What Layer ▸ Align lines layers up with: the composition's frame, or the selected layers' bounds. */
 export type AlignTo = 'composition' | 'selection'
 
-const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean): ReadonlyArray<readonly [string, readonly Entry[]]> => [
+/** No layer styles on the selected layer. */
+const NO_STYLES: ReadonlySet<string> = new Set()
+
+/** A Layer ▸ Layer Styles row: marked (Added) when the selected layer has the style (choosing it again turns it on). */
+const styleLabel = (label: string, id: string, styled: ReadonlySet<string>) => (styled.has(id) ? `${label} (Added)` : label)
+
+const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean, styled: ReadonlySet<string>): ReadonlyArray<readonly [string, readonly Entry[]]> => [
   [
     'File',
     [
@@ -272,15 +278,15 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
       [
         'Layer Styles',
         [
-          ['Drop Shadow', 'layer.style.dropShadow'],
-          ['Inner Shadow', 'layer.style.innerShadow'],
-          ['Outer Glow', 'layer.style.outerGlow'],
-          ['Inner Glow', 'layer.style.innerGlow'],
-          ['Bevel and Emboss', 'layer.style.bevelEmboss'],
-          ['Satin', 'layer.style.satin'],
-          ['Color Overlay', 'layer.style.colorOverlay'],
-          ['Gradient Overlay', 'layer.style.gradientOverlay'],
-          ['Stroke', 'layer.style.stroke'],
+          [styleLabel('Drop Shadow', 'dropShadow', styled), 'layer.style.dropShadow'],
+          [styleLabel('Inner Shadow', 'innerShadow', styled), 'layer.style.innerShadow'],
+          [styleLabel('Outer Glow', 'outerGlow', styled), 'layer.style.outerGlow'],
+          [styleLabel('Inner Glow', 'innerGlow', styled), 'layer.style.innerGlow'],
+          [styleLabel('Bevel and Emboss', 'bevelEmboss', styled), 'layer.style.bevelEmboss'],
+          [styleLabel('Satin', 'satin', styled), 'layer.style.satin'],
+          [styleLabel('Color Overlay', 'colorOverlay', styled), 'layer.style.colorOverlay'],
+          [styleLabel('Gradient Overlay', 'gradientOverlay', styled), 'layer.style.gradientOverlay'],
+          [styleLabel('Stroke', 'stroke', styled), 'layer.style.stroke'],
           SEPARATOR,
           ['Remove All', 'layer.style.removeAll'],
         ],
@@ -404,8 +410,8 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
 ]
 
 /** Every menu row, in menu order: the Effect menu (every effect the engine has, by category) after Layer. */
-export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo, skipFrames = true, remapOn = false): MenuRow[] {
-  return MENUS(overlays, alignTo, skipFrames, remapOn).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
+export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo, skipFrames = true, remapOn = false, styled: ReadonlySet<string> = NO_STYLES): MenuRow[] {
+  return MENUS(overlays, alignTo, skipFrames, remapOn, styled).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
 }
 
 /** Menus kept in a read-only document. */

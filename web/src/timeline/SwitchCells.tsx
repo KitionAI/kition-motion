@@ -83,6 +83,14 @@ export function useSwitchDrag(): SwitchDrag {
   }
 }
 
+/** The switches a camera or a light has (the rest do nothing for them and are left blank). */
+const CAMERA_LIGHT_SWITCHES: ReadonlySet<SwitchId> = new Set(['video', 'lock', 'shy'])
+
+/** Whether `layer` is a camera or a light: no pixels of its own, so no blending, effects, styles or matte. */
+export function cameraOrLight(layer: MotionLayer) {
+  return layer.type === 'Camera' || layer.type === 'Light'
+}
+
 /** One layer's switch in one column: a press toggles it (and starts a drag down the column); Enter or Space toggles it from the keyboard. */
 function SwitchCell({ layer, column, drag, readOnly }: { layer: MotionLayer; column: SwitchColumn; drag: SwitchDrag; readOnly: boolean }) {
   const { run, t } = useKitEditor()
@@ -90,6 +98,7 @@ function SwitchCell({ layer, column, drag, readOnly }: { layer: MotionLayer; col
   const [iconOn, iconOff] = ICONS[column.id]
   const Shown = on ? iconOn : (iconOff ?? iconOn)
   const label = t(`switch.${column.id}`)
+  if (cameraOrLight(layer) && !CAMERA_LIGHT_SWITCHES.has(column.id)) return <span className="motion-switch" aria-hidden="true" data-testid={`motion-switch-${column.id}-${layer.id}`} data-none />
   return (
     <button
       type="button"
@@ -142,7 +151,8 @@ export function ModeCells({ info, layer, shown, modes, readOnly }: { info: Motio
   const matteLabel = (kind: MotionMatte['kind'], other: MotionLayer) => t('matte.option', { kind: t(`matte.${kind}`), index: other.index, name: other.name })
   return (
     <span className="motion-mode-cells" onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}>
-      {shown.has('mode') ? (
+      {shown.has('mode') && cameraOrLight(layer) ? <span className="motion-cell-select" aria-hidden="true" /> : null}
+      {shown.has('mode') && !cameraOrLight(layer) ? (
         <Select
           className="motion-cell-select"
           value={layer.blendMode}
@@ -159,7 +169,8 @@ export function ModeCells({ info, layer, shown, modes, readOnly }: { info: Motio
           ))}
         </Select>
       ) : null}
-      {shown.has('matte') ? (
+      {shown.has('matte') && cameraOrLight(layer) ? <span className="motion-cell-select" aria-hidden="true" /> : null}
+      {shown.has('matte') && !cameraOrLight(layer) ? (
         <Select
           className="motion-cell-select"
           value={matte}

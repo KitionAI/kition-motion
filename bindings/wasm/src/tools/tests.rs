@@ -538,3 +538,97 @@ fn tools_path_vertices_look_unlike_the_layers_handles_which_hide_while_vertices_
     assert_eq!(doc.session.state.selected_vertices.len(), 1);
     assert_eq!(box_handles(&mut doc).0, 0, "no scale handles while a vertex is picked");
 }
+
+#[test]
+fn tools_orbit_turns_gently_and_with_shift_about_one_axis_only() {
+    let mut doc = doc();
+    let layer = solid(&mut doc, "Card");
+    doc.execute("layer.setSwitch", json!({ "layers": [layer], "switch": "threeD", "value": true })).unwrap();
+    let camera = doc.execute("layer.newCamera", json!({})).unwrap()["layer"].as_u64().unwrap();
+    let eye = |doc: &mut MotionDocument| value(doc, camera, "transform/position");
+    let poi = value(&mut doc, camera, "transform/poi");
+    let start = eye(&mut doc);
+    doc.select_tool("orbit", 1.0).unwrap();
+    // A 150-pixel drag across turns the camera about 24° around its point of interest (not to its side).
+    drag(&mut doc, [800.0, 500.0], [950.0, 500.0], ToolMods::default());
+    let turned = eye(&mut doc);
+    let angle = |a: &[f64]| (a[0] - poi[0]).atan2(-(a[2] - poi[2])).to_degrees();
+    let yaw = (angle(&turned) - angle(&start)).abs();
+    assert!((15.0..35.0).contains(&yaw), "a 150-pixel drag turned the camera {yaw}°: {start:?} → {turned:?}");
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert!(near(&eye(&mut doc), &start));
+    // With Shift, a drag mostly across with a little up and down turns about the vertical axis
+    // only: the camera stays at its height.
+    drag(&mut doc, [800.0, 500.0], [950.0, 530.0], ToolMods { shift: true, ..ToolMods::default() });
+    let level = eye(&mut doc);
+    assert!((level[1] - start[1]).abs() < 1e-6, "a Shift-drag across moved the camera up or down: {start:?} → {level:?}");
+    assert!(!near(&level, &start), "the Shift-drag did not turn the camera");
+}
+
+#[test]
+fn tools_a_box_corner_on_a_vertex_scales_when_dragged_and_a_double_click_edits_the_path_until_escape() {
+    use kition_kit::tools::ToolOverlay;
+    let mut doc = doc();
+    doc.select_tool("pen", 1.0).unwrap();
+    for [x, y] in [[800.0, 400.0], [1000.0, 400.0], [1000.0, 600.0], [800.0, 600.0], [801.0, 401.0]] {
+        click(&mut doc, x, y, ToolMods::default());
+    }
+    let layer = selected(&doc)[0];
+    doc.select_tool("selection", 1.0).unwrap();
+    doc.execute("mask.selectVertices", json!({ "vertices": [] })).unwrap();
+    let handles = |doc: &mut MotionDocument| {
+        doc.state(0.0, 0.0, ToolMods::default(), 1.0).overlays.iter().filter(|o| matches!(o, ToolOverlay::Anchor { size, .. } if *size >= 7.0)).count()
+    };
+    let (_, start, _) = shape_path_of(&mut doc, layer);
+    let scale = value(&mut doc, layer, "transform/scale");
+    // A drag from the top-left corner (a vertex too) scales the layer; the path keeps its vertices.
+    drag(&mut doc, [800.0, 400.0], [760.0, 360.0], ToolMods::default());
+    assert!(!near(&value(&mut doc, layer, "transform/scale"), &scale), "the corner drag did not scale the layer");
+    assert!(near(&shape_path_of(&mut doc, layer).1[0], &start[0]), "the corner drag moved the vertex");
+    assert!(doc.session.state.selected_vertices.is_empty());
+    doc.execute("edit.undo", json!({})).unwrap();
+    // A double-click on the path's edge edits it: the transform box hides, Escape brings it back.
+    doc.pointer(&event(PointerAction::DoubleClick, 900.0, 600.0, ToolMods::default())).unwrap();
+    assert_eq!(handles(&mut doc), 0, "no scale handles while the path is edited");
+    KitTools::key(&mut doc, "Escape", ToolMods::default(), 1.0).unwrap();
+    assert!(doc.session.state.selected_vertices.is_empty());
+    assert_eq!(handles(&mut doc), 8, "Escape ends path editing: the box is back");
+}
+
+#[test]
+fn tools_in_a_3d_view_the_boxes_follow_the_view_and_2d_layers_are_not_picked() {
+    let mut doc = doc();
+    let flat = solid(&mut doc, "Flat");
+    let card = solid(&mut doc, "Card");
+    doc.execute("layer.setSwitch", json!({ "layers": [card], "switch": "threeD", "value": true })).unwrap();
+    doc.execute("prop.set", json!({ "layer": card, "path": "transform/rotationY", "value": 60 })).unwrap();
+    doc.execute("layer.select", json!({ "layers": [card] })).unwrap();
+    let corners = |doc: &MotionDocument| super::selected_boxes(&doc.session).first().map(|b| b.corners());
+    let camera = corners(&doc).unwrap();
+    doc.execute("view.set3DView", json!({ "view": "top" })).unwrap();
+    let top = corners(&doc).expect("the 3D layer still has a box in the Top view");
+    assert!(camera.iter().zip(&top).any(|(a, b)| (a[0] - b[0]).abs() + (a[1] - b[1]).abs() > 1.0), "the box did not follow the view: {camera:?} {top:?}");
+    // The 2D layer is not in the Top view: a click where it covers the comp's middle picks nothing of it.
+    doc.execute("edit.deselectAll", json!({})).unwrap();
+    click(&mut doc, 960.0, 540.0, ToolMods::default());
+    assert!(!selected(&doc).contains(&flat), "a 2D layer was picked in the Top view: {:?}", selected(&doc));
+}
+
+#[test]
+fn tools_a_3d_view_shows_the_ground_the_3d_layers_and_the_camera_and_light() {
+    use kition_kit::tools::ToolOverlay;
+    let mut doc = doc();
+    let card = solid(&mut doc, "Card");
+    doc.execute("layer.setSwitch", json!({ "layers": [card], "switch": "threeD", "value": true })).unwrap();
+    doc.execute("layer.newCamera", json!({})).unwrap();
+    doc.execute("layer.newLight", json!({ "kind": "Spot" })).unwrap();
+    let lines = |doc: &mut MotionDocument, color: [u8; 4]| {
+        doc.state(0.0, 0.0, ToolMods::default(), 1.0).overlays.iter().filter(|o| matches!(o, ToolOverlay::Line { color: c, .. } if *c == color)).count()
+    };
+    assert_eq!(lines(&mut doc, super::view3d::CAMERA), 0, "the active camera's view draws no camera icon");
+    doc.execute("view.set3DView", json!({ "view": "top" })).unwrap();
+    assert!(lines(&mut doc, super::view3d::GRID) >= 10, "no ground grid in the Top view");
+    assert!(lines(&mut doc, super::view3d::CAMERA) >= 8, "no camera icon and frustum in the Top view");
+    assert!(lines(&mut doc, super::view3d::LIGHT) >= 5, "no light icon in the Top view");
+    assert!(lines(&mut doc, super::view3d::OUTLINE) >= 4, "the 3D layer's outline is missing in the Top view");
+}

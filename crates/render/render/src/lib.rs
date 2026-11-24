@@ -1933,10 +1933,14 @@ impl<'a> Renderer<'a> {
     pub fn visible_layers(&self, ctx: &EvalCtx<'a>) -> Vec<&'a Layer> {
         let (comp, t) = (ctx.comp, ctx.time);
         let any_solo = comp.layers.iter().any(|l| l.switches.solo && l.source.is_av() && l.is_active_at(t));
+        // A 3D view other than the active camera's (Front, Top, a custom view) shows the 3D
+        // layers only: a 2D layer is drawn over the camera's picture, not at a place in space.
+        let only_3d = self.opts.view.is_some() && self.depth == 0;
         comp.layers
             .iter()
             .rev()
             .filter(|l| l.is_active_at(t) && l.has_video() && !l.environment && (!any_solo || l.switches.solo) && (self.opts.guides || !l.switches.guide))
+            .filter(|l| !only_3d || l.is_3d())
             .collect()
     }
 

@@ -1,9 +1,11 @@
-import { ArrowLeftIcon as Back, ChevronRightIcon as Into, PauseIcon as Pause, PlayIcon as Play, PlusIcon as Plus, SkipBackIcon as SkipBack, SkipForwardIcon as SkipForward, StepBackIcon as StepBack, StepForwardIcon as StepForward } from '@kition/tessera/icons/react'
+import { ArrowLeftIcon as Back, RepeatIcon as Repeat, ChevronRightIcon as Into, PauseIcon as Pause, PlayIcon as Play, PlusIcon as Plus, SkipBackIcon as SkipBack, SkipForwardIcon as SkipForward, StepBackIcon as StepBack, StepForwardIcon as StepForward } from '@kition/tessera/icons/react'
 import { Button, IconButton, MenuButton, MenuItem, useEngineQuery, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import { timecode, type MotionInfo } from './motion'
 import { CompSwitcher } from './CompSwitcher'
 
 /** The layers the add menu makes, as engine commands. */
+/** The new layers the editor makes itself (`ownLayer`): a solid asks in a dialog; a camera and a light get Chinese names, the light a sensible kind and place. */
+export const OWN_NEW_LAYERS: ReadonlySet<string> = new Set(['layer.newSolid', 'layer.newCamera', 'layer.newLight'])
 export const NEW_LAYERS = [
   { id: 'text', command: 'layer.newText', params: { text: 'Text' } },
   { id: 'shape', command: 'layer.newShape', params: { kind: 'rect' } },
@@ -50,6 +52,7 @@ export function Transport({
   trail,
   onBack,
   playbackRate,
+  loop,
 }: {
   info: MotionInfo
   playing: boolean
@@ -61,6 +64,8 @@ export function Transport({
   onBack: (comp: number) => void
   /** The frames per second playback shows (null before it has measured), and Skip Frames to Keep Real Time. */
   playbackRate?: { fps: number | null; skip: boolean; onSkip: () => void }
+  /** Loop: playback goes round the work area (on by default). */
+  loop?: { on: boolean; onToggle: () => void }
 }) {
   const { run, t } = useKitEditor()
   const readOnly = useReadOnly()
@@ -69,6 +74,7 @@ export function Transport({
   return (
     <div className="kui-bar motion-transport" data-testid="motion-transport">
       <MenuButton
+        placement="auto"
         trigger={({ toggle }) => (
           <Button variant="ghost" onClick={toggle} disabled={readOnly} data-testid="motion-new-layer">
             <Plus size={14} aria-hidden="true" />
@@ -77,7 +83,7 @@ export function Transport({
         )}
       >
         {NEW_LAYERS.map((layer) => (
-          <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => (layer.command === 'layer.newSolid' ? onCommand(layer.command) : void run(layer.command, { ...layer.params }))} testId={`motion-new-${layer.id}`} />
+          <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => (OWN_NEW_LAYERS.has(layer.command) ? onCommand(layer.command) : void run(layer.command, { ...layer.params }))} testId={`motion-new-${layer.id}`} />
         ))}
       </MenuButton>
       <CompPath trail={trail} onBack={onBack} />
@@ -94,10 +100,16 @@ export function Transport({
         {timecode(info.time, fps)}
       </span>
       <span className="motion-timecode kui-muted">/ {timecode(info.comp?.duration ?? 0, fps)}</span>
+      {loop ? (
+        <Button variant="ghost" className="motion-toggle" aria-pressed={loop.on} aria-label={t('loop.label')} title={loop.on ? t('loop.on') : t('loop.off')} onClick={loop.onToggle} data-testid="motion-loop">
+          <Repeat size={14} aria-hidden="true" />
+        </Button>
+      ) : null}
       {playbackRate ? (
         <>
           <Button
             variant="ghost"
+            className="motion-toggle"
             aria-pressed={playbackRate.skip}
             title={playbackRate.skip ? t('skipFrames.on') : t('skipFrames.off')}
             onClick={playbackRate.onSkip}
@@ -105,11 +117,10 @@ export function Transport({
           >
             {t('skipFrames.label')}
           </Button>
-          {playing && playbackRate.fps !== null ? (
-            <span className="motion-fps kui-muted" role="status" data-testid="motion-fps" data-fps={playbackRate.fps.toFixed(2)}>
-              {t('fps.shown', { fps: playbackRate.fps.toFixed(1), of: Math.round(fps * 100) / 100 })}
-            </span>
-          ) : null}
+          {/* Its room is kept while stopped, so the buttons before it do not move when it shows. */}
+          <span className="motion-fps kui-muted" role="status" data-testid="motion-fps" data-fps={playing && playbackRate.fps !== null ? playbackRate.fps.toFixed(2) : undefined} data-shown={playing && playbackRate.fps !== null ? true : undefined}>
+            {playing && playbackRate.fps !== null ? t('fps.shown', { fps: playbackRate.fps.toFixed(1), of: Math.round(fps * 100) / 100 }) : ''}
+          </span>
         </>
       ) : null}
       <span style={{ flex: 1 }} />

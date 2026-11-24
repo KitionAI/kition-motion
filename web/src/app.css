@@ -82,6 +82,13 @@
   color: var(--kit-primary);
 }
 
+/* A switch a camera or a light does not have: its cell is left blank. */
+span.motion-switch[data-none],
+span.motion-cell-select[aria-hidden='true'] {
+  display: inline-block;
+  flex: none;
+}
+
 /* A switch cell: no frame, the icon alone; one that is off (and has no "off" icon of its own) is faint. */
 button.motion-switch {
   display: inline-flex;
@@ -1484,9 +1491,30 @@ button.motion-switch:focus-visible {
   pointer-events: none;
 }
 
+/*
+ * The status bar never wraps: its controls keep their size, the tool's hint gives way first (cut
+ * short, the whole text in its tooltip), then the composition's summary.
+ */
+.kui-app .kui-status-bar {
+  overflow: hidden;
+}
+
+.kui-app .kui-status-bar > * {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.kui-app .kui-status-bar > .motion-summary {
+  flex-shrink: 1;
+  min-width: 4em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* What the active tool says, in the status bar: one line, cut short when the bar is narrow. */
-.motion-tool-status {
-  min-width: 0;
+.kui-app .kui-status-bar > .motion-tool-status {
+  flex: 1 1 0;
+  min-width: 3em;
   overflow: hidden;
   color: var(--kit-text-muted);
   text-overflow: ellipsis;
@@ -1663,16 +1691,17 @@ button.motion-switch:focus-visible {
   right: 0;
   bottom: 0;
   left: 0;
-  height: 3px;
+  height: 5px;
   pointer-events: none;
 }
 
+/* Green, unlike the playhead and the work area (the theme's primary colour): frames ready to play. */
 .motion-cache-run {
   position: absolute;
   top: 0;
   height: 100%;
-  background: var(--kit-primary);
-  opacity: 0.75;
+  background: #3fb950;
+  opacity: 0.9;
 }
 
 /* View ▸ Region of Interest: the region drawn and outlined over the picture. */
@@ -1704,8 +1733,23 @@ button.motion-switch:focus-visible {
 
 /* The playback frame rate and the frame cache's size beside the transport's buttons. */
 .motion-fps {
+  /* Room for "28.7 / 30 帧/秒" kept while stopped: the buttons before it stay where they are. */
+  display: inline-block;
+  min-width: 11em;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* A switch button in the transport and the status bar (Loop, Skip frames, Region, Draw mask): pressed while on. */
+.kui-app .motion-toggle[aria-pressed='true'] {
+  border-color: var(--kit-primary);
+  background: var(--kit-primary-soft);
+  color: var(--kit-primary);
+}
+
+.kui-app .motion-toggle {
+  border: 1px solid transparent;
 }
 
 /* A layer style in the Properties panel: its on/off and remove buttons beside its group's head. */
@@ -1810,18 +1854,72 @@ button.motion-switch:focus-visible {
 .motion-names-split {
   position: absolute;
   top: 0;
-  right: 0;
+  right: -4px;
   bottom: 0;
-  width: 6px;
+  z-index: 2;
+  width: 9px;
   cursor: col-resize;
   touch-action: none;
 }
 
-.motion-names-split:hover {
+/* Its grip: a line down the split with three dots in the middle, seen without hovering. */
+.motion-names-split::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+  background: var(--kit-border);
+}
+
+.motion-names-split::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 3px;
+  height: 13px;
+  margin-top: -6px;
+  background: radial-gradient(circle, var(--kit-text-muted) 1px, transparent 1.2px) 0 0 / 3px 5px repeat-y;
+}
+
+.motion-names-split:hover,
+.motion-names-split[data-dragging] {
   background: var(--kit-primary-soft);
+}
+
+.motion-names-split:hover::before,
+.motion-names-split[data-dragging]::before {
+  background: var(--kit-primary);
 }
 
 /* The text animators: inset like the section's other rows, their buttons clear of the panel's scroll bar. */
 .motion-animators {
   padding: 0 14px 0 12px;
+}
+
+/* The source time a time remapping shows now, as a timecode under its value. */
+.motion-remap-time {
+  align-self: flex-end;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A text animator's parts, flat under its head: what it animates, then its selectors. */
+.motion-animator-part-name {
+  display: block;
+  padding: 2px 0;
+  font-size: 11px;
+}
+
+.motion-animator-part > .motion-props {
+  padding-left: 0;
+}
+
+/* The next step after adding an animator, in one short line under it. */
+.motion-animator-hint {
+  margin: 4px 0 2px;
+  font-size: 11px;
+  line-height: 1.4;
 }

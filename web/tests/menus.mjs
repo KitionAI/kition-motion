@@ -7,17 +7,37 @@
 // In zh-CN every label must have Chinese characters, effect names excepted. Cmd+K, Cmd+Y and
 // Alt+Shift+J open their dialogs; Backspace deletes like Delete; the splitter resizes the timeline.
 // MENUS_OUT=<file> writes every leaf's result as JSON (the walkthrough's menu table is made from it).
+// Each item clicked prints a `STEP <time>` line first, so a log that stops shows the last one. A
+// page whose browser process crashed (WebKit's, on Linux CI: inside WebKit, not the page) is
+// retried once on a fresh page, saying so with a `RETRY` line; a second crash fails the item.
 import { writeFileSync } from 'node:fs'
-import { chromium, webkit } from 'playwright'
 import { createServer } from 'vite'
 import { delayEngineReplies } from './slowEngine.mjs'
+import { clock, launchBrowser } from './harness.mjs'
 
 const which = process.argv[2] ?? 'chromium'
 const WORKERS = Number(process.env.MENUS_WORKERS ?? 4)
 const server = await createServer({ configFile: new URL('../vite.config.ts', import.meta.url).pathname, server: { port: 0, host: '127.0.0.1', watch: null }, logLevel: 'error' })
 await server.listen()
 const origin = `http://127.0.0.1:${server.httpServer.address().port}`
-const browser = await (which === 'webkit' ? webkit : chromium).launch()
+const browser = await launchBrowser(which)
+/** Says which step the run has reached, with the time (the last such line names where a crash was). */
+const trace = (what) => console.log(`STEP ${clock()} ${what}`)
+/** Whether an error means the page's browser process went away (it crashed) rather than a failed check. */
+const crashed = (error, ctx) => ctx?.crashed === true || /crash|Target (page|closed)|has been closed|Page closed|document was closed/i.test(String(error?.message ?? error))
+/**
+ * Runs `attempt` once more on a fresh page when the first one ended in a crash of the page's
+ * browser process (said with a RETRY line); any other failure, and a second crash, stands.
+ */
+async function retryCrash(label, attempt) {
+  try {
+    return await attempt()
+  } catch (error) {
+    if (!crashed(error)) throw error
+    console.log(`RETRY ${clock()} ${label}: the page's browser process crashed (${String(error?.message ?? error).split('\n')[0]}); once more on a fresh page`)
+    return attempt()
+  }
+}
 let failures = 0
 const step = (name, ok, detail = '') => {
   if (!ok) failures += 1
@@ -33,6 +53,11 @@ async function open(state) {
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
+  const ctx = { crashed: false }
+  page.on('crash', () => {
+    ctx.crashed = true
+    console.log(`CRASH ${clock()} the page's browser process crashed (${state})`)
+  })
   await page.goto(`${origin}/dev.html?locale=zh-CN`)
   await page.waitForFunction(() => document.getElementById('status')?.textContent?.includes(' open in '), null, { timeout: 60000 })
   const kit = page.frameLocator('#kit')
@@ -50,7 +75,7 @@ async function open(state) {
   if (state === 'layer') await kit.getByTestId(`motion-layer-${shape.id}`).click()
   if (state === 'solid') await kit.getByTestId(`motion-layer-${(await details()).info.layers.find((layer) => layer.type === 'Solid').id}`).click()
   await page.waitForTimeout(400)
-  return { context, page, kit, errors, primary, details, shape }
+  return Object.assign(ctx, { context, page, kit, errors, primary, details, shape })
 }
 
 /** What a click may change: the document, the selection, the time, the comp, the view, playback, the commands that can run, the files. */
@@ -302,11 +327,13 @@ async function finishDialog(ctx, leaf, state) {
 // takes every page with it, and this names what was on screen then).
 const inFlight = new Set()
 
-async function run(state, leaf) {
-  const ctx = await open(state)
+async function run(state, leaf, again = false) {
   const mark = `${state}: ${leaf.path.join(' › ')}`
+  trace(`${again ? 'again ' : ''}${mark}`)
+  let ctx = null
   inFlight.add(mark)
   try {
+    ctx = await open(state)
     const before = await snapshot(ctx)
     await click(ctx, leaf)
     await ctx.page.waitForTimeout(700)
@@ -321,40 +348,69 @@ async function run(state, leaf) {
     if (ctx.errors.length) return { result: 'error', note: `page error: ${ctx.errors[0]}` }
     return changed.length ? { result: 'changed', note: changed.join(', ') } : { result: 'nothing', note: '' }
   } catch (error) {
-    return { result: 'error', note: String(error.message ?? error).split('\n')[0] }
+    if (crashed(error, ctx) && !again) {
+      console.log(`RETRY ${clock()} ${mark}: the page's browser process crashed; once more on a fresh page`)
+      inFlight.delete(mark)
+      await ctx?.context.close().catch(() => {})
+      ctx = null
+      return run(state, leaf, true)
+    }
+    return { result: 'error', note: `${crashed(error, ctx) ? 'the page crashed twice: ' : ''}${String(error.message ?? error).split('\n')[0]}` }
   } finally {
     inFlight.delete(mark)
-    await ctx.context.close().catch(() => {})
+    await ctx?.context.close().catch(() => {})
   }
 }
 
 /** Applies every effect leaf on one page, undoing each after: a change and no error notice each. */
 async function runEffects(leaves) {
-  const ctx = await open('layer')
+  let ctx = await open('layer')
   const results = []
   let mark = ''
   try {
-    for (const leaf of leaves) {
+    for (let at = 0, again = false; at < leaves.length; at += 1) {
+      const leaf = leaves[at]
       inFlight.delete(mark)
       mark = `effect: ${leaf.path.join(' › ')}`
       inFlight.add(mark)
-      const revision = async () => (await ctx.page.evaluate(async () => window.devHost.connection().ai.inspect())).revision
-      const before = await revision()
-      const toasts = await errorToasts(ctx.kit)
-      await click(ctx, leaf)
-      let after = before
-      for (let i = 0; i < 40 && after === before; i += 1) {
-        await ctx.page.waitForTimeout(100)
-        after = await revision()
+      trace(`${again ? 'again ' : ''}${mark}`)
+      const counted = results.length
+      try {
+        const revision = async () => (await ctx.page.evaluate(async () => window.devHost.connection().ai.inspect())).revision
+        const before = await revision()
+        const toasts = await errorToasts(ctx.kit)
+        await click(ctx, leaf)
+        let after = before
+        for (let i = 0; i < 40 && after === before; i += 1) {
+          await ctx.page.waitForTimeout(100)
+          after = await revision()
+        }
+        await ctx.page.waitForTimeout(150)
+        if ((await errorToasts(ctx.kit)) > toasts) results.push({ leaf, result: 'error', note: (await ctx.kit.locator('.kui-toast').last().textContent()).trim() })
+        else if (after === before) results.push({ leaf, result: 'nothing', note: '' })
+        else results.push({ leaf, result: 'changed', note: 'effect applied' })
+        await undo(ctx)
+        again = false
+      } catch (error) {
+        if (!crashed(error, ctx)) throw error
+        // The page's browser process crashed: a fresh page goes on, this effect once more (its
+        // result, if it had one before the crash, is dropped).
+        results.length = counted
+        await ctx.context.close().catch(() => {})
+        ctx = await open('layer')
+        if (again) {
+          results.push({ leaf, result: 'error', note: `the page crashed twice: ${String(error.message ?? error).split('\n')[0]}` })
+          again = false
+        } else {
+          console.log(`RETRY ${clock()} ${mark}: the page's browser process crashed; once more on a fresh page`)
+          again = true
+          at -= 1
+        }
       }
-      await ctx.page.waitForTimeout(150)
-      if ((await errorToasts(ctx.kit)) > toasts) results.push({ leaf, result: 'error', note: (await ctx.kit.locator('.kui-toast').last().textContent()).trim() })
-      else if (after === before) results.push({ leaf, result: 'nothing', note: '' })
-      else results.push({ leaf, result: 'changed', note: 'effect applied' })
-      await undo(ctx)
     }
   } finally {
-    await ctx.context.close()
+    inFlight.delete(mark)
+    await ctx.context.close().catch(() => {})
   }
   return results
 }
@@ -363,9 +419,15 @@ const all = { none: null, layer: null }
 const report = []
 try {
   for (const state of ['none', 'layer']) {
-    const ctx = await open(state)
-    const leaves = await enumerate(ctx)
-    await ctx.context.close()
+    trace(`${state}: listing the menus`)
+    const leaves = await retryCrash(`${state}: listing the menus`, async () => {
+      const ctx = await open(state)
+      try {
+        return await enumerate(ctx)
+      } finally {
+        await ctx.context.close().catch(() => {})
+      }
+    })
     all[state] = leaves
     const effectNames = new Set(
       (await (async () => {
@@ -406,7 +468,8 @@ try {
   }
 
   // Shortcuts: the dialogs open from the keyboard, as their menu rows say.
-  {
+  await retryCrash('shortcuts', async () => {
+    trace('shortcuts')
     const ctx = await open('layer')
     const { kit, page, primary } = ctx
     await kit.getByTestId('motion-timeline-rows').click({ position: { x: 600, y: 200 } })
@@ -433,10 +496,11 @@ try {
     for (let i = 0; i < 50 && (await ctx.details()).info.layers.length !== count - 1; i += 1) await page.waitForTimeout(100)
     step('Backspace deletes the selected layer', (await ctx.details()).info.layers.length === count - 1)
     await ctx.context.close()
-  }
+  })
 
   // With three layers selected: Sequence Layers puts them one after another, Distribute spaces them (each one undo step).
-  {
+  await retryCrash('three layers', async () => {
+    trace('three layers')
     const ctx = await open('none')
     const { kit, page, primary } = ctx
     const all = (await ctx.details()).info.layers
@@ -485,20 +549,22 @@ try {
     step('aligning left to the selection moves some layers and leaves the leftmost', moved.length >= 1 && moved.length < Object.keys(start).length && (await errorToasts(kit)) === 0, JSON.stringify({ start, aligned }))
     await undo(ctx)
     await ctx.context.close()
-  }
+  })
 
   // Solid Settings, on a selected solid.
-  {
+  await retryCrash('solid settings', async () => {
+    trace('solid settings')
     const ctx = await open('solid')
     const leaf = { top: 'Layer', uipath: [], testid: 'motion-cmd-layer.settings', path: ['图层', '纯色设置…'] }
     const result = await run('solid', leaf)
     step(`solid: Solid Settings (${result.result})`, result.result === 'dialog', result.note)
     report.push({ state: 'solid', path: leaf.path, testid: leaf.testid, shortcut: '', ...result })
     await ctx.context.close()
-  }
+  })
 
   // The splitter between the composition and the timeline drags the timeline's height, kept for the session.
-  {
+  await retryCrash('splitter', async () => {
+    trace('splitter')
     const ctx = await open('none')
     const { kit, page } = ctx
     const splitter = await kit.getByTestId('motion-splitter').boundingBox()
@@ -515,7 +581,7 @@ try {
     const kept = (await kit.getByTestId('motion-timeline').boundingBox()).height
     step('the height is kept for the session', Math.abs(kept - taller) <= 2, `${kept}`)
     await ctx.context.close()
-  }
+  })
 } catch (error) {
   console.log(`stopped early with these items being clicked: ${[...inFlight].join(' | ') || 'none'}`)
   throw error

@@ -36,6 +36,7 @@ import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
 import { Splitter, useTimelineHeight } from './Splitter'
 import { PropertiesPanel } from './properties/PropertiesPanel'
+import { DROP_SHADOW } from './properties/LayerStylesSection'
 import { EffectCatalog } from './properties/catalog'
 import { ProjectPanel, useProjectPanel } from './ProjectPanel'
 import { ExportDialog } from './ExportDialog'
@@ -56,27 +57,40 @@ import { isThreeD } from './timeline/tree'
  * full refresh of the editor's state each frame); `at` is the time shown, for the playhead and the
  * timecode, and the editor's state catches up when playback stops.
  */
-function usePlayback(run: (command: string, params?: Record<string, unknown>, damage?: null, options?: { refresh?: 'all' | 'repaint' | 'none' }) => Promise<unknown>, time: number, duration: number, frame: number, skip: boolean, paint: () => Promise<unknown>) {
+function usePlayback(run: (command: string, params?: Record<string, unknown>, damage?: null, options?: { refresh?: 'all' | 'repaint' | 'none' }) => Promise<unknown>, time: number, duration: number, frame: number, skip: boolean, paint: () => Promise<unknown>, loop: boolean, workArea: readonly [number, number]) {
   const [playing, setPlaying] = useState(false)
   const [at, setAt] = useState<number | null>(null)
-  const latest = useRef({ time, duration, frame, skip, paint })
-  latest.current = { time, duration, frame, skip, paint }
+  // Counts the times playback went round the loop: the sound starts again with each.
+  const [rounds, setRounds] = useState(0)
+  const latest = useRef({ time, duration, frame, skip, paint, loop, workArea })
+  latest.current = { time, duration, frame, skip, paint, loop, workArea }
   const origin = useRef<{ wall: number; time: number } | null>(null)
   const last = useRef<number | null>(null)
   const stop = useCallback(() => {
     origin.current = null
     setPlaying(false)
   }, [])
+  /** Where looping playback goes round: the work area (the whole composition when it has none). */
+  const span = () => {
+    const { duration, workArea } = latest.current
+    const from = Math.max(0, Math.min(workArea[0], duration))
+    const to = Math.min(duration, workArea[1])
+    return to - from > 1e-3 ? [from, to] : [0, duration]
+  }
   const toggle = useCallback(() => {
     if (playing) {
       stop()
       return
     }
-    const from = latest.current.time >= latest.current.duration - 1e-3 ? 0 : latest.current.time
-    origin.current = { wall: performance.now(), time: from }
+    const now = latest.current.time
+    const [from, to] = span()
+    // Looping, playback starts at the work area's start when the time is outside it; otherwise at
+    // the start once the end is reached.
+    const start = latest.current.loop ? (now < from - 1e-3 || now >= to - 1e-3 ? from : now) : now >= latest.current.duration - 1e-3 ? 0 : now
+    origin.current = { wall: performance.now(), time: start }
     last.current = null
     setPlaying(true)
-  }, [playing, stop])
+  }, [playing, stop]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!playing) {
       // The editor's state catches up with the last frame shown.
@@ -96,11 +110,20 @@ function usePlayback(run: (command: string, params?: Record<string, unknown>, da
     let first = true
     const step = async () => {
       if (stopped || !origin.current) return
-      const { duration, frame, skip } = latest.current
-      const next = skip ? origin.current.time + (performance.now() - origin.current.wall) / 1000 : first ? shown : shown + frame
-      if (next >= duration - (skip ? 0 : frame / 2)) {
-        stop()
-        return
+      const { duration, frame, skip, loop } = latest.current
+      const [from, to] = loop ? span() : [0, duration]
+      let next = skip ? origin.current.time + (performance.now() - origin.current.wall) / 1000 : first ? shown : shown + frame
+      if (next >= to - (skip ? 0 : frame / 2)) {
+        if (!loop) {
+          stop()
+          return
+        }
+        // Round again from the work area's start.
+        next = from
+        origin.current = { wall: performance.now(), time: from }
+        shown = from
+        first = true
+        setRounds((count) => count + 1)
       }
       if (!busy) {
         busy = true
@@ -123,8 +146,8 @@ function usePlayback(run: (command: string, params?: Record<string, unknown>, da
     return () => {
       stopped = true
     }
-  }, [playing, run, stop])
-  return { playing, toggle, stop, origin, at }
+  }, [playing, run, stop]) // eslint-disable-line react-hooks/exhaustive-deps
+  return { playing, toggle, stop, origin, at, rounds }
 }
 
 /** What the engine's frame cache reports (`previewCache`). */
@@ -206,7 +229,7 @@ const AUDIO_AHEAD = 2
  * that nothing is audible. `scheduled` counts the stretches handed to the speakers (the footage
  * test reads it from the workspace's `data-audio`).
  */
-function usePreviewAudio(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, playing: boolean, from: number | null, duration: number, scheduled: (count: number) => void) {
+function usePreviewAudio(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, playing: boolean, from: number | null, duration: number, scheduled: (count: number) => void, round: number) {
   useEffect(() => {
     if (!playing || !doc || from === null || typeof AudioContext === 'undefined') return undefined
     const context = new AudioContext()
@@ -248,8 +271,11 @@ function usePreviewAudio(doc: { invoke: <T>(name: string, ...args: unknown[]) =>
       stopped = true
       void context.close()
     }
-  }, [doc, playing, from, duration, scheduled])
+  }, [doc, playing, from, duration, scheduled, round])
 }
+
+/** A composition without a work area plays all of it. */
+const NO_WORK_AREA: readonly [number, number] = [0, Number.POSITIVE_INFINITY]
 
 /** One step of View ▸ Zoom In or Zoom Out, as the frame's Cmd+= and Cmd+-. */
 const ZOOM_STEP = 1.25
@@ -296,6 +322,12 @@ function useGentleWheelZoom(workspace: RefObject<HTMLDivElement | null>, canvas:
 const HOST_TOOLS = { hand: HAND_TOOL, zoom: ZOOM_TOOL }
 /** The tools that change the document: a read-only one has only the view tools. */
 const EDITING_TOOLS: ReadonlySet<string> = new Set(['selection', 'rectangle', 'ellipse', 'text'])
+
+/** What the engine's Selection tool says while paths are edited (bindings/wasm/src/tools.rs). */
+const PATH_EDIT_HINT = 'Editing the path: drag its vertices or edges; Esc or a click on empty space ends it'
+
+/** The camera tools, left off the rail while the composition has nothing 3D. */
+const CAMERA_TOOLS: ReadonlySet<string> = new Set(['orbit', 'track', 'dolly'])
 
 /** How far (screen pixels) the arrow keys move the selected layers: 1, or 10 with Shift (comp pixels). */
 const NUDGE = { plain: 1, shift: 10 }
@@ -353,6 +385,8 @@ function codeOf(key: string) {
 const GRID_KEY = 'kition-motion.grid-spacing'
 /** Where Skip Frames to Keep Real Time is kept. */
 const SKIP_KEY = 'kition-motion.skip-frames'
+/** Where Loop (playback goes round the work area, on by default) is kept. */
+const LOOP_KEY = 'kition-motion.loop'
 const PRESET_FOLDER_KEY = 'kition-motion.preset-folder'
 /** Where Layer ▸ Align's target (the composition or the selection) is kept. */
 const ALIGN_KEY = 'kition-motion.align-to'
@@ -372,7 +406,7 @@ const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).re
  * ones it asks values for in its own dialogs, Pre-compose (which then offers to open the new
  * composition), and the ones given another shortcut (`SHORTCUT_OVERRIDES`).
  */
-const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'anim.savePreset', 'anim.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
+const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'anim.savePreset', 'anim.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -383,13 +417,40 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const editor = useKitEditorState(session, host, t, 'motion', phrase, undefined, { report })
   const { state } = session
   const toolsRef = useRef<ReturnType<typeof useEngineTools> | null>(null)
+  // Whether a button is held down (a gesture may be under way), for Escape.
+  const pointerHeld = useRef(false)
+  useEffect(() => {
+    const down = () => (pointerHeld.current = true)
+    const up = () => (pointerHeld.current = false)
+    window.addEventListener('pointerdown', down, true)
+    window.addEventListener('pointerup', up, true)
+    window.addEventListener('pointercancel', up, true)
+    return () => {
+      window.removeEventListener('pointerdown', down, true)
+      window.removeEventListener('pointerup', up, true)
+      window.removeEventListener('pointercancel', up, true)
+    }
+  }, [])
+  // The camera tools are on the rail only while the composition has a 3D layer, a camera or a light.
+  const anyThreeD = state?.layers.some(isThreeD) ?? false
+  const hiddenTools = useMemo(() => (host.readOnly ? EDITING_TOOLS : anyThreeD ? undefined : CAMERA_TOOLS), [host.readOnly, anyThreeD])
+  const hiddenRail = useMemo(() => [...(hiddenTools ?? [])], [hiddenTools])
   const tools = useEngineTools(session.tool, session.doc != null, session.change, {
     initial: host.readOnly ? 'hand' : 'selection',
     hostTools: HOST_TOOLS,
-    hidden: host.readOnly ? EDITING_TOOLS : undefined,
+    hidden: hiddenTools,
     onDeferredKey: deferredKey,
+    // While typing, during a drag (Escape undoes the gesture), and while paths are edited (Escape ends that).
+    escapable: () => {
+      const current = toolsRef.current
+      return current != null && (current.wantsText || pointerHeld.current || current.status === PATH_EDIT_HINT)
+    },
   })
   toolsRef.current = tools
+  // The last 3D layer gone (or a composition without any opened) while a camera tool was out: back to Selection.
+  useEffect(() => {
+    if (!anyThreeD && CAMERA_TOOLS.has(tools.active) && !host.readOnly) tools.select('selection')
+  }, [anyThreeD, tools, host.readOnly])
   /**
    * A key pressed while the engine was answering (during playback it nearly always is), which was
    * not typed text. Space was the window's already (useSpaceTap): given back as a keydown with no
@@ -487,14 +548,33 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       return !current
     })
   }, [])
+  // The transport's Loop (on by default): playback goes round the work area, kept in this browser.
+  const [loop, setLoop] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem(LOOP_KEY) !== 'false'
+    } catch {
+      return true
+    }
+  })
+  const toggleLoop = useCallback(() => {
+    setLoop((current) => {
+      try {
+        localStorage.setItem(LOOP_KEY, String(!current))
+      } catch {
+        // Kept for this page only.
+      }
+      return !current
+    })
+  }, [])
   const paintNow = useCallback(async () => canvas.current?.retryRender(), [])
-  const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0, state?.frame ?? 1 / 30, skipFrames, paintNow)
+  const workArea = state?.comp?.workArea ?? NO_WORK_AREA
+  const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0, state?.frame ?? 1 / 30, skipFrames, paintNow, loop, workArea)
   const frameCache = usePreviewCache(session.doc, state, playback.playing)
   // While playing, the transport and the timeline show the time playback has reached.
   const shownState = useMemo(() => (state && playback.at !== null ? { ...state, time: playback.at } : state), [state, playback.at])
   useSpaceTap(playback.toggle)
   const audioCount = useCallback((count: number) => workspace.current?.setAttribute('data-audio', String(count)), [])
-  usePreviewAudio(session.doc, playback.playing, playback.playing ? (playback.origin.current?.time ?? null) : null, state?.comp?.duration ?? 0, audioCount)
+  usePreviewAudio(session.doc, playback.playing, playback.playing ? (playback.origin.current?.time ?? null) : null, loop ? Math.min(state?.comp?.duration ?? 0, workArea[1]) : (state?.comp?.duration ?? 0), audioCount, playback.rounds)
   // The Export dialog, open on a movie format or on Lottie (File ▸ Export ▸ Lottie JSON…).
   const [exporting, setExporting] = useState<false | 'movie' | 'lottie'>(false)
   const project = useProjectPanel()
@@ -681,6 +761,13 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     while (names.has(`${base} ${n}`)) n += 1
     return `${base} ${n}`
   }
+  /** A layer name not taken in this composition: `摄像机 1`, `灯光 2`. */
+  const unusedLayerName = (base: string) => {
+    const names = new Set(state?.layers.map((layer) => layer.name))
+    let n = 1
+    while (names.has(`${base} ${n}`)) n += 1
+    return `${base} ${n}`
+  }
   const openComp = async (mode: 'new' | 'settings') => {
     const comp = state?.comp
     if (mode === 'settings') {
@@ -790,7 +877,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   useEffect(() => {
     if (drawingRegion) workspace.current?.querySelector<HTMLElement>('[data-testid="motion-roi-layer"]')?.focus({ preventScroll: true })
   }, [drawingRegion])
-  const purgeCache = () => void session.doc?.invoke('purgePreviewCache').then(() => frameCache.refresh())
+  const purgeCache = () =>
+    void session.doc
+      ?.invoke('purgePreviewCache')
+      .then(() => frameCache.refresh())
+      .then(() => toast.success(t('cache.purged')))
   /** Commands the editor answers itself (the rest go to the engine as they are). */
   const own: Record<string, () => void> = {
     ...Object.fromEntries(Object.entries(OVERLAY_ROWS).map(([command, key]) => [command, () => toggleOverlay(key)])),
@@ -829,6 +920,16 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     ...Object.fromEntries(INTERPOLATIONS.map((row) => [row.command, () => void run('keys.interpolation', { interpolation: row.interpolation })])),
     'comp.settings': () => void openComp('settings'),
     'layer.newSolid': () => void openSolid('new'),
+    // A new drop shadow is seen at once, even on a dark background (one already there is only turned on).
+    'layer.style.dropShadow': () => void run('layer.style.dropShadow', styled.has('dropShadow') ? {} : { params: DROP_SHADOW }),
+    'layer.newCamera': () => void run('layer.newCamera', { name: unusedLayerName(t('layerName.camera')) }),
+    // A point light in front of the composition's middle: a 3D layer facing the camera stays lit
+    // (a spot light off to one side left it nearly black).
+    'layer.newLight': () => {
+      const comp = state?.comp
+      if (!comp) return
+      void run('layer.newLight', { kind: 'Point', name: unusedLayerName(t('layerName.light')), position: [comp.width / 2, comp.height / 2, -comp.width / 2] })
+    },
     'layer.settings': () => void openSolid('settings'),
     'time.set': () => state?.comp && setDialog({ kind: 'time', time: state.time, fps: state.comp.fps, duration: state.comp.duration }),
     'layer.rename': () => {
@@ -864,9 +965,27 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }, [idle, alignTo, state?.layers])
   const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo, threeD: view3d, region: region !== null, cached: frameCache.cached.length > 0 }, editor.enabled('keys.interpolation'), idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  // The first selected layer's layer styles: Layer ▸ Layer Styles marks them (Added).
+  const firstSelected = state?.layers.find((layer) => layer.selected)?.id
+  const [styled, setStyled] = useState<ReadonlySet<string>>(() => new Set())
+  useEffect(() => {
+    if (firstSelected == null) {
+      setStyled((before) => (before.size ? new Set() : before))
+      return undefined
+    }
+    let current = true
+    void query<{ styles?: Array<{ style?: string }> }>('layer.style.list', { layer: firstSelected }).then((answer) => {
+      if (!current) return
+      const next = new Set((answer?.styles ?? []).map((style) => style.style ?? ''))
+      setStyled((before) => ([...before].sort().join() === [...next].sort().join() ? before : next))
+    })
+    return () => {
+      current = false
+    }
+  }, [firstSelected, state, query])
   // Layer ▸ Time ▸ Enable or Disable Time Remapping, by the first selected layer.
   const remapOn = state?.layers.find((layer) => layer.selected)?.animated.some((property) => property.path === 'timeRemap') ?? false
-  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn), [effects, overlays, alignTo, skipFrames, remapOn])
+  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled), [effects, overlays, alignTo, skipFrames, remapOn, styled])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
   const allowed = useMemo(() => shortcutCommands(rows), [rows])
   const hiddenCommands = useCallback((command: string) => !allowed.has(command), [allowed])
@@ -929,6 +1048,12 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       addMarker()
       return true
     }
+    // The 3D views' keys that browsers leave alone (as F10, F11 and F12).
+    const view3dKey = pressed(EDITOR_KEYS.view3dFront, event) ? 'view.3d.front' : pressed(EDITOR_KEYS.view3dCustom, event) ? 'view.3d.custom1' : pressed(EDITOR_KEYS.view3dCamera, event) ? 'view.3d.activeCamera' : null
+    if (view3dKey) {
+      if (view3d.has3D) void run(view3dKey, {})
+      return true
+    }
     // Space plays on its release (useSpaceTap); its press is taken here so nothing else runs.
     if (pressed(EDITOR_KEYS.play, event)) return true
     // View ▸ Zoom In and Zoom Out: . and , (Cmd or Ctrl with = and - zoom too, and Cmd+0 fits).
@@ -963,7 +1088,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         defaultTab="home"
         actions={
           <>
-            <Button variant="ghost" aria-pressed={project.open} onClick={project.toggle} title={t('project.toggle')} data-testid="motion-project-toggle">
+            <Button variant="ghost" className="motion-toggle" aria-pressed={project.open} onClick={project.toggle} title={t('project.toggle')} data-testid="motion-project-toggle">
               <PanelLeftIcon size={14} aria-hidden="true" />
               {t('project.title')}
             </Button>
@@ -979,7 +1104,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           ) : null
         }
         canvas={canvas}
-        rail={<EngineToolRail />}
+        rail={<EngineToolRail hidden={hiddenRail} />}
         zoom={zoom}
         onKeyDown={keyDown}
         hiddenCommands={hiddenCommands}
@@ -1004,6 +1129,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           {state?.comp ? (
             <Button
               variant="ghost"
+              className="motion-toggle"
               aria-pressed={region !== null || drawingRegion}
               title={region ? t('roi.clear') : drawingRegion ? t('roi.hint') : t('roi.draw')}
               onClick={toggleRegion}
@@ -1033,16 +1159,16 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             </Select>
           ) : null}
           {tools.active === 'pen' && shapeSelected && !host.readOnly ? (
-            <Button variant="ghost" aria-pressed={penMasks} title={t('pen.maskOption.hint')} onClick={() => setPenMasks((now) => !now)} data-testid="motion-pen-mask">
+            <Button variant="ghost" className="motion-toggle" aria-pressed={penMasks} title={t('pen.maskOption.hint')} onClick={() => setPenMasks((now) => !now)} data-testid="motion-pen-mask">
               {t('pen.maskOption')}
             </Button>
           ) : null}
           {toolHint ? (
-            <span className="motion-tool-status" role="status" data-testid="motion-tool-status">
+            <span className="motion-tool-status" role="status" title={toolHint} data-testid="motion-tool-status">
               {toolHint}
             </span>
           ) : null}
-          <span data-testid="motion-status">
+          <span className="motion-summary" title={state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : undefined} data-testid="motion-status">
             {state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : t('noComp')}
           </span>
           </>
@@ -1072,6 +1198,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           data-view3d={view3d.has3D ? view3d.view : undefined}
           data-roi={region ? region.join(' ') : drawingRegion ? 'drawing' : undefined}
           data-skip-frames={skipFrames}
+          data-loop={loop}
           data-cached={frameCache.cached.length}
           data-preview={frameCache.stats}
         >
@@ -1167,6 +1294,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
                   trail={trail}
                   onBack={(comp) => void run('comp.open', { comp })}
                   playbackRate={{ fps: frameCache.fps, skip: skipFrames, onSkip: toggleSkipFrames }}
+                  loop={{ on: loop, onToggle: toggleLoop }}
                 />
                 <Timeline
                   info={shownState ?? state}

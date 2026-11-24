@@ -133,6 +133,9 @@ try {
   step('Delete right after adding a stop removes that stop, not the layer', (await stops()).length === 2 && (await h.layer(SHAPE)) != null, JSON.stringify(await stops()))
   await h.undo()
   await until(async () => (await stops()).length === 3)
+  // Said with what had the focus and whether Undo could run, should the undo miss (it did once on Linux).
+  const undoState = async () => ({ stops: (await stops()).length, focus: await kit.locator(':focus').evaluate((element) => element.getAttribute('data-testid') ?? element.className).catch(() => 'none'), undo: await page.evaluate(async () => (await window.devHost.connection().ai.commands('')).find((command) => command.id === 'edit.undo')?.enabled) })
+  step('one undo brings the deleted stop back', (await stops()).length === 3, JSON.stringify(await undoState()))
   const marker = await h.centre(kit.getByTestId(`${editor}-stop-1`))
   await h.drag(marker, { x: bar.x + bar.width * 0.25, y: marker.y })
   await until(async () => near((await stops())[1]?.[0], 0.25, 0.03))

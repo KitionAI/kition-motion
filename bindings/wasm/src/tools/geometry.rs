@@ -74,13 +74,35 @@ impl LayerBox {
 
 /// A layer's box at the context time, when it has content to show.
 pub(crate) fn layer_box(ctx: &EvalCtx, layer: &Layer) -> Option<LayerBox> {
+    let view = VIEW.with(std::cell::Cell::get);
+    // A 3D view other than the active camera's shows 3D layers only (as the viewer draws it).
+    if view.is_some() && !layer.is_3d() {
+        return None;
+    }
     let bounds = kition_motion_engine::render::content_bounds(ctx, layer)?;
     if !bounds.iter().all(|v| v.is_finite()) || bounds[2] < bounds[0] || bounds[3] < bounds[1] {
         return None;
     }
-    let (m, _) = ctx.layer_to_comp(layer);
+    let m = match view {
+        Some(camera) => (camera.projection(f64::from(ctx.comp.width), f64::from(ctx.comp.height)) * ctx.world_matrix(layer)).plane_to_mat3(),
+        None => ctx.layer_to_comp(layer).0,
+    };
     let anchor = layer.transform().map(|tr| ctx.v3(layer, tr, "anchor", [0.0; 3])).unwrap_or([0.0; 3]);
     Some(LayerBox { id: layer.id, bounds, m, anchor: [anchor[0], anchor[1]], flat: !layer.is_3d() })
+}
+
+thread_local! {
+    /// The 3D view the boxes are seen through while [`through_view`] runs (None: the active camera).
+    static VIEW: std::cell::Cell<Option<kition_motion_engine::render::three_d::CameraState>> = const { std::cell::Cell::new(None) };
+}
+
+/// Runs `f` with the layers' boxes seen through `view` (the viewer's 3D view; None for the
+/// active camera's), then puts back the view there was.
+pub(crate) fn through_view<R>(view: Option<kition_motion_engine::render::three_d::CameraState>, f: impl FnOnce() -> R) -> R {
+    let before = VIEW.with(|cell| cell.replace(view));
+    let out = f();
+    VIEW.with(|cell| cell.set(before));
+    out
 }
 
 /// Whether the canvas shows a layer now and lets it be picked: active at the time, its video

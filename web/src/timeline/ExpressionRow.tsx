@@ -21,7 +21,69 @@ function syntaxDetail(detail: string, t: (key: string, values?: Record<string, s
   return t('expr.syntax.generic')
 }
 
-export function explainError(message: string, t: (key: string, values?: Record<string, string | number>) => string) {
+/** The pairs of brackets an expression's text must balance. */
+const PAIRS: Record<string, string> = { '(': ')', '[': ']', '{': '}' }
+const OPENERS: Record<string, string> = { ')': '(', ']': '[', '}': '{' }
+
+/**
+ * The first bracket or quote in `source` that is left open or closes nothing, with its line and
+ * column (from 1), skipping text in quotes and comments; null when they all pair up.
+ */
+export function unbalanced(source: string): { kind: 'unclosed' | 'extra' | 'quote'; open: string; close: string; line: number; column: number } | null {
+  const stack: Array<{ char: string; line: number; column: number }> = []
+  let line = 1
+  let column = 0
+  let quote: { char: string; line: number; column: number } | null = null
+  for (let at = 0; at < source.length; at += 1) {
+    const char = source[at]
+    if (char === '\n') {
+      line += 1
+      column = 0
+      // A quote ' or " ends with its line; a template string goes on.
+      if (quote && quote.char !== '`') return { kind: 'quote', open: quote.char, close: quote.char, line: quote.line, column: quote.column }
+      continue
+    }
+    column += 1
+    if (quote) {
+      if (char === '\\') {
+        at += 1
+        column += 1
+      } else if (char === quote.char) quote = null
+      continue
+    }
+    if (char === '/' && source[at + 1] === '/') {
+      const end = source.indexOf('\n', at)
+      if (end < 0) break
+      column += end - at - 1
+      at = end - 1
+      continue
+    }
+    if (char === '/' && source[at + 1] === '*') {
+      const end = source.indexOf('*/', at + 2)
+      const skipped = source.slice(at, end < 0 ? source.length : end + 2)
+      const lines = skipped.split('\n')
+      if (lines.length > 1) {
+        line += lines.length - 1
+        column = lines[lines.length - 1].length
+      } else column += skipped.length - 1
+      at += skipped.length - 1
+      continue
+    }
+    if (char === '"' || char === "'" || char === '`') quote = { char, line, column }
+    else if (PAIRS[char]) stack.push({ char, line, column })
+    else if (OPENERS[char]) {
+      const open = stack.pop()
+      if (!open) return { kind: 'extra', open: OPENERS[char], close: char, line, column }
+      if (open.char !== OPENERS[char]) return { kind: 'unclosed', open: open.char, close: PAIRS[open.char], line: open.line, column: open.column }
+    }
+  }
+  if (quote) return { kind: 'quote', open: quote.char, close: quote.char, line: quote.line, column: quote.column }
+  const open = stack.pop()
+  return open ? { kind: 'unclosed', open: open.char, close: PAIRS[open.char], line: open.line, column: open.column } : null
+}
+
+/** `source`: the expression's text; a syntax error from a bracket or a quote left open says which one and where. */
+export function explainError(message: string, t: (key: string, values?: Record<string, string | number>) => string, source?: string) {
   // The engine says where: `Error at line 3: ReferenceError: foo is not defined`, or `Error: …`
   // when it cannot tell the line.
   const located = /^Error at line (\d+):\s*(.*)$/is.exec(message.trim())
@@ -33,6 +95,12 @@ export function explainError(message: string, t: (key: string, values?: Record<s
     [/^TypeError:\s*(.+?) is not a function/i, 'expr.error.notFunction'],
     [/^TypeError:\s*(.*)$/is, 'expr.error.type'],
   ]
+  // A bracket or quote left open (or one too many): named with its place, which the engine's
+  // message does not give (it fails where the text ends).
+  if (/^SyntaxError:/i.test(body) && source !== undefined) {
+    const found = unbalanced(source)
+    if (found) return t('expr.error.syntax', { detail: t(`expr.syntax.${found.kind}`, { open: found.open, close: found.close, line: found.line, column: found.column }) })
+  }
   let said = t('expr.error.other', { detail: body })
   for (const [pattern, key] of rules) {
     const found = pattern.exec(body)

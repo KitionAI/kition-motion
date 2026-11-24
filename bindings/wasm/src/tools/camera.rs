@@ -7,11 +7,17 @@
 
 use serde_json::json;
 
+use kition_kit::tools::ToolMods;
+
 use super::{Gesture, Pt, Tool, ToolState};
 use crate::MotionDocument;
 
-/// Degrees the Orbit tool turns per screen pixel dragged.
-const ORBIT_DEGREES_PER_PIXEL: f64 = 0.4;
+/// Degrees the Orbit tool turns per screen pixel dragged: about half a turn across a viewer
+/// 1100 pixels wide, so a short drag turns the view a little (0.4 swung the camera to the side
+/// with a 150-pixel drag).
+const ORBIT_DEGREES_PER_PIXEL: f64 = 0.16;
+/// Screen pixels a Shift-drag goes before it keeps to the direction it went most.
+const AXIS_AFTER: f64 = 4.0;
 /// Composition pixels the Dolly tool moves per screen pixel dragged.
 const DOLLY_PER_PIXEL: f64 = 4.0;
 
@@ -36,13 +42,30 @@ impl MotionDocument {
             return;
         }
         let merge = st.merge_key("camera");
-        st.gesture = Gesture::Camera { last: p, merge };
+        st.gesture = Gesture::Camera { start: p, last: p, axis: None, merge };
     }
 
-    pub(super) fn camera_drag(&mut self, st: &mut ToolState, p: Pt) {
-        let Gesture::Camera { last, merge } = &mut st.gesture else { return };
+    /// A drag's move. With Shift held it keeps to one direction (across or up and down), the one
+    /// it went most once it has gone a few pixels: Orbit turns about one axis only.
+    pub(super) fn camera_drag(&mut self, st: &mut ToolState, p: Pt, mods: ToolMods) {
+        let zoom = st.zoom;
+        let Gesture::Camera { start, last, axis, merge } = &mut st.gesture else { return };
         // Screen pixels dragged (the pointer arrives in composition pixels).
-        let (dx, dy) = ((p[0] - last[0]) * st.zoom, (p[1] - last[1]) * st.zoom);
+        let (mut dx, mut dy) = ((p[0] - last[0]) * zoom, (p[1] - last[1]) * zoom);
+        if mods.shift {
+            let (tx, ty) = ((p[0] - start[0]) * zoom, (p[1] - start[1]) * zoom);
+            if axis.is_none() && tx.hypot(ty) >= AXIS_AFTER {
+                *axis = Some(tx.abs() >= ty.abs());
+            }
+            match axis {
+                Some(true) => dy = 0.0,
+                Some(false) => dx = 0.0,
+                // Not far enough yet to know the direction: nothing moves.
+                None => return,
+            }
+        } else {
+            *axis = None;
+        }
         if dx == 0.0 && dy == 0.0 {
             return;
         }

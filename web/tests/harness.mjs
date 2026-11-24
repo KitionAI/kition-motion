@@ -7,11 +7,26 @@ import { chromium, webkit } from 'playwright'
 import { createServer } from 'vite'
 import { delayEngineReplies } from './slowEngine.mjs'
 
+/**
+ * The browser for `which`. WebKit on Linux (the CI runners: no GPU, Mesa's llvmpipe) paints with
+ * Skia on the CPU: its GPU painting threads there died now and then inside WebKit, not in the page
+ * (a Skia shader that failed to compile, "trap invalid opcode in libWPEWebKit", an llvmpipe or
+ * SkiaGPUWorker segfault), which closed the page under the test. `KIT_WEBKIT_GPU=1` keeps the GPU path.
+ */
+export function launchBrowser(which) {
+  if (which !== 'webkit') return chromium.launch()
+  const cpu = process.platform === 'linux' && process.env.KIT_WEBKIT_GPU !== '1'
+  return webkit.launch(cpu ? { env: { ...process.env, WEBKIT_SKIA_ENABLE_CPU_RENDERING: '1' } } : {})
+}
+
+/** `HH:MM:SS.mmm`, for the lines that say which step a run had reached. */
+export const clock = () => new Date().toISOString().slice(11, 23)
+
 export async function start(which) {
   const server = await createServer({ configFile: new URL('../vite.config.ts', import.meta.url).pathname, server: { port: 0, host: '127.0.0.1', watch: null }, logLevel: 'error' })
   await server.listen()
   const origin = `http://127.0.0.1:${server.httpServer.address().port}`
-  const browser = await (which === 'webkit' ? webkit : chromium).launch()
+  const browser = await launchBrowser(which)
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   await delayEngineReplies(context)
   const page = await context.newPage()

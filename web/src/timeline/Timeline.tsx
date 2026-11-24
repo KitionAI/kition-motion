@@ -373,7 +373,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
             // Every layer is shy and Hide Shy Layers is on: say so, with the way to show them.
             <p className="kui-muted motion-empty" data-testid="motion-all-shy">
               {t('shy.allHidden', { count: all.layers.length })}{' '}
-              <Button variant="ghost" onClick={() => void run('comp.setSwitch', { switch: 'hideShy', value: false })} data-testid="motion-show-shy">
+              <Button onClick={() => void run('comp.setSwitch', { switch: 'hideShy', value: false })} data-testid="motion-show-shy">
                 {t('shy.show')}
               </Button>
             </p>

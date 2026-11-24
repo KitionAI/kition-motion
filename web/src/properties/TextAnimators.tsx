@@ -1,7 +1,9 @@
 import { PlusIcon as Plus, SparklesIcon as Sparkles, TrashIcon } from '@kition/tessera/icons/react'
 import { Button, IconButton, MenuButton, MenuItem, MenuSeparator, useKitEditor } from '@kition/sdk/editor'
 import type { TreeNode } from '../timeline/tree'
-import { PropertyGroup, usePanel } from './PropertyTree'
+import { useEffect } from 'react'
+import { parseAnswer } from '../footage'
+import { PropertyChildren, PropertyGroup, propId, usePanel } from './PropertyTree'
 
 /**
  * What a text animator animates (`layer.addTextAnimator`'s `properties`), in its menu's order,
@@ -50,6 +52,25 @@ export const TEXT_PRESETS: ReadonlyArray<readonly [preset: string, label: string
 ]
 
 /**
+ * A property just added to an animator (by its uid) from a menu: its value field takes the focus
+ * once the panel shows it, so typing a value is the next step (the added property starts at no
+ * change, and nothing moves until it gets one).
+ */
+let focusNext: { animator: number; property: string; since: number } | null = null
+
+/** When the person last pressed, typed or moved the focus: after the property was added, its field is left alone. */
+let lastInput = 0
+if (typeof document !== 'undefined') {
+  for (const type of ['pointerdown', 'keydown', 'focusin']) document.addEventListener(type, () => (lastInput = performance.now()), true)
+}
+
+/** Runs an add-property command and asks for the added property's field to be focused. */
+async function addAndFocus(run: (command: string, params: Record<string, unknown>) => Promise<unknown>, command: string, params: Record<string, unknown>, property: string) {
+  const answer = parseAnswer<{ animator?: number }>((await run(command, params)) as string | null)
+  if (answer && typeof answer.animator === 'number') focusNext = { animator: answer.animator, property, since: performance.now() }
+}
+
+/**
  * The text layer's Animate menu (a new animator animating one property, with a Range Selector
  * over every character) and Presets menu (a built-in animation applied from the current time),
  * for the Text section's header. Each is one undo step.
@@ -69,7 +90,7 @@ export function TextAnimateMenus({ layer }: { layer: number }) {
         )}
       >
         {ANIMATOR_PROPERTIES.map((entry, at) =>
-          entry === '---' ? <MenuSeparator key={`-${at}`} /> : <MenuItem key={entry[0]} label={phrase(entry[1])} onSelect={() => void run('layer.addTextAnimator', { layer, properties: [entry[0]] })} testId={`motion-text-animate-${entry[0]}`} />,
+          entry === '---' ? <MenuSeparator key={`-${at}`} /> : <MenuItem key={entry[0]} label={phrase(entry[1])} onSelect={() => void addAndFocus(run, 'layer.addTextAnimator', { layer, properties: [entry[0]] }, entry[0])} testId={`motion-text-animate-${entry[0]}`} />,
         )}
       </MenuButton>
       <MenuButton placement="auto"
@@ -99,6 +120,25 @@ export function TextAnimators({ node, scope }: { node: TreeNode; scope: string }
   const { run, t, phrase } = useKitEditor()
   const { layer, readOnly } = usePanel()
   const animators = (node.children ?? []).filter((child) => child.children)
+  // The property just added: its first value field takes the focus, its text selected.
+  useEffect(() => {
+    const wanted = focusNext
+    if (!wanted) return
+    const animator = animators.find((each) => each.uid === wanted.animator)
+    const property = animator?.children?.find((group) => group.match === 'properties')?.children?.find((child) => child.match === wanted.property)
+    if (!property) return
+    focusNext = null
+    // After the menu has given the focus back to its button; not if the person has gone on
+    // meanwhile (a press, a key, the focus moved: their keys stay where they put them).
+    const since = wanted.since
+    window.setTimeout(() => {
+      if (lastInput > since) return
+      const field = document.querySelector<HTMLInputElement>(`[data-testid="motion-prop-${propId(property.path)}"] input`)
+      field?.scrollIntoView({ block: 'nearest' })
+      field?.focus({ preventScroll: true })
+      field?.select()
+    }, 80)
+  })
   if (!animators.length) return null
   return (
     <div className="motion-animators" data-testid="motion-text-animators">
@@ -120,7 +160,7 @@ export function TextAnimators({ node, scope }: { node: TreeNode; scope: string }
                   entry === '---' ? (
                     <MenuSeparator key={`-${at}`} />
                   ) : (
-                    <MenuItem key={entry[0]} label={phrase(entry[1])} onSelect={() => void run('layer.addTextAnimatorProperty', { layer: layer.id, animator: animator.uid, property: entry[0] })} testId={`motion-animator-add-${index + 1}-${entry[0]}`} />
+                    <MenuItem key={entry[0]} label={phrase(entry[1])} onSelect={() => void addAndFocus(run, 'layer.addTextAnimatorProperty', { layer: layer.id, animator: animator.uid, property: entry[0] }, entry[0])} testId={`motion-animator-add-${index + 1}-${entry[0]}`} />
                   ),
                 )}
                 <MenuSeparator />
@@ -139,7 +179,27 @@ export function TextAnimators({ node, scope }: { node: TreeNode; scope: string }
                 ))}
               </MenuButton>
             </div>
-            <PropertyGroup node={animator} scope={scope} depth={1} byDefault label={name} />
+            {/* Flat: what it animates (its values), then its selectors, each open; no second heading with its name. */}
+            {(animator.children ?? [])
+              .filter((group) => group.match === 'properties')
+              .map((group) => (
+                <div key={group.path} className="motion-animator-part" data-testid={`motion-animator-${index + 1}-properties`}>
+                  <span className="motion-animator-part-name kui-muted">{phrase(group.name)}</span>
+                  <PropertyChildren node={group} scope={scope} depth={1} />
+                </div>
+              ))}
+            {(animator.children ?? [])
+              .filter((group) => group.match === 'selectors')
+              .flatMap((group) => (group.children ?? []).filter((selector) => selector.children))
+              .map((selector) => (
+                <PropertyGroup key={selector.path} node={selector} scope={scope} depth={1} byDefault label={phrase(selector.name)} />
+              ))}
+            {(animator.children ?? [])
+              .filter((group) => group.children && group.match !== 'properties' && group.match !== 'selectors')
+              .map((group) => (
+                <PropertyGroup key={group.path} node={group} scope={scope} depth={1} label={phrase(group.name)} />
+              ))}
+            <p className="kui-muted motion-animator-hint">{t('animator.hint')}</p>
           </div>
         )
       })}

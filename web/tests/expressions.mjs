@@ -121,6 +121,20 @@ try {
   await until(async () => ((await kit.getByTestId(`${row}-error`).textContent().catch(() => '')) ?? '').includes('没写完'))
   const syntax = (await kit.getByTestId(`${row}-error`).textContent().catch(() => '')) ?? ''
   step('an expression that stops short says so in Chinese, without the engine’s words or a brace', syntax.includes('没写完') && !/[{}]|unexpected|token/i.test(syntax), syntax)
+  // A bracket or a quote left open: which one, and where.
+  for (const [typed, expected] of [
+    ['Math.sin(time', '第 1 行第 9 个字符的“(”缺少配对的“)”'],
+    ['wiggle(2, 30', '第 1 行第 7 个字符的“(”缺少配对的“)”'],
+    ['[1, 2', '第 1 行第 1 个字符的“[”缺少配对的“]”'],
+    ['x = "abc', '第 1 行第 5 个字符的引号 " 没有结束'],
+  ]) {
+    await field.click()
+    await field.fill(typed)
+    await field.press('Enter')
+    await until(async () => ((await kit.getByTestId(`${row}-error`).textContent().catch(() => '')) ?? '').includes(expected))
+    const said = (await kit.getByTestId(`${row}-error`).textContent().catch(() => '')) ?? ''
+    step(`${typed} says what is missing and where`, said.includes(expected), said)
+  }
   await field.click()
   await field.fill('nothingHere * 2')
   await field.press('Enter')

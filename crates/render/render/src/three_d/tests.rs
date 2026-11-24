@@ -525,6 +525,27 @@ fn top_view_sees_planes_edge_on() {
 }
 
 #[test]
+fn a_3d_view_other_than_the_cameras_leaves_the_2d_layers_out() {
+    let (mut p, cid, comp) = setup();
+    // A 2D solid over the whole comp, above a small 3D one.
+    let mut flat = solid3(&mut p, &comp, [0.0, 0.0, 1.0], W, H, [100.0, 50.0, 0.0]);
+    flat.switches.three_d = false;
+    let cube = solid3(&mut p, &comp, [1.0, 0.0, 0.0], 40, 40, [100.0, 50.0, 0.0]);
+    push(&mut p, cid, cube);
+    push(&mut p, cid, flat);
+    // The active camera's picture shows the 2D layer over everything.
+    let img = Renderer::new(&p, &NoFootage, RenderOpts::default()).comp_frame(cid, Tick::ZERO);
+    assert!(img.get(10, 10)[2] > 0.99);
+    // The Front view shows the 3D layer alone.
+    let mut vc = default_view_cam(View3D::Front, W as f64, H as f64);
+    vc.zoom = 1.0;
+    let opts = RenderOpts { view: Some(vc.state()), ..Default::default() };
+    let img = Renderer::new(&p, &NoFootage, opts).comp_frame(cid, Tick::ZERO);
+    assert!(img.get(10, 10)[3] < 0.01, "the 2D layer covers the Front view");
+    assert!(img.get(100, 50)[0] > 0.99, "the 3D layer is not in the Front view");
+}
+
+#[test]
 fn rig_orbit_keeps_distance_and_pan_moves_both() {
     let vc = default_view_cam(View3D::Custom1, 1920.0, 1080.0);
     let mut r = Rig::from_view(&vc);

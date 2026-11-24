@@ -60,7 +60,7 @@ function EffectCard({ effect, index, count, scope, selected, onSelect, onGrip }:
           data-testid={`motion-effect-enabled-${index + 1}`}
         />
         <IconButton icon={Reset} label={t('effect.reset')} disabled={readOnly} onClick={() => void run('effect.reset', { layer: layer.id, effect: index + 1 })} data-testid={`motion-effect-reset-${index + 1}`} />
-        <MenuButton align="end" trigger={({ open: shown, toggle }) => <IconButton icon={More} label={t('effect.menu')} pressed={shown} disabled={readOnly} onClick={toggle} data-testid={`motion-effect-menu-${index + 1}`} />}>
+        <MenuButton placement="auto" align="end" trigger={({ open: shown, toggle }) => <IconButton icon={More} label={t('effect.menu')} pressed={shown} disabled={readOnly} onClick={toggle} data-testid={`motion-effect-menu-${index + 1}`} />}>
           <MenuItem label={t('effect.duplicate')} onSelect={() => void run('prop.duplicateGroup', { layer: layer.id, prop: uid })} testId={`motion-effect-duplicate-${index + 1}`} />
           <MenuItem label={t('effect.moveUp')} disabled={index === 0} onSelect={() => move(index - 1)} testId={`motion-effect-up-${index + 1}`} />
           <MenuItem label={t('effect.moveDown')} disabled={index === count - 1} onSelect={() => move(index + 1)} testId={`motion-effect-down-${index + 1}`} />

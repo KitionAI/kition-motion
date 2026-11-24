@@ -16,6 +16,9 @@ export function pressed(binding: Binding, event: KeyLike) {
   return binding.match ? binding.match(event) : binding.keys.some((keys) => shortcutMatches(keys, event, undefined, true))
 }
 
+/** Alt+Shift and a digit key, by its place on the keyboard (Option changes the character on a Mac). */
+const altShiftDigit = (event: KeyLike, digit: number) => event.altKey && event.shiftKey && !event.metaKey && !event.ctrlKey && event.code === `Digit${digit}`
+
 const plain = (event: KeyLike) => !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey
 
 /** The timeline's keys, asked before the editor's (Timeline.tsx). */
@@ -53,6 +56,10 @@ export const EDITOR_KEYS = {
   previousFrame: { keys: ['PageUp', 'Cmd+←'], zh: '上一帧（加 Shift 后退 10 帧）', en: 'Previous frame (10 with Shift)', match: (event: KeyLike) => event.key === 'PageUp' || (event.key === 'ArrowLeft' && (event.metaKey || event.ctrlKey)) },
   start: { keys: ['Home'], zh: '转到开头', en: 'Go to the start', match: (event: KeyLike) => event.key === 'Home' && plain(event) },
   end: { keys: ['End'], zh: '转到结尾', en: 'Go to the end', match: (event: KeyLike) => event.key === 'End' && plain(event) },
+  // F10, F11 and F12 (the menu's keys) are often the browser's or the system's: these work everywhere.
+  view3dFront: { keys: ['Alt+Shift+1'], zh: '3D 视图：正面（同 F10）', en: '3D view: Front (as F10)', match: (event: KeyLike) => altShiftDigit(event, 1) },
+  view3dCustom: { keys: ['Alt+Shift+2'], zh: '3D 视图：自定义视图 1（同 F11）', en: '3D view: Custom View 1 (as F11)', match: (event: KeyLike) => altShiftDigit(event, 2) },
+  view3dCamera: { keys: ['Alt+Shift+3'], zh: '3D 视图：活动摄像机（同 F12）', en: '3D view: Active Camera (as F12)', match: (event: KeyLike) => altShiftDigit(event, 3) },
 } satisfies Record<string, Binding>
 
 /** Mouse gestures with keys in the Properties panel and on the timeline's property rows (KeyDiamond.tsx). */

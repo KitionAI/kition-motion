@@ -36,6 +36,10 @@ try {
   await h.open()
   const comp = (await h.details()).comp
   const frames = Math.round(comp.duration * comp.frameRate)
+  // Playback here runs to the end and stops: Loop (on by default) off first.
+  await kit.getByTestId('motion-loop').click()
+  await until(async () => (await kit.getByTestId('motion-loop').getAttribute('aria-pressed')) === 'false')
+  step('Loop turns off (playback then stops at the end)', (await kit.getByTestId('motion-loop').getAttribute('aria-pressed')) === 'false')
   await h.focusEditor()
 
   // 1. The first playback renders each frame it shows and keeps it.

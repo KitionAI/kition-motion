@@ -19,6 +19,9 @@ export const LAYER_STYLES: ReadonlyArray<readonly [id: string, label: string]> =
   ['stroke', 'Stroke'],
 ]
 
+/** A new drop shadow's settings: farther, larger and darker than the engine's, so it shows on a dark background. */
+export const DROP_SHADOW = { distance: 20, size: 20, opacity: 100 }
+
 /** Layers that take styles: the ones that draw pixels of their own. */
 const NO_STYLES = new Set(['Camera', 'Light', 'Null', 'Adjustment', 'Audio'])
 
@@ -54,7 +57,7 @@ export function LayerStylesSection({ layer, group }: { layer: MotionLayer; group
           )}
         >
           {missing.map(([id, label]) => (
-            <MenuItem key={id} label={phrase(label)} onSelect={() => void run('layer.style.add', { layers: [layer.id], style: id })} testId={`motion-style-add-${id}`} />
+            <MenuItem key={id} label={phrase(label)} onSelect={() => void run('layer.style.add', { layers: [layer.id], style: id, ...(id === 'dropShadow' ? { params: DROP_SHADOW } : {}) })} testId={`motion-style-add-${id}`} />
           ))}
           {applied.length ? <MenuSeparator /> : null}
           {applied.length ? <MenuItem label={t('style.removeAll')} onSelect={() => void run('layer.style.removeAll', { layers: [layer.id] })} testId="motion-style-remove-all" /> : null}
@@ -62,6 +65,7 @@ export function LayerStylesSection({ layer, group }: { layer: MotionLayer; group
       }
     >
       {applied.length ? null : <p className="kui-muted motion-effect-none">{t('style.empty')}</p>}
+      <div className="motion-props">
       {styles.map((style) => {
         const name = phrase(style.name)
         const id = pathId(style.path)
@@ -85,6 +89,7 @@ export function LayerStylesSection({ layer, group }: { layer: MotionLayer; group
           </div>
         )
       })}
+      </div>
     </Section>
   )
 }

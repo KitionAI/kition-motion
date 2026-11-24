@@ -1,3 +1,4 @@
+import { cameraOrLight } from '../timeline/SwitchCells'
 import { useEffect, useRef, useState } from 'react'
 import { Field, Select, TextInput, useKitEditor } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
@@ -57,24 +58,26 @@ export function LayerHeader({ info, layer, readOnly, count }: { info: MotionInfo
         </span>
       </div>
       <div className="motion-form-pair">
-        <Field label={t('props.blendMode')}>
-          {({ id }) => (
-            <Select id={id} value={layer.blendMode} disabled={readOnly} onChange={(event) => void run('layer.setBlendMode', { layers: [layer.id], mode: event.target.value })} data-testid="motion-blend-mode">
-              {modes.flatMap((mode) => [
-                ...(GROUP_STARTS.has(mode)
-                  ? [
-                      <option key={`--${mode}`} disabled>
-                        ──────
-                      </option>,
-                    ]
-                  : []),
-                <option key={mode} value={mode}>
-                  {phrase(mode)}
-                </option>,
-              ])}
-            </Select>
-          )}
-        </Field>
+        {cameraOrLight(layer) ? null : (
+          <Field label={t('props.blendMode')}>
+            {({ id }) => (
+              <Select id={id} value={layer.blendMode} disabled={readOnly} onChange={(event) => void run('layer.setBlendMode', { layers: [layer.id], mode: event.target.value })} data-testid="motion-blend-mode">
+                {modes.flatMap((mode) => [
+                  ...(GROUP_STARTS.has(mode)
+                    ? [
+                        <option key={`--${mode}`} disabled>
+                          ──────
+                        </option>,
+                      ]
+                    : []),
+                  <option key={mode} value={mode}>
+                    {phrase(mode)}
+                  </option>,
+                ])}
+              </Select>
+            )}
+          </Field>
+        )}
         <Field label={t('props.parent')}>
           {({ id }) => (
             <Select

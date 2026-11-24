@@ -85,8 +85,8 @@ const EXTRA_KEY = 'kition-motion.timeline-names-extra'
 
 /**
  * The pixels the person dragged the split between the names (with their columns) and the tracks
- * by, kept in this browser: the names column is its columns' width plus this, at least 160 px and
- * leaving the tracks at least 200 px of `total`.
+ * by, kept in this browser: the names column is its columns' width plus this, at least its columns
+ * and `NAMES_LEAST` px, leaving the tracks at least `TRACKS_LEAST` px of `total`.
  */
 export function useNamesSplit() {
   const [extra, setExtraState] = useState(() => {
@@ -107,6 +107,12 @@ export function useNamesSplit() {
 /** The names column's width: its columns' plus the dragged `extra`, within `total` (the timeline's width; 0 when unknown). */
 export function splitWidth(shown: ReadonlySet<ColumnId>, extra: number, total: number) {
   const wanted = namesWidth(shown) + extra
-  const most = total > 0 ? Math.max(160, total - 200) : Infinity
-  return Math.round(Math.min(most, Math.max(160, wanted)))
+  // The names keep room for a layer's number, a name and the graph button beside their columns.
+  const least = namesWidth(shown) - NAMES_BASE + NAMES_LEAST
+  const most = total > 0 ? Math.max(least, total - TRACKS_LEAST) : Infinity
+  return Math.round(Math.min(most, Math.max(least, wanted)))
 }
+
+/** The narrowest the names part (without its columns) and the tracks get when the split is dragged. */
+export const NAMES_LEAST = 168
+export const TRACKS_LEAST = 240

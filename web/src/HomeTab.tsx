@@ -2,7 +2,7 @@ import { DiamondIcon as Diamond, LayersIcon as Layers, PauseIcon as Pause, PlusI
 import { CommandButton, CommandItem, MenuItem, MenuSeparator, RibbonButton, RibbonGroup, RibbonMenu, RibbonStack, useKitEditor, useReadOnly } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
 import { keyAt } from './properties/KeyDiamond'
-import { NEW_LAYERS } from './Transport'
+import { NEW_LAYERS, OWN_NEW_LAYERS } from './Transport'
 import { EFFECT_PREFIX, FIND_EFFECT } from './effects'
 
 /** The layers Home's New Layer menu makes: the transport's (a camera and a light among them). */
@@ -29,7 +29,7 @@ export function HomeTab({ info, onCommand, wholeWorkArea, lastEffect }: { info: 
       <RibbonGroup label={p('Layer')} icon={Layers}>
         <RibbonMenu icon={Plus} label={t('newLayer')} size="large" disabled={readOnly} testId="motion-home-new-layer" primary>
           {HOME_LAYERS.map((layer) => (
-            <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => (layer.command === 'layer.newSolid' ? onCommand(layer.command) : void run(layer.command, { ...layer.params }))} testId={`motion-home-new-${layer.id}`} />
+            <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => (OWN_NEW_LAYERS.has(layer.command) ? onCommand(layer.command) : void run(layer.command, { ...layer.params }))} testId={`motion-home-new-${layer.id}`} />
           ))}
         </RibbonMenu>
         <CommandButton command="layer.newText" params={{ text: 'Text' }} icon={Type} primary />
