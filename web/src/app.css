@@ -1820,3 +1820,8 @@ button.motion-switch:focus-visible {
 .motion-names-split:hover {
   background: var(--kit-primary-soft);
 }
+
+/* The text animators: inset like the section's other rows, their buttons clear of the panel's scroll bar. */
+.motion-animators {
+  padding: 0 14px 0 12px;
+}

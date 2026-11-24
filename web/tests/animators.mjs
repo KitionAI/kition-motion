@@ -11,6 +11,22 @@ const { page, kit, step, until } = h
 
 const TEXT = 73
 
+/**
+ * Opens animator 1's Remove menu and picks `part` in it; on failure says which removal it was,
+ * with the panel's test ids and a picture of the page, so a missing card shows why.
+ */
+async function removeFromAnimator(part, which) {
+  try {
+    await kit.getByTestId('motion-animator-remove-1').click({ timeout: 10000 })
+    await kit.getByTestId(`motion-animator-remove-1-${part}`).click({ timeout: 10000 })
+  } catch (error) {
+    const ids = await kit.getByTestId('motion-properties-body').locator('[data-testid]').evaluateAll((all) => all.map((each) => each.getAttribute('data-testid')).filter((id) => /animator/.test(id ?? ''))).catch(() => [])
+    const shot = `/tmp/animators-${h.which}-${part}.png`
+    await page.screenshot({ path: shot }).catch(() => null)
+    throw new Error(`the ${which} removal (${part}) failed: ${String(error?.message ?? error).split('\n')[0]}; panel ids: ${ids.join(' ')}; picture: ${shot}`)
+  }
+}
+
 /** The layer's animators: each `{uid, selectors: [match], properties: [match]}`. */
 async function animators() {
   const tree = (await h.query('layer.tree', { layer: TEXT, depth: 8 }))?.properties
@@ -75,12 +91,10 @@ try {
   await kit.getByTestId('motion-animator-selector-1-wiggly').click()
   await until(async () => (await animators())[0]?.selectors.includes('wigglySelector'))
   step('Add ▸ 摆动选择器 adds a wiggly selector', (await animators())[0]?.selectors.join() === 'rangeSelector,wigglySelector', JSON.stringify((await animators())[0]?.selectors))
-  await kit.getByTestId('motion-animator-remove-1').click()
-  await kit.getByTestId('motion-animator-remove-1-opacity').click()
+  await removeFromAnimator('opacity', 'first')
   await until(async () => !(await animators())[0]?.properties.includes('opacity'))
   step('Remove ▸ 不透明度 removes only Opacity', (await animators())[0]?.properties.join() === 'position', JSON.stringify((await animators())[0]?.properties))
-  await kit.getByTestId('motion-animator-remove-1').click()
-  await kit.getByTestId('motion-animator-remove-1-wigglySelector').click()
+  await removeFromAnimator('wigglySelector', 'second')
   await until(async () => !(await animators())[0]?.selectors.includes('wigglySelector'))
   step('and the wiggly selector alone', (await animators())[0]?.selectors.join() === 'rangeSelector')
   await h.undo()
@@ -102,8 +116,7 @@ try {
   } else step('the animator’s Position has x and y fields', false, String(await offset.count()))
 
   // 5. The whole animator removed.
-  await kit.getByTestId('motion-animator-remove-1').click()
-  await kit.getByTestId('motion-animator-remove-1-all').click()
+  await removeFromAnimator('all', 'third')
   await until(async () => (await animators()).length === 0)
   step('Remove ▸ the animator takes it away', (await animators()).length === 0)
 
