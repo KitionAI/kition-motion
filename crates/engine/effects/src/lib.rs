@@ -162,11 +162,14 @@ impl Params {
     pub fn get(&self, id: &str) -> Option<&Value> {
         self.values.get(id)
     }
+    /// A number parameter; 0 when it is missing, or not a finite number (a NaN or an infinity an
+    /// expression or a malformed project gave), so no effect divides, loops or sizes by one.
     pub fn f(&self, id: &str) -> f64 {
-        self.values.get(id).map(Value::as_f64).unwrap_or(0.0)
+        self.values.get(id).map(Value::as_f64).filter(|v| v.is_finite()).unwrap_or(0.0)
     }
+    /// A point parameter; a coordinate that is not a finite number reads as 0, as [`Params::f`].
     pub fn v2(&self, id: &str) -> [f64; 2] {
-        self.values.get(id).map(Value::as_vec2).unwrap_or([0.0; 2])
+        self.values.get(id).map(Value::as_vec2).map(|p| p.map(|c| if c.is_finite() { c } else { 0.0 })).unwrap_or([0.0; 2])
     }
     pub fn color(&self, id: &str) -> [f32; 4] {
         self.values.get(id).map(Value::as_color).unwrap_or([1.0; 4])
@@ -1208,6 +1211,39 @@ pub(crate) fn run_fx(id: &str, vals: &[(&str, Value)], img: Image, time: f64, en
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn number_parameters_that_are_not_finite_read_as_zero() {
+        let mut params = Params::default();
+        for (id, v) in [("nan", f64::NAN), ("up", f64::INFINITY), ("down", f64::NEG_INFINITY), ("fine", 2.5)] {
+            params.values.insert(id.to_owned(), num(v));
+        }
+        params.values.insert("point".to_owned(), Value::Vec2([f64::NAN, 3.0]));
+        assert_eq!(params.f("nan"), 0.0);
+        assert_eq!(params.f("up"), 0.0);
+        assert_eq!(params.f("down"), 0.0);
+        assert_eq!(params.f("fine"), 2.5);
+        assert_eq!(params.v2("point"), [0.0, 3.0]);
+    }
+
+    /// Every effect with every number parameter NaN (an expression's 0/0) renders without a panic.
+    #[test]
+    fn every_effect_takes_nan_parameters() {
+        for spec in registry() {
+            let size = [8.0, 6.0];
+            let mut params = Params { values: spec.params.iter().map(|p| (p.id.to_string(), default_value(p, size))).collect() };
+            for value in params.values.values_mut() {
+                match value {
+                    Value::Scalar(v) => *v = f64::NAN,
+                    Value::Vec2(v) => *v = [f64::NAN; 2],
+                    _ => {}
+                }
+            }
+            let img = Image::filled(8, 6, [0.5, 0.25, 0.125, 1.0]);
+            let ctx = EffectCtx { params: &params, time: 0.0, layer_size: size, seed: 1, adjustment: false, env: EffectEnv::default() };
+            let _ = apply(spec, &ctx, Buf { img, offset: [0.0, 0.0], scale: 1.0 });
+        }
+    }
 
     #[test]
     fn run_fx_passthrough() {
