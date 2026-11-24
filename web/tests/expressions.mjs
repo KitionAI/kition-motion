@@ -176,6 +176,16 @@ try {
   await until(async () => (await solidKeys()) === keysBefore)
   step('one undo takes it off', (await solidKeys()) === keysBefore)
 
+  // The help docs' picture of the interface: a layer selected, twirled open with its expression row.
+  if (shots) {
+    await open()
+    await kit.getByTestId(`motion-layer-${SHAPE}`).click()
+    await kit.getByTestId(`motion-twirl-layer-${SHAPE}`).click()
+    await kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).waitFor()
+    await page.waitForTimeout(500)
+    await page.screenshot({ path: `${shots}phase6-interface.png` })
+  }
+
   step('no page errors', errors.length === 0, errors.join(' | '))
 } catch (error) {
   step('ran to the end', false, String(error?.stack ?? error).split('\n').slice(0, 3).join(' '))
