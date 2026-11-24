@@ -224,8 +224,20 @@ try {
   step('a second effect opens below the first', (await kit.getByTestId('motion-effect-toggle-2').getAttribute('aria-expanded')) === 'true')
   await kit.getByTestId('motion-effect-toggle-1').click()
   await kit.getByTestId('motion-effect-toggle-2').click()
-  const grip = await kit.getByTestId('motion-effect-grip-2').boundingBox()
+  // Both cards are brought into view and have stopped moving before the drag is measured: the panel
+  // is long, and closing two cards moves what is below them.
+  await kit.getByTestId('motion-effect-card-1').scrollIntoViewIfNeeded()
+  await kit.getByTestId('motion-effect-grip-2').scrollIntoViewIfNeeded()
+  let grip = await kit.getByTestId('motion-effect-grip-2').boundingBox()
+  await until(async () => {
+    const was = grip
+    await page.waitForTimeout(150)
+    grip = await kit.getByTestId('motion-effect-grip-2').boundingBox()
+    return was.y === grip.y && (await kit.getByTestId('motion-effect-toggle-2').getAttribute('aria-expanded')) === 'false'
+  })
   const first = await kit.getByTestId('motion-effect-card-1').boundingBox()
+  const pressed = await kit.locator('body').evaluate((body, at) => body.ownerDocument.elementFromPoint(at.x, at.y)?.closest('[data-testid]')?.getAttribute('data-testid') ?? 'nothing', await kit.getByTestId('motion-effect-grip-2').evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } }))
+  step('the second card’s grip is in view to press', pressed === 'motion-effect-grip-2' && first.y >= 0, `under the pointer: ${pressed}`)
   await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
   await page.mouse.down()
   for (let i = 1; i <= 10; i += 1) await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2 + ((first.y + 4 - grip.y - grip.height / 2) * i) / 10)
