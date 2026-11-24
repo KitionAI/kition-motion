@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict'
 import { chromium, webkit } from 'playwright'
 import { createServer } from 'vite'
+import { delayEngineReplies } from './slowEngine.mjs'
 
 /** The editor's scroll margin, in screen pixels (src/motion.ts: SCROLL_MARGIN, the margin a fitted picture has). */
 const MARGIN = 32
@@ -14,6 +15,7 @@ const server = await createServer({ configFile: new URL('../vite.config.ts', imp
 await server.listen()
 const browser = await (which === 'webkit' ? webkit : chromium).launch()
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+await delayEngineReplies(page.context())
 const errors = []
 page.on('pageerror', (error) => errors.push(error.message))
 try {

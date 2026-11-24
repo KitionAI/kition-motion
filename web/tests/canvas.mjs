@@ -6,6 +6,7 @@
 // Prints PASS or FAIL per step.
 import { chromium, webkit } from 'playwright'
 import { createServer } from 'vite'
+import { delayEngineReplies } from './slowEngine.mjs'
 
 const which = process.argv[2] ?? 'chromium'
 const shots = process.argv[3] === 'shots' ? new URL('../../../kition-plan/kit-docs/motion/images/', import.meta.url).pathname : null
@@ -14,6 +15,7 @@ await server.listen()
 const origin = `http://127.0.0.1:${server.httpServer.address().port}`
 const browser = await (which === 'webkit' ? webkit : chromium).launch()
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+await delayEngineReplies(context)
 const page = await context.newPage()
 const errors = []
 let failures = 0

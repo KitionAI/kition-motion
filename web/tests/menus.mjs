@@ -10,6 +10,7 @@
 import { writeFileSync } from 'node:fs'
 import { chromium, webkit } from 'playwright'
 import { createServer } from 'vite'
+import { delayEngineReplies } from './slowEngine.mjs'
 
 const which = process.argv[2] ?? 'chromium'
 const WORKERS = Number(process.env.MENUS_WORKERS ?? 4)
@@ -28,6 +29,7 @@ const PICTURE = 'iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAIAAAAuKetIAAAACXBIWXMAAAABAAA
 /** A fresh page on the sample: the playhead at the middle, and in `layer` the shape layer selected by a click on its row. */
 async function open(state) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  await delayEngineReplies(context)
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
