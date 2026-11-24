@@ -247,8 +247,22 @@ try {
 
   // A box drawn on empty space selects the keys inside it.
   const area = await box('motion-graph-svg')
-  // From the top right to past the left edge: keys at 0 s sit on the graph's left edge.
-  await drag({ x: area.x + area.width - 3, y: area.y + 3 }, { x: area.x - 12, y: area.y + area.height - 3 })
+  // From the top right to past the left edge: keys at 0 s sit on the graph's left edge. The press must
+  // land on empty space (on a key it would pick that key instead of starting a box), and the last key
+  // of a curve that reaches the top sits in that corner, nearer or farther with the page's fonts; so
+  // the press goes to the right of every key, at the first height along the right edge clear of them.
+  const start = await kit.getByTestId('motion-graph-svg').evaluate((svg) => {
+    const frame = svg.getBoundingClientRect()
+    const marks = [...svg.querySelectorAll('.motion-graph-key, .motion-graph-handle')].map((mark) => mark.getBoundingClientRect())
+    const x = frame.width - 1
+    for (let y = 1; y < frame.height / 2; y += 2) {
+      const [px, py] = [frame.left + x, frame.top + y]
+      if (marks.every((mark) => px < mark.left - 6 || px > mark.right + 6 || py < mark.top - 6 || py > mark.bottom + 6)) return { x, y }
+    }
+    return null
+  })
+  step('the graph has empty space beside its last keys to start a box from', start !== null, JSON.stringify(start))
+  await drag({ x: area.x + (start?.x ?? area.width - 3), y: area.y + (start?.y ?? 3) }, { x: area.x - 12, y: area.y + area.height - 3 })
   await until(async () => (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === (await kit.locator('.motion-graph-key').count()))
   step('a box over the graph selects every key in it', (await kit.locator('.motion-graph-key[aria-selected="true"]').count()) === (await kit.locator('.motion-graph-key').count()) && (await kit.locator('.motion-graph-key').count()) >= 6, `${await kit.locator('.motion-graph-key[aria-selected="true"]').count()} of ${await kit.locator('.motion-graph-key').count()}`)
   await page.mouse.click(area.x + area.width - 3, area.y + 3)
