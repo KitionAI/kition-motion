@@ -266,6 +266,15 @@ const enUS: Catalog = {
   "export.lottie.warnings": "Lottie could not carry {count} thing(s) of this composition:",
   "export.lottieFailed": "The engine wrote no Lottie file",
   "export.close": "Close",
+  "dialog.sequence": "Sequence Layers",
+  "sequence.overlap": "Overlap",
+  "sequence.duration": "Overlap duration",
+  "sequence.badDuration": "A duration above 0, as 0:00:01:00 or in seconds",
+  "sequence.transition": "Transition",
+  "sequence.transition.off": "None",
+  "sequence.transition.dissolveFront": "Dissolve front layer",
+  "sequence.transition.crossDissolve": "Cross dissolve front and back layers",
+  "sequence.order": "The layers follow one another in the order they were selected.",
 }
 
 const zhCN: Catalog = {
@@ -532,6 +541,15 @@ const zhCN: Catalog = {
   "export.lottie.warnings": "这个合成里有 {count} 处 Lottie 带不过去：",
   "export.lottieFailed": "引擎没有写出 Lottie 文件",
   "export.close": "关闭",
+  "dialog.sequence": "序列图层",
+  "sequence.overlap": "重叠",
+  "sequence.duration": "重叠持续时间",
+  "sequence.badDuration": "持续时间要大于 0，写成 0:00:01:00 或秒数",
+  "sequence.transition": "过渡",
+  "sequence.transition.off": "无",
+  "sequence.transition.dissolveFront": "溶解前景图层",
+  "sequence.transition.crossDissolve": "交叉溶解前景和背景图层",
+  "sequence.order": "图层按选中的先后顺序一个接一个排列。",
 }
 
 export const CATALOGS: Record<string, Catalog> = { 'en-US': enUS, 'zh-CN': zhCN }
@@ -997,4 +1015,7 @@ export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
   "Save Animation Preset…": "保存动画预设…",
   "Lottie JSON…": "Lottie JSON 动画…",
   "Export": "导出",
+  "Sequence Layers…": "序列图层…",
+  "Align to Selection Instead": "改为对齐到选区",
+  "Align to Composition Instead": "改为对齐到合成",
 } }

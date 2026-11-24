@@ -26,7 +26,7 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
+import { ARRANGE, KIT, KIT_RUNS, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, type AlignTo, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -95,13 +95,13 @@ function usePlayback(run: (command: string, params: Record<string, unknown>) => 
  * copy, `wouldChange`), asked again a moment after the document, the selection or the time
  * changes, but not during playback.
  */
-function useIdleRows(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, state: unknown, playing: boolean) {
+function useIdleRows(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, state: unknown, playing: boolean, alignTo: string) {
   const [idle, setIdle] = useState<ReadonlySet<string>>(() => new Set([...Object.keys(KIT_RUNS), ...Object.keys(TRIED_ROWS)]))
   useEffect(() => {
     if (!doc || playing) return undefined
     let current = true
     const timer = window.setTimeout(async () => {
-      const tries: Array<[string, string, Record<string, unknown>]> = [...Object.entries(KIT_RUNS).map(([row, [command, params]]) => [row, command, params] as [string, string, Record<string, unknown>]), ...Object.entries(TRIED_ROWS).map(([command, params]) => [command, command, params] as [string, string, Record<string, unknown>])]
+      const tries: Array<[string, string, Record<string, unknown>]> = [...Object.entries(KIT_RUNS).map(([row, [command, params]]) => [row, command, command === 'layer.align' ? { ...params, to: alignTo } : params] as [string, string, Record<string, unknown>]), ...Object.entries(TRIED_ROWS).map(([command, params]) => [command, command, params] as [string, string, Record<string, unknown>])]
       const next = new Set<string>()
       for (const [row, command, params] of tries) if (!(await doc.invoke<boolean>('wouldChange', command, JSON.stringify(params)).catch(() => false))) next.add(row)
       if (current) setIdle((before) => ([...before].sort().join() === [...next].sort().join() ? before : next))
@@ -110,7 +110,7 @@ function useIdleRows(doc: { invoke: <T>(name: string, ...args: unknown[]) => Pro
       current = false
       window.clearTimeout(timer)
     }
-  }, [doc, state, playing])
+  }, [doc, state, playing, alignTo])
   return idle
 }
 
@@ -435,6 +435,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   // View's rulers, guides, grid and safe areas, and what a moved layer snaps to (the engine's Selection tool asks).
   const { overlays, toggle: toggleOverlay } = useOverlays()
   const [gridSpacing, setGridSpacing] = useState(100)
+  // Layer ▸ Align: to the composition, or to the selected layers' bounds.
+  const [alignTo, setAlignTo] = useState<AlignTo>('composition')
   // View ▸ Resolution: the engine renders every n-th pixel; the canvas paints again.
   const [preview, setPreview] = useState(() => {
     const stored = Number(globalThis.sessionStorage?.getItem('motion-preview-resolution'))
@@ -586,6 +588,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'keys.interpolation': () => void openInterpolation(),
     'keys.velocity': () => void openVelocity(),
     'layer.timeStretch': () => void openStretch(),
+    'kit:sequence': () => state?.comp && setDialog({ kind: 'sequence', fps: state.comp.fps }),
+    [KIT.alignTo]: () => setAlignTo((current) => (current === 'composition' ? 'selection' : 'composition')),
     'anim.savePreset': () => setDialog({ kind: 'savePreset', name: t('preset.defaultName'), onSave: (name) => void savePreset(name) }),
     'anim.applyPreset': () => void applyPreset(),
     ...Object.fromEntries(INTERPOLATIONS.map((row) => [row.command, () => void run('keys.interpolation', { interpolation: row.interpolation })])),
@@ -599,6 +603,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     },
   }
   const latestOwn = useRef(own)
+  const latestAlign = useRef(alignTo)
+  latestAlign.current = alignTo
   const latestApply = useRef(applyEffect)
   latestApply.current = applyEffect
   latestOwn.current = own
@@ -609,16 +615,16 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       if (handler) handler()
       else if (command.startsWith(EFFECT_PREFIX)) latestApply.current(command.slice(EFFECT_PREFIX.length))
       else if (ARRANGE[command]) void run('layer.arrange', { to: ARRANGE[command] })
-      else if (KIT_RUNS[command]) void run(KIT_RUNS[command][0], { ...KIT_RUNS[command][1] })
+      else if (KIT_RUNS[command]) void run(KIT_RUNS[command][0], { ...KIT_RUNS[command][1], ...(KIT_RUNS[command][0] === 'layer.align' ? { to: latestAlign.current } : {}) })
       else void run(command, {})
     },
     [run],
   )
   // Rows with nothing to act on are hidden; the predicate changes only when that does.
-  const idle = useIdleRows(session.doc, state, playback.playing)
-  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview }, editor.enabled('keys.interpolation'), idle)
+  const idle = useIdleRows(session.doc, state, playback.playing, alignTo)
+  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo }, editor.enabled('keys.interpolation'), idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
-  const rows = useMemo(() => menuRows(effects, overlays), [effects, overlays])
+  const rows = useMemo(() => menuRows(effects, overlays, alignTo), [effects, overlays, alignTo])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
   const allowed = useMemo(() => shortcutCommands(rows), [rows])
   const hiddenCommands = useCallback((command: string) => !allowed.has(command), [allowed])
@@ -761,6 +767,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           data-picture={picture ? `${picture.width} ${picture.height}` : undefined}
           data-overlays={OVERLAY_KEYS.filter((key) => overlays[key]).join(' ')}
           data-resolution={preview}
+          data-align-to={alignTo}
         >
           <div
             className="motion-main"

@@ -629,3 +629,12 @@ features:
     gap: "No adding or deleting a vertex on an existing mask, no converting a corner to a curve after drawing, no selecting several vertices or moving a whole mask, no mask feather tool and no RotoBezier; mask vertices take a press before the layer's scale handles, so a mask corner on the layer's corner moves the vertex. Gated by web/tests/canvas.mjs and the pen tests in bindings/wasm/src/tools/tests.rs."
     cases: []
     since: "2026-11-23"
+  - id: motion.editor.sequenceAlign
+    title: "Animation ▸ Sequence Layers… asks whether the selected layers overlap, by how long, and with which transition (none, dissolve front layer, cross dissolve) and sequences them in one undo step (layer.sequence); Layer ▸ Align switches between aligning to the composition and to the selection (改为对齐到选区 / 改为对齐到合成), and its rows then line the layers up with the selection's bounds (layer.align to: selection)"
+    dimension: [function]
+    priority: P2
+    status: has
+    paths: [web/src/dialogs.tsx, web/src/menus.ts, web/src/App.tsx, web/src/strings.ts, web/tests/menus.mjs]
+    gap: "The align target is the session's choice, not saved; there is no Align panel, only the menu (and Home has no align buttons). Gated by web/tests/menus.mjs (three layers sequenced with a cross dissolve, aligned left to the selection)."
+    cases: []
+    since: "2026-11-23"

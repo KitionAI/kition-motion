@@ -23,6 +23,7 @@ export type MotionDialog =
   | { kind: 'velocity'; values: VelocityValues; units: string }
   | { kind: 'stretch'; layers: number[]; stretch: number; span: number; fps: number }
   | { kind: 'savePreset'; name: string; onSave: (name: string) => void }
+  | { kind: 'sequence'; fps: number }
 
 /** The first selected keyframe's speed (units per second) and influence (%) on each side, for Keyframe Velocity. */
 export type VelocityValues = { inSpeed: number; inInfluence: number; outSpeed: number; outInfluence: number }
@@ -439,6 +440,50 @@ function SavePresetDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { 
   )
 }
 
+/**
+ * Sequence Layers: the selected layers one after another in the order they were selected, each
+ * starting where the one before ends, or overlapping it by a duration with a transition (none,
+ * the front layer dissolving out, or both dissolving across). One undo step (`layer.sequence`).
+ */
+function SequenceDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'sequence' }>; onDone: () => void }) {
+  const { run, t } = useKitEditor()
+  const [overlap, setOverlap] = useState(false)
+  const [duration, setDuration] = useState(formatTimecode(1, dialog.fps))
+  const [transition, setTransition] = useState<'off' | 'dissolveFront' | 'crossDissolve'>('off')
+  const seconds = parseTimecode(duration, dialog.fps, false, 1)
+  const valid = !overlap || (seconds !== null && seconds > 0)
+  return (
+    <FormDialog
+      title={t('dialog.sequence')}
+      testId="motion-sequence-dialog"
+      onSubmit={() => {
+        if (!valid) return
+        void run('layer.sequence', overlap ? { overlap: true, duration: seconds, transition } : { overlap: false })
+        onDone()
+      }}
+      onClose={onDone}
+      valid={valid}
+    >
+      <Checkbox label={t('sequence.overlap')} checked={overlap} onChange={setOverlap} testId="motion-sequence-overlap" />
+      {overlap ? (
+        <>
+          <TextRow label={t('sequence.duration')} value={duration} onChange={setDuration} error={seconds !== null && seconds > 0 ? null : t('sequence.badDuration')} testId="motion-sequence-duration" />
+          <Field label={t('sequence.transition')}>
+            {({ id }) => (
+              <Select id={id} value={transition} onChange={(event) => setTransition(event.target.value as 'off' | 'dissolveFront' | 'crossDissolve')} data-testid="motion-sequence-transition">
+                <option value="off">{t('sequence.transition.off')}</option>
+                <option value="dissolveFront">{t('sequence.transition.dissolveFront')}</option>
+                <option value="crossDissolve">{t('sequence.transition.crossDissolve')}</option>
+              </Select>
+            )}
+          </Field>
+        </>
+      ) : null}
+      <p className="kui-muted">{t('sequence.order')}</p>
+    </FormDialog>
+  )
+}
+
 /** The open dialog, if any; each runs one engine command (one undo step) when confirmed. */
 export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialog | null; onClose: () => void; onSeek: (seconds: number) => void }) {
   // A new dialog (even of the same kind) starts from its own values.
@@ -474,5 +519,7 @@ export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialo
       return <StretchDialog key={key} dialog={dialog} onDone={onClose} />
     case 'savePreset':
       return <SavePresetDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'sequence':
+      return <SequenceDialog key={key} dialog={dialog} onDone={onClose} />
   }
 }

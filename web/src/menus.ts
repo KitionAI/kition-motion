@@ -68,6 +68,7 @@ export const KIT = {
   addMarker: 'kit:add-marker',
   projectPanel: 'kit:project-panel',
   safe: 'kit:safe-areas',
+  alignTo: 'kit:align-to',
 } as const
 
 /** View's switches (the engine's own rows, answered by the editor) and the overlay each turns on and off. */
@@ -156,7 +157,10 @@ function overlayEntries(overlays: Overlays): Entry[] {
   return [row('view.rulers'), SEPARATOR, row('view.guides'), row('view.snapToGuides'), row('view.lockGuides'), ['Clear Guides', 'view.clearGuides'], SEPARATOR, row('view.grid'), row('view.snapToGrid'), row(KIT.safe)]
 }
 
-const MENUS = (overlays: Overlays): ReadonlyArray<readonly [string, readonly Entry[]]> => [
+/** What Layer ▸ Align lines layers up with: the composition's frame, or the selected layers' bounds. */
+export type AlignTo = 'composition' | 'selection'
+
+const MENUS = (overlays: Overlays, alignTo: AlignTo): ReadonlyArray<readonly [string, readonly Entry[]]> => [
   [
     'File',
     [
@@ -266,6 +270,8 @@ const MENUS = (overlays: Overlays): ReadonlyArray<readonly [string, readonly Ent
       [
         'Align',
         [
+          [alignTo === 'composition' ? 'Align to Selection Instead' : 'Align to Composition Instead', KIT.alignTo],
+          SEPARATOR,
           ['Align Left', 'kit:align-left'],
           ['Align Horizontal Centers', 'kit:align-hcenter'],
           ['Align Right', 'kit:align-right'],
@@ -311,7 +317,7 @@ const MENUS = (overlays: Overlays): ReadonlyArray<readonly [string, readonly Ent
       ['Easy Ease Out', 'keys.easyEaseOut'],
       ['Toggle Hold Keyframe', 'keys.toggleHold'],
       ['Time-Reverse Keyframes', 'keys.timeReverse'],
-      ['Sequence Layers', 'kit:sequence'],
+      ['Sequence Layers…', 'kit:sequence'],
       SEPARATOR,
       ['Separate Dimensions', 'prop.separateDimensions'],
       ['Add Expression', 'prop.setExpression'],
@@ -346,8 +352,8 @@ const MENUS = (overlays: Overlays): ReadonlyArray<readonly [string, readonly Ent
 ]
 
 /** Every menu row, in menu order: the Effect menu (every effect the engine has, by category) after Layer. */
-export function menuRows(effects: readonly MotionEffect[], overlays: Overlays): MenuRow[] {
-  return MENUS(overlays).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
+export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo): MenuRow[] {
+  return MENUS(overlays, alignTo).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
 }
 
 /** Menus kept in a read-only document. */
@@ -373,7 +379,7 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
  * Zoom 100% at 100%, the resolution the canvas shows, the Keyframe Interpolation rows without selected keyframes, and the
  * `KIT_RUNS` and `TRIED_ROWS` rows that would change nothing now (`idle`).
  */
-export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean; preview: number }, keysSelected: boolean, idle: ReadonlySet<string>) {
+export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean; preview: number; alignTo: AlignTo }, keysSelected: boolean, idle: ReadonlySet<string>) {
   const layers = info?.layers ?? []
   const selected = layers.some((layer) => layer.selected)
   const comp = info?.comp
@@ -391,6 +397,8 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { 
   for (const [command, , divisor] of RESOLUTIONS) if (divisor === view.preview) hidden.add(command)
   if (!keysSelected) for (const row of INTERPOLATIONS) hidden.add(row.command)
   for (const command of idle) hidden.add(command)
+  // Aligning to the selection needs two or more selected layers.
+  if (view.alignTo === 'selection' && layers.filter((layer) => layer.selected).length < 2) for (const command of Object.keys(KIT_RUNS)) if (command.startsWith('kit:align-')) hidden.add(command)
   const key = [...hidden].sort().join(' ') + (selected ? '' : ' effects')
   return { key, hidden: (row: MenuRow) => hidden.has(row.command) || (!selected && row.command.startsWith(EFFECT_PREFIX)) }
 }

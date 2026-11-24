@@ -56,7 +56,7 @@ async function snapshot({ page, kit }) {
   const inspected = await page.evaluate(async () => window.devHost.connection().ai.inspect())
   const enabled = await page.evaluate(async () => (await window.devHost.connection().ai.commands('')).filter((command) => command.enabled !== false).map((command) => command.id).sort().join(' '))
   const files = await page.evaluate(() => [...window.devHost.files.keys()].sort().join(' '))
-  const view = `${await kit.getByTestId('motion-workspace').getAttribute('data-view')} ${await kit.getByTestId('motion-workspace').getAttribute('data-overlays')} ${await kit.getByTestId('motion-workspace').getAttribute('data-resolution')}`
+  const view = `${await kit.getByTestId('motion-workspace').getAttribute('data-view')} ${await kit.getByTestId('motion-workspace').getAttribute('data-overlays')} ${await kit.getByTestId('motion-workspace').getAttribute('data-resolution')} ${await kit.getByTestId('motion-workspace').getAttribute('data-align-to')}`
   const play = await kit.getByTestId('motion-play').getAttribute('aria-label')
   const render = await kit.getByTestId('motion-render').textContent()
   const d = inspected.details ?? {}
@@ -420,12 +420,39 @@ try {
       const shown = (await row.count()) === 1
       if (shown) await row.click()
       else await page.keyboard.press('Escape')
+      // Sequence Layers… asks how: overlapping by half a second, cross-dissolving.
+      if (shown && (await kit.getByTestId('motion-sequence-dialog').count())) {
+        await kit.getByTestId('motion-sequence-overlap').click()
+        await kit.getByTestId('motion-sequence-duration').fill('0:00:00:15')
+        await kit.getByTestId('motion-sequence-transition').selectOption('crossDissolve')
+        await kit.getByTestId('motion-sequence-dialog-ok').click()
+      }
       await page.waitForTimeout(600)
       const after = (await page.evaluate(async () => window.devHost.connection().ai.inspect())).revision
       step(`three layers: ${what} is shown and changes the composition`, shown && after !== before && (await errorToasts(kit)) === 0)
+      if (what === 'Sequence Layers') {
+        const faded = (await ctx.details()).info.layers.filter((layer) => layer.animated.some((property) => property.path === 'transform/opacity')).length
+        step('three layers: a cross dissolve keys the overlapping layers’ opacity', faded >= 2, `${faded} layers fade`)
+      }
       await undo(ctx)
       step(`and one undo takes it back`, (await page.evaluate(async () => window.devHost.connection().ai.inspect())).revision !== after)
     }
+    // Align to the selection: Align Left lines the layers up with the leftmost, which stays put.
+    const positions = async () => Object.fromEntries((await Promise.all(all.map(async (layer) => [layer.id, (await page.evaluate(async (id) => (await window.devHost.connection().ai.run([{ command: 'prop.get', params: { layer: id, path: 'transform/position' } }], false)).completed[0].result.value, layer.id)) ]))))
+    const start = await positions()
+    await kit.getByTestId('motion-menu-Layer').click()
+    await kit.locator('[data-kit-ui-id="menu:Layer/Align"]').hover()
+    await kit.locator('[role=menu] [data-testid="motion-control-align-to"]').first().click()
+    await page.waitForTimeout(300)
+    step('Layer ▸ 对齐 ▸ 改为对齐到选区 switches what Align lines up with', (await kit.getByTestId('motion-workspace').getAttribute('data-align-to')) === 'selection')
+    await kit.getByTestId('motion-menu-Layer').click()
+    await kit.locator('[data-kit-ui-id="menu:Layer/Align"]').hover()
+    await kit.locator('[role=menu] [data-testid="motion-control-align-left"]').first().click()
+    await page.waitForTimeout(700)
+    const aligned = await positions()
+    const moved = Object.keys(start).filter((id) => Math.abs(start[id][0] - aligned[id][0]) > 0.5)
+    step('aligning left to the selection moves some layers and leaves the leftmost', moved.length >= 1 && moved.length < Object.keys(start).length && (await errorToasts(kit)) === 0, JSON.stringify({ start, aligned }))
+    await undo(ctx)
     await ctx.context.close()
   }
 
