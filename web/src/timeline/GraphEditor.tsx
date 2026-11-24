@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react'
+import { EyeIcon, EyeOffIcon, TargetIcon } from '@kition/tessera/icons/react'
 import { useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
 import { snapIn, useTimeline } from './context'
@@ -155,6 +156,14 @@ function gridOf(low: number, high: number, count: number) {
   return lines
 }
 
+/** Enter or Space on a span with the button role presses it. */
+function pressWithKey(event: KeyboardEvent<HTMLElement>, press: () => void) {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  event.stopPropagation()
+  press()
+}
+
 /** A curve's id in test ids and keys: its layer and its property's path. */
 const curveId = (curve: Curve) => `${curve.target.layer.id}-${pathId(curve.target.path)}`
 
@@ -205,7 +214,19 @@ export function GraphEditor({
     return () => observer.disconnect()
   }, [])
   const count = Math.round(Math.min(600, Math.max(48, width / 3)))
-  const curves = useCurves(targets, view.start, view.start + view.span, count, revision)
+  const all = useCurves(targets, view.start, view.start + view.span, count, revision)
+  // The legend's eyes hide curves, its solo shows one alone; the rest draw, select and fit only what shows.
+  const [hiddenCurves, setHiddenCurves] = useState<ReadonlySet<string>>(() => new Set())
+  const [solo, setSolo] = useState<string | null>(null)
+  const soloShown = solo != null && all.some((curve) => curveId(curve) === solo) ? solo : null
+  const curves = useMemo(() => all.filter((curve) => (soloShown ? curveId(curve) === soloShown : !hiddenCurves.has(curveId(curve)))), [all, soloShown, hiddenCurves])
+  const toggleHidden = (id: string) =>
+    setHiddenCurves((now) => {
+      const next = new Set(now)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const [drag, showDrag] = useState<Drag | null>(null)
   // The drag as the pointer has left it: a busy page takes several moves and the release in one go,
   // before the moves' render, so the handlers read this and not the drag of the last render.
@@ -253,7 +274,7 @@ export function GraphEditor({
   fitRef.current = fit
 
   const local = (event: { clientX: number; clientY: number }) => {
-    const rect = box.current?.querySelector('svg')?.getBoundingClientRect()
+    const rect = box.current?.querySelector('.motion-graph-plot > svg')?.getBoundingClientRect()
     return rect ? { px: event.clientX - rect.left, py: event.clientY - rect.top } : { px: 0, py: 0 }
   }
 
@@ -395,18 +416,50 @@ export function GraphEditor({
       <div className="motion-timeline-names motion-graph-names">
         {head}
         <ul className="motion-graph-legend">
-          {curves.map((curve, curveIndex) => (
-            <li key={curveId(curve)} data-scale={curve === owner || undefined} data-testid={`motion-graph-legend-${curveId(curve)}`}>
-              <button type="button" className="motion-graph-legend-name" title={t('graph.scaleHint', { name: `${curve.target.layer.name} › ${curve.target.name}` })} onClick={() => setScaleOf(curveId(curve))}>
+          {all.map((curve, curveIndex) => {
+            const id = curveId(curve)
+            const shown = curves.includes(curve)
+            const name = `${curve.target.layer.name} › ${curve.target.name}`
+            return (
+            <li key={id} data-scale={curve === owner || undefined} data-hidden={!shown || undefined} data-testid={`motion-graph-legend-${id}`}>
+              {/* Spans with the button role: the legend's one <button> stays the name (the scale's). */}
+              <span
+                role="button"
+                tabIndex={0}
+                className="motion-graph-legend-eye"
+                onKeyDown={(event) => pressWithKey(event, () => toggleHidden(id))}
+                aria-pressed={!hiddenCurves.has(id)}
+                aria-label={t(hiddenCurves.has(id) ? 'graph.show' : 'graph.hide', { name })}
+                title={t(hiddenCurves.has(id) ? 'graph.show' : 'graph.hide', { name })}
+                onClick={() => toggleHidden(id)}
+                data-testid={`motion-graph-eye-${id}`}
+              >
+                {hiddenCurves.has(id) ? <EyeOffIcon size={12} aria-hidden="true" /> : <EyeIcon size={12} aria-hidden="true" />}
+              </span>
+              <span
+                role="button"
+                tabIndex={0}
+                className="motion-graph-legend-eye"
+                onKeyDown={(event) => pressWithKey(event, () => setSolo((now) => (now === id ? null : id)))}
+                aria-pressed={soloShown === id}
+                aria-label={t(soloShown === id ? 'graph.unsolo' : 'graph.solo', { name })}
+                title={t(soloShown === id ? 'graph.unsolo' : 'graph.solo', { name })}
+                onClick={() => setSolo((now) => (now === id ? null : id))}
+                data-testid={`motion-graph-solo-${id}`}
+              >
+                <TargetIcon size={12} aria-hidden="true" />
+              </span>
+              <button type="button" className="motion-graph-legend-name" title={t('graph.scaleHint', { name })} onClick={() => setScaleOf(id)}>
                 {curve.target.layer.name} › {curve.target.name}
               </button>
-              {(lines.get(curve) ?? []).map((line) => (
+              {(lines.get(curve) ?? linesOf(curve, mode)).map((line) => (
                 <span key={line.dim} className="motion-graph-chip" data-dim={line.kind} style={lineStyle(line.kind, curveIndex)}>
                   {line.kind === 'one' ? '' : line.kind.toUpperCase()}
                 </span>
               ))}
             </li>
-          ))}
+            )
+          })}
         </ul>
       </div>
       <div className="motion-graph-plot">
@@ -432,8 +485,10 @@ export function GraphEditor({
               ))
             : null}
           <line className="motion-graph-playhead" x1={x(info.time)} x2={x(info.time)} y1={0} y2={height} />
-          {curves.map((curve, curveIndex) =>
+          {curves.map((curve) =>
             (lines.get(curve) ?? []).map((line) => {
+              // Its colour by its place among all the curves, so hiding another does not repaint it.
+              const curveIndex = all.indexOf(curve)
               const id = `${curveId(curve)}-${line.dim}`
               const points = line.points.map(([time, value]) => `${x(time).toFixed(1)},${y(curve, value).toFixed(1)}`).join(' ')
               return (

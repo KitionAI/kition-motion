@@ -286,9 +286,14 @@ impl MotionDocument {
 
     /// What the viewer's frame now depends on besides the project (see [`frames::FrameKey`]).
     fn frame_key(&self) -> Option<frames::FrameKey> {
+        self.frame_key_at(self.session.time())
+    }
+
+    /// [`Self::frame_key`] at another time.
+    fn frame_key_at(&self, at: Tick) -> Option<frames::FrameKey> {
         let comp_id = self.session.active_comp_id()?;
         let comp = self.session.project.comp(comp_id)?;
-        let time = comp.frame_rate.snap(self.session.time());
+        let time = comp.frame_rate.snap(at);
         let view = self
             .session
             .view_camera(comp_id)
@@ -319,12 +324,19 @@ impl MotionDocument {
     /// the region of interest rendered (the rest grey), at View ▸ Resolution. A frame drawn
     /// before (same revision and settings) comes from the frame cache.
     fn frame(&self) -> Result<(Arc<Vec<u8>>, u32, u32), String> {
-        let comp_id = self.session.active_comp_id().ok_or("no composition is open")?;
         let key = self.frame_key().ok_or("no composition is open")?;
         let revision = self.session.revision;
         if let Some(drawn) = self.frames.borrow_mut().get(revision, &key) {
             return Ok((drawn.rgba, drawn.width, drawn.height));
         }
+        let (rgba, width, height, ms) = self.render_frame(&key)?;
+        self.frames.borrow_mut().put(revision, key, rgba.clone(), width, height, ms);
+        Ok((rgba, width, height))
+    }
+
+    /// Renders the viewer's frame for `key` (see [`Self::frame`]); answers it and the milliseconds it took.
+    fn render_frame(&self, key: &frames::FrameKey) -> Result<(Arc<Vec<u8>>, u32, u32, f64), String> {
+        let comp_id = key.comp;
         let started = web_time::Instant::now();
         let comp = self.session.project.comp(comp_id).ok_or("no composition is open")?;
         let scale = 1.0 / f64::from(self.preview.max(1));
@@ -358,9 +370,46 @@ impl MotionDocument {
         } else {
             (Arc::new(rendered), width, height)
         };
-        let ms = started.elapsed().as_secs_f64() * 1000.0;
-        self.frames.borrow_mut().put(revision, key, rgba.clone(), width, height, ms);
-        Ok((rgba, width, height))
+        Ok((rgba, width, height, started.elapsed().as_secs_f64() * 1000.0))
+    }
+
+    /// Cache Work Area in Background: renders, for about `milliseconds`, the work area's frames
+    /// the frame cache does not hold yet for the viewer's settings now, from the current time on
+    /// (round to the work area's start), without showing them. It stops at the cache's memory
+    /// budget rather than drop frames it holds. Answers `{done, total, full}`: frames held of the
+    /// work area's, and whether the budget stopped it. An edit (a new revision) empties the cache,
+    /// so the next call starts again.
+    pub fn cache_ahead(&self, milliseconds: f64) -> Value {
+        let Some(comp) = self.session.active_comp() else { return json!({ "done": 0, "total": 0, "full": false }) };
+        let rate = comp.frame_rate;
+        let (from, to) = if comp.work_area.1 > comp.work_area.0 { comp.work_area } else { (Tick(0), comp.duration) };
+        let (first, end) = (rate.frame_at(rate.snap_nearest(from)), rate.frame_at(rate.snap_nearest(to)));
+        let total = end.saturating_sub(first).max(0);
+        // At most a few thousand frames are looked at.
+        let total = total.min(100_000);
+        let revision = self.session.revision;
+        let started = web_time::Instant::now();
+        let budget = if milliseconds.is_finite() { milliseconds.clamp(0.0, 2000.0) } else { 0.0 };
+        let now = rate.frame_at(self.session.time()).clamp(first, end.saturating_sub(1).max(first));
+        let mut full = false;
+        for step in 0..total {
+            let frame = first + (now - first + step).rem_euclid(total.max(1));
+            let Some(key) = self.frame_key_at(rate.tick_of(frame)) else { break };
+            if self.frames.borrow().holds(revision, &key) {
+                continue;
+            }
+            if started.elapsed().as_secs_f64() * 1000.0 >= budget {
+                break;
+            }
+            let Ok((rgba, width, height, ms)) = self.render_frame(&key) else { break };
+            if !self.frames.borrow_mut().put_ahead(revision, key, rgba, width, height, ms) {
+                full = true;
+                break;
+            }
+        }
+        let held =
+            (0..total).filter(|step| self.frame_key_at(rate.tick_of(first + step)).is_some_and(|key| self.frames.borrow().holds(revision, &key))).count();
+        json!({ "done": held, "total": total, "full": full })
     }
 
     /// What the frame cache holds for the viewer's settings now (the frames of the active
@@ -477,6 +526,101 @@ impl MotionDocument {
         self.export.with(|export| export.step(milliseconds)).ok_or_else(|| "no export is running".to_owned())
     }
 
+    /// The finished export's files, by name, left in memory for [`Self::take_file`]: the one
+    /// file of a movie or a sound, or every frame of an image sequence (its output named the
+    /// frame number `[#####]`), in order. An export that failed answers why.
+    pub fn export_finish_files(&mut self) -> Result<Vec<String>, String> {
+        let export = self.export.take().ok_or("no export is running")?;
+        let first = export.finished()?;
+        let pattern = export.path().to_owned();
+        let names = if pattern.contains('#') { self.sequence_files(&pattern) } else { vec![first.trim_start_matches('/').to_owned()] };
+        if names.is_empty() {
+            return Err("the render produced no file".to_owned());
+        }
+        Ok(names)
+    }
+
+    /// The files in memory an image sequence named `pattern` wrote (`Comp_[#####].png`: the
+    /// part before the run of `#`, digits, the part after), in order.
+    fn sequence_files(&self, pattern: &str) -> Vec<String> {
+        let pattern = pattern.trim_start_matches('/');
+        let Some(at) = pattern.find('#') else { return Vec::new() };
+        let prefix = pattern.get(..at).unwrap_or("").trim_end_matches('[');
+        let suffix = pattern.get(at..).unwrap_or("").trim_start_matches('#').trim_start_matches(']');
+        let memory = self.services.memory.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut names: Vec<String> = memory
+            .keys()
+            .map(|key| key.trim_start_matches('/'))
+            .filter(|key| {
+                key.len() > prefix.len() + suffix.len()
+                    && key.starts_with(prefix)
+                    && key.ends_with(suffix)
+                    && key.get(prefix.len()..key.len() - suffix.len()).is_some_and(|digits| !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()))
+            })
+            .map(str::to_owned)
+            .collect();
+        names.sort();
+        names.dedup();
+        names
+    }
+
+    /// File ▸ Dependencies ▸ Collect Files: a copy of the project and every footage file it uses,
+    /// in memory under `folder` (inside the project's folder) for the host to write: the project
+    /// as `<folder>/<project name>` with its footage pointing at `(Footage)/<file>`, each file
+    /// beside it there (same names made unique). Answers `{files, missing}`: the names written (for
+    /// [`Self::take_file`]) and the footage that could not be read (left pointing where it was).
+    pub fn collect_files(&self, folder: &str) -> Result<Value, String> {
+        let folder = folder.trim().trim_matches('/');
+        if folder.is_empty() || folder.split('/').any(|part| part.is_empty() || part == "." || part == "..") || folder.contains('\\') {
+            return Err("the folder must be a name inside the project's folder".to_owned());
+        }
+        let mut project = (*self.session.project).clone();
+        let mut taken: HashSet<String> = HashSet::new();
+        let mut copied: HashMap<String, String> = HashMap::new();
+        let mut files = Vec::new();
+        let mut missing = Vec::new();
+        let mut memory: Vec<(String, Arc<[u8]>)> = Vec::new();
+        for item in project.items.values_mut() {
+            let ItemKind::Footage(footage) = &mut item.kind else { continue };
+            for path in std::iter::once(&mut footage.path).chain(footage.sequence.iter_mut()) {
+                if path.is_empty() {
+                    continue;
+                }
+                if let Some(done) = copied.get(path.as_str()) {
+                    *path = done.clone();
+                    continue;
+                }
+                let Ok(bytes) = self.services.read_file(path) else {
+                    missing.push(path.clone());
+                    continue;
+                };
+                let base = path.rsplit(['/', '\\']).next().unwrap_or("footage").to_owned();
+                let (stem, extension) = match base.rsplit_once('.') {
+                    Some((stem, extension)) if !stem.is_empty() => (stem.to_owned(), format!(".{extension}")),
+                    _ => (base.clone(), String::new()),
+                };
+                let mut name = base.clone();
+                let mut n = 2;
+                while !taken.insert(name.to_lowercase()) {
+                    name = format!("{stem} {n}{extension}");
+                    n += 1;
+                }
+                let relative = format!("(Footage)/{name}");
+                memory.push((format!("{folder}/{relative}"), Arc::from(bytes)));
+                copied.insert(path.clone(), relative.clone());
+                *path = relative;
+            }
+        }
+        let project_name = self.name.rsplit('/').next().filter(|name| !name.is_empty()).unwrap_or("Project.kmotion").to_owned();
+        memory.push((format!("{folder}/{project_name}"), Arc::from(project.to_content_json().into_bytes())));
+        let mut written = self.services.memory.lock().unwrap_or_else(PoisonError::into_inner);
+        for (name, bytes) in memory {
+            files.push(name.clone());
+            written.insert(name, bytes);
+        }
+        Ok(json!({ "files": files, "missing": missing }))
+    }
+
     /// The finished export's file; an export that failed answers why, one still running says so.
     pub fn export_finish(&mut self) -> Result<Vec<u8>, String> {
         let export = self.export.take().ok_or("no export is running")?;
@@ -523,6 +667,12 @@ impl MotionDocument {
         let Some(mut export) = self.export.take() else { return false };
         export.cancel();
         let _ = self.take_file(export.path());
+        // An image sequence's frames written so far go too.
+        if export.path().contains('#') {
+            for name in self.sequence_files(export.path()) {
+                let _ = self.take_file(&name);
+            }
+        }
         true
     }
 
@@ -636,6 +786,8 @@ pub const TRIED_COMMANDS: &[&str] = &[
     "keys.exponentialScale",
     "prop.convertExpressionToKeyframes",
     "view.reset3DView",
+    // Rove Across Time on the selected keyframes (a first or last one cannot rove).
+    "keys.interpolation",
 ];
 
 /// The longest stretch of sound [`MotionDocument::mix_audio`] mixes per call, in seconds.
@@ -1338,6 +1490,12 @@ pub mod web {
             self.0.export_step(milliseconds).map(|progress| progress.to_json()).map_err(|message| JsError::new(&message))
         }
 
+        /// The finished export's files' names, as JSON, for `takeFile` (see [`MotionDocument::export_finish_files`]).
+        #[wasm_bindgen(js_name = exportFinishFiles)]
+        pub fn export_finish_files(&mut self) -> Result<String, JsError> {
+            self.0.export_finish_files().map(|names| json!(names).to_string()).map_err(|message| JsError::new(&message))
+        }
+
         /// The finished export's bytes (see [`MotionDocument::export_finish`]).
         #[wasm_bindgen(js_name = exportFinish)]
         pub fn export_finish(&mut self) -> Result<Vec<u8>, JsError> {
@@ -1373,6 +1531,13 @@ pub mod web {
         #[wasm_bindgen(js_name = previewCache)]
         pub fn preview_cache(&self) -> String {
             self.0.preview_cache().to_string()
+        }
+
+        /// Cache Work Area in Background: renders frames ahead for about `milliseconds`; answers
+        /// JSON `{done, total, full}` (see [`MotionDocument::cache_ahead`]).
+        #[wasm_bindgen(js_name = cacheAhead)]
+        pub fn cache_ahead(&self, milliseconds: f64) -> String {
+            self.0.cache_ahead(milliseconds).to_string()
         }
 
         /// Drops every frame the cache keeps (see [`MotionDocument::purge_preview_cache`]).
@@ -1414,6 +1579,32 @@ pub mod web {
                 return Err(JsError::new("the layer must be a layer id"));
             }
             self.0.layer_waveform(layer as u64, count).map(|wave| wave.to_string()).map_err(|message| JsError::new(&message))
+        }
+
+        /// Where the Selection tool's 3D handles are on the canvas, as JSON (see [`MotionDocument::gizmo_handles`]).
+        #[wasm_bindgen(js_name = gizmoHandles)]
+        pub fn gizmo_handles(&self, zoom: f64) -> String {
+            self.0.gizmo_handles(zoom).to_string()
+        }
+
+        /// The two-view layout's second view: the length of a JSON header `{width, height, lines}`
+        /// (four bytes, little-endian), the header, then the RGBA picture (see [`MotionDocument::view_frame`]).
+        #[wasm_bindgen(js_name = viewFrame)]
+        pub fn view_frame(&self, view: &str, width: u32) -> Result<Vec<u8>, JsError> {
+            let (rgba, w, h, lines) = self.0.view_frame(view, width).map_err(|message| JsError::new(&message))?;
+            // The header (JSON, its length first as four bytes) and the picture in one answer.
+            let head = json!({ "width": w, "height": h, "lines": lines }).to_string().into_bytes();
+            let mut out = Vec::with_capacity(4 + head.len() + rgba.len());
+            out.extend_from_slice(&(head.len() as u32).to_le_bytes());
+            out.extend_from_slice(&head);
+            out.extend_from_slice(&rgba);
+            Ok(out)
+        }
+
+        /// Collect Files into `folder`: the names written, as JSON (see [`MotionDocument::collect_files`]).
+        #[wasm_bindgen(js_name = collectFiles)]
+        pub fn collect_files(&self, folder: &str) -> Result<String, JsError> {
+            self.0.collect_files(folder).map(|answer| answer.to_string()).map_err(|message| JsError::new(&message))
         }
 
         /// Stops the export and keeps no file (see [`MotionDocument::export_cancel`]).
@@ -1681,6 +1872,82 @@ mod tests {
         assert_eq!(&bytes[..4], &[0x1a, 0x45, 0xdf, 0xa3], "a WebM (EBML) file");
         assert_eq!(doc.revision(), revision);
         assert!(doc.export_finish().is_err(), "the export is over");
+    }
+
+    #[test]
+    fn roving_would_change_a_middle_keyframe_but_not_a_first_or_last_one() {
+        let mut doc = MotionDocument::create("Rove.kmotion", 64, 36).unwrap();
+        let layer = doc.execute("layer.newSolid", json!({ "name": "Dot" })).unwrap()["layer"].clone();
+        for (time, x) in [(0.0, 0.0), (1.0, 30.0), (2.0, 60.0)] {
+            doc.execute("prop.addKey", json!({ "layer": layer, "path": "transform/position", "time": time, "value": [x, 10.0, 0.0] })).unwrap();
+        }
+        let select = |doc: &mut MotionDocument, time: f64| {
+            doc.execute("keys.select", json!({ "keys": [{ "layer": layer, "path": "transform/position", "time": time }] })).unwrap()
+        };
+        select(&mut doc, 0.0);
+        assert!(!doc.would_change("keys.interpolation", r#"{"roving":true}"#), "a first keyframe cannot rove");
+        select(&mut doc, 2.0);
+        assert!(!doc.would_change("keys.interpolation", r#"{"roving":true}"#), "a last keyframe cannot rove");
+        select(&mut doc, 1.0);
+        assert!(doc.would_change("keys.interpolation", r#"{"roving":true}"#), "a middle keyframe can");
+    }
+
+    #[test]
+    fn collect_files_copies_the_project_and_its_footage_into_a_folder() {
+        let mut doc = MotionDocument::create("Shots/Motion.kmotion", 64, 36).unwrap();
+        // Footage the engine can read from memory (as the host's lent files are).
+        let svg = br##"<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#f00"/></svg>"##;
+        for path in ["art/logo.svg", "more/logo.svg"] {
+            doc.services.write_file(path, svg).unwrap();
+            let footage = kition_motion_media::probe_bytes(path, Arc::from(svg.to_vec())).unwrap();
+            Arc::make_mut(&mut doc.session.project).add_item("logo.svg", Default::default(), None, ItemKind::Footage(footage));
+        }
+        let answer = doc.collect_files("Collected").unwrap();
+        let files: Vec<String> = answer["files"].as_array().unwrap().iter().map(|name| name.as_str().unwrap().to_owned()).collect();
+        assert_eq!(answer["missing"], json!([]), "{answer}");
+        assert!(files.contains(&"Collected/(Footage)/logo.svg".to_owned()) && files.contains(&"Collected/(Footage)/logo 2.svg".to_owned()), "{files:?}");
+        assert!(files.contains(&"Collected/Motion.kmotion".to_owned()));
+        let copy = String::from_utf8(doc.take_file("Collected/Motion.kmotion").unwrap()).unwrap();
+        assert!(
+            copy.contains("(Footage)/logo.svg") && copy.contains("(Footage)/logo 2.svg") && !copy.contains("art/logo.svg"),
+            "the copy points at its own footage"
+        );
+        assert_eq!(doc.take_file("Collected/(Footage)/logo.svg").unwrap(), svg.to_vec());
+        // The open project still points where it did.
+        assert!(String::from_utf8(doc.save(None).unwrap()).unwrap().contains("art/logo.svg"));
+        for bad in ["", "..", "a/../b", "/"] {
+            assert!(doc.collect_files(bad).is_err(), "{bad:?} should be refused");
+        }
+    }
+
+    #[test]
+    fn png_and_jpeg_sequences_write_a_file_per_frame_and_wav_the_sound() {
+        let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        doc.execute("comp.settings", json!({ "duration": 0.2, "frameRate": 10 })).unwrap();
+        doc.export_start("Shot_[#####].png", r#"{"format":"png","channels":"rgba","size":{"width":32,"height":18}}"#).unwrap();
+        while !doc.export_step(50.0).unwrap().finished {}
+        let names = doc.export_finish_files().unwrap();
+        assert_eq!(names, vec!["Shot_00000.png".to_owned(), "Shot_00001.png".to_owned()], "{names:?}");
+        let first = doc.take_file(&names[0]).unwrap();
+        assert_eq!(&first[1..4], b"PNG");
+        // An RGBA PNG: colour type 6 in its header.
+        assert_eq!(first[25], 6, "the PNG keeps its alpha");
+        doc.export_start("Shot_[#####].jpg", r#"{"format":"jpeg","size":{"width":32,"height":18}}"#).unwrap();
+        while !doc.export_step(50.0).unwrap().finished {}
+        let names = doc.export_finish_files().unwrap();
+        assert_eq!(names.len(), 2);
+        assert!(names.iter().all(|name| doc.take_file(name).is_some_and(|bytes| bytes.starts_with(&[0xff, 0xd8]))));
+        // Stopped half way, a sequence leaves none of its frames.
+        doc.execute("comp.settings", json!({ "duration": 2.0 })).unwrap();
+        doc.export_start("Cut_[#####].png", r#"{"format":"png"}"#).unwrap();
+        doc.export_step(0.0).unwrap();
+        assert!(doc.export_cancel());
+        assert!(doc.sequence_files("Cut_[#####].png").is_empty());
+        doc.export_start("Sound.wav", r#"{"format":"wav"}"#).unwrap();
+        while !doc.export_step(50.0).unwrap().finished {}
+        let names = doc.export_finish_files().unwrap();
+        assert_eq!(names, vec!["Sound.wav".to_owned()]);
+        assert!(doc.take_file("Sound.wav").is_some_and(|bytes| bytes.starts_with(b"RIFF")));
     }
 
     #[test]

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowDownIcon, ArrowUpIcon, CopyIcon, PlayIcon, Settings2Icon, SquareIcon, TrashIcon, XIcon } from '@kition/tessera/icons/react'
-import { Button, Dialog, Field, IconButton, Select, TextInput, formatTimecode, parseTimecode, toast, useEngineQuery, useKitEditor, useReadOnly, type HostConnection, type KitEngine } from '@kition/sdk/editor'
+import { Button, Checkbox, Dialog, Field, IconButton, Select, TextInput, formatTimecode, parseTimecode, toast, useEngineQuery, useKitEditor, useReadOnly, type HostConnection, type KitEngine } from '@kition/sdk/editor'
 import { presetFolder } from './dialogs'
+import { SEQUENCES, sequenceName, writeExport } from './ExportDialog'
 import { parseAnswer, type ProjectItem, type ProjectSummary } from './footage'
 
 /**
@@ -17,11 +18,14 @@ import { parseAnswer, type ProjectItem, type ProjectSummary } from './footage'
  * started or waiting in this one. The jobs of the run cannot be moved or removed until it ends.
  */
 
-/** The formats a job renders here: the ones the web build writes as one file. Engine name (`renderQueue.add`), the item's serialized name, extension. */
+/** The formats a job renders here: movies in one file, PNG and JPEG sequences (a numbered file per frame) and WAV sound. Engine name (`renderQueue.add`), the item's serialized name, extension. */
 export const QUEUE_FORMATS = [
   { id: 'h264', item: 'H264', extension: 'mp4' },
   { id: 'webm', item: 'WebM', extension: 'webm' },
   { id: 'gif', item: 'Gif', extension: 'gif' },
+  { id: 'png', item: 'PngSequence', extension: 'png' },
+  { id: 'jpeg', item: 'JpegSequence', extension: 'jpg' },
+  { id: 'wav', item: 'Wav', extension: 'wav' },
 ] as const
 
 export type QueueFormat = (typeof QUEUE_FORMATS)[number]['id']
@@ -42,10 +46,12 @@ export type JobSettings = {
   name: string
   /** A folder inside the project's folder; empty: the project's folder. */
   folder: string
+  /** A PNG sequence keeps its transparency (RGB + alpha). */
+  alpha: boolean
 }
 
 /** A named preset of a job's output settings (not its composition, stretch or file name). */
-export type QueuePreset = { name: string } & Pick<JobSettings, 'format' | 'size' | 'width' | 'height' | 'frameRate' | 'folder'>
+export type QueuePreset = { name: string } & Pick<JobSettings, 'format' | 'size' | 'width' | 'height' | 'frameRate' | 'folder'> & Partial<Pick<JobSettings, 'alpha'>>
 
 /** A job as `renderQueue.list` answers it (the fields the panel reads). */
 export type QueueItem = {
@@ -61,7 +67,7 @@ export type QueueItem = {
   frameRate?: number
   span?: { kind: 'workArea' | 'comp' | 'custom'; start: number; end: number }
   settings?: { resolution?: number }
-  output?: { format?: string; output?: string; resize?: { enabled?: boolean; width?: number; height?: number } }
+  output?: { format?: string; output?: string; channels?: string; resize?: { enabled?: boolean; width?: number; height?: number } }
 }
 
 /** What happened to a job in this session's runs. */
@@ -127,7 +133,9 @@ function outputParams(settings: JobSettings, compName: string) {
   return {
     format: settings.format,
     resize: settings.size === 'custom' ? { enabled: true, width: settings.width, height: settings.height, lockAspect: false } : false,
-    output: [settings.folder, `${name}.${extension}`].filter(Boolean).join('/'),
+    // A sequence: the frame number after the name (`Comp 1_00000.png`, …).
+    output: [settings.folder, SEQUENCES.has(settings.format) ? sequenceName(name, extension) : `${name}.${extension}`].filter(Boolean).join('/'),
+    ...(settings.format === 'png' ? { channels: settings.alpha ? 'rgba' : 'rgb' } : {}),
   }
 }
 
@@ -160,8 +168,9 @@ function settingsOf(item: QueueItem): JobSettings {
     width: resize?.width ?? item.width ?? 1920,
     height: resize?.height ?? item.height ?? 1080,
     frameRate: null,
-    name: file.replace(/\.[^.]*$/, ''),
+    name: file.replace(/\.[^.]*$/, '').replace(/_\[#+\]$/, ''),
     folder,
+    alpha: (item.output?.channels ?? '').toLowerCase().includes('a'),
   }
 }
 
@@ -179,6 +188,7 @@ function newSettings(comp: { name: string; width: number; height: number }): Job
     frameRate: typeof last.frameRate === 'number' && last.frameRate > 0 ? last.frameRate : null,
     name: '',
     folder: typeof last.folder === 'string' ? (presetFolder(last.folder) ?? '') : '',
+    alpha: last.alpha !== false,
   }
 }
 
@@ -266,10 +276,11 @@ export function useRenderQueue({ doc, host, run, t }: { doc: KitEngine | null; h
             update(id, { state: 'stopped', elapsed: performance.now() - started })
             continue
           }
-          const bytes = await doc.invoke<Uint8Array>('exportFinish')
-          const path = await host.exportFile([folder, inside, file].filter(Boolean).join('/'), bytes)
+          // The movie or sound, or every frame of a sequence, into the job's folder.
+          const paths = await writeExport(doc, host, [folder, inside].filter(Boolean).join('/'))
           written += 1
-          update(id, { state: 'done', elapsed: performance.now() - started, file: path.split('/').slice(folder ? folder.split('/').length : 0).join('/') || path })
+          const shown = (path: string) => path.split('/').slice(folder ? folder.split('/').length : 0).join('/') || path
+          update(id, { state: 'done', elapsed: performance.now() - started, file: paths.length === 1 ? shown(paths[0]) : t('queue.files', { count: paths.length, first: shown(paths[0] ?? '') }) })
         } catch (error) {
           await doc.invoke<boolean>('exportCancel').catch(() => false)
           update(id, { state: 'failed', elapsed: performance.now() - started, error: error instanceof Error ? error.message : String(error) })
@@ -328,16 +339,20 @@ export function RenderQueuePanel({ queue, onClose }: { queue: RenderQueueRuns; o
 
   return (
     <section className="kui-panel motion-queue" aria-label={t('queue.title')} data-testid="motion-queue-panel" data-rendering={queue.rendering || undefined}>
+      {/* The title and Close on one line, the run's buttons on their own: nothing wraps in a narrow column. */}
       <div className="motion-project-head">
-        <span className="motion-project-title">{t('queue.title')}</span>
+        <span className="motion-project-title motion-queue-title">{t('queue.title')}</span>
         <span style={{ flex: 1 }} />
+        <IconButton icon={XIcon} label={t('queue.close')} onClick={onClose} data-testid="motion-queue-close" />
+      </div>
+      <div className="motion-queue-actions">
         {queue.rendering ? (
           <>
-            <Button variant="ghost" onClick={queue.stop} data-testid="motion-queue-stop">
-              <SquareIcon size={12} aria-hidden="true" />
+            <Button variant="ghost" className="motion-queue-stop" onClick={queue.stop} title={t('queue.stop.hint')} data-testid="motion-queue-stop">
+              <SquareIcon size={11} aria-hidden="true" />
               {t('queue.stop')}
             </Button>
-            <Button variant="ghost" onClick={queue.stopAll} data-testid="motion-queue-stop-all">
+            <Button variant="ghost" className="motion-queue-stop" onClick={queue.stopAll} title={t('queue.stopAll.hint')} data-testid="motion-queue-stop-all">
               {t('queue.stopAll')}
             </Button>
           </>
@@ -347,7 +362,6 @@ export function RenderQueuePanel({ queue, onClose }: { queue: RenderQueueRuns; o
             {t('queue.render')}
           </Button>
         )}
-        <IconButton icon={XIcon} label={t('queue.close')} onClick={onClose} data-testid="motion-queue-close" />
       </div>
       <div className="kui-panel-body motion-queue-list" data-testid="motion-queue-list">
         {items.length ? (
@@ -373,6 +387,9 @@ export function RenderQueuePanel({ queue, onClose }: { queue: RenderQueueRuns; o
                   <span className="motion-queue-comp" title={item.compName ?? ''}>
                     {item.compName ?? t('queue.noComp')}
                   </span>
+                </div>
+                {/* The job's buttons on a line of their own, under its name: the name keeps the row's width. */}
+                <div className="motion-queue-line motion-queue-tools-line">
                   <span className="motion-queue-tools">
                     <IconButton icon={Settings2Icon} label={t('queue.settings')} disabled={locked} onClick={() => setEditing({ item, comp: comps.find((comp) => comp.id === item.comp) ?? null })} data-testid={`motion-queue-item-${item.id}-settings`} />
                     <IconButton icon={ArrowUpIcon} label={t('queue.up')} disabled={locked || at === 0} onClick={() => void run('renderQueue.move', { item: item.id, to: at })} data-testid={`motion-queue-item-${item.id}-up`} />
@@ -456,7 +473,7 @@ function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: Proj
   const save = async () => {
     if (!valid || !item) return
     const values = final()
-    writeStored(LAST_KEY, { format: values.format, span: values.span === 'custom' ? 'comp' : values.span, size: values.size, width: values.width, height: values.height, frameRate: values.frameRate, folder: values.folder })
+    writeStored(LAST_KEY, { format: values.format, span: values.span === 'custom' ? 'comp' : values.span, size: values.size, width: values.width, height: values.height, frameRate: values.frameRate, folder: values.folder, alpha: values.alpha })
     // Only what changed: the engine refuses a change that changes nothing.
     const was = { ...start, frameRate: settings0.frameRate }
     const renderChanged = JSON.stringify(renderParams(values)) !== JSON.stringify(renderParams(was))
@@ -468,7 +485,7 @@ function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: Proj
   const applyPreset = (name: string) => {
     const preset = presets.find((each) => each.name === name)
     if (!preset) return
-    set({ format: preset.format, size: preset.size, frameRate: preset.frameRate, folder: preset.folder })
+    set({ format: preset.format, size: preset.size, frameRate: preset.frameRate, folder: preset.folder, ...(preset.alpha != null ? { alpha: preset.alpha } : {}) })
     setWidth(String(preset.width))
     setHeight(String(preset.height))
     if (preset.frameRate !== null) setRate(String(preset.frameRate))
@@ -477,7 +494,7 @@ function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: Proj
     const name = presetName.trim()
     if (!name || !valid) return
     const values = final()
-    const next = [...presets.filter((each) => each.name !== name), { name, format: values.format, size: values.size, width: values.width, height: values.height, frameRate: values.frameRate, folder: values.folder }]
+    const next = [...presets.filter((each) => each.name !== name), { name, format: values.format, size: values.size, width: values.width, height: values.height, frameRate: values.frameRate, folder: values.folder, alpha: values.alpha }]
     writeStored(PRESETS_KEY, next)
     setPresets(next)
     setPresetName('')
@@ -576,6 +593,7 @@ function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: Proj
             </Select>
           )}
         </Field>
+        {settings.format === 'png' ? <Checkbox label={t('export.alpha')} checked={settings.alpha} onChange={(alpha) => set({ alpha })} testId="motion-job-alpha" /> : null}
         <Field label={t('export.size')}>
           {({ id }) => (
             <Select id={id} value={settings.size} onChange={(event) => set({ size: event.target.value as JobSettings['size'] })} data-testid="motion-job-size">

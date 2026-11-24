@@ -60,8 +60,11 @@ impl MotionDocument {
         if project.comp(job.comp).is_none() {
             return Err("the item's composition is no longer in the project".to_owned());
         }
-        if !matches!(job.output.format, OutputFormat::H264 | OutputFormat::WebM | OutputFormat::Gif) {
-            return Err(format!("{} is not written here: choose H.264, WebM or GIF", job.output.format.label()));
+        if !matches!(
+            job.output.format,
+            OutputFormat::H264 | OutputFormat::WebM | OutputFormat::Gif | OutputFormat::PngSequence | OutputFormat::JpegSequence | OutputFormat::Wav
+        ) {
+            return Err(format!("{} is not written here: choose H.264, WebM, GIF, a PNG or JPEG sequence, or WAV", job.output.format.label()));
         }
         job.render = true;
         job.status = RenderStatus::Queued;
@@ -202,5 +205,48 @@ mod tests {
         assert!(doc.take_file(&path).is_some_and(|bytes| bytes.starts_with(b"GIF")));
         assert!(doc.drop_render_snapshot());
         assert!(doc.new_queue_export(id, "job.gif").is_err());
+    }
+
+    #[test]
+    fn a_queue_job_writes_a_png_sequence_with_alpha_and_a_wav() {
+        let mut doc = doc();
+        doc.execute(
+            "renderQueue.add",
+            json!({ "format": "png", "channels": "rgba", "timeSpan": "custom", "start": 0, "end": 0.1, "output": "seq/Shot_[#####].png" }),
+        )
+        .unwrap();
+        doc.execute("renderQueue.add", json!({ "format": "wav", "timeSpan": "custom", "start": 0, "end": 0.5, "output": "Sound.wav" })).unwrap();
+        let ids = doc.render_snapshot();
+        let (png, wav) = (ids[0].as_u64().unwrap(), ids[1].as_u64().unwrap());
+        doc.export.put(doc.new_queue_export(png, "Shot_[#####].png").unwrap());
+        while !doc.export_step(f64::INFINITY).unwrap().finished {}
+        let names = doc.export_finish_files().unwrap();
+        assert!(!names.is_empty() && names.iter().all(|name| name.starts_with("Shot_") && name.ends_with(".png")), "{names:?}");
+        assert!(names.iter().all(|name| doc.take_file(name).is_some_and(|bytes| bytes.get(25) == Some(&6))), "RGBA PNGs");
+        doc.export.put(doc.new_queue_export(wav, "Sound.wav").unwrap());
+        while !doc.export_step(f64::INFINITY).unwrap().finished {}
+        assert_eq!(doc.export_finish_files().unwrap(), vec!["Sound.wav".to_owned()]);
+        assert!(doc.take_file("Sound.wav").is_some_and(|bytes| bytes.starts_with(b"RIFF")));
+    }
+
+    #[test]
+    fn frames_cached_ahead_fill_the_work_area_and_an_edit_starts_again() {
+        let mut doc = doc();
+        doc.execute("comp.settings", json!({ "duration": 1.0, "frameRate": 10 })).unwrap();
+        let first = doc.cache_ahead(0.0);
+        assert_eq!(first["total"], json!(10));
+        // Enough time for every frame: the work area is all held, none was shown.
+        let all = doc.cache_ahead(2000.0);
+        assert_eq!((all["done"].as_i64(), all["full"].as_bool()), (Some(10), Some(false)), "{all}");
+        let report = doc.preview_cache();
+        assert_eq!(report["cached"].as_array().map(Vec::len), Some(10));
+        assert_eq!(report["shown"], json!(0), "frames cached ahead are not shown");
+        // The viewer's frame now comes from the cache.
+        doc.render(0.0, 0.0, 1.0, 64, 36).unwrap();
+        assert_eq!(doc.preview_cache()["hits"], json!(1));
+        // An edit: the cache holds nothing of the new revision until it fills again.
+        doc.execute("layer.newSolid", json!({ "name": "Blue", "color": "#0000ff" })).unwrap();
+        assert_eq!(doc.cache_ahead(0.0)["done"], json!(0));
+        assert_eq!(doc.cache_ahead(2000.0)["done"], json!(10));
     }
 }

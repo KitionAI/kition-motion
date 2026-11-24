@@ -130,8 +130,9 @@ impl Drop for ExportKey {
     }
 }
 
-/// The formats the Export dialog offers: the ones the web build encodes into one file.
-const FORMATS: [&str; 3] = ["h264", "webm", "gif"];
+/// The formats the Export dialog offers: the movies the web build encodes, PNG and JPEG
+/// sequences (a numbered file per frame: the output names its number as `[#####]`) and WAV sound.
+const FORMATS: [&str; 6] = ["h264", "webm", "gif", "png", "jpeg", "wav"];
 /// The size of a custom output, in pixels on each side.
 const SIZE: std::ops::RangeInclusive<u64> = 16..=8192;
 
@@ -159,6 +160,8 @@ pub(crate) fn queue_params(comp: u64, path: &str, settings: &str) -> Result<Valu
         match (key.as_str(), value) {
             ("format", Value::String(format)) if FORMATS.contains(&format.as_str()) => params["format"] = json!(format),
             ("span", Value::String(span)) if span == "comp" || span == "workArea" => params["timeSpan"] = json!(span),
+            // A PNG sequence with its alpha (RGB + Alpha) or without.
+            ("channels", Value::String(channels)) if channels == "rgb" || channels == "rgba" => params["channels"] = json!(channels),
             ("size", Value::String(size)) if size == "full" || size == "half" => params["resolution"] = json!(size),
             ("size", Value::Object(size)) => {
                 let side = |name: &str| size.get(name).and_then(Value::as_u64).filter(|n| SIZE.contains(n));
@@ -173,7 +176,7 @@ pub(crate) fn queue_params(comp: u64, path: &str, settings: &str) -> Result<Valu
             }
             _ => {
                 return Err(format!(
-                    "the export setting `{key}` is {value}: it takes format ({}), span (comp or workArea), size (full, half or {{width, height}}) and frameRate (fps or null)",
+                    "the export setting `{key}` is {value}: it takes format ({}), span (comp or workArea), size (full, half or {{width, height}}), frameRate (fps or null) and channels (rgb or rgba)",
                     FORMATS.join(", ")
                 ));
             }
@@ -203,6 +206,14 @@ mod tests {
         assert_eq!(params["resize"], json!({ "enabled": true, "width": 320, "height": 180, "lockAspect": false }));
         assert_eq!(params["frameRate"], 15);
         assert_eq!(queue_params(3, "a.mp4", r#"{"size":"half","frameRate":null}"#).unwrap()["resolution"], "half");
+    }
+
+    #[test]
+    fn image_sequences_and_sound_are_offered_with_their_alpha() {
+        let params = queue_params(2, "Comp_[#####].png", r#"{"format":"png","channels":"rgba"}"#).unwrap();
+        assert_eq!((params["format"].as_str(), params["channels"].as_str()), (Some("png"), Some("rgba")));
+        assert_eq!(queue_params(2, "a.wav", r#"{"format":"wav"}"#).unwrap()["format"], "wav");
+        assert!(queue_params(2, "a.png", r#"{"channels":"cmyk"}"#).is_err());
     }
 
     #[test]

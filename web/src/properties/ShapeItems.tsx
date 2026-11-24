@@ -1,7 +1,8 @@
 import { ArrowDownIcon, ArrowUpIcon, CopyIcon, EyeIcon, EyeOffIcon, PlusIcon, TrashIcon } from '@kition/tessera/icons/react'
 import type { TreeNode } from '../timeline/tree'
 import { reveal } from './Section'
-import { Button, ContextMenu, IconButton, MenuButton, MenuItem, SubMenu, useKitEditor, type ContextMenuPoint } from '@kition/sdk/editor'
+import { useState } from 'react'
+import { Button, ContextMenu, IconButton, MenuButton, MenuItem, MenuSeparator, SubMenu, TextInput, useKitEditor, type ContextMenuPoint } from '@kition/sdk/editor'
 
 /**
  * What a shape layer's Add menu offers (`layer.addShapeItem`'s kinds), in three submenus so the
@@ -11,7 +12,7 @@ import { Button, ContextMenu, IconButton, MenuButton, MenuItem, SubMenu, useKitE
 export const SHAPE_MENUS: ReadonlyArray<{ id: string; label: string; kinds: ReadonlyArray<readonly [kind: string, label: string]> }> = [
   {
     id: 'shapes',
-    label: 'Shapes',
+    label: 'Shapes: Rectangle, Ellipse, Star, Path',
     kinds: [
       ['group', 'Group (empty)'],
       ['rect', 'Rectangle'],
@@ -22,7 +23,7 @@ export const SHAPE_MENUS: ReadonlyArray<{ id: string; label: string; kinds: Read
   },
   {
     id: 'paints',
-    label: 'Paints',
+    label: 'Fill & Stroke (Gradients Too)',
     kinds: [
       ['fill', 'Fill'],
       ['stroke', 'Stroke'],
@@ -30,7 +31,7 @@ export const SHAPE_MENUS: ReadonlyArray<{ id: string; label: string; kinds: Read
       ['gstroke', 'Gradient Stroke'],
     ],
   },
-  { id: 'operations', label: 'Path Operations', kinds: [] },
+  { id: 'operations', label: 'Path Operations: Merge, Trim, Repeater…', kinds: [] },
 ]
 
 /** Every kind of the Add menu, in its order. */
@@ -56,6 +57,9 @@ const PAINTS = new Set(['fill', 'stroke', 'gfill', 'gstroke'])
 
 export function ShapeAddMenu({ layer, group, items, testId, readOnly, compact = false }: { layer: number; group?: number; items?: readonly TreeNode[]; testId: string; readOnly: boolean; compact?: boolean }) {
   const { run, t, phrase } = useKitEditor()
+  const [search, setSearch] = useState('')
+  const query = search.trim().toLowerCase()
+  const found = query ? MENUS.flatMap((menu) => menu.kinds).filter(([kind, label]) => label.toLowerCase().includes(query) || phrase(label).toLowerCase().includes(query) || kind.includes(query)) : []
   const add = async (kind: string) => {
     const first = PAINTS.has(kind) ? (items ?? []).findIndex((item) => PAINTS.has(item.match ?? '')) : -1
     const answer = await run('layer.addShapeItem', { layer, kind, ...(group != null ? { group } : {}), ...(first >= 0 ? { index: first + 1 } : {}) })
@@ -81,13 +85,46 @@ export function ShapeAddMenu({ layer, group, items, testId, readOnly, compact = 
         )
       }
     >
-      {MENUS.map((menu) => (
-        <SubMenu key={menu.id} label={phrase(menu.label)} path={`${testId}/${menu.id}`} uiId={`${testId}-${menu.id}`} testId={`${testId}-menu-${menu.id}`}>
-          {menu.kinds.map(([kind, label]) => (
-            <MenuItem key={kind} label={phrase(label)} onSelect={() => void add(kind)} testId={`${testId}-${kind}`} />
+      {/* A search over every kind (in either language): what matches is listed flat, Enter adds the first. */}
+      <div className="motion-add-search" role="none">
+        <TextInput
+          type="search"
+          value={search}
+          placeholder={t('shape.add.search')}
+          aria-label={t('shape.add.search')}
+          onChange={(event) => setSearch(event.target.value)}
+          onKeyDown={(event) => {
+            // The field's own keys (letters, arrows within the text), not the menu's; Escape still closes it.
+            if (event.key !== 'Escape') event.stopPropagation()
+            if (event.key === 'Enter' && found[0]) {
+              event.preventDefault()
+              const first = found[0][0]
+              setSearch('')
+              void add(first)
+              ;(event.currentTarget.closest('[role="menu"]') as HTMLElement | null)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+            }
+          }}
+          data-testid={`${testId}-search`}
+        />
+      </div>
+      {query ? (
+        found.length ? (
+          found.map(([kind, label]) => <MenuItem key={kind} label={phrase(label)} onSelect={() => { setSearch(''); void add(kind) }} testId={`${testId}-${kind}`} />)
+        ) : (
+          <p className="kui-muted motion-add-none">{t('shape.add.none')}</p>
+        )
+      ) : (
+        <>
+          <MenuSeparator />
+          {MENUS.map((menu) => (
+            <SubMenu key={menu.id} label={phrase(menu.label)} path={`${testId}/${menu.id}`} uiId={`${testId}-${menu.id}`} testId={`${testId}-menu-${menu.id}`}>
+              {menu.kinds.map(([kind, label]) => (
+                <MenuItem key={kind} label={phrase(label)} onSelect={() => void add(kind)} testId={`${testId}-${kind}`} />
+              ))}
+            </SubMenu>
           ))}
-        </SubMenu>
-      ))}
+        </>
+      )}
     </MenuButton>
   )
 }

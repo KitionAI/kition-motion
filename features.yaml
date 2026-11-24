@@ -779,7 +779,7 @@ features:
     priority: P1
     status: has
     paths: [web/src/RenderQueue.tsx, web/src/App.tsx, web/src/menus.ts, bindings/wasm/src/editor_reads.rs, bindings/wasm/src/movie.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/commands/render_queue.rs, web/tests/renderQueue.mjs]
-    gap: "Only formats written as one file render here (MP4, WebM, GIF); a job an agent set to an image sequence or another codec says so and is not rendered. Render settings beyond these (quality, effects, motion blur, templates) stay with agents (renderQueue.setRenderSettings). Gated by web/tests/renderQueue.mjs and the queue test in bindings/wasm/src/editor_reads.rs."
+    gap: "MP4, WebM, GIF, PNG and JPEG sequences and WAV render here; a job an agent set to another format (TIFF, EXR, ProRes, AIFF, HEVC, AV1) says so and is not rendered. Render settings beyond these (quality, effects, motion blur, templates) stay with agents (renderQueue.setRenderSettings). Gated by web/tests/renderQueue.mjs and the queue test in bindings/wasm/src/editor_reads.rs."
     cases: []
     since: "2026-11-24"
   - id: motion.editor.keyframe-assistants
@@ -788,7 +788,7 @@ features:
     priority: P1
     status: has
     paths: [web/src/timeline/KeyMenu.tsx, web/src/timeline/Timeline.tsx, web/src/dialogs.tsx, web/src/menus.ts, web/src/App.tsx, bindings/wasm/src/lib.rs, web/tests/keyframes.mjs]
-    gap: "No Wiggler, Smoother or Motion Sketch panels (keys.wiggle, keys.smooth and motion.sketch are for agents). Gated by web/tests/keyframes.mjs."
+    gap: "No Motion Sketch panel (motion.sketch is for agents); Wiggler and Smoother are in motion.editor.graph-tools. Gated by web/tests/keyframes.mjs."
     cases: []
     since: "2026-11-24"
   - id: motion.editor.info-audio
@@ -807,5 +807,95 @@ features:
     status: has
     paths: [web/src/App.tsx, web/src/menus.ts, web/src/keys.ts, web/src/strings.ts, web/src/app.css, web/src/Transport.tsx, web/src/HomeTab.tsx, web/src/properties/ShapeItems.tsx, web/src/properties/TextAnimators.tsx, web/src/properties/PropertiesPanel.tsx, web/scripts/shortcuts.mjs, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/pen.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/editor_reads.rs, crates/engine/engine/src/commands/layer.rs, crates/engine/engine/src/commands/text_edit.rs, crates/engine/engine/src/tests_text_edit.rs, web/tests/fixes7c.mjs]
     gap: "Gated by web/tests/fixes7c.mjs, web/tests/shapes.mjs, the test:shortcuts check, the Pen test in bindings/wasm/src/tools/tests.rs and the text naming test in crates/engine/engine/src/tests_text_edit.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.hand-fixes-7e
+    title: "The phase 7d audit's fixes: the transport stays on one line beside the Project and Properties panels (the meters and the frame rate give up their room first, then New layer's and Loop's labels; the composition's name stays readable and the time and duration never wrap; the buttons keep their place while playing); the Render Queue's title and job names read in the narrow column, its run buttons sit on their own line and Stop is a filled square; the keyframe dialog names the property in the editor's language and a 2D layer's Position, Anchor Point or Scale has x and y only (z kept); Rove Across Time is off with a tooltip (and says why from the Animation menu) on a first or last keyframe; File ▸ New ▸ New Folder starts renaming as the panel's button does; the pointer readout empties when the pointer leaves the composition (going straight to the status bar it holds, to switch units); the switch columns' short names use two characters where one was ambiguous; the shape Add menu's submenus name what they hold and a search at its top lists matching kinds (Enter adds the first); Alt+Shift+1, 2, 3, F10 and F12 are the 3D views' documented keys; a Project item dropped on the timeline after a single dragover adds its layer in WebKit (dragenter is accepted too); the text selection and caret follow characters moved by animators and Path Options"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/App.tsx, web/src/Transport.tsx, web/src/RenderQueue.tsx, web/src/dialogs.tsx, web/src/timeline/KeyMenu.tsx, web/src/menus.ts, web/src/ProjectPanel.tsx, web/src/properties/ShapeItems.tsx, web/src/keys.ts, web/src/strings.ts, web/src/app.css, bindings/wasm/src/tools/text.rs, bindings/wasm/src/tools/tests.rs, web/tests/fixes7d.mjs]
+    gap: "F11 is not offered (the browser's full screen almost everywhere). Gated by web/tests/fixes7d.mjs, the test:shortcuts check and the text selection test in bindings/wasm/src/tools/tests.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.3d-handles
+    title: "3D handles on the canvas: with the Selection tool the first selected 3D layer, camera or light shows an arrow per world axis (X red, Y green, Z blue), a square per plane between two arrows and a ring about each of its rotation axes, in every 3D view (the active camera's too); an arrow moves the selected 3D layers, cameras and lights along its axis, a square in its plane, a ring turns X, Y or Z Rotation; each drag is one undo step (prop.set with the gesture's merge key) and Escape undoes it; Shift keeps a plane move to its main direction, an arrow to steps of 10 pixels and a ring to 15° steps; the handles keep their screen size at any zoom and depth"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [bindings/wasm/src/tools/gizmo.rs, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/select.rs, bindings/wasm/src/lib.rs, bindings/wasm/src/tools/tests.rs, web/src/App.tsx, web/tests/gizmo.mjs]
+    gap: "The arrows follow the world axes (no local or view axes to choose); a camera's or light's rings ignore its point of interest's turn for X and Y. A press on the handles' origin is a plain move. Gated by web/tests/gizmo.mjs and the 3D handle tests in bindings/wasm/src/tools/tests.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.cache-ahead
+    title: "Render-ahead preview: View ▸ Cache Work Area in Background (and the status bar's Cache ahead switch, showing its state and how many frames are held) renders the work area's frames the viewer's cache lacks while nothing plays, a little at a time from the current time on (cacheAhead), without showing them; the cache bar fills, playback then shows every frame from the cache at the composition's rate; it stops at the cache's memory budget (400 MB) rather than drop frames, and says so; an edit empties the cache (the engine cannot tell which frames it changed) and caching starts again a moment later"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [bindings/wasm/src/lib.rs, bindings/wasm/src/frames.rs, bindings/wasm/src/editor_reads.rs, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/tests/cacheAhead.mjs]
+    gap: "Every edit empties the whole cache (no per-layer invalidation). Gated by web/tests/cacheAhead.mjs, the cache-ahead test in bindings/wasm/src/editor_reads.rs and the budget test in bindings/wasm/src/frames.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.output-formats
+    title: "Output formats by hand: Export… and the Render Queue write PNG sequences (with transparency, RGB + alpha, unless turned off) and JPEG sequences, a numbered file per frame (name_00000.png, …) into a folder through the host, and WAV with the composition's sound alone; Export… also saves the current frame as one PNG (as File ▸ Save Frame As PNG…); the engine hands every file of a finished export over (exportFinishFiles), and a stopped sequence leaves none of its frames"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [bindings/wasm/src/movie.rs, bindings/wasm/src/lib.rs, bindings/wasm/src/editor_reads.rs, web/src/ExportDialog.tsx, web/src/RenderQueue.tsx, web/src/strings.ts, web/tests/outputs.mjs]
+    gap: "No TIFF, EXR, ProRes or AIFF here (agents can still queue them; the panel says they are not written here). Gated by web/tests/outputs.mjs, the sequence and WAV tests in bindings/wasm/src/lib.rs and bindings/wasm/src/editor_reads.rs, and the settings test in bindings/wasm/src/movie.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.expression-tools
+    title: "Expressions by hand: beside an expression's text a pick-whip handle dragged onto a property's row in the timeline writes its reference where the cursor was (prop.pickWhip with the text and the selection, one undo step) and onto a layer's row thisComp.layer(\"name\") (thisLayer for its own); the function menu inserts a function at the cursor from its group (global, vector math, random numbers, interpolation, layer, property, keyframes, time conversion); a failing expression lights the line its error is on (the engine's line, or the bracket or quote left open)"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/timeline/ExpressionRow.tsx, web/src/timeline/PropertyRows.tsx, web/src/timeline/Timeline.tsx, web/src/app.css, web/src/strings.ts, web/tests/expressionTools.mjs]
+    gap: "The pick-whip links to rows on the timeline (not the Properties panel's) in the same composition; the function menu inserts examples with placeholder arguments. Gated by web/tests/expressionTools.mjs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.multi-layer-edit
+    title: "Editing several layers at once: with two or more layers selected the Properties panel shows what they have in common: blending mode and parent (\"mixed\" where they differ; a choice sets all), the Transform properties every one of them has (Anchor Point, Position, Scale, Rotation, Opacity, and Orientation and X/Y Rotation when all are 3D) with a number empty and dashed where they differ, and the Align section; a typed number goes to every layer and a scrubbed one moves each by the same amount from where it was, each one undo step (prop.set per layer under one merge key)"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/properties/MultiLayers.tsx, web/src/properties/PropertiesPanel.tsx, web/src/strings.ts, web/tests/multiEdit.mjs]
+    gap: "Only Transform, blending mode and parent are shared; effects, masks and a type's own properties are edited one layer at a time. Gated by web/tests/multiEdit.mjs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.effect-browser
+    title: "The effect browser (Effect ▸ Find Effect… and the Properties panel's Add effect): with nothing typed it lists Favourites (starred), Recently used (the last eight applied) and every category, opened with a click; each effect shows a one-line description (what its category does and its first settings, in the editor's language); typing lists the matches by name (English or translated) or category; Up, Down and Enter or a click apply to the selected layers; the star adds an effect to the favourites or takes it out (both kept in this browser)"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/effects.tsx, web/src/App.tsx, web/src/app.css, web/src/strings.ts, web/tests/effectBrowser.mjs]
+    gap: "The descriptions are made from each effect's category and settings, not written per effect, and there is no picture preview. Gated by web/tests/effectBrowser.mjs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.graph-tools
+    title: "The graph editor's legend and keyframe assistants: each curve's eye in the legend hides it and shows it again, its solo shows it alone (the rest dimmed in the legend; drawing, selecting and Fit All take only what shows); Animation ▸ Keyframe Assistant ▸ Wiggler… (two or more selected keyframes) adds random keys between them along the path or in time, smooth or jagged, per dimension, at a frequency and magnitude (keys.wiggle), and Smoother… (three or more) takes keys off within a tolerance (keys.smooth), both also in the keyframe menu, each one undo step"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/timeline/GraphEditor.tsx, web/src/dialogs.tsx, web/src/menus.ts, web/src/App.tsx, web/src/timeline/KeyMenu.tsx, web/src/strings.ts, web/src/app.css, web/tests/graphTools.mjs]
+    gap: "Hidden and soloed curves are the graph's for this session only. Gated by web/tests/graphTools.mjs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.labels-collect
+    title: "Colour labels and Collect Files by hand: a layer's menu (timeline) and a Project item's menu have Label with the sixteen colours (edit.label, project.setLabel, one undo step) and Select Label Group (edit.selectLabelGroup); a layer's bar shows its label on its left edge and as a tint, a Project row as a square before its icon; File ▸ Dependencies ▸ Collect Files… writes a copy of the project and every footage file it uses into a folder beside it through the host, the copy's footage in its (Footage) folder (collectFiles), and names the footage it could not read"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/labels.tsx, web/src/timeline/LayerMenu.tsx, web/src/timeline/LayerBar.tsx, web/src/timeline/Timeline.tsx, web/src/ProjectPanel.tsx, web/src/footage.ts, web/src/motion.ts, web/src/dialogs.tsx, web/src/menus.ts, web/src/App.tsx, bindings/wasm/src/lib.rs, web/tests/labels.mjs]
+    gap: "Label names are not customisable here (Settings ▸ Labels is the engine's); Collect Files copies every footage item, used or not, and no proxies or fonts. Gated by web/tests/labels.mjs and the Collect Files test in bindings/wasm/src/lib.rs."
+    cases: []
+    since: "2026-11-24"
+  - id: motion.editor.two-views
+    title: "Two-view layout for 3D: View ▸ Two Views (with 3D layers; View ▸ One View or its close button hides it) shows a second 3D view beside the viewer, Top by default (the active camera's when the viewer shows Top), with that view's ground, 3D layers' outlines, cameras and lights, drawn again a moment after each change (viewFrame); its drop-down picks the view and Make Main swaps it with the viewer's"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/SecondView.tsx, web/src/App.tsx, web/src/menus.ts, web/src/app.css, web/src/strings.ts, bindings/wasm/src/tools.rs, bindings/wasm/src/tools/view3d.rs, bindings/wasm/src/lib.rs, web/tests/twoViews.mjs]
+    gap: "The second view is for looking: selecting, the handles and the camera tools work in the viewer (Make Main brings a view there). It is not redrawn while playing. Gated by web/tests/twoViews.mjs and the second view test in bindings/wasm/src/tools/tests.rs."
     cases: []
     since: "2026-11-24"

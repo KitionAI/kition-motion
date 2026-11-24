@@ -647,3 +647,127 @@ fn tools_a_3d_view_shows_the_ground_the_3d_layers_and_the_camera_and_light() {
     assert!(lines(&mut doc, super::view3d::LIGHT) >= 5, "no light icon in the Top view");
     assert!(lines(&mut doc, super::view3d::OUTLINE) >= 4, "the 3D layer's outline is missing in the Top view");
 }
+
+#[test]
+fn tools_the_text_selection_and_caret_follow_characters_moved_by_an_animator() {
+    use kition_kit::tools::ToolOverlay;
+    let mut doc = doc();
+    doc.select_tool("text", 1.0).unwrap();
+    click(&mut doc, 200.0, 300.0, ToolMods::default());
+    KitTools::text(&mut doc, "ABCD", 1.0).unwrap();
+    let id = selected(&doc)[0];
+    // Select every character (Shift+Home from the end).
+    doc.key("Home", SHIFT, 1.0).unwrap();
+    let highlights = |doc: &mut MotionDocument| -> Vec<[[f64; 2]; 4]> {
+        doc.state(0.0, 0.0, ToolMods::default(), 1.0)
+            .overlays
+            .iter()
+            .filter_map(|o| if let ToolOverlay::Highlight { quad, .. } = o { Some(*quad) } else { None })
+            .collect()
+    };
+    let still = highlights(&mut doc);
+    assert!(!still.is_empty(), "no selection drawn");
+    // An animator moves every character 80 px down: the highlight goes with them.
+    doc.execute("layer.addTextAnimator", json!({ "layer": id, "properties": ["position"] })).unwrap();
+    doc.execute("prop.set", json!({ "layer": id, "path": "text/animators/#1/properties/position", "value": [0, 80, 0] })).unwrap();
+    let moved = highlights(&mut doc);
+    let top = |quads: &[[[f64; 2]; 4]]| quads.iter().flat_map(|q| q.iter().map(|p| p[1])).fold(f64::INFINITY, f64::min);
+    assert!((top(&moved) - top(&still) - 80.0).abs() < 1.0, "the highlight stayed where the text was before animation: {} → {}", top(&still), top(&moved));
+}
+
+/// A 3D solid at the comp's centre, selected.
+fn card(doc: &mut MotionDocument) -> u64 {
+    let card = solid(doc, "Card");
+    doc.execute("layer.setSwitch", json!({ "layers": [card], "switch": "threeD", "value": true })).unwrap();
+    doc.execute("layer.select", json!({ "layers": [card] })).unwrap();
+    card
+}
+
+#[test]
+fn tools_the_3d_arrows_move_a_3d_layer_along_one_axis_in_one_undo_step() {
+    use super::gizmo::{Part, spot};
+    let mut doc = doc();
+    let card = card(&mut doc);
+    let start = value(&mut doc, card, "transform/position");
+    // The X arrow, dragged 60 px right: the layer moves along X only (the default camera shows z = 0 at 1:1).
+    let tip = spot(&doc.session, Part::Axis(0), 1.0).expect("the X arrow shows");
+    drag(&mut doc, tip, [tip[0] + 60.0, tip[1] + 25.0], ToolMods::default());
+    let moved = value(&mut doc, card, "transform/position");
+    assert!((moved[0] - start[0] - 60.0).abs() < 1.0 && (moved[1] - start[1]).abs() < 1e-6 && (moved[2] - start[2]).abs() < 1e-6, "{start:?} → {moved:?}");
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert!(near(&value(&mut doc, card, "transform/position"), &start), "one undo step puts it back");
+    // In the Top view the Z arrow is on screen: dragging it changes the depth only.
+    doc.execute("view.set3DView", json!({ "view": "top" })).unwrap();
+    let tip = spot(&doc.session, Part::Axis(2), 1.0).expect("the Z arrow shows in the Top view");
+    let base = spot(&doc.session, Part::Plane(0, 2), 1.0).unwrap();
+    let away = [tip[0] - base[0], tip[1] - base[1]];
+    drag(&mut doc, tip, [tip[0] + away[0] * 0.5, tip[1] + away[1] * 0.5], ToolMods::default());
+    let deeper = value(&mut doc, card, "transform/position");
+    assert!((deeper[2] - start[2]).abs() > 1.0 && (deeper[0] - start[0]).abs() < 1e-6 && (deeper[1] - start[1]).abs() < 1e-6, "{start:?} → {deeper:?}");
+}
+
+#[test]
+fn tools_a_3d_plane_square_moves_in_two_axes_and_shift_keeps_one() {
+    use super::gizmo::{Part, spot};
+    let mut doc = doc();
+    let card = card(&mut doc);
+    let start = value(&mut doc, card, "transform/position");
+    let square = spot(&doc.session, Part::Plane(0, 1), 1.0).expect("the XY square shows");
+    drag(&mut doc, square, [square[0] + 40.0, square[1] + 30.0], ToolMods::default());
+    let moved = value(&mut doc, card, "transform/position");
+    assert!((moved[0] - start[0] - 40.0).abs() < 1.0 && (moved[1] - start[1] - 30.0).abs() < 1.0 && (moved[2] - start[2]).abs() < 1e-6, "{moved:?}");
+    doc.execute("edit.undo", json!({})).unwrap();
+    let square = spot(&doc.session, Part::Plane(0, 1), 1.0).unwrap();
+    drag_from(&mut doc, square, [square[0] + 40.0, square[1] + 10.0], ToolMods::default(), SHIFT);
+    let kept = value(&mut doc, card, "transform/position");
+    assert!((kept[0] - start[0] - 40.0).abs() < 1.0 && (kept[1] - start[1]).abs() < 1e-6, "Shift keeps the main direction: {kept:?}");
+}
+
+#[test]
+fn tools_a_3d_ring_turns_the_layer_about_its_axis_and_shift_steps_15_degrees() {
+    use super::gizmo::{Part, spot};
+    let mut doc = doc();
+    let card = card(&mut doc);
+    // The Z ring faces the default camera: a drag along it turns Z Rotation.
+    // Along the ring: 30° about the layer's anchor point (the comp's centre).
+    let along = |p: [f64; 2]| {
+        let (dx, dy) = (p[0] - 960.0, p[1] - 540.0);
+        let (s, c) = 30f64.to_radians().sin_cos();
+        [960.0 + dx * c - dy * s, 540.0 + dx * s + dy * c]
+    };
+    let on = spot(&doc.session, Part::Ring(2), 1.0).expect("the Z ring shows");
+    drag(&mut doc, on, along(on), ToolMods::default());
+    let turned = value(&mut doc, card, "transform/rotation")[0];
+    assert!(turned.abs() > 15.0, "the Z ring did not turn the layer: {turned}");
+    assert!(near(&value(&mut doc, card, "transform/rotationX"), &[0.0]) && near(&value(&mut doc, card, "transform/rotationY"), &[0.0]));
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert!(near(&value(&mut doc, card, "transform/rotation"), &[0.0]), "one undo step");
+    let on = spot(&doc.session, Part::Ring(2), 1.0).unwrap();
+    drag_from(&mut doc, on, along(on), ToolMods::default(), SHIFT);
+    let stepped = value(&mut doc, card, "transform/rotation")[0];
+    assert!(stepped.abs() > 1.0 && (stepped / 15.0 - (stepped / 15.0).round()).abs() < 1e-9, "Shift turns in 15° steps: {stepped}");
+    // A camera has the handles too (seen from the Top view).
+    let camera = doc.execute("layer.newCamera", json!({})).unwrap()["layer"].as_u64().unwrap();
+    doc.execute("layer.select", json!({ "layers": [camera] })).unwrap();
+    doc.execute("view.set3DView", json!({ "view": "top" })).unwrap();
+    let before = value(&mut doc, camera, "transform/position");
+    let tip = spot(&doc.session, Part::Axis(0), 1.0).expect("the camera's X arrow shows in the Top view");
+    drag(&mut doc, tip, [tip[0] + 30.0, tip[1]], ToolMods::default());
+    let after = value(&mut doc, camera, "transform/position");
+    assert!(after[0] > before[0] + 1.0 && (after[1] - before[1]).abs() < 1e-6, "{before:?} → {after:?}");
+}
+
+#[test]
+fn tools_the_second_view_renders_another_3d_view_with_its_ground_and_outlines() {
+    let mut doc = doc();
+    card(&mut doc);
+    let (rgba, width, height, lines) = doc.view_frame("top", 320).unwrap();
+    assert_eq!((width, height), (320, 180));
+    assert_eq!(rgba.len(), 320 * 180 * 4);
+    assert!(lines.as_array().is_some_and(|lines| lines.len() >= 10), "the Top view's ground and outlines: {lines}");
+    // The viewer's own view is untouched.
+    assert!(doc.session.view_camera(doc.session.active_comp_id().unwrap()).is_none());
+    let (_, _, _, none) = doc.view_frame("activeCamera", 320).unwrap();
+    assert_eq!(none, serde_json::json!([]), "the active camera's view draws no ground");
+    assert!(doc.view_frame("sideways", 320).is_err());
+}

@@ -220,7 +220,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
   }
   const openMenu = (layer: MotionLayer, at: { x: number; y: number }) => {
     if (!layer.selected) void run('layer.select', { layers: [layer.id] })
-    setMenu({ at, layer: layer.id, layers: layer.selected ? selected : [layer.id], precomp: layer.type === 'Composition', source: HAS_SOURCE.has(layer.type) })
+    setMenu({ at, layer: layer.id, layers: layer.selected ? selected : [layer.id], precomp: layer.type === 'Composition', source: HAS_SOURCE.has(layer.type), label: layer.label })
   }
 
   // The split between the names (with their columns) and the tracks drags; kept in the browser.
@@ -342,7 +342,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
           ) : info.layers.length ? (
             info.layers.map((layer) => (
               <div key={layer.id} className="motion-layer-block" data-layer-block={layer.id} data-testid={`motion-layer-block-${layer.id}`}>
-                <div className="motion-row" data-selected={layer.selected} data-testid={`motion-layer-${layer.id}`}>
+                <div className="motion-row" data-selected={layer.selected} data-pick-layer={layer.id} data-pick-name={layer.name} data-testid={`motion-layer-${layer.id}`}>
                   <LayerNames
                     layer={layer}
                     shown={columns.shown}

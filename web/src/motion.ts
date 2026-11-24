@@ -48,6 +48,8 @@ export type MotionLayer = {
   animated: Animated[]
   /** Its blending mode by name (`Normal`, `Screen`), as `layer.setBlendMode` takes it. */
   blendMode: string
+  /** Its colour label by the engine's name (`Red`, `Sea Foam`, `None`). */
+  label: string
   /** The id of the layer it follows, or null. */
   parent: number | null
   /** The paths of its properties selected in the timeline (a click on a property's name). */
@@ -113,6 +115,7 @@ type Inspected = {
       trackMatte?: { layer?: number; kind?: string } | null
       animated?: Animated[]
       blendMode?: string
+      label?: string
       parent?: number | null
       selectedProps?: string[]
     }>
@@ -171,6 +174,7 @@ export function describe(info: KitEngineInfo): MotionInfo {
       matte: layer.trackMatte?.layer != null ? { layer: layer.trackMatte.layer, kind: matteKind(layer.trackMatte.kind) } : null,
       animated: layer.animated ?? [],
       blendMode: layer.blendMode ?? 'Normal',
+      label: layer.label ?? 'None',
       parent: layer.parent ?? null,
       selectedProps: layer.selectedProps ?? [],
     })),

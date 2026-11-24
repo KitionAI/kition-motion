@@ -12,7 +12,13 @@ use kition_motion_engine::render::EvalCtx;
 use kition_motion_engine::render::three_d::CameraState;
 
 use super::geometry::{self, Pt};
-use super::with_ctx;
+/// The active composition at the current time, without changing the view the boxes are seen through.
+fn with_ctx_plain<R>(session: &Session, f: impl FnOnce(&EvalCtx) -> R) -> Option<R> {
+    let cid = session.active_comp_id()?;
+    let comp = session.project.comp(cid)?;
+    let ctx = EvalCtx { footage: Some(session.footage.as_ref()), expr: session.expr.as_deref(), ..EvalCtx::new(&session.project, cid, comp, session.time()) };
+    Some(f(&ctx))
+}
 
 /// The ground grid's and the 3D layers' outlines' colour (grey, half seen).
 pub(super) const GRID: [u8; 4] = [150, 150, 150, 140];
@@ -46,7 +52,17 @@ fn place(ctx: &EvalCtx, layer: &Layer) -> (Vec3, Option<Vec3>) {
 pub(super) fn overlays(session: &Session, out: &mut Vec<ToolOverlay>) {
     let Some(cid) = session.active_comp_id() else { return };
     let Some(view) = session.view_camera(cid) else { return };
-    with_ctx(session, |ctx| {
+    overlays_through(session, view, out);
+}
+
+/// The ground, the 3D layers' outlines, cameras and lights as `view` sees them (the second view
+/// of the two-view layout draws them too).
+pub(crate) fn overlays_through(session: &Session, view: CameraState, out: &mut Vec<ToolOverlay>) {
+    super::geometry::through_view(Some(view), || overlays_seen(session, view, out));
+}
+
+fn overlays_seen(session: &Session, view: CameraState, out: &mut Vec<ToolOverlay>) {
+    with_ctx_plain(session, |ctx| {
         let (w, h) = (f64::from(ctx.comp.width), f64::from(ctx.comp.height));
         // The ground: a grid on the plane through the composition's bottom edge, as wide as the
         // composition and as deep, centred under it.

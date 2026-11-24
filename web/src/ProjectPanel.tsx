@@ -15,6 +15,7 @@ import {
 import { Button, ContextMenu, Dialog, IconButton, MenuItem, MenuSeparator, RenameField, TextInput, toast, useEngineQuery, useKitEditor, useReadOnly, type ContextMenuPoint } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
 import { ITEM_MIME, ITEMS_MIME, isLayerSource, parseAnswer, type ProjectItem, type ProjectSummary } from './footage'
+import { LabelMenu, labelHex } from './labels'
 
 const KEY = 'kition-motion.project-width'
 const OPEN_KEY = 'kition-motion.project-open'
@@ -171,8 +172,8 @@ export function ProjectPanel({
   onInterpret: (item: ProjectItem) => void
   /** Add to Render Queue, for compositions. */
   onQueue: (comps: number[]) => void
-  /** An item to show and select (Reveal Layer Source in Project); a new object each time. */
-  reveal: { item: number } | null
+  /** An item to show and select (Reveal Layer Source in Project), and with `rename` to rename at once (File ▸ New ▸ New Folder); a new object each time. */
+  reveal: { item: number; rename?: boolean } | null
 }) {
   const { run, query, t } = useKitEditor()
   const readOnly = useReadOnly()
@@ -235,13 +236,20 @@ export function ProjectPanel({
     if (above.length) setOpen((now) => (above.every((folder) => now.has(folder)) ? now : new Set([...now, ...above])))
   }
   // Reveal Layer Source in Project: the item's folders open, it is selected and scrolled to.
-  const revealed = useRef<{ item: number } | null>(null)
+  const revealed = useRef<{ item: number; rename?: boolean } | null>(null)
   useEffect(() => {
     if (!reveal || reveal === revealed.current || !items.some((item) => item.id === reveal.item)) return
     revealed.current = reveal
     setSearch('')
     showRow(reveal.item)
     choose([reveal.item])
+    const shown = byId(reveal.item)
+    if (reveal.rename && shown && !readOnly) {
+      // As the header's New Folder button: the new folder's name is ready to type over.
+      setName(shown.name)
+      setRenaming(shown.id)
+      return
+    }
     requestAnimationFrame(() => {
       list.current?.querySelector(`[data-testid="motion-item-${reveal.item}"]`)?.scrollIntoView({ block: 'nearest' })
       list.current?.focus({ preventScroll: true })
@@ -512,6 +520,8 @@ export function ProjectPanel({
                 ) : (
                   <span className="motion-project-twirl" aria-hidden="true" />
                 )}
+                {/* Its colour label (Label in its menu). */}
+                <span className="motion-label-swatch motion-project-label" style={{ width: 8, height: 8, background: labelHex(item.label) ?? 'transparent', borderColor: labelHex(item.label) ? undefined : 'transparent' }} data-label={item.label} data-testid={`motion-item-label-${item.id}`} aria-hidden="true" />
                 <Icon size={14} aria-hidden="true" />
                 {renaming === item.id ? (
                   <RenameField
@@ -578,6 +588,14 @@ export function ProjectPanel({
             <MenuItem label={t('project.interpret')} disabled={readOnly} onSelect={() => onInterpret(menuFirst)} testId="motion-item-menu-interpret" />
             <MenuItem label={t('project.replace')} disabled={readOnly} onSelect={() => onReplace(menuFirst)} testId="motion-item-menu-replace" />
           </>
+        ) : null}
+        {menuItems.length && !readOnly ? (
+          <LabelMenu
+            current={menuFirst?.label}
+            onLabel={(label) => void run('project.setLabel', { items: menuItems.map((item) => item.id), label })}
+            onSelectGroup={() => void run('edit.selectLabelGroup', {})}
+            testId="motion-item-menu"
+          />
         ) : null}
         <MenuSeparator />
         <MenuItem label={t('project.newFolder')} disabled={readOnly} onSelect={() => void newFolder(folderFor(menu?.item ?? null))} testId="motion-item-menu-new-folder" />

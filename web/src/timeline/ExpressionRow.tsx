@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { useEngineQuery, useKitEditor } from '@kition/sdk/editor'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { createPortal } from 'react-dom'
+import { LinkIcon, SigmaIcon } from '@kition/tessera/icons/react'
+import { MenuButton, MenuItem, SubMenu, useEngineQuery, useKitEditor } from '@kition/sdk/editor'
 
 /** An expression failure as `expr.errors` lists it. */
 export type ExprError = { layer: number; path: string; message: string }
@@ -112,6 +114,38 @@ export function explainError(message: string, t: (key: string, values?: Record<s
   return line !== null && Number.isFinite(line) ? t('expr.error.atLine', { line, message: said }) : said
 }
 
+/** The line (from 1) an expression error is on: where the engine says, or the bracket or quote left open; null when it cannot tell. */
+export function errorLine(message: string, source?: string): number | null {
+  const located = /^Error at line (\d+):/i.exec(message.trim())
+  if (located) return Number(located[1])
+  if (/SyntaxError:/i.test(message) && source !== undefined) return unbalanced(source)?.line ?? null
+  return null
+}
+
+/**
+ * The expression function menu: what each group inserts (the text, with the cursor after it).
+ * Group names are translated (`expr.fn.<group>`); the entries are the expression language's own.
+ */
+export const EXPRESSION_FUNCTIONS: ReadonlyArray<readonly [group: string, entries: readonly string[]]> = [
+  ['global', ['time', 'value', 'thisComp', 'thisLayer', 'thisProperty', 'comp("Comp 1")', 'posterizeTime(12)', 'degreesToRadians(90)', 'radiansToDegrees(1)']],
+  ['vector', ['add(a, b)', 'sub(a, b)', 'mul(a, 2)', 'div(a, 2)', 'clamp(value, 0, 100)', 'dot(a, b)', 'cross(a, b)', 'normalize(a)', 'length(a, b)', 'lookAt(fromPoint, atPoint)']],
+  ['random', ['seedRandom(1, true)', 'random()', 'random(100)', 'random(0, 100)', 'gaussRandom()', 'noise(time)']],
+  ['interpolation', ['linear(time, 0, 1, 0, 100)', 'ease(time, 0, 1, 0, 100)', 'easeIn(time, 0, 1, 0, 100)', 'easeOut(time, 0, 1, 0, 100)']],
+  ['layer', ['thisLayer.name', 'index', 'inPoint', 'outPoint', 'startTime', 'hasParent', 'parent', 'toComp(anchorPoint)', 'fromComp([0, 0])', 'sampleImage(anchorPoint, [0.5, 0.5])']],
+  ['property', ['wiggle(2, 30)', 'loopOut("cycle")', 'loopIn("cycle")', 'valueAtTime(time - 0.5)', 'velocity', 'speed', 'velocityAtTime(time)', 'smooth(0.2, 5)']],
+  ['key', ['numKeys', 'key(1).value', 'key(1).time', 'nearestKey(time).index']],
+  ['time', ['time', 'timeToFrames(time)', 'framesToTime(10)', 'timeToTimecode(time)', 'thisComp.frameDuration']],
+]
+
+/** What a pick-whip was let go over: a property's row (`data-pick-path`) or a layer's (`data-pick-layer`). */
+function pickTarget(x: number, y: number): { layer: number; path?: string; name?: string } | null {
+  const under = document.elementFromPoint(x, y)
+  const row = under?.closest<HTMLElement>('[data-pick-path], [data-pick-layer]')
+  const layer = Number(row?.dataset.pickLayer)
+  if (!row || !Number.isFinite(layer)) return null
+  return { layer, ...(row.dataset.pickPath ? { path: row.dataset.pickPath } : {}), ...(row.dataset.pickName ? { name: row.dataset.pickName } : {}) }
+}
+
 /** A value as the row shows it: numbers to two decimals, several joined by commas. */
 function shownValue(value: unknown): string | null {
   const one = (part: unknown) => (typeof part === 'number' ? String(Math.round(part * 100) / 100) : null)
@@ -129,11 +163,74 @@ function shownValue(value: unknown): string | null {
  * that turns it on and off, Remove, and, when it fails, why. Each change is one undo step
  * (`prop.setExpression`).
  */
-export function ExpressionRow({ layer, path, name, text, enabled, error, depth, time, testId, readOnly }: { layer: number; path: string; name: string; text: string; enabled: boolean; error: string | null; depth: number; time: number; testId: string; readOnly: boolean }) {
+export function ExpressionRow({ layer, path, name, text, enabled, error, line, depth, time, testId, readOnly }: { layer: number; path: string; name: string; text: string; enabled: boolean; error: string | null; /** The line the error is on (from 1), highlighted in the field. */ line?: number | null; depth: number; time: number; testId: string; readOnly: boolean }) {
   const { run, t } = useKitEditor()
   const [draft, setDraft] = useState(text)
   const dropped = useRef(false)
   useEffect(() => setDraft(text), [text])
+  const field = useRef<HTMLTextAreaElement>(null)
+  const [scroll, setScroll] = useState(0)
+  // Where the cursor was in the field (what a pick-whip or a function goes in place of).
+  const caret = useRef<[number, number] | null>(null)
+  const remember = () => {
+    const element = field.current
+    if (element) caret.current = [element.selectionStart, element.selectionEnd]
+  }
+  /** Puts `insert` where the cursor was (the end when it never was in the field), and puts the cursor after it. */
+  const insertText = (insert: string) => {
+    const [from, to] = caret.current ?? [draft.length, draft.length]
+    const next = draft.slice(0, from) + insert + draft.slice(to)
+    setDraft(next)
+    const at = from + insert.length
+    caret.current = [at, at]
+    // After the menu has given the focus back to its button.
+    window.setTimeout(() => {
+      const element = field.current
+      if (!element) return
+      element.focus({ preventScroll: true })
+      element.setSelectionRange(at, at)
+    }, 0)
+  }
+  // The pick-whip being dragged: from its handle to the pointer, the row under it lit.
+  const [whip, setWhip] = useState<{ from: [number, number]; to: [number, number] } | null>(null)
+  const lit = useRef<HTMLElement | null>(null)
+  const light = (row: HTMLElement | null) => {
+    if (lit.current === row) return
+    lit.current?.removeAttribute('data-pick-over')
+    row?.setAttribute('data-pick-over', 'true')
+    lit.current = row
+  }
+  const whipDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (readOnly || event.button !== 0) return
+    event.preventDefault()
+    event.stopPropagation()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    const box = event.currentTarget.getBoundingClientRect()
+    setWhip({ from: [box.left + box.width / 2, box.top + box.height / 2], to: [event.clientX, event.clientY] })
+  }
+  const whipMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!whip) return
+    setWhip({ ...whip, to: [event.clientX, event.clientY] })
+    const under = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-pick-path], [data-pick-layer]') ?? null
+    light(under)
+  }
+  /** Let go over a property: the engine writes the reference where the cursor was (one undo step); over a layer, `thisComp.layer("name")`. */
+  const whipUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!whip) return
+    setWhip(null)
+    light(null)
+    const target = pickTarget(event.clientX, event.clientY)
+    if (!target) return
+    const [from, to] = caret.current ?? [draft.length, draft.length]
+    if (target.path) {
+      if (target.layer === layer && target.path === path) return
+      void run('prop.pickWhip', { layer, path, target: { layer: target.layer, path: target.path }, expression: draft, range: [from, to] })
+      return
+    }
+    const reference = target.layer === layer ? 'thisLayer' : `thisComp.layer(${JSON.stringify(target.name ?? '')})`
+    const next = draft.slice(0, from) + reference + draft.slice(to)
+    void run('prop.setExpression', { layer, path, expression: next })
+  }
   // What the expression makes of the property now (what renders), as `prop.get` evaluates it.
   const read = useEngineQuery<{ evaluated?: unknown }>('prop.get', { layer, path }, `${text} ${enabled} ${time}`)
   const result = shownValue(read?.evaluated)
@@ -166,7 +263,46 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, depth, 
         </button>
       </div>
       <div className="motion-row-track motion-expr-track">
+        <div className="motion-expr-edit">
+          <button
+            type="button"
+            className="motion-expr-whip"
+            title={t('expr.whip', { name })}
+            aria-label={t('expr.whip', { name })}
+            disabled={readOnly}
+            onPointerDown={whipDown}
+            onPointerMove={whipMove}
+            onPointerUp={whipUp}
+            onPointerCancel={() => {
+              setWhip(null)
+              light(null)
+            }}
+            data-testid={`${testId}-whip`}
+          >
+            <LinkIcon size={13} aria-hidden="true" />
+          </button>
+          <MenuButton
+            placement="auto"
+            align="start"
+            trigger={({ open, toggle }) => (
+              <button type="button" className="motion-expr-whip" aria-expanded={open} title={t('expr.functions')} aria-label={t('expr.functions')} disabled={readOnly} onClick={toggle} data-testid={`${testId}-functions`}>
+                <SigmaIcon size={13} aria-hidden="true" />
+              </button>
+            )}
+          >
+            {EXPRESSION_FUNCTIONS.map(([group, entries]) => (
+              <SubMenu key={group} label={t(`expr.fn.${group}`)} path={`${testId}/fn/${group}`} testId={`${testId}-fn-${group}`}>
+                {entries.map((entry) => (
+                  <MenuItem key={entry} label={entry} onSelect={() => insertText(entry)} testId={`${testId}-fn-${group}-${entry.replace(/[^a-zA-Z0-9]+/g, '-')}`} />
+                ))}
+              </SubMenu>
+            ))}
+          </MenuButton>
+          <span className="motion-expr-box">
+            {/* The line the error is on, lit behind the text (the field scrolls over it). */}
+            {line != null && line > 0 && error ? <span className="motion-expr-line" style={{ top: `calc(4px + ${line - 1} * 1.4em - ${scroll}px)` }} aria-hidden="true" data-line={line} data-testid={`${testId}-error-line`} /> : null}
         <textarea
+          ref={field}
           className="kui-field motion-expr-field"
           value={draft}
           rows={Math.min(4, Math.max(1, draft.split('\n').length))}
@@ -174,7 +310,13 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, depth, 
           readOnly={readOnly}
           aria-label={t('expr.field', { name })}
           onChange={(event) => setDraft(event.target.value)}
-          onBlur={commit}
+          onSelect={remember}
+          onKeyUp={remember}
+          onScroll={(event) => setScroll(event.currentTarget.scrollTop)}
+          onBlur={() => {
+            remember()
+            commit()
+          }}
           onKeyDown={(event) => {
             event.stopPropagation()
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -189,6 +331,16 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, depth, 
           }}
           data-testid={`${testId}-field`}
         />
+          </span>
+        </div>
+        {whip
+          ? createPortal(
+              <svg className="motion-whip-line" aria-hidden="true">
+                <line x1={whip.from[0]} y1={whip.from[1]} x2={whip.to[0]} y2={whip.to[1]} />
+              </svg>,
+              document.body,
+            )
+          : null}
         {result !== null && !error ? (
           <span className="motion-expr-result kui-muted" data-testid={`${testId}-result`}>
             {t('expr.result', { value: result })}

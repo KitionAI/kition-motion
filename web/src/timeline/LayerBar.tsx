@@ -1,6 +1,7 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { useKitEditor } from '@kition/sdk/editor'
 import { timecode, type MotionLayer } from '../motion'
+import { labelHex } from '../labels'
 import { snapIn, useTimeline } from './context'
 import { leftOf, secondsFor } from './view'
 
@@ -100,7 +101,9 @@ export function LayerBar({ layer, shift, onShift }: { layer: MotionLayer; shift:
       className="motion-bar"
       data-locked={locked || undefined}
       data-dragging={dragging || undefined}
-      style={{ left: leftOf(view, shown.in), width: `${((shown.out - shown.in) / view.span) * 100}%` }}
+      // The layer's colour label on the bar's left edge and in its tint.
+      style={{ left: leftOf(view, shown.in), width: `${((shown.out - shown.in) / view.span) * 100}%`, ...(labelHex(layer.label) ? { '--motion-label': labelHex(layer.label) } : {}) } as CSSProperties}
+      data-label={layer.label}
       {...handlers('move')}
       data-testid={`motion-bar-${layer.id}`}
     >

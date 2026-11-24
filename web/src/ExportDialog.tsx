@@ -1,20 +1,51 @@
 import { useRef, useState } from 'react'
-import { Button, Checkbox, Dialog, Field, Select, TextInput, toast, useKitEditor, type KitEngine } from '@kition/sdk/editor'
+import { Button, Checkbox, Dialog, Field, Select, TextInput, toast, useKitEditor, type HostConnection, type KitEngine } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
 
-/** The formats the web build encodes into one file (`bindings/wasm/src/movie.rs`), with their extensions. */
+/**
+ * The formats the web build renders (`bindings/wasm/src/movie.rs`), with their extensions: movies
+ * in one file, PNG and JPEG sequences (a numbered file per frame, into a folder), WAV sound alone,
+ * the current frame as one PNG (Save Frame As), and Lottie.
+ */
 const FORMATS = [
   { id: 'h264', extension: 'mp4' },
   { id: 'webm', extension: 'webm' },
   { id: 'gif', extension: 'gif' },
+  { id: 'png', extension: 'png' },
+  { id: 'jpeg', extension: 'jpg' },
+  { id: 'wav', extension: 'wav' },
+  // The current frame as a PNG beside the project (File ▸ Export ▸ Save Frame As).
+  { id: 'frame', extension: 'png' },
   // A Lottie animation (`file.exportLottie`): vector, for the web and apps; no size, range or rate to choose.
   { id: 'lottie', extension: 'json' },
 ] as const
 
 type Format = (typeof FORMATS)[number]['id']
 
+/** The formats written as a numbered file per frame. */
+export const SEQUENCES: ReadonlySet<string> = new Set(['png', 'jpeg'])
+
 /** What the dialog sends `renderMovie` (`movie::queue_params`). */
-type Settings = { format: Exclude<Format, 'lottie'>; span: 'comp' | 'workArea'; size: 'full' | 'half' | { width: number; height: number }; frameRate: number | null }
+type Settings = { format: Exclude<Format, 'lottie' | 'frame'>; span: 'comp' | 'workArea'; size: 'full' | 'half' | { width: number; height: number }; frameRate: number | null; channels?: 'rgb' | 'rgba' }
+
+/** An image sequence's file names: the name, an underscore and the frame number (`[#####]`, five digits). */
+export const sequenceName = (name: string, extension: string) => `${name}_[#####].${extension}`
+
+/**
+ * Hands a finished export's files to the host (`exportFinishFiles`, then `takeFile` each): the
+ * movie or sound, or every frame of a sequence, into `folder` (inside the project's folder, made as
+ * needed). Answers the paths written.
+ */
+export async function writeExport(doc: KitEngine, host: HostConnection, folder: string): Promise<string[]> {
+  const names = JSON.parse(await doc.invoke<string>('exportFinishFiles')) as string[]
+  const written: string[] = []
+  for (const name of names) {
+    const bytes = await doc.invoke<Uint8Array | undefined>('takeFile', name)
+    if (!bytes) throw new Error(`the engine kept no ${name}`)
+    written.push(await host.exportFile([folder, name].filter(Boolean).join('/'), bytes))
+  }
+  return written
+}
 
 /** A whole number of pixels from 16 to 8192 typed in a field, or null. */
 function side(text: string) {
@@ -38,7 +69,7 @@ const STEP_MS = 120
  * finished, then `exportFinish` hands over the file), so the dialog shows the frames done and
  * Cancel stops the render between two steps and writes no file.
  */
-export function ExportDialog({ info, doc, lottie = false, onClose }: { info: MotionInfo; doc: KitEngine | null; lottie?: boolean; onClose: () => void }) {
+export function ExportDialog({ info, doc, lottie = false, onClose, onSaveFrame }: { info: MotionInfo; doc: KitEngine | null; lottie?: boolean; onClose: () => void; /** Save Frame As: the current frame as a PNG beside the project. */ onSaveFrame: () => Promise<void> }) {
   const { host, t, run } = useKitEditor()
   const comp = info.comp
   const [format, setFormat] = useState<Format>(lottie ? 'lottie' : 'h264')
@@ -53,6 +84,9 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
   const [expressions, setExpressions] = useState(false)
   const [textAsShapes, setTextAsShapes] = useState(false)
   const [warnings, setWarnings] = useState<string[] | null>(null)
+  // A PNG sequence's alpha (on: a transparent background stays transparent), and the folder a sequence goes in.
+  const [alpha, setAlpha] = useState(true)
+  const [folderName, setFolderName] = useState(() => fileName(comp?.name ?? 'Composition'))
   const cancelled = useRef(false)
   // Close once the render has stopped (Escape, or Cancel pressed again while it was stopping).
   const closeWhenStopped = useRef(false)
@@ -62,7 +96,9 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
   if (!comp) return null
   const w = side(width)
   const h = side(height)
-  const valid = size !== 'custom' || (w !== null && h !== null)
+  const sequence = SEQUENCES.has(format)
+  const folderOk = !sequence || (folderName.trim() !== '' && !/[\\:*?"<>|]|\.\./.test(folderName))
+  const valid = (size !== 'custom' || (w !== null && h !== null)) && folderOk
   const [start, end] = comp.workArea
   const seconds = (value: number) => Math.round(value * 100) / 100
 
@@ -76,18 +112,28 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
       await exportLottie(path)
       return
     }
+    if (format === 'frame') {
+      await onSaveFrame()
+      setBusy(false)
+      onClose()
+      return
+    }
     const settings: Settings = {
       format,
       span,
       size: size === 'custom' && w !== null && h !== null ? { width: w, height: h } : size === 'half' ? 'half' : 'full',
       frameRate: rate === 'half' ? Math.round((comp.fps / 2) * 1000) / 1000 : null,
+      ...(format === 'png' ? { channels: alpha ? ('rgba' as const) : ('rgb' as const) } : {}),
     }
+    // A sequence: numbered files into a folder of their own beside the project.
+    const target = sequence ? [folder, folderName.trim().replace(/^\/+|\/+$/g, '')].filter(Boolean).join('/') : folder
+    const engineName = sequence ? sequenceName(fileName(comp.name), extension) : (path.split('/').pop() ?? path)
     cancelled.current = false
     closeWhenStopped.current = false
     setStopped(false)
     const read = (json: string) => JSON.parse(json) as Progress
     try {
-      let now = read(await doc.invoke<string>('exportStart', path.split('/').pop() ?? path, JSON.stringify(settings)))
+      let now = read(await doc.invoke<string>('exportStart', engineName, JSON.stringify(settings)))
       setProgress(now)
       while (!now.finished && !cancelled.current) {
         now = read(await doc.invoke<string>('exportStep', STEP_MS))
@@ -103,9 +149,9 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
         if (closeWhenStopped.current) onClose()
         return
       }
-      const bytes = await doc.invoke<Uint8Array>('exportFinish')
-      const written = await host.exportFile(path, bytes)
-      toast.success(t('export.done', { name: written.split('/').pop() ?? written }))
+      const written = await writeExport(doc, host, target)
+      if (written.length === 1) toast.success(t('export.done', { name: written[0].split('/').pop() ?? written[0] }))
+      else toast.success(t('export.doneMany', { count: written.length, folder: folderName.trim() }))
       onClose()
     } catch (error) {
       await doc.invoke<boolean>('exportCancel').catch(() => false)
@@ -207,14 +253,26 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
             <Checkbox label={t('export.lottie.textAsShapes')} checked={textAsShapes} onChange={setTextAsShapes} disabled={busy} testId="motion-export-lottie-text" />
             <p className="kui-muted motion-export-note">{t('export.lottie.note')}</p>
           </>
+        ) : format === 'frame' ? (
+          <p className="kui-muted motion-export-note">{t('export.frame.note', { time: info.time.toFixed(2) })}</p>
         ) : (
           <>
+        {format === 'png' ? <Checkbox label={t('export.alpha')} checked={alpha} onChange={setAlpha} disabled={busy} testId="motion-export-alpha" /> : null}
+        {sequence ? (
+          <Field label={t('export.folder')} error={folderOk ? undefined : t('preset.badFolder')}>
+            {({ id, invalid }) => <TextInput id={id} invalid={invalid} value={folderName} disabled={busy} onChange={(event) => setFolderName(event.target.value)} data-testid="motion-export-folder" />}
+          </Field>
+        ) : null}
+        {sequence ? <p className="kui-muted motion-export-note">{t('export.sequence.note', { name: sequenceName(fileName(comp.name), FORMATS.find((each) => each.id === format)?.extension ?? 'png').replace('[#####]', '00000') })}</p> : null}
+        {format === 'wav' ? <p className="kui-muted motion-export-note">{t('export.wav.note')}</p> : null}
         <Field label={t('export.range')}>
           <Select value={span} disabled={busy} onChange={(event) => setSpan(event.target.value as 'comp' | 'workArea')} data-testid="motion-export-range">
             <option value="comp">{t('export.range.comp', { seconds: seconds(comp.duration) })}</option>
             <option value="workArea">{t('export.range.workArea', { start: seconds(start), end: seconds(end) })}</option>
           </Select>
         </Field>
+        {format !== 'wav' ? (
+          <>
         <Field label={t('export.size')}>
           <Select value={size} disabled={busy} onChange={(event) => setSize(event.target.value as 'full' | 'half' | 'custom')} data-testid="motion-export-size">
             <option value="full">{t('export.size.full', { width: comp.width, height: comp.height })}</option>
@@ -248,6 +306,8 @@ export function ExportDialog({ info, doc, lottie = false, onClose }: { info: Mot
             <option value="half">{t('export.rate.half', { fps: Math.round((comp.fps / 2) * 100) / 100 })}</option>
           </Select>
         </Field>
+          </>
+        ) : null}
           </>
         )}
         {warnings ? (

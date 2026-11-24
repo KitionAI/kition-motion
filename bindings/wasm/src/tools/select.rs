@@ -130,6 +130,10 @@ impl MotionDocument {
         if self.gradient_down(st, p) {
             return;
         }
+        // The selected 3D layer's, camera's or light's handles: its arrows, plane squares and rings.
+        if self.gizmo_down(st, p) {
+            return;
+        }
         // A selected layer's handles first (Shift held from the start keeps a corner's
         // proportions), then, without Shift, its rotation zones.
         let boxes = selected_boxes(&self.session);
@@ -239,6 +243,10 @@ impl MotionDocument {
             Gesture::PenPoint { .. } => Self::pen_drag(st, p),
             Gesture::Vertex { .. } | Gesture::Vertices { .. } | Gesture::VertexBox { .. } => self.path_drag(st, p, mods),
             Gesture::GradientPoint { .. } => self.gradient_drag(st, p),
+            Gesture::Gizmo(drag) => {
+                let drag = drag.clone();
+                self.gizmo_drag(&drag, p, mods);
+            }
             Gesture::Move { start, applied, layers, features, targets, merge } => {
                 let mut d = [p[0] - start[0], p[1] - start[1]];
                 if mods.shift {
@@ -400,6 +408,7 @@ impl MotionDocument {
             Gesture::Move { merge, .. } => Some(merge.as_str()),
             Gesture::Scale(s) => Some(s.merge.as_str()),
             Gesture::Rotate(t) => Some(t.merge.as_str()),
+            Gesture::Gizmo(drag) => Some(MotionDocument::gizmo_merge(drag)),
             Gesture::Vertex { merge, .. } | Gesture::Vertices { merge, .. } | Gesture::GradientPoint { merge, .. } | Gesture::Camera { merge, .. } => {
                 Some(merge.as_str())
             }

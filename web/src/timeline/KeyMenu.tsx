@@ -13,16 +13,21 @@ import { SHORTCUT_OVERRIDES } from '../menus'
  * editor's dispatch, which runs the rows the Animation menu has as well.
  */
 export function KeyMenu({ at, onClose, onCommand }: { at: ContextMenuPoint | null; onClose: () => void; onCommand: (command: string) => void }) {
-  const { run, query, t, phrase: p, byId } = useKitEditor()
+  const { run, query, t, phrase: p, byId, session } = useKitEditor()
   // What the selected keyframes are: how many, whether any moves through space (and all rove), whether two are Scale's.
-  const [keys, setKeys] = useState({ count: 0, spatial: false, roving: false, scale: false })
+  const [keys, setKeys] = useState({ count: 0, spatial: false, roving: false, scale: false, rovable: true })
   useEffect(() => {
     if (!at) return undefined
     let current = true
-    void query<Array<{ spatial?: string | null; roving?: boolean; path?: string }>>('keys.info', {}).then((list) => {
+    void query<Array<{ spatial?: string | null; roving?: boolean; path?: string }>>('keys.info', {}).then(async (list) => {
       if (!current || !Array.isArray(list)) return
       const moving = list.filter((key) => typeof key.spatial === 'string')
-      setKeys({ count: list.length, spatial: moving.length > 0, roving: moving.length > 0 && moving.every((key) => key.roving === true), scale: list.filter((key) => key.path === 'transform/scale').length >= 2 })
+      const spatial = moving.length > 0
+      const roving = spatial && moving.every((key) => key.roving === true)
+      // A first or last keyframe cannot rove: the engine, trying it on a copy, would change nothing.
+      const rovable = !spatial || roving ? true : await (session.doc?.invoke<boolean>('wouldChange', 'keys.interpolation', JSON.stringify({ roving: true })) ?? Promise.resolve(true)).catch(() => true)
+      if (!current) return
+      setKeys({ count: list.length, spatial, roving, rovable, scale: list.filter((key) => key.path === 'transform/scale').length >= 2 })
     })
     return () => {
       current = false
@@ -42,10 +47,17 @@ export function KeyMenu({ at, onClose, onCommand }: { at: ContextMenuPoint | nul
       <MenuItem label={p('Keyframe Interpolation…')} shortcut={shortcut('keys.interpolation')} onSelect={() => onCommand('keys.interpolation')} testId="motion-key-menu-interpolation" />
       <MenuItem label={p('Keyframe Velocity…')} shortcut={shortcut('keys.velocity')} onSelect={() => onCommand('keys.velocity')} testId="motion-key-menu-velocity" />
       <MenuItem label={p('Toggle Hold Keyframe')} shortcut={shortcut('keys.toggleHold')} onSelect={() => onCommand('keys.toggleHold')} testId="motion-key-menu-toggle-hold" />
-      {keys.spatial ? <MenuItem label={p(keys.roving ? 'Rove Across Time (On)' : 'Rove Across Time')} onSelect={() => onCommand('kit:rove-across-time')} testId="motion-key-menu-rove" /> : null}
+      {keys.spatial ? (
+        // Off on a first or last keyframe, saying why.
+        <div className="motion-menu-hinted" title={keys.rovable ? undefined : t('keyMenu.roveEnds')} data-testid="motion-key-menu-rove-row">
+          <MenuItem label={p(keys.roving ? 'Rove Across Time (On)' : 'Rove Across Time')} disabled={!keys.rovable} onSelect={() => onCommand('kit:rove-across-time')} testId="motion-key-menu-rove" />
+        </div>
+      ) : null}
       <MenuSeparator />
       <MenuItem label={p('Time-Reverse Keyframes')} onSelect={() => onCommand('keys.timeReverse')} testId="motion-key-menu-reverse" />
       {keys.scale ? <MenuItem label={p('Exponential Scale')} onSelect={() => onCommand('keys.exponentialScale')} testId="motion-key-menu-exponential" /> : null}
+      {keys.count >= 2 ? <MenuItem label={t('keyMenu.wiggler')} onSelect={() => onCommand('kit:wiggler')} testId="motion-key-menu-wiggler" /> : null}
+      {keys.count >= 3 ? <MenuItem label={t('keyMenu.smoother')} onSelect={() => onCommand('kit:smoother')} testId="motion-key-menu-smoother" /> : null}
       <MenuSeparator />
       <MenuItem label={p('Select Equal Keyframes')} onSelect={() => onCommand('keys.selectEqual')} testId="motion-key-menu-select-equal" />
       <MenuItem label={p('Select Previous Keyframes')} onSelect={() => onCommand('keys.selectPrevious')} testId="motion-key-menu-select-previous" />

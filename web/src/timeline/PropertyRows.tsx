@@ -13,7 +13,7 @@ import { KeyMark } from './KeyMark'
 import { sideOf, type PropRead } from './interp'
 import { keyTimes } from './keys'
 import { effectOf, parentsOf, propertyRows, type TreeNode, type Twirl } from './tree'
-import { ExpressionRow, explainError, type ExprError } from './ExpressionRow'
+import { ExpressionRow, errorLine, explainError, type ExprError } from './ExpressionRow'
 import { leftOf } from './view'
 import { useWaveformReader, type Waveform } from './samples'
 
@@ -160,6 +160,7 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
               text={node.expression}
               enabled={node.expressionEnabled !== false}
               error={failure ? explainError(failure.message, t, node.expression) : null}
+              line={failure ? errorLine(failure.message, node.expression) : null}
               depth={depth}
               time={info.time}
               testId={`motion-expr-${id}`}
@@ -167,7 +168,8 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
             />
           ) : null
         return [
-          <div key={node.path} className="motion-row motion-prop-row" data-selected={layer.selectedProps.includes(node.path) || undefined} data-testid={`motion-prop-row-${id}`}>
+          // A pick-whip let go over this row references this property (ExpressionRow.tsx).
+          <div key={node.path} className="motion-row motion-prop-row" data-selected={layer.selectedProps.includes(node.path) || undefined} data-pick-layer={layer.id} data-pick-path={node.path} data-testid={`motion-prop-row-${id}`}>
             <div className="motion-timeline-names motion-prop-names" style={{ paddingLeft: 36 + depth * 14 }}>
               <KeyDiamond layer={layer.id} path={node.path} name={name} times={times} time={info.time} frame={info.frame} testId={`motion-row-add-key-${id}`} readOnly={readOnly} expression={node.expression !== undefined} />
               {/* A click on the name selects the property (Shift or Cmd adds it): what Add Expression, Copy and the keyframe commands act on. */}

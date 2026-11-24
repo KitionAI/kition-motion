@@ -76,13 +76,16 @@ export function Transport({
   const fps = info.comp?.fps ?? 30
   const end = Math.max(0, (info.comp?.duration ?? 0) - info.frame)
   return (
+    // A size container: as the bar narrows (the Project and Properties panels open beside it), the
+    // meters and the frame rate give up their room first, then the labels, never the controls
+    // (app.css, `@container motion-transport`).
     <div className="kui-bar motion-transport" data-testid="motion-transport">
       <MenuButton
         placement="auto"
         trigger={({ toggle }) => (
-          <Button variant="ghost" onClick={toggle} disabled={readOnly} data-testid="motion-new-layer">
+          <Button variant="ghost" onClick={toggle} disabled={readOnly} aria-label={t('newLayer')} title={t('newLayer')} data-testid="motion-new-layer">
             <Plus size={14} aria-hidden="true" />
-            {t('newLayer')}
+            <span className="motion-transport-label">{t('newLayer')}</span>
           </Button>
         )}
       >
@@ -92,7 +95,7 @@ export function Transport({
       </MenuButton>
       <CompPath trail={trail} onBack={onBack} />
       <CompSwitcher info={info} />
-      <span style={{ flex: 1 }} />
+      <span className="motion-transport-lead" />
       <IconButton icon={SkipBack} label={t('goToStart')} onClick={() => onSeek(0)} />
       <IconButton icon={StepBack} label={t('stepBack')} onClick={() => onStep(-1)} />
       <Button variant="primary" onClick={onPlay} aria-label={playing ? t('pause') : t('play')} title={`${playing ? t('pause') : t('play')} (Space)`} data-testid="motion-play">
@@ -100,14 +103,19 @@ export function Transport({
       </Button>
       <IconButton icon={StepForward} label={t('stepForward')} onClick={() => onStep(1)} />
       <IconButton icon={SkipForward} label={t('goToEnd')} onClick={() => onSeek(end)} />
-      <span className="motion-timecode" data-testid="motion-timecode">
-        {timecode(info.time, fps)}
+      {/* The time and the duration on one line: they never wrap however narrow the bar. */}
+      <span className="motion-timecodes">
+        <span className="motion-timecode" data-testid="motion-timecode">
+          {timecode(info.time, fps)}
+        </span>
+        <span className="motion-timecode motion-duration kui-muted" data-testid="motion-duration">
+          / {timecode(info.comp?.duration ?? 0, fps)}
+        </span>
       </span>
-      <span className="motion-timecode kui-muted">/ {timecode(info.comp?.duration ?? 0, fps)}</span>
       {loop ? (
         <Button variant="ghost" className="motion-toggle" aria-pressed={loop.on} aria-label={t('loop.label')} title={loop.on ? t('loop.on') : t('loop.off')} onClick={loop.onToggle} data-testid="motion-loop">
           <Repeat size={14} aria-hidden="true" />
-          {t('loop.label')}
+          <span className="motion-transport-label">{t('loop.label')}</span>
         </Button>
       ) : null}
       {meters}
@@ -129,7 +137,7 @@ export function Transport({
           </span>
         </>
       ) : null}
-      <span style={{ flex: 1 }} />
+      <span className="motion-transport-tail" />
     </div>
   )
 }

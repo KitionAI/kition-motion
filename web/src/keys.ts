@@ -64,10 +64,11 @@ export const EDITOR_KEYS = {
   previousFrame: { command: 'time.previousFrame', keys: ['PageUp', 'Cmd+←'], zh: '上一帧（加 Shift 后退 10 帧）', en: 'Previous frame (10 with Shift)', match: (event: KeyLike) => event.key === 'PageUp' || (event.key === 'ArrowLeft' && (event.metaKey || event.ctrlKey)) },
   start: { command: 'time.start', keys: ['Home'], zh: '转到开头', en: 'Go to the start', match: (event: KeyLike) => event.key === 'Home' && plain(event) },
   end: { command: 'time.end', keys: ['End'], zh: '转到结尾', en: 'Go to the end', match: (event: KeyLike) => event.key === 'End' && plain(event) },
-  // F10, F11 and F12 (the menu's keys) are often the browser's or the system's: these work everywhere.
-  view3dFront: { command: 'view.3d.front', keys: ['Alt+Shift+1'], zh: '3D 视图：正面（同 F10）', en: '3D view: Front (as F10)', match: (event: KeyLike) => altShiftDigit(event, 1) },
-  view3dCustom: { command: 'view.3d.custom1', keys: ['Alt+Shift+2'], zh: '3D 视图：自定义视图 1（同 F11）', en: '3D view: Custom View 1 (as F11)', match: (event: KeyLike) => altShiftDigit(event, 2) },
-  view3dCamera: { command: 'view.3d.activeCamera', keys: ['Alt+Shift+3'], zh: '3D 视图：活动摄像机（同 F12）', en: '3D view: Active Camera (as F12)', match: (event: KeyLike) => altShiftDigit(event, 3) },
+  // Alt+Shift with 1, 2 or 3 work in every browser; F10 and F12 too (F11 is the browser's full
+  // screen almost everywhere, so it is not offered).
+  view3dFront: { command: 'view.3d.front', keys: ['Alt+Shift+1', 'F10'], zh: '3D 视图：正面', en: '3D view: Front', match: (event: KeyLike) => altShiftDigit(event, 1) || (plain(event) && event.key === 'F10') },
+  view3dCustom: { command: 'view.3d.custom1', keys: ['Alt+Shift+2'], zh: '3D 视图：自定义视图 1', en: '3D view: Custom View 1', match: (event: KeyLike) => altShiftDigit(event, 2) },
+  view3dCamera: { command: 'view.3d.activeCamera', keys: ['Alt+Shift+3', 'F12'], zh: '3D 视图：活动摄像机', en: '3D view: Active Camera', match: (event: KeyLike) => altShiftDigit(event, 3) || (plain(event) && event.key === 'F12') },
 } satisfies Record<string, Binding>
 
 /** Mouse gestures with keys in the Properties panel and on the timeline's property rows (KeyDiamond.tsx). */

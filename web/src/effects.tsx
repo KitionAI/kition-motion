@@ -65,21 +65,83 @@ export function EffectRibbon({ effects, onCommand, lastEffect }: { effects: read
   )
 }
 
+/** Chinese (and Japanese) characters: a name in the editor's Chinese. */
+const CJK = /[\u3400-\u9fff]/
+
 /** How many matches Find Effect lists at once. */
 const SHOWN = 60
 
+/** What each category's effects do, as the first half of an effect's one-line description (`effect.about.<category>`). */
+const ABOUT: Readonly<Record<string, string>> = {
+  '3D Channel': '3d',
+  Audio: 'audio',
+  'Blur & Sharpen': 'blur',
+  Channel: 'channel',
+  'Color Correction': 'color',
+  Distort: 'distort',
+  'Expression Controls': 'controls',
+  Generate: 'generate',
+  'Immersive Video': 'immersive',
+  Keying: 'keying',
+  Matte: 'matte',
+  'Noise & Grain': 'noise',
+  Paint: 'paint',
+  Perspective: 'perspective',
+  Simulation: 'simulation',
+  Stylize: 'stylize',
+  Text: 'text',
+  Time: 'time',
+  Transition: 'transition',
+  Utility: 'utility',
+}
+
+const RECENT_KEY = 'kition-motion.effects-recent'
+const FAVOURITE_KEY = 'kition-motion.effects-favourite'
+/** How many effects Recently Used keeps. */
+const RECENT = 8
+
+function stored(key: string): string[] {
+  try {
+    const list = JSON.parse(globalThis.localStorage?.getItem(key) ?? '[]') as unknown
+    return Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : []
+  } catch {
+    return []
+  }
+}
+function store(key: string, list: string[]) {
+  try {
+    localStorage.setItem(key, JSON.stringify(list))
+  } catch {
+    // Kept for this page only.
+  }
+}
+
+/** An effect just applied goes first in Recently Used (kept in this browser). */
+export function rememberEffect(id: string) {
+  store(RECENT_KEY, [id, ...stored(RECENT_KEY).filter((each) => each !== id)].slice(0, RECENT))
+}
+
 /**
- * Find Effect: the effects whose name (English or translated) or category contains what is typed,
- * as it is typed; Up and Down choose, Enter or a click applies to the selected layers.
+ * Find Effect, the effect browser: with nothing typed, the favourites (starred), the effects used
+ * last, then every category (opened with a click), each effect with a one-line description (what
+ * its category does and its first parameters); typing lists the effects whose name (English or
+ * translated) or category contains it. Up and Down choose, Enter or a click applies to the
+ * selected layers; the star beside an effect adds it to the favourites or takes it out (kept in
+ * this browser).
  */
 export function FindEffectDialog({ effects, onApply, onClose }: { effects: readonly MotionEffect[]; onApply: (effect: MotionEffect) => void; onClose: () => void }) {
   const { enabled, phrase: p, t } = useKitEditor()
   const [text, setText] = useState('')
   const [at, setAt] = useState(0)
+  const [favourites, setFavourites] = useState(() => stored(FAVOURITE_KEY))
+  const [recent] = useState(() => stored(RECENT_KEY))
+  const [openCategories, setOpenCategories] = useState<ReadonlySet<string>>(() => new Set())
   const can = enabled('effect.apply')
-  const all = useMemo(() => [...effectCategories(effects).values()].flat(), [effects])
+  const categories = useMemo(() => effectCategories(effects), [effects])
+  const all = useMemo(() => [...categories.values()].flat(), [categories])
+  const byId = useMemo(() => new Map(all.map((effect) => [effect.id, effect])), [all])
+  const query = text.trim().toLowerCase()
   const matches = useMemo(() => {
-    const query = text.trim().toLowerCase()
     if (!query) return all
     // Names that start with the text first, then names that contain it, then categories that do.
     const rank = (effect: MotionEffect) => {
@@ -93,14 +155,78 @@ export function FindEffectDialog({ effects, onApply, onClose }: { effects: reado
       .filter((match) => match.rank < 3)
       .sort((a, b) => a.rank - b.rank)
       .map((match) => match.effect)
-  }, [all, p, text])
-  const shown = matches.slice(0, SHOWN)
+  }, [all, p, query])
+  // With nothing typed: the groups shown, in order (a category's effects only once it is opened).
+  const groups = useMemo(() => {
+    if (query) return [{ id: 'matches', label: '', effects: matches.slice(0, SHOWN), open: true }]
+    const pick = (ids: string[]) => ids.map((id) => byId.get(id)).filter((effect): effect is MotionEffect => effect != null)
+    return [
+      ...(favourites.length ? [{ id: 'favourites', label: t('effect.favourites'), effects: pick(favourites), open: true }] : []),
+      ...(recent.length ? [{ id: 'recent', label: t('effect.recent'), effects: pick(recent), open: true }] : []),
+      ...[...categories].map(([category, list]) => ({ id: `category-${category}`, label: p(category), effects: list, open: openCategories.has(category), category })),
+    ]
+  }, [query, matches, favourites, recent, categories, openCategories, byId, p, t])
+  // The options a key moves through: every effect shown, in order.
+  const shown = groups.flatMap((group) => (group.open ? group.effects.map((effect) => ({ effect, key: `${group.id}:${effect.id}` })) : []))
   const current = shown[Math.min(at, shown.length - 1)]
   const apply = (effect: MotionEffect | undefined) => {
     if (!effect || !can) return
     onApply(effect)
     onClose()
   }
+  const toggleFavourite = (id: string) =>
+    setFavourites((now) => {
+      const next = now.includes(id) ? now.filter((each) => each !== id) : [...now, id]
+      store(FAVOURITE_KEY, next)
+      return next
+    })
+  /** An effect's one-line description: what its category does, and its first parameters. */
+  const about = (effect: MotionEffect) => {
+    const kind = ABOUT[effect.category]
+    // Only settings named in the editor's language (a name without a translation is left out of a
+    // Chinese description, rather than shown in English).
+    const chinese = CJK.test(t('effect.noParams'))
+    const all = effect.params ?? []
+    const named = all.map((param) => p(param.name)).filter((name) => !chinese || CJK.test(name) || !/[A-Za-z]/.test(name))
+    const params = named.slice(0, 3)
+    const more = all.length > params.length ? '…' : ''
+    const settings = params.length ? t('effect.params', { names: params.join(t('effect.listSeparator')) + more }) : all.length ? t('effect.paramCount', { count: all.length }) : t('effect.noParams')
+    return [kind ? t(`effect.about.${kind}`) : p(effect.category), settings].join(' · ')
+  }
+  const option = (effect: MotionEffect, key: string, group: string) => (
+    <div key={key} className="motion-effect-row" data-group={group}>
+      <button
+        type="button"
+        role="option"
+        aria-selected={current?.key === key}
+        className="kui-menu-item motion-effect-option"
+        disabled={!can}
+        title={about(effect)}
+        onMouseEnter={() => setAt(shown.findIndex((each) => each.key === key))}
+        onClick={() => apply(effect)}
+        data-testid={group === 'matches' || group.startsWith('category-') ? `motion-effect-option-${effect.id}` : `motion-effect-${group}-${effect.id}`}
+      >
+        <span className="motion-effect-name">
+          <span>{p(effect.name)}</span>
+          <span className="kui-muted">{p(effect.category)}</span>
+        </span>
+        <span className="motion-effect-about kui-muted" data-testid={`motion-effect-about-${effect.id}`}>
+          {about(effect)}
+        </span>
+      </button>
+      <button
+        type="button"
+        className="motion-effect-star"
+        aria-pressed={favourites.includes(effect.id)}
+        aria-label={t(favourites.includes(effect.id) ? 'effect.unfavourite' : 'effect.favourite', { name: p(effect.name) })}
+        title={t(favourites.includes(effect.id) ? 'effect.unfavourite' : 'effect.favourite', { name: p(effect.name) })}
+        onClick={() => toggleFavourite(effect.id)}
+        data-testid={`motion-effect-star-${group}-${effect.id}`}
+      >
+        {favourites.includes(effect.id) ? '★' : '☆'}
+      </button>
+    </div>
+  )
   return (
     <Dialog
       title={t('effect.find')}
@@ -111,7 +237,7 @@ export function FindEffectDialog({ effects, onApply, onClose }: { effects: reado
           <Button onClick={onClose} data-testid="motion-effect-dialog-cancel">
             {t('dialog.cancel')}
           </Button>
-          <Button variant="primary" disabled={!can || !current} onClick={() => apply(current)} data-testid="motion-effect-dialog-ok">
+          <Button variant="primary" disabled={!can || !current} onClick={() => apply(current?.effect)} data-testid="motion-effect-dialog-ok">
             {t('effect.apply')}
           </Button>
         </>
@@ -121,7 +247,7 @@ export function FindEffectDialog({ effects, onApply, onClose }: { effects: reado
         className="motion-form motion-effect-find"
         onSubmit={(event) => {
           event.preventDefault()
-          apply(current)
+          apply(current?.effect)
         }}
       >
         <TextInput
@@ -143,28 +269,38 @@ export function FindEffectDialog({ effects, onApply, onClose }: { effects: reado
         />
         {can ? null : <p className="kui-muted">{t('effect.selectFirst')}</p>}
         <div className="motion-effect-list" role="listbox" aria-label={t('effect.find')} data-testid="motion-effect-list">
-          {shown.length ? (
-            shown.map((effect) => (
-              <button
-                key={effect.id}
-                type="button"
-                role="option"
-                aria-selected={effect === current}
-                className="kui-menu-item motion-effect-option"
-                disabled={!can}
-                onMouseEnter={() => setAt(shown.indexOf(effect))}
-                onClick={() => apply(effect)}
-                data-testid={`motion-effect-option-${effect.id}`}
-              >
-                <span>{p(effect.name)}</span>
-                <span className="kui-muted">{p(effect.category)}</span>
-              </button>
-            ))
-          ) : (
-            <p className="kui-muted">{t('effect.none')}</p>
+          {query && !matches.length ? <p className="kui-muted">{t('effect.none')}</p> : null}
+          {groups.map((group) =>
+            group.id === 'matches' ? (
+              group.effects.map((effect) => option(effect, `${group.id}:${effect.id}`, group.id))
+            ) : (
+              <div key={group.id} className="motion-effect-group" role="group" aria-label={group.label} data-testid={`motion-effect-group-${group.id}`}>
+                {'category' in group && group.category ? (
+                  <button
+                    type="button"
+                    className="motion-effect-group-head"
+                    aria-expanded={group.open}
+                    onClick={() =>
+                      setOpenCategories((now) => {
+                        const next = new Set(now)
+                        if (next.has(group.category)) next.delete(group.category)
+                        else next.add(group.category)
+                        return next
+                      })
+                    }
+                    data-testid={`motion-effect-head-${group.id}`}
+                  >
+                    {group.open ? '▾' : '▸'} {group.label} <span className="kui-muted">{group.effects.length}</span>
+                  </button>
+                ) : (
+                  <p className="motion-effect-group-head kui-muted">{group.label}</p>
+                )}
+                {group.open ? group.effects.map((effect) => option(effect, `${group.id}:${effect.id}`, group.id)) : null}
+              </div>
+            ),
           )}
         </div>
-        {matches.length > SHOWN ? <p className="kui-muted">{t('effect.more', { count: matches.length - SHOWN })}</p> : null}
+        {query && matches.length > SHOWN ? <p className="kui-muted">{t('effect.more', { count: matches.length - SHOWN })}</p> : null}
         <button type="submit" hidden />
       </form>
     </Dialog>

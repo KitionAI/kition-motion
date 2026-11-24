@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent, type RefObject } from 'react'
 import { DownloadIcon as Download, PanelLeftIcon } from '@kition/tessera/icons/react'
 import {
   Button,
@@ -27,7 +27,7 @@ import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
 import { ARRANGE, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
-import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, type MotionEffect } from './effects'
+import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, rememberEffect, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
 import { motionReport } from './errors'
@@ -42,6 +42,7 @@ import { ProjectPanel, useProjectPanel } from './ProjectPanel'
 import { ExportDialog } from './ExportDialog'
 import { CanvasGuides, OVERLAY_KEYS, useOverlays } from './CanvasGuides'
 import { RegionOfInterest, type Region } from './RegionOfInterest'
+import { SecondView } from './SecondView'
 import { installPointerdownFallback } from './pointerFallback'
 import { ITEM_MIME, parseAnswer, relativePath, useFootage, type ProjectItem, type ProjectSummary } from './footage'
 import { RenderQueuePanel, compsOf, useRenderQueue } from './RenderQueue'
@@ -194,6 +195,44 @@ function usePreviewCache(doc: { invoke: <T>(name: string, ...args: unknown[]) =>
   return { cached: cache?.cached ?? [], fps, refresh: ask, stats }
 }
 
+/** What the engine's `cacheAhead` answers: frames of the work area held, of how many, and whether memory ran out. */
+type CacheAhead = { done: number; total: number; full: boolean }
+
+/**
+ * View ▸ Cache Work Area in Background: while it is on and nothing plays, the engine renders the
+ * work area's frames the cache lacks a little at a time (`cacheAhead`, about 60 ms a step with a
+ * pause between, so edits and keys keep their turn), from the current time on, until all are held
+ * or the cache's memory budget is reached; the cache bar fills as it goes. An edit empties the
+ * cache (the engine cannot tell which frames it changed): caching starts again a moment later.
+ */
+function useCacheAhead(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, on: boolean, playing: boolean, state: unknown, refresh: () => Promise<unknown>) {
+  const [progress, setProgress] = useState<CacheAhead | null>(null)
+  const latestRefresh = useRef(refresh)
+  latestRefresh.current = refresh
+  useEffect(() => {
+    if (!doc || !on || playing) return undefined
+    let stopped = false
+    const pause = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
+    void (async () => {
+      // A moment after the last change, so a drag or typing is not held up.
+      await pause(300)
+      while (!stopped) {
+        const answer = await doc.invoke<string>('cacheAhead', 60).catch(() => null)
+        if (stopped || !answer) break
+        const next = JSON.parse(answer) as CacheAhead
+        setProgress((before) => (before && before.done === next.done && before.total === next.total && before.full === next.full ? before : next))
+        void latestRefresh.current()
+        if (next.done >= next.total || next.full) break
+        await pause(30)
+      }
+    })()
+    return () => {
+      stopped = true
+    }
+  }, [doc, on, playing, state])
+  return on ? progress : null
+}
+
 /**
  * The `KIT_RUNS` and `TRIED_ROWS` rows that would change nothing now (the engine tries each on a
  * copy, `wouldChange`), asked again a moment after the document, the selection or the time
@@ -331,6 +370,10 @@ function codeOf(key: string) {
 const GRID_KEY = 'kition-motion.grid-spacing'
 /** Where Skip Frames to Keep Real Time is kept. */
 const SKIP_KEY = 'kition-motion.skip-frames'
+/** Where View ▸ Two Views is kept. */
+const TWO_VIEWS_KEY = 'kition-motion.two-views'
+/** Where Cache Work Area in Background is kept. */
+const CACHE_AHEAD_KEY = 'kition-motion.cache-ahead'
 /** Where Loop (playback goes round the work area, on by default) is kept. */
 const LOOP_KEY = 'kition-motion.loop'
 const PRESET_FOLDER_KEY = 'kition-motion.preset-folder'
@@ -518,6 +561,25 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const workArea = state?.comp?.workArea ?? NO_WORK_AREA
   const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0, state?.frame ?? 1 / 30, skipFrames, paintNow, loop, workArea)
   const frameCache = usePreviewCache(session.doc, state, playback.playing)
+  // View ▸ Cache Work Area in Background (off by default), kept in this browser.
+  const [cacheAhead, setCacheAhead] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem(CACHE_AHEAD_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+  const toggleCacheAhead = useCallback(() => {
+    setCacheAhead((current) => {
+      try {
+        localStorage.setItem(CACHE_AHEAD_KEY, String(!current))
+      } catch {
+        // Kept for this page only.
+      }
+      return !current
+    })
+  }, [])
+  const ahead = useCacheAhead(session.doc, cacheAhead, playback.playing, state, frameCache.refresh)
   // While playing, the transport and the timeline show the time playback has reached.
   const shownState = useMemo(() => (state && playback.at !== null ? { ...state, time: playback.at } : state), [state, playback.at])
   useSpaceTap(playback.toggle)
@@ -536,7 +598,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const { run, query } = editor
   const footage = useFootage({ host, run, t })
   // Reveal Layer Source in Project: the item the Project panel shows and selects.
-  const [reveal, setReveal] = useState<{ item: number } | null>(null)
+  const [reveal, setReveal] = useState<{ item: number; rename?: boolean } | null>(null)
   const revealSource = async (layer?: number) => {
     const answer = parseAnswer<{ item?: number }>(await run('layer.revealSource', layer != null ? { layer } : {}))
     if (answer?.item == null) return
@@ -557,7 +619,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   /** A new folder from File ▸ New ▸ Folder, at the top of the project (the panel shows it). */
   const newFolder = async () => {
     project.show()
-    await run('project.newFolder', { name: await unusedName(t('project.folderName')) })
+    const made = parseAnswer<{ item?: number }>(await run('project.newFolder', { name: await unusedName(t('project.folderName')) }))
+    // Its name is ready to type over, as after the panel's own New Folder button.
+    if (made?.item != null) setReveal({ item: made.item, rename: true })
   }
   /** Footage, a solid or a composition from the project as a layer at the current time (one undo step). */
   const placeItem = (item: number, position?: [number, number]) => footage.place(item, { time: state?.time ?? 0, ...(position ? { position } : {}) })
@@ -608,6 +672,27 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }
   /** Adds a marker at the current time: on the selected layers, or on the composition with none selected. */
   const addMarker = () => void run(state?.layers.some((layer) => layer.selected) ? 'layer.addMarker' : 'comp.addMarker', {})
+  /**
+   * File ▸ Dependencies ▸ Collect Files: a copy of the project and every footage file it uses, in
+   * a folder beside the project (the engine's `collectFiles` makes them in memory, the host writes
+   * each one); the copy's footage points at its `(Footage)` folder.
+   */
+  const collectFiles = async (inside: string) => {
+    const doc = session.doc
+    if (!doc) return
+    const folder = host.init.document.path.split('/').slice(0, -1).join('/')
+    try {
+      const answer = JSON.parse(await doc.invoke<string>('collectFiles', inside)) as { files: string[]; missing: string[] }
+      for (const name of answer.files) {
+        const bytes = await doc.invoke<Uint8Array | undefined>('takeFile', name)
+        if (!bytes) throw new Error(name)
+        await host.exportFile([folder, name].filter(Boolean).join('/'), bytes)
+      }
+      toast.success(t('collect.done', { count: answer.files.length, folder: inside }), answer.missing.length ? { description: t('collect.missing', { names: answer.missing.join(', ') }) } : undefined)
+    } catch (error) {
+      toast.error(t('collect.failed'), { description: error instanceof Error ? error.message : String(error) })
+    }
+  }
   /** The composition's current frame as a PNG beside the project. */
   const saveFrame = async () => {
     const doc = session.doc
@@ -624,6 +709,14 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     } catch (error) {
       toast.error(t('frameFailed'), { description: error instanceof Error ? error.message : String(error) })
     }
+  }
+  /** A Project item or files dragged over the composition or the timeline: taken as a copy. */
+  const acceptDrag = (event: DragEvent<HTMLDivElement>) => {
+    const types = event.dataTransfer.types
+    if (host.readOnly || !state?.comp || !(types.includes(ITEM_MIME) || types.includes('Files'))) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+    setDropping(true)
   }
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
   // The first press after a drag-and-drop gets its pointerdown in WebKit too (pointerFallback.ts).
@@ -715,6 +808,26 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       void canvas.current?.retryRender()
     }, 30)
   }
+  // Where the Selection tool's 3D handles are (the engine's `gizmoHandles`, composition pixels),
+  // on the workspace for the browser tests, which press there.
+  useEffect(() => {
+    const doc = session.doc
+    const element = workspace.current
+    if (!doc || !element || !zoom || tools.active !== 'selection' || !anyThreeD) {
+      element?.removeAttribute('data-gizmo')
+      return undefined
+    }
+    let current = true
+    void doc
+      .invoke<string>('gizmoHandles', zoom)
+      .then((answer) => {
+        if (current) element.setAttribute('data-gizmo', answer)
+      })
+      .catch(() => undefined)
+    return () => {
+      current = false
+    }
+  }, [session.doc, state, zoom, view3d.view, tools.active, anyThreeD])
   // The graph editor's curves: a property's values over time, sampled by the engine.
   const doc = session.doc
   const sampler = useCallback<CurveSampler>(
@@ -742,15 +855,28 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       }
       return !now
     })
-  const pointerAsk = useRef<{ busy: boolean; next: [number, number] | null }>({ busy: false, next: null })
+  const pointerAsk = useRef<{ busy: boolean; next: [number, number] | null; gone: boolean }>({ busy: false, next: null, gone: false })
+  /** The pointer left the composition: the readout empties (it would read a place no longer pointed at). */
+  const clearPointer = () => {
+    pointerAsk.current.next = null
+    pointerAsk.current.gone = true
+    setPointer(null)
+  }
   const readPointer = (event: { clientX: number; clientY: number; target: EventTarget | null }) => {
-    if (event.target instanceof Element && event.target.closest('.motion-timeline, .motion-transport, .motion-splitter')) return
+    if (event.target instanceof Element && event.target.closest('.motion-timeline, .motion-transport, .motion-splitter')) {
+      clearPointer()
+      return
+    }
     const view = canvas.current?.view()
     const element = workspace.current?.querySelector('[data-testid="kit-canvas-surface"]')
     if (!view || !element || !state?.comp) return
     const rect = element.getBoundingClientRect()
-    if (event.clientX < rect.left || event.clientY < rect.top || event.clientX > rect.right || event.clientY > rect.bottom) return
+    if (event.clientX < rect.left || event.clientY < rect.top || event.clientX > rect.right || event.clientY > rect.bottom) {
+      clearPointer()
+      return
+    }
     const ask = pointerAsk.current
+    ask.gone = false
     ask.next = [view.x + (event.clientX - rect.left) / view.zoom, view.y + (event.clientY - rect.top) / view.zoom]
     if (ask.busy) return
     ask.busy = true
@@ -760,6 +886,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         ask.next = null
         // While it plays the engine is busy with frames: the position only.
         const rgba = playback.playing || !session.doc ? null : await session.doc.invoke<Uint8Array>('pixelAt', x, y).catch(() => null)
+        // Left meanwhile: an answer arriving late does not bring the readout back.
+        if (ask.gone) break
         setPointer({ x: Math.floor(x), y: Math.floor(y), rgba: rgba && rgba.length === 4 ? [...rgba] : null })
       }
       ask.busy = false
@@ -773,7 +901,13 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     if (!session.doc) return
     void query<MotionEffect[]>('effect.list', {}).then((list) => setEffects((list ?? []).map(({ id, name, category, params }) => ({ id, name, category, params }))))
   }, [session.doc, query])
-  const applyEffect = (effect: string) => void run('effect.apply', { effect }).then((done) => done !== null && setLastEffect(true))
+  const applyEffect = (effect: string) =>
+    void run('effect.apply', { effect }).then((done) => {
+      if (done === null) return
+      setLastEffect(true)
+      // Find Effect lists it under Recently used.
+      rememberEffect(effect)
+    })
   /** A name not taken by a project item: `Comp 2`, `Solid 1`. */
   const unusedName = async (base: string) => {
     const summary = await query<{ items?: Array<{ name?: string }> }>('project.summary', {})
@@ -833,7 +967,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     const keys = await query<Array<{ layer: number; path?: string; name?: string; compTime: number; value: unknown }>>('keys.info', {})
     const key = Array.isArray(keys) && keys.length === 1 ? keys[0] : null
     if (!key || !state?.comp || !key.path) return
-    setDialog({ kind: 'keyValue', layer: key.layer, path: key.path, name: key.name ?? key.path, time: key.compTime, value: key.value, fps: state.comp.fps, duration: state.comp.duration })
+    // The property's name as the timeline shows it (in the editor's language); a 2D layer's
+    // Position, Anchor Point or Scale shows x and y only, as the timeline does.
+    const layer = state.layers.find((each) => each.id === key.layer)
+    const flat = layer != null && !isThreeD(layer) && /^transform\/(position|anchor|scale)$/.test(key.path) && Array.isArray(key.value) && key.value.length === 3
+    setDialog({ kind: 'keyValue', layer: key.layer, path: key.path, name: phrase(key.name ?? key.path), time: key.compTime, value: key.value, fps: state.comp.fps, duration: state.comp.duration, ...(flat ? { shown: 2 } : {}) })
   }
   /** Time Stretch, from the first selected layer's stretch and length. */
   const openStretch = async () => {
@@ -893,6 +1031,33 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     if (!session.doc) return
     void session.doc.invoke('setPenMasks', penMasks).catch(() => undefined)
   }, [session.doc, penMasks])
+  // View ▸ Two Views: a second 3D view beside the viewer (Top, or the active camera when the
+  // viewer shows Top), kept in this browser.
+  const [twoViews, setTwoViews] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem(TWO_VIEWS_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
+  const toggleTwoViews = () =>
+    setTwoViews((now) => {
+      try {
+        localStorage.setItem(TWO_VIEWS_KEY, String(!now))
+      } catch {
+        // Kept for this page only.
+      }
+      return !now
+    })
+  const [chosenSecond, setChosenSecond] = useState('top')
+  const secondView = chosenSecond === view3d.view ? (view3d.view === 'top' ? 'activeCamera' : 'top') : chosenSecond
+  /** Make Main: the second view goes to the viewer, the viewer's view here. */
+  const swapViews = () => {
+    const row = THREE_D_VIEWS.find(([, , each]) => each === secondView)
+    if (!row) return
+    setChosenSecond(view3d.view)
+    void run(row[0], {})
+  }
   // View ▸ Region of Interest: drawn with a drag over the composition; the viewer then renders
   // only inside it.
   const [region, setRegion] = useState<Region | null>(null)
@@ -923,6 +1088,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [KIT.roi]: () => setDrawingRegion((now) => !now),
     [KIT.clearRoi]: () => setRegionOfInterest(null),
     [KIT.skipFrames]: toggleSkipFrames,
+    [KIT.cacheAhead]: toggleCacheAhead,
+    [KIT.twoViews]: toggleTwoViews,
     [KIT.purgeCache]: purgeCache,
     'file.exportMovie': () => {
       if (renderQueue.rendering) toast.info(t('queue.busy'))
@@ -930,8 +1097,17 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     },
     [KIT.addToQueue]: () => state?.comp && void addToQueue([state.comp.id]),
     [KIT.renderQueue]: () => setQueueOpen((now) => !now),
-    [KIT.rove]: () => void run('keys.interpolation', { roving: !keyState.roving }),
+    [KIT.rove]: () => {
+      if (keyState.rovable === false) toast.info(t('keyMenu.roveEnds'))
+      else void run('keys.interpolation', { roving: !keyState.roving })
+    },
     'kit:edit-key': () => void openKeyValue(),
+    [KIT.collectFiles]: () => {
+      const project = (host.init.document.path.split('/').pop() ?? 'Project').replace(/\.[^.]*$/, '')
+      setDialog({ kind: 'collect', folder: t('collect.folderName', { name: project }), onCollect: (folder) => void collectFiles(folder) })
+    },
+    [KIT.wiggler]: () => setDialog({ kind: 'wiggler', spatial: keyState.spatial }),
+    [KIT.smoother]: () => setDialog({ kind: 'smoother' }),
     // One undo step per property (each its own `prop.convertExpressionToKeyframes`).
     [KIT.convertExpression]: () => convertible.forEach((each) => void run('prop.convertExpressionToKeyframes', each)),
     'layer.revealSource': () => void revealSource(),
@@ -1021,15 +1197,20 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const [keyState, setKeyState] = useState<SelectedKeys>({ spatial: false, roving: false })
   useEffect(() => {
     if (!keysSelected || playback.playing) {
-      setKeyState((before) => (before.spatial || before.roving ? { spatial: false, roving: false } : before))
+      setKeyState((before) => (before.spatial || before.roving || before.count ? { spatial: false, roving: false } : before))
       return undefined
     }
     let current = true
-    void query<Array<{ spatial?: string | null; roving?: boolean }>>('keys.info', {}).then((keys) => {
+    void query<Array<{ spatial?: string | null; roving?: boolean }>>('keys.info', {}).then(async (keys) => {
       if (!current || !Array.isArray(keys)) return
       const moving = keys.filter((key) => typeof key.spatial === 'string')
-      const next = { spatial: moving.length > 0, roving: moving.length > 0 && moving.every((key) => key.roving === true) }
-      setKeyState((before) => (before.spatial === next.spatial && before.roving === next.roving ? before : next))
+      const spatial = moving.length > 0
+      const roving = spatial && moving.every((key) => key.roving === true)
+      // Roving on a first or last keyframe changes nothing (the engine tries it on a copy).
+      const rovable = !spatial || roving ? true : await (session.doc?.invoke<boolean>('wouldChange', 'keys.interpolation', JSON.stringify({ roving: true })) ?? Promise.resolve(true)).catch(() => true)
+      if (!current) return
+      const next = { spatial, roving, rovable, count: keys.length }
+      setKeyState((before) => (before.spatial === next.spatial && before.roving === next.roving && before.rovable === next.rovable && before.count === next.count ? before : next))
     })
     return () => {
       current = false
@@ -1076,7 +1257,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }, [firstSelected, state, query])
   // Layer ▸ Time ▸ Enable or Disable Time Remapping, by the first selected layer.
   const remapOn = state?.layers.find((layer) => layer.selected)?.animated.some((property) => property.path === 'timeRemap') ?? false
-  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled, keyState), [effects, overlays, alignTo, skipFrames, remapOn, styled, keyState])
+  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews), [effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
   const allowed = useMemo(() => shortcutCommands(rows), [rows])
   const hiddenCommands = useCallback((command: string) => !allowed.has(command), [allowed])
@@ -1253,6 +1434,21 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               {t('roi.label')}
             </Button>
           ) : null}
+          {state?.comp ? (
+            <Button
+              variant="ghost"
+              className="motion-toggle"
+              aria-pressed={cacheAhead}
+              title={!cacheAhead ? t('cacheAhead.off') : ahead?.full ? t('cacheAhead.full', { done: ahead.done, total: ahead.total }) : t('cacheAhead.on', { done: ahead?.done ?? 0, total: ahead?.total ?? 0 })}
+              onClick={toggleCacheAhead}
+              data-testid="motion-cache-ahead"
+              data-done={ahead?.done}
+              data-total={ahead?.total}
+              data-full={ahead?.full || undefined}
+            >
+              {t('cacheAhead.label')}
+            </Button>
+          ) : null}
           {state?.comp && view3d.has3D ? (
             <Select
               className="motion-3d-view"
@@ -1322,7 +1518,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         }
       >
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
-        {exporting && state ? <ExportDialog info={state} doc={session.doc} lottie={exporting === 'lottie'} onClose={() => setExporting(false)} /> : null}
+        {exporting && state ? <ExportDialog info={state} doc={session.doc} lottie={exporting === 'lottie'} onClose={() => setExporting(false)} onSaveFrame={saveFrame} /> : null}
         {findEffect ? <FindEffectDialog effects={effects} onApply={(effect) => applyEffect(effect.id)} onClose={() => setFindEffect(false)} /> : null}
         <div
           className="kui-row"
@@ -1337,6 +1533,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           data-skip-frames={skipFrames}
           data-loop={loop}
           data-cached={frameCache.cached.length}
+          data-cache-ahead={cacheAhead}
+          data-two-views={twoViews}
           data-preview={frameCache.stats}
         >
           <div
@@ -1349,6 +1547,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               readPointer(event)
             }}
             onPointerUpCapture={repaintAfterCamera}
+            // Gone straight to the status bar (to the readout, to switch its units), it holds the last reading.
+            onPointerLeave={(event) => {
+              if (!(event.relatedTarget instanceof Element && event.relatedTarget.closest('.kui-status-bar'))) clearPointer()
+            }}
             onPointerDownCapture={(event) => {
               const box = event.currentTarget.getBoundingClientRect()
               lastPress.current = { x: event.clientX - box.left, y: event.clientY - box.top }
@@ -1358,13 +1560,12 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
             onCompositionUpdate={(event) => setComposing(event.data)}
             onCompositionEnd={() => setComposing(null)}
             data-drop={dropping || undefined}
-            onDragOver={(event) => {
-              const types = event.dataTransfer.types
-              if (host.readOnly || !state?.comp || !(types.includes(ITEM_MIME) || types.includes('Files'))) return
-              event.preventDefault()
-              event.dataTransfer.dropEffect = 'copy'
-              setDropping(true)
-            }}
+            // Accepted on entering as well as over: WebKit makes an element the drop target only
+            // when its dragenter is cancelled, so with dragover alone a drag that came in and was
+            // let go without a second move dropped on nothing (the timeline has no drop target of
+            // its own, as the canvas has).
+            onDragEnter={acceptDrag}
+            onDragOver={acceptDrag}
             onDragLeave={(event) => {
               if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) setDropping(false)
             }}
@@ -1399,6 +1600,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
                 {composing}
               </div>
             ) : null}
+            <div className="motion-views" data-testid="motion-views" data-two={twoViews && view3d.has3D ? true : undefined}>
             <KitDocumentCanvas
               canvas={canvas}
               viewMemory={viewMemory}
@@ -1420,6 +1622,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               {state?.comp ? <CanvasGuides views={views} comp={state.comp} overlays={overlays} gridSpacing={gridSpacing} readOnly={host.readOnly === true} /> : null}
               {state?.comp ? <RegionOfInterest views={views} comp={state.comp} region={region} drawing={drawingRegion} onDrawn={setRegionOfInterest} onCancel={() => setDrawingRegion(false)} /> : null}
             </KitDocumentCanvas>
+            {twoViews && view3d.has3D && state?.comp ? (
+              <SecondView doc={session.doc} view={secondView} onView={setChosenSecond} main={view3d.view} onMakeMain={swapViews} onClose={toggleTwoViews} version={state} playing={playback.playing} compWidth={state.comp.width} />
+            ) : null}
+            </div>
             {/* The transport and the timeline are the kit's own bars: Focus shows the composition alone. */}
             {state ? (
               <FrameChrome>

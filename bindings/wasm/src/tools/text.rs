@@ -8,6 +8,7 @@ use kition_motion_engine::Session;
 use kition_motion_engine::commands::text_edit;
 use kition_motion_engine::geom::{Mat3, vec2};
 use kition_motion_engine::project::{Layer, LayerId, LayerSource};
+use kition_motion_engine::render::text::caret_maps;
 use kition_motion_engine::text::kurbo::Point;
 use kition_motion_engine::text::{TextLayout, layout_doc};
 use serde_json::json;
@@ -51,17 +52,25 @@ pub(super) fn overlays(session: &Session, zoom: f64, out: &mut Vec<ToolOverlay>)
         out.push(ToolOverlay::Path { d, color: SELECTION, width: 1.0, dashed: true });
     }
     let Some((layout, m)) = laid_out(session, edit.layer) else { return };
-    let to_comp = |p: Point| {
-        let q = m.apply(vec2(p.x, p.y));
+    // Where animators (and Path Options) put each caret position: the highlight and the caret
+    // follow the characters as they are drawn, not their place before animation.
+    let maps = with_ctx(session, |ctx| ctx.comp.layer(edit.layer).map(|l| caret_maps(ctx, l, layout.chars))).flatten().unwrap_or_default();
+    let to_comp = |p: Point, caret: usize| {
+        let moved = maps.get(caret).map_or(vec2(p.x, p.y), |at| at.apply(vec2(p.x, p.y)));
+        let q = m.apply(moved);
         [q.x, q.y]
     };
     if !edit.is_empty() {
-        for quad in layout.selection_quads(edit.anchor, edit.caret) {
-            out.push(ToolOverlay::Highlight { quad: quad.map(to_comp), color: HIGHLIGHT });
+        // One quad per character, each moved with its character (caret `ci + 1` follows character `ci`).
+        let (from, to) = (edit.anchor.min(edit.caret), edit.anchor.max(edit.caret));
+        for ci in from..to.min(layout.chars) {
+            for quad in layout.selection_quads(ci, ci + 1) {
+                out.push(ToolOverlay::Highlight { quad: quad.map(|p| to_comp(p, ci + 1)), color: HIGHLIGHT });
+            }
         }
     }
     let (top, bottom) = layout.caret(edit.caret);
-    let (a, b) = (to_comp(top), to_comp(bottom));
+    let (a, b) = (to_comp(top, edit.caret), to_comp(bottom, edit.caret));
     out.push(ToolOverlay::Line { ax: a[0], ay: a[1], bx: b[0], by: b[1], color: SELECTION, dashed: false });
     // A second stroke a screen pixel over, so the caret reads at any zoom.
     let nudge = 1.0 / zoom;

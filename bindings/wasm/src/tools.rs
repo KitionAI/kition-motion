@@ -16,6 +16,7 @@
 
 mod camera;
 mod geometry;
+mod gizmo;
 mod gradient;
 mod pen;
 mod select;
@@ -112,6 +113,8 @@ pub(crate) enum Gesture {
     /// Orbiting, panning or dollying the view of the 3D layers from `start`; `last` is where it
     /// was applied, `axis` the direction a Shift-drag keeps to (true: across).
     Camera { start: Pt, last: Pt, axis: Option<bool>, merge: String },
+    /// Dragging the 3D handles: an arrow, a plane square or a ring (see [`gizmo`]).
+    Gizmo(Box<gizmo::Drag>),
 }
 
 /// The tools' state for the open document.
@@ -305,6 +308,9 @@ fn rotate_cursor(degrees: f64) -> String {
 
 /// What the Selection tool would do with a press at `p`: the cursor that says so.
 fn hover_cursor(session: &Session, p: Pt, zoom: f64) -> String {
+    if let Some(cursor) = gizmo::hover(session, p, zoom) {
+        return cursor.to_owned();
+    }
     for b in selected_boxes(session).iter().filter(|b| b.flat) {
         let centre = b.to_comp([(b.bounds[0] + b.bounds[2]) / 2.0, (b.bounds[1] + b.bounds[3]) / 2.0]);
         if let Some(h) = geometry::handle_at(b, p, zoom) {
@@ -323,6 +329,43 @@ impl MotionDocument {
     /// Whether paths are being edited: a vertex is picked, or a selected layer is in path editing.
     pub(crate) fn editing_paths(&self, st: &ToolState) -> bool {
         !self.session.state.selected_vertices.is_empty() || st.path_edit.iter().any(|layer| self.session.state.selected_layers.contains(layer))
+    }
+
+    /// Where the 3D handles' parts are on the canvas at `zoom` (screen pixels per comp pixel), as
+    /// JSON (see [`gizmo::spots`]): the browser tests press there.
+    pub fn gizmo_handles(&self, zoom: f64) -> Value {
+        gizmo::spots(&self.session, zoom_of(zoom))
+    }
+
+    /// The second view of the two-view layout: the active composition at the current time seen
+    /// through 3D view `view` (`top`, `front`, `activeCamera`…; its edited camera, or its default),
+    /// at most `width` pixels wide, as RGBA over the background (`rgba`, `width`, `height`), with
+    /// the ground, the 3D layers' outlines, cameras and lights for that view as lines in
+    /// composition pixels (`lines`: `[ax, ay, bx, by, r, g, b, a, dashed]`).
+    pub fn view_frame(&self, view: &str, width: u32) -> Result<(Vec<u8>, u32, u32, Value), String> {
+        use kition_motion_engine::render::three_d::View3D;
+        let cid = self.session.active_comp_id().ok_or("no composition is open")?;
+        let comp = self.session.project.comp(cid).ok_or("no composition is open")?;
+        let which = View3D::from_id(view).ok_or_else(|| format!("no 3D view `{view}`"))?;
+        let (w, h) = (f64::from(comp.width.max(1)), f64::from(comp.height.max(1)));
+        let camera = (which != View3D::ActiveCamera).then(|| self.session.state.views3d.get(&cid).cloned().unwrap_or_default().cam(which, w, h).state());
+        let scale = (f64::from(width.clamp(16, 4096)) / w).min(1.0);
+        let opts = kition_motion_engine::render::RenderOpts { scale, view: camera, ..Default::default() };
+        let mut renderer = kition_motion_engine::render::Renderer::new(&self.session.project, &*self.session.footage, opts);
+        renderer.expr = self.session.expr.as_deref();
+        let image = renderer.comp_frame(cid, comp.frame_rate.snap(self.session.time()));
+        let rgba = image.to_rgba8_over(comp.background);
+        let mut lines = Vec::new();
+        if let Some(camera) = camera {
+            let mut overlays = Vec::new();
+            view3d::overlays_through(&self.session, camera, &mut overlays);
+            for overlay in overlays {
+                if let ToolOverlay::Line { ax, ay, bx, by, color, dashed } = overlay {
+                    lines.push(json!([ax, ay, bx, by, color[0], color[1], color[2], color[3], dashed]));
+                }
+            }
+        }
+        Ok((rgba, image.width, image.height, Value::Array(lines)))
     }
 
     /// Runs an engine command for a tool, as the editor would.
@@ -351,6 +394,10 @@ impl MotionDocument {
         }
         // A 3D view other than the camera's: the ground, the 3D layers' outlines, cameras and lights.
         view3d::overlays(&self.session, &mut overlays);
+        // The 3D handles of the selected 3D layer, camera or light (not while paths or text are edited).
+        if !editing && st.tool == Tool::Selection && !self.editing_paths(st) {
+            gizmo::overlays(&self.session, zoom, &mut overlays);
+        }
         // The selected shape layers' gradients, their points dragged with the Selection tool.
         if !editing && st.tool == Tool::Selection {
             gradient::overlays(&self.session, &mut overlays);

@@ -34,7 +34,17 @@
     "test:keyframes": "node tests/keyframes.mjs chromium && node tests/keyframes.mjs webkit",
     "test:info": "node tests/info.mjs chromium && node tests/info.mjs webkit",
     "test:shortcuts": "node scripts/shortcuts.mjs --check",
-    "test:fixes7c": "node tests/fixes7c.mjs chromium && node tests/fixes7c.mjs webkit"
+    "test:fixes7c": "node tests/fixes7c.mjs chromium && node tests/fixes7c.mjs webkit",
+    "test:fixes7d": "node tests/fixes7d.mjs chromium && node tests/fixes7d.mjs webkit",
+    "test:gizmo": "node tests/gizmo.mjs chromium && node tests/gizmo.mjs webkit",
+    "test:cacheAhead": "node tests/cacheAhead.mjs chromium && node tests/cacheAhead.mjs webkit",
+    "test:outputs": "node tests/outputs.mjs chromium && node tests/outputs.mjs webkit",
+    "test:expressionTools": "node tests/expressionTools.mjs chromium && node tests/expressionTools.mjs webkit",
+    "test:multiEdit": "node tests/multiEdit.mjs chromium && node tests/multiEdit.mjs webkit",
+    "test:effectBrowser": "node tests/effectBrowser.mjs chromium && node tests/effectBrowser.mjs webkit",
+    "test:graphTools": "node tests/graphTools.mjs chromium && node tests/graphTools.mjs webkit",
+    "test:labels": "node tests/labels.mjs chromium && node tests/labels.mjs webkit",
+    "test:twoViews": "node tests/twoViews.mjs chromium && node tests/twoViews.mjs webkit"
   },
   "dependencies": {
     "@kition/sdk": "npm:@kitionstage/sdk@0.5.2-stage.16",

@@ -83,7 +83,7 @@ async function snapshot({ page, kit }) {
   const inspected = await page.evaluate(async () => window.devHost.connection().ai.inspect())
   const enabled = await page.evaluate(async () => (await window.devHost.connection().ai.commands('')).filter((command) => command.enabled !== false).map((command) => command.id).sort().join(' '))
   const files = await page.evaluate(() => [...window.devHost.files.keys()].sort().join(' '))
-  const view = `${await kit.getByTestId('motion-workspace').getAttribute('data-view')} ${await kit.getByTestId('motion-workspace').getAttribute('data-overlays')} ${await kit.getByTestId('motion-workspace').getAttribute('data-resolution')} ${await kit.getByTestId('motion-workspace').getAttribute('data-align-to')} ${await kit.getByTestId('motion-workspace').getAttribute('data-roi')} ${await kit.getByTestId('motion-workspace').getAttribute('data-skip-frames')} cache:${Number(await kit.getByTestId('motion-workspace').getAttribute('data-cached')) > 0} ${await kit.getByTestId('motion-workspace').getAttribute('data-view3d')}`
+  const view = `${await kit.getByTestId('motion-workspace').getAttribute('data-view')} ${await kit.getByTestId('motion-workspace').getAttribute('data-overlays')} ${await kit.getByTestId('motion-workspace').getAttribute('data-resolution')} ${await kit.getByTestId('motion-workspace').getAttribute('data-align-to')} ${await kit.getByTestId('motion-workspace').getAttribute('data-roi')} ${await kit.getByTestId('motion-workspace').getAttribute('data-skip-frames')} cache:${Number(await kit.getByTestId('motion-workspace').getAttribute('data-cached')) > 0} ${await kit.getByTestId('motion-workspace').getAttribute('data-view3d')} ahead:${await kit.getByTestId('motion-workspace').getAttribute('data-cache-ahead')} two:${await kit.getByTestId('motion-workspace').getAttribute('data-two-views')}`
   const play = await kit.getByTestId('motion-play').getAttribute('aria-label')
   const render = await kit.getByTestId('motion-render').textContent()
   const d = inspected.details ?? {}
@@ -266,6 +266,22 @@ async function finishDialog(ctx, leaf, state) {
     for (let i = 0; i < 30 && !(await page.evaluate(() => window.devHost.files.has('Walk preset.ecpreset'))); i += 1) await page.waitForTimeout(100)
     if (!(await page.evaluate(() => window.devHost.files.has('Walk preset.ecpreset')))) throw new Error('no preset file beside the project')
     return 'saved Walk preset.ecpreset through the host'
+  }
+  if (await field('motion-collect-dialog').count()) {
+    await field('motion-collect-folder').fill('Collected by test')
+    await confirm()
+    const copied = async () => page.evaluate(() => [...window.devHost.files.keys()].filter((name) => name.startsWith('Collected by test/')))
+    for (let i = 0; i < 50 && !(await copied()).some((name) => name.endsWith('.kmotion')); i += 1) await page.waitForTimeout(100)
+    if (!(await copied()).some((name) => name.endsWith('.kmotion'))) throw new Error('Collect Files wrote no copy of the project')
+    return `collected ${(await copied()).length} file(s) into Collected by test`
+  }
+  if (await field('motion-wiggler-dialog').count()) {
+    await page.keyboard.press('Escape')
+    return 'Wiggler asks its settings'
+  }
+  if (await field('motion-smoother-dialog').count()) {
+    await page.keyboard.press('Escape')
+    return 'Smoother asks its tolerance'
   }
   if (await field('motion-grid-dialog').count()) {
     await field('motion-grid-spacing').fill('50')

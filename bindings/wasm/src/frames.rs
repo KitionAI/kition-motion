@@ -129,6 +129,30 @@ impl FrameCache {
         }
     }
 
+    /// Whether it holds the frame for `key` at `revision` (not counted as shown).
+    pub fn holds(&self, revision: u64, key: &FrameKey) -> bool {
+        self.revision == revision && self.frames.contains_key(key)
+    }
+
+    /// Keeps a frame rendered ahead (Cache Work Area in Background): not counted as shown, and
+    /// only while it fits the budget without dropping a frame; answers whether it was kept.
+    pub fn put_ahead(&mut self, revision: u64, key: FrameKey, rgba: Arc<Vec<u8>>, width: u32, height: u32, ms: f64) -> bool {
+        self.keep_revision(revision);
+        let size = rgba.len();
+        if self.bytes.saturating_add(size) > self.budget {
+            return false;
+        }
+        self.clock = self.clock.wrapping_add(1);
+        if ms.is_finite() && ms >= 0.0 {
+            self.render_ms += ms;
+        }
+        if let Some(old) = self.frames.insert(key, Drawn { rgba, width, height, used: self.clock }) {
+            self.bytes = self.bytes.saturating_sub(old.rgba.len());
+        }
+        self.bytes = self.bytes.saturating_add(size);
+        true
+    }
+
     /// Empties the cache (View ▸ Purge).
     pub fn clear(&mut self) {
         self.frames.clear();
@@ -202,5 +226,19 @@ mod tests {
         assert!(cache.get(1, &key(0)).is_some() && cache.get(1, &key(2)).is_some());
         cache.put(1, key(3), Arc::new(vec![0; SMALL + 1]), 1, 1, 1.0);
         assert!(cache.get(1, &key(3)).is_none(), "a frame larger than the whole budget is not kept");
+    }
+
+    #[test]
+    fn frames_rendered_ahead_stop_at_the_budget_and_drop_nothing() {
+        const SMALL: usize = 3000;
+        let mut cache = FrameCache::with_budget(SMALL);
+        let size = SMALL / 3;
+        assert!(cache.put_ahead(1, key(0), Arc::new(vec![0; size]), 1, 1, 1.0));
+        assert!(cache.put_ahead(1, key(1), Arc::new(vec![0; size]), 1, 1, 1.0));
+        assert!(cache.put_ahead(1, key(2), Arc::new(vec![0; size]), 1, 1, 1.0));
+        assert!(!cache.put_ahead(1, key(3), Arc::new(vec![0; size]), 1, 1, 1.0), "over the budget: not kept");
+        assert!((0..3).all(|t| cache.holds(1, &key(t))) && !cache.holds(1, &key(3)));
+        assert_eq!(cache.shown, 0, "frames rendered ahead were not shown");
+        assert!(!cache.holds(2, &key(0)), "another revision holds none of them");
     }
 }

@@ -16,6 +16,7 @@ import { SolidSection } from './SolidSection'
 import { TextControls, type TextSelection } from './TextSection'
 import { TextAnimateMenus, TextAnimators } from './TextAnimators'
 import { cameraOrLight } from '../timeline/SwitchCells'
+import { MultiLayers } from './MultiLayers'
 
 /** How deep the panel reads a layer's property tree (shape groups nest). */
 const TREE_DEPTH = 10
@@ -94,7 +95,8 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
   const [width, setWidth] = usePanelWidth()
   const first = info.transform?.layer
   const layer = first != null ? info.layers.find((item) => item.id === first) : undefined
-  const selected = info.layers.filter((item) => item.selected).length
+  const chosen = info.layers.filter((item) => item.selected)
+  const selected = chosen.length
   const tree = useEngineQuery<{ properties?: TreeNode; text?: TextSelection; lightKind?: string }>('layer.tree', layer ? { layer: layer.id, depth: TREE_DEPTH, time: info.time } : { layer: -1 })
   const root = layer && tree?.properties ? tree.properties : null
   const top = root?.children ?? []
@@ -120,7 +122,13 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
     <aside className="kui-panel motion-side" data-side="right" style={{ width }} data-testid="motion-properties-panel">
       <PanelEdge width={width} onWidth={setWidth} />
       <div className="kui-panel-body motion-side-body" data-testid="motion-properties-body">
-        {layer && root ? (
+        {selected > 1 ? (
+          // Several layers: what they have in common, edited on all of them.
+          <>
+            <MultiLayers info={info} layers={chosen} readOnly={readOnly} />
+            {chosen.every(cameraOrLight) ? null : <AlignSection scope="all" alignTo={align.to} onAlignTo={align.onTo} idle={align.idle} onCommand={align.onCommand} readOnly={readOnly} />}
+          </>
+        ) : layer && root ? (
           <PanelContext.Provider value={{ layer, time: info.time, frame: info.frame, readOnly }}>
             <LayerHeader info={info} layer={layer} readOnly={readOnly} count={selected} />
             {/* Align near the top, closed until opened (its state remembered), so it is reached without scrolling. */}

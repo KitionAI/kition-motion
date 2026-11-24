@@ -28,7 +28,10 @@ export type MotionDialog =
   | { kind: 'grid'; spacing: number; onSave: (spacing: number) => void }
   | { kind: 'guide'; comp: { width: number; height: number } }
   | { kind: 'interpret'; item: ProjectItem }
-  | { kind: 'keyValue'; layer: number; path: string; name: string; time: number; value: unknown; fps: number; duration: number }
+  | { kind: 'wiggler'; spatial: boolean }
+  | { kind: 'smoother' }
+  | { kind: 'collect'; folder: string; onCollect: (folder: string) => void }
+  | { kind: 'keyValue'; layer: number; path: string; name: string; time: number; value: unknown; fps: number; duration: number; /** The parts typed (a 2D layer's Position shows x and y; its z is kept). */ shown?: number }
 
 /** The first selected keyframe's speed (units per second) and influence (%) on each side, for Keyframe Velocity. */
 export type VelocityValues = { inSpeed: number; inInfluence: number; outSpeed: number; outInfluence: number }
@@ -668,7 +671,9 @@ function InterpretDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { k
 function KeyValueDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'keyValue' }>; onDone: () => void }) {
   const { run, t } = useKitEditor()
   const numbers = typeof dialog.value === 'number' ? [dialog.value] : Array.isArray(dialog.value) && dialog.value.every((part) => typeof part === 'number') ? (dialog.value as number[]) : null
-  const [parts, setParts] = useState(() => (numbers ?? []).map((part) => String(Math.round(part * 1000) / 1000)))
+  // The parts not shown (a 2D layer's z) go back as they were.
+  const kept = numbers && dialog.shown != null && dialog.shown > 0 ? numbers.slice(dialog.shown) : []
+  const [parts, setParts] = useState(() => (numbers ?? []).slice(0, numbers && dialog.shown != null && dialog.shown > 0 ? dialog.shown : undefined).map((part) => String(Math.round(part * 1000) / 1000)))
   const [time, setTime] = useState(formatTimecode(dialog.time, dialog.fps))
   const seconds = parseTimecode(time, dialog.fps, false, dialog.time)
   const values = parts.map((part) => numberIn(part, -1e9, 1e9))
@@ -681,7 +686,7 @@ function KeyValueDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { ki
       testId="motion-key-dialog"
       onSubmit={() => {
         if (!valid || seconds === null) return
-        const value = numbers == null ? undefined : typeof dialog.value === 'number' ? values[0] : values
+        const value = numbers == null ? undefined : typeof dialog.value === 'number' ? values[0] : [...values, ...kept]
         void run('keys.set', { layer: dialog.layer, path: dialog.path, time: dialog.time, timeBase: 'comp', ...(Math.abs(seconds - dialog.time) > 1e-6 ? { newTime: seconds } : {}), ...(value !== undefined ? { value } : {}) })
         onDone()
       }}
@@ -701,6 +706,109 @@ function KeyValueDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { ki
       ))}
       {numbers == null ? <p className="kui-muted">{t('keyValue.notNumber')}</p> : null}
       <TextRow label={t('keyValue.time')} value={time} onChange={setTime} error={timeOk ? null : t('dialog.badTime', { end: formatTimecode(dialog.duration, dialog.fps) })} testId="motion-key-time" autoFocus={numbers == null} />
+    </FormDialog>
+  )
+}
+
+/**
+ * Animation ▸ Keyframe Assistant ▸ Wiggler: random deviations added between the selected
+ * keyframes (`keys.wiggle`, one undo step): along the path or in time (a moving property only),
+ * smooth or jagged noise, each dimension on its own, all alike or one, how many keys a second and
+ * how far.
+ */
+function WigglerDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'wiggler' }>; onDone: () => void }) {
+  const { run, t } = useKitEditor()
+  const [apply, setApply] = useState<'spatial' | 'temporal'>(dialog.spatial ? 'spatial' : 'temporal')
+  const [noise, setNoise] = useState<'smooth' | 'jagged'>('smooth')
+  const [dimensions, setDimensions] = useState<'independent' | 'same' | 'one'>('independent')
+  const [frequency, setFrequency] = useState('5')
+  const [magnitude, setMagnitude] = useState('10')
+  const perSecond = numberIn(frequency, 0.01, 1000)
+  const howFar = numberIn(magnitude, 0, 1e7)
+  return (
+    <FormDialog
+      title={t('dialog.wiggler')}
+      testId="motion-wiggler-dialog"
+      onSubmit={() => {
+        if (perSecond === null || howFar === null) return
+        void run('keys.wiggle', { apply, noise, dimensions, ...(dimensions === 'one' ? { dimension: 0 } : {}), frequency: perSecond, magnitude: howFar })
+        onDone()
+      }}
+      onClose={onDone}
+      valid={perSecond !== null && howFar !== null}
+    >
+      {dialog.spatial ? (
+        <Field label={t('wiggler.apply')}>
+          <Select value={apply} onChange={(event) => setApply(event.target.value as 'spatial' | 'temporal')} data-testid="motion-wiggler-apply">
+            <option value="spatial">{t('wiggler.apply.spatial')}</option>
+            <option value="temporal">{t('wiggler.apply.temporal')}</option>
+          </Select>
+        </Field>
+      ) : null}
+      <Field label={t('wiggler.noise')}>
+        <Select value={noise} onChange={(event) => setNoise(event.target.value as 'smooth' | 'jagged')} data-testid="motion-wiggler-noise">
+          <option value="smooth">{t('wiggler.noise.smooth')}</option>
+          <option value="jagged">{t('wiggler.noise.jagged')}</option>
+        </Select>
+      </Field>
+      <Field label={t('wiggler.dimensions')}>
+        <Select value={dimensions} onChange={(event) => setDimensions(event.target.value as 'independent' | 'same' | 'one')} data-testid="motion-wiggler-dimensions">
+          <option value="independent">{t('wiggler.dimensions.independent')}</option>
+          <option value="same">{t('wiggler.dimensions.same')}</option>
+          <option value="one">{t('wiggler.dimensions.one')}</option>
+        </Select>
+      </Field>
+      <TextRow label={t('wiggler.frequency')} value={frequency} onChange={setFrequency} error={perSecond === null ? t('dialog.badNumber') : null} testId="motion-wiggler-frequency" unit={t('wiggler.perSecond')} />
+      <TextRow label={t('wiggler.magnitude')} value={magnitude} onChange={setMagnitude} error={howFar === null ? t('dialog.badNumber') : null} testId="motion-wiggler-magnitude" />
+    </FormDialog>
+  )
+}
+
+/**
+ * Animation ▸ Keyframe Assistant ▸ Smoother: the selected keyframes' curve kept with fewer keys,
+ * within a tolerance (`keys.smooth`, one undo step).
+ */
+function SmootherDialog({ onDone }: { onDone: () => void }) {
+  const { run, t } = useKitEditor()
+  const [tolerance, setTolerance] = useState('1')
+  const value = numberIn(tolerance, 0, 1e6)
+  return (
+    <FormDialog
+      title={t('dialog.smoother')}
+      testId="motion-smoother-dialog"
+      onSubmit={() => {
+        if (value === null) return
+        void run('keys.smooth', { tolerance: value })
+        onDone()
+      }}
+      onClose={onDone}
+      valid={value !== null}
+    >
+      <p className="kui-muted motion-export-note">{t('smoother.note')}</p>
+      <TextRow label={t('smoother.tolerance')} value={tolerance} onChange={setTolerance} error={value === null ? t('dialog.badNumber') : null} testId="motion-smoother-tolerance" autoFocus />
+    </FormDialog>
+  )
+}
+
+/** File ▸ Dependencies ▸ Collect Files: the folder (inside the project's) the copy goes into. */
+function CollectDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'collect' }>; onDone: () => void }) {
+  const { t } = useKitEditor()
+  const [folder, setFolder] = useState(dialog.folder)
+  const ok = folder.trim() !== '' && !/[\\:*?"<>|]|(^|\/)\.\.?(\/|$)/.test(folder.trim())
+  return (
+    <FormDialog
+      title={t('dialog.collect')}
+      testId="motion-collect-dialog"
+      onSubmit={() => {
+        if (!ok) return
+        dialog.onCollect(folder.trim())
+        onDone()
+      }}
+      onClose={onDone}
+      valid={ok}
+    >
+      <p className="kui-muted motion-export-note">{t('collect.note')}</p>
+      <TextRow label={t('export.folder')} value={folder} onChange={setFolder} error={ok ? null : t('preset.badFolder')} testId="motion-collect-folder" autoFocus />
     </FormDialog>
   )
 }
@@ -750,5 +858,11 @@ export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialo
       return <InterpretDialog key={key} dialog={dialog} onDone={onClose} />
     case 'keyValue':
       return <KeyValueDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'wiggler':
+      return <WigglerDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'smoother':
+      return <SmootherDialog key={key} onDone={onClose} />
+    case 'collect':
+      return <CollectDialog key={key} dialog={dialog} onDone={onClose} />
   }
 }

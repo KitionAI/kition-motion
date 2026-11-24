@@ -31,7 +31,7 @@ export type FootageInfo = {
 }
 
 /** A project item as `project.summary` lists it; `uses` counts the layers (in every composition) using it. */
-export type ProjectItem = { id: number; name: string; type: string; parent: number | null; size?: [number, number]; duration?: number; frameRate?: number; layers?: number; uses?: number; footage?: FootageInfo }
+export type ProjectItem = { id: number; name: string; type: string; parent: number | null; /** Its colour label by the engine's name. */ label?: string; size?: [number, number]; duration?: number; frameRate?: number; layers?: number; uses?: number; footage?: FootageInfo }
 
 /** `selection`: the Project panel's selected items (the engine's, `project.select`). */
 export type ProjectSummary = { activeComp?: number | null; items?: ProjectItem[]; selection?: number[] }
