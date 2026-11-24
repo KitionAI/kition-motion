@@ -133,6 +133,7 @@ pub(crate) fn group_json(g: &PropGroup, path: &str, l: &Layer, t: kition_motion_
                         }
                         if let Some(e) = &p.expr {
                             o["expression"] = json!(e.text);
+                            o["expressionEnabled"] = json!(e.enabled);
                         }
                         if let Some(options) = popup_options(&p.ui, &cpath, l) {
                             o["options"] = json!(options);

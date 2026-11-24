@@ -22,6 +22,7 @@ export type MotionDialog =
   | { kind: 'interpolation'; spatial: boolean }
   | { kind: 'velocity'; values: VelocityValues; units: string }
   | { kind: 'stretch'; layers: number[]; stretch: number; span: number; fps: number }
+  | { kind: 'savePreset'; name: string; onSave: (name: string) => void }
 
 /** The first selected keyframe's speed (units per second) and influence (%) on each side, for Keyframe Velocity. */
 export type VelocityValues = { inSpeed: number; inInfluence: number; outSpeed: number; outInfluence: number }
@@ -415,6 +416,29 @@ function StretchDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kin
   )
 }
 
+/** Save Animation Preset: the preset's name (its file is `<name>.ecpreset` beside the project). */
+function SavePresetDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'savePreset' }>; onDone: () => void }) {
+  const { t } = useKitEditor()
+  const [name, setName] = useState(dialog.name)
+  const clean = name.replace(/[\\/:*?"<>|]+/g, '_').trim()
+  return (
+    <FormDialog
+      title={t('dialog.savePreset')}
+      testId="motion-preset-dialog"
+      onSubmit={() => {
+        if (!clean) return
+        dialog.onSave(clean)
+        onDone()
+      }}
+      onClose={onDone}
+      valid={clean !== ''}
+    >
+      <TextRow label={t('preset.name')} value={name} onChange={setName} error={clean ? null : t('preset.badName')} testId="motion-preset-name" autoFocus />
+      <p className="kui-muted">{t('preset.where', { file: `${clean || '…'}.ecpreset` })}</p>
+    </FormDialog>
+  )
+}
+
 /** The open dialog, if any; each runs one engine command (one undo step) when confirmed. */
 export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialog | null; onClose: () => void; onSeek: (seconds: number) => void }) {
   // A new dialog (even of the same kind) starts from its own values.
@@ -448,5 +472,7 @@ export function MotionDialogs({ dialog, onClose, onSeek }: { dialog: MotionDialo
       return <VelocityDialog key={key} dialog={dialog} onDone={onClose} />
     case 'stretch':
       return <StretchDialog key={key} dialog={dialog} onDone={onClose} />
+    case 'savePreset':
+      return <SavePresetDialog key={key} dialog={dialog} onDone={onClose} />
   }
 }

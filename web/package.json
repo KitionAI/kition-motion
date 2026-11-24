@@ -18,7 +18,8 @@
     "test:properties": "node tests/properties.mjs chromium && node tests/properties.mjs webkit",
     "test:canvas": "node tests/canvas.mjs chromium && node tests/canvas.mjs webkit",
     "test:footage": "node tests/footage.mjs chromium && node tests/footage.mjs webkit",
-    "test:curves": "node tests/curves.mjs chromium && node tests/curves.mjs webkit"
+    "test:curves": "node tests/curves.mjs chromium && node tests/curves.mjs webkit",
+    "test:expressions": "node tests/expressions.mjs chromium && node tests/expressions.mjs webkit"
   },
   "dependencies": {
     "@kition/sdk": "npm:@kitionstage/sdk@0.5.2-stage.16",

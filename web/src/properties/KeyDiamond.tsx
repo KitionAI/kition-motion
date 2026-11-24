@@ -14,7 +14,7 @@ export function keyAt(times: readonly number[], time: number, frame: number) {
  * here), adds a keyframe between keyframes, or removes the one here. Alt-click, or 清除动画 in its
  * right-click menu, removes every keyframe (the property keeps its value here). Each is one undo step.
  */
-export function KeyDiamond({ layer, path, name, times, time, frame, testId, readOnly }: { layer: number; path: string; name: string; times: readonly number[]; time: number; frame: number; testId: string; readOnly: boolean }) {
+export function KeyDiamond({ layer, path, name, times, time, frame, testId, readOnly, expression }: { layer: number; path: string; name: string; times: readonly number[]; time: number; frame: number; testId: string; readOnly: boolean; expression?: boolean }) {
   const { run, t } = useKitEditor()
   const [menu, setMenu] = useState<ContextMenuPoint | null>(null)
   const here = keyAt(times, time, frame)
@@ -51,6 +51,11 @@ export function KeyDiamond({ layer, path, name, times, time, frame, testId, read
       <ContextMenu at={menu} onClose={() => setMenu(null)} label={name} testId={`${testId}-menu`}>
         <MenuItem label={label} onSelect={() => void (here ? run('prop.toggleKey', { layer, path }) : run('prop.addKey', { layer, path, time, timeBase: 'comp' }))} testId={`${testId}-menu-key`} />
         <MenuItem label={t('clearAnimation')} disabled={!animated} onSelect={clear} testId={`${testId}-menu-clear`} />
+        {expression === undefined ? null : expression ? (
+          <MenuItem label={t('expr.remove')} onSelect={() => void run('prop.setExpression', { layer, path, expression: '' })} testId={`${testId}-menu-expression`} />
+        ) : (
+          <MenuItem label={t('expr.add')} onSelect={() => void run('prop.setExpression', { layer, path, enabled: true })} testId={`${testId}-menu-expression`} />
+        )}
       </ContextMenu>
     </>
   )

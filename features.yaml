@@ -593,3 +593,30 @@ features:
     gap: "The resolution is the person's view for the session (sessionStorage); Custom… is not offered; export always renders at the size chosen in the Export dialog. Gated by web/tests/canvas.mjs and the preview test in bindings/wasm/src/lib.rs."
     cases: []
     since: "2026-11-23"
+  - id: motion.editor.expressions
+    title: "A property's expression is added from its diamond's right-click menu (添加表达式), Animation ▸ Add Expression or Alt+Shift+= (the selected properties), and edited on the row under the property in the timeline: its text (Enter or leaving the field commits, Shift+Enter a new line, Escape goes back), what it makes of the property now, a = switch that turns it off and on, Remove, and, when it fails, why in Chinese (expr.errors); each change one undo step"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/timeline/ExpressionRow.tsx, web/src/timeline/PropertyRows.tsx, web/src/properties/KeyDiamond.tsx, web/src/properties/PropertyTree.tsx, web/src/menus.ts, web/src/strings.ts, web/src/app.css, crates/engine/engine/src/commands/query.rs, bindings/wasm/src/lib.rs, web/tests/expressions.mjs]
+    gap: "No expression language menu, pick whip or autocomplete; the error text keeps the expression language's own detail after a Chinese headline; the property's own field shows its keyframed value, the row under it the expression's result. Gated by web/tests/expressions.mjs (the test:expressions job of the kit's CI run)."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.presets
+    title: "Animation ▸ Save Animation Preset… writes the selected properties' and effects' animation (anim.savePreset) as <name>.ecpreset beside the project through the host, and Animation ▸ Apply Animation Preset… applies one picked in the project's folder with the host's picker (anim.applyPreset) to the selected layers at the current time, one undo step"
+    dimension: [function]
+    priority: P2
+    status: has
+    paths: [web/src/App.tsx, web/src/dialogs.tsx, web/src/menus.ts, web/src/devHost.ts, web/src/strings.ts, web/tests/expressions.mjs, web/tests/menus.mjs]
+    gap: "The picker is the host's (it offers .ecpreset files in the project's folder); there is no preset browser or list of recent presets, and the Effects ribbon's search does not list presets. Gated by web/tests/expressions.mjs and web/tests/menus.mjs."
+    cases: []
+    since: "2026-11-23"
+  - id: motion.editor.lottie
+    title: "File ▸ Export ▸ Lottie JSON… (and Lottie in the Export dialog's formats) writes the active composition as a Lottie JSON beside the project through the host (file.exportLottie), with expressions and text as shapes as options, and lists in the dialog what of the composition Lottie could not carry, as the engine reports it"
+    dimension: [function]
+    priority: P2
+    status: has
+    paths: [web/src/ExportDialog.tsx, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/tests/menus.mjs]
+    gap: "The .lottie (zipped) form is not offered; the list of what could not travel is the engine's English text. Gated by web/tests/menus.mjs (the file parses and has layers)."
+    cases: []
+    since: "2026-11-23"

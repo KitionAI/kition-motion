@@ -40,7 +40,7 @@ import { EffectCatalog } from './properties/catalog'
 import { ProjectPanel, useProjectPanel } from './ProjectPanel'
 import { ExportDialog } from './ExportDialog'
 import { CanvasGuides, OVERLAY_KEYS, useOverlays } from './CanvasGuides'
-import { ITEM_MIME, parseAnswer, useFootage } from './footage'
+import { ITEM_MIME, parseAnswer, relativePath, useFootage } from './footage'
 import { EDITOR_KEYS, pressed } from './keys'
 import { INTERPOLATIONS } from './timeline/interp'
 import { SamplerContext, type CurveSampler } from './timeline/samples'
@@ -276,7 +276,7 @@ const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).re
  * ones it asks values for in its own dialogs, Pre-compose (which then offers to open the new
  * composition), and the ones given another shortcut (`SHORTCUT_OVERRIDES`).
  */
-const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
+const OWN_SHORTCUTS = ['comp.new', 'comp.settings', 'layer.newSolid', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'anim.savePreset', 'anim.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -371,7 +371,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   useSpaceTap(playback.toggle)
   const audioCount = useCallback((count: number) => workspace.current?.setAttribute('data-audio', String(count)), [])
   usePreviewAudio(session.doc, playback.playing, playback.playing ? (playback.origin.current?.time ?? null) : null, state?.comp?.duration ?? 0, audioCount)
-  const [exporting, setExporting] = useState(false)
+  // The Export dialog, open on a movie format or on Lottie (File ▸ Export ▸ Lottie JSON…).
+  const [exporting, setExporting] = useState<false | 'movie' | 'lottie'>(false)
   const project = useProjectPanel()
   const seek = useCallback((seconds: number) => void runQuietly('time.set', { time: Math.max(0, seconds) }).catch(() => undefined), [runQuietly])
   const step = (frames: number) => void runQuietly('time.step', { frames }).catch(() => undefined)
@@ -528,12 +529,45 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     const row = (await query<{ layers?: Array<{ id: number; stretch?: number }> }>('comp.info', {}))?.layers?.find((layer) => layer.id === first.id)
     setDialog({ kind: 'stretch', layers: selected.map((layer) => layer.id), stretch: row?.stretch ?? 100, span: Math.max(0, first.out - first.in), fps: state.comp.fps })
   }
+  /**
+   * Animation presets go through the host: Save writes the selected properties' and effects'
+   * animation (`anim.savePreset`, in memory) to `<name>.ecpreset` beside the project; Apply picks
+   * a preset in the workspace and applies it to the selected layers at the current time
+   * (`anim.applyPreset`, one undo step).
+   */
+  const savePreset = async (name: string) => {
+    const file = `${name}.ecpreset`
+    const folder = host.init.document.path.split('/').slice(0, -1).join('/')
+    try {
+      if ((await run('anim.savePreset', { path: file, name })) === null) return
+      const bytes = await session.doc?.invoke<Uint8Array | undefined>('takeFile', file)
+      if (!bytes) throw new Error(t('preset.notWritten'))
+      const written = await host.exportFile([folder, file].filter(Boolean).join('/'), bytes)
+      toast.success(t('preset.saved', { name: written.split('/').pop() ?? written }))
+    } catch (error) {
+      toast.error(t('preset.saveFailed'), { description: error instanceof Error ? error.message : String(error) })
+    }
+  }
+  const applyPreset = async () => {
+    if (!host.init.capabilities.includes('pick-file')) {
+      toast.error(t('import.noPicker'))
+      return
+    }
+    const folder = host.init.document.path.split('/').slice(0, -1).join('/')
+    const path = await host.pick('preset', ['ecpreset']).catch(() => null)
+    if (!path) {
+      toast.info(t('preset.noneChosen'))
+      return
+    }
+    if ((await run('anim.applyPreset', { path: relativePath(folder, path) })) !== null) toast.success(t('preset.applied', { name: path.split('/').pop() ?? path }))
+  }
   /** Commands the editor answers itself (the rest go to the engine as they are). */
   const own: Record<string, () => void> = {
     ...Object.fromEntries(Object.entries(OVERLAY_ROWS).map(([command, key]) => [command, () => toggleOverlay(key)])),
     ...Object.fromEntries(RESOLUTIONS.map(([command, , divisor]) => [command, () => setPreview(divisor)])),
     'playback.toggle': playback.toggle,
-    'file.exportMovie': () => state?.comp && setExporting(true),
+    'file.exportMovie': () => state?.comp && setExporting('movie'),
+    'file.exportLottie': () => state?.comp && setExporting('lottie'),
     'file.import': () => void footage.importPicked(),
     'layer.precompose': () => void precompose(),
     [KIT.saveFrame]: () => void saveFrame(),
@@ -552,6 +586,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     'keys.interpolation': () => void openInterpolation(),
     'keys.velocity': () => void openVelocity(),
     'layer.timeStretch': () => void openStretch(),
+    'anim.savePreset': () => setDialog({ kind: 'savePreset', name: t('preset.defaultName'), onSave: (name) => void savePreset(name) }),
+    'anim.applyPreset': () => void applyPreset(),
     ...Object.fromEntries(INTERPOLATIONS.map((row) => [row.command, () => void run('keys.interpolation', { interpolation: row.interpolation })])),
     'comp.settings': () => void openComp('settings'),
     'layer.newSolid': () => void openSolid('new'),
@@ -674,7 +710,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               <PanelLeftIcon size={14} aria-hidden="true" />
               {t('project.title')}
             </Button>
-            <Button variant="ghost" disabled={!state?.comp} onClick={() => setExporting(true)} data-testid="motion-render">
+            <Button variant="ghost" disabled={!state?.comp} onClick={() => setExporting('movie')} data-testid="motion-render">
               <Download size={14} aria-hidden="true" />
               {t('renderMovie')}
             </Button>
@@ -716,7 +752,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         panels={state ? <PropertiesPanel info={state} onAddEffect={() => setFindEffect(true)} typingOnCanvas={tools.active === 'text' || tools.wantsText} /> : null}
       >
         <MotionDialogs dialog={dialog} onClose={() => setDialog(null)} onSeek={seek} />
-        {exporting && state ? <ExportDialog info={state} doc={session.doc} onClose={() => setExporting(false)} /> : null}
+        {exporting && state ? <ExportDialog info={state} doc={session.doc} lottie={exporting === 'lottie'} onClose={() => setExporting(false)} /> : null}
         {findEffect ? <FindEffectDialog effects={effects} onApply={(effect) => applyEffect(effect.id)} onClose={() => setFindEffect(false)} /> : null}
         <div
           className="kui-row"

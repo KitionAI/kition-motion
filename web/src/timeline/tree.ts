@@ -20,8 +20,9 @@ export type TreeNode = {
   range?: { min: number | null; max: number | null; sliderMin: number | null; sliderMax: number | null; decimals: number }
   /** A text property's character and paragraph settings at the asked time. */
   style?: TextStyle
-  /** The property's expression, when it has one. */
+  /** The property's expression, when it has one, and whether it is on. */
   expression?: string
+  expressionEnabled?: boolean
 }
 
 /** A text layer's character and paragraph settings, as `layer.tree` reports them on its Source Text. */

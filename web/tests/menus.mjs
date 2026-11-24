@@ -37,6 +37,8 @@ async function open(state) {
   await kit.getByTestId('motion-timeline').waitFor()
   // A 64 × 48 red picture in the workspace, for File ▸ Import's picker to pick.
   await page.evaluate((data) => window.devHost.files.set('picture.png', { bytes: Uint8Array.from(atob(data), (c) => c.charCodeAt(0)).buffer, version: 1 }), PICTURE)
+  // An animation preset in the workspace, for Animation ▸ Apply Animation Preset's picker to pick.
+  await page.evaluate((text) => window.devHost.files.set('Half.ecpreset', { bytes: new TextEncoder().encode(text).buffer, version: 1 }), JSON.stringify({ kitionMotionAnimationPreset: 1, name: 'Half', properties: [{ path: 'transform/opacity', value: { t: 'Scalar', v: 50 }, keys: [], expression: null }], effects: [] }))
   await page.waitForTimeout(400)
   const primary = (await page.evaluate(() => /Mac|iPhone|iPad/i.test(navigator.platform))) ? 'Meta' : 'Control'
   const ruler = await kit.getByTestId('motion-ruler').boundingBox()
@@ -224,6 +226,13 @@ async function finishDialog(ctx, leaf, state) {
     if ((await revision()) === startRevision) throw new Error('no effect applied')
     return 'found 高斯模糊 by typing and applied it'
   }
+  if (await field('motion-preset-dialog').count()) {
+    await field('motion-preset-name').fill('Walk preset')
+    await confirm()
+    for (let i = 0; i < 30 && !(await page.evaluate(() => window.devHost.files.has('Walk preset.ecpreset'))); i += 1) await page.waitForTimeout(100)
+    if (!(await page.evaluate(() => window.devHost.files.has('Walk preset.ecpreset')))) throw new Error('no preset file beside the project')
+    return 'saved Walk preset.ecpreset through the host'
+  }
   if (await field('motion-stretch-dialog').count()) {
     const layer = before.info.layers.find((each) => each.selected)
     await field('motion-stretch-factor').fill('200')
@@ -236,6 +245,19 @@ async function finishDialog(ctx, leaf, state) {
     const back = (await details()).info.layers.find((each) => each.id === layer.id)
     if (Math.abs(back.out - layer.out) > 1e-3) throw new Error('undo did not restore the length')
     return `stretched to 200 % (${was.toFixed(2)} s → ${now.toFixed(2)} s) holding the in point; undo restored it`
+  }
+  if ((await field('motion-export-dialog').count()) && (await field('motion-export-format').inputValue()) === 'lottie') {
+    const written = async () => (await page.evaluate(() => [...window.devHost.files.keys()])).filter((name) => name.endsWith('.json'))
+    await field('motion-export-dialog-ok').click()
+    for (let i = 0; i < 100 && !(await written()).length; i += 1) await page.waitForTimeout(100)
+    if (!(await written()).length) throw new Error('Export ▸ Lottie wrote no JSON')
+    const json = await page.evaluate((name) => new TextDecoder().decode(window.devHost.files.get(name).bytes), (await written())[0])
+    if (!JSON.parse(json).layers) throw new Error('the Lottie file has no layers')
+    const warned = await field('motion-export-warnings').count()
+    if (warned) await field('motion-export-dialog-close').click()
+    await page.waitForTimeout(200)
+    if (await dialogOpen(kit)) throw new Error('the Export dialog stayed open')
+    return `exported ${(await written())[0]} as Lottie${warned ? ', listing what it could not carry' : ''}`
   }
   if (await field('motion-export-dialog').count()) {
     const movies = async () => (await page.evaluate(() => [...window.devHost.files.keys()])).filter((name) => name.endsWith('.mp4'))

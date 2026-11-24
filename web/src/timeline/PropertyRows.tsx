@@ -11,6 +11,7 @@ import { KeyMark } from './KeyMark'
 import { sideOf, type PropRead } from './interp'
 import { keyTimes } from './keys'
 import { effectOf, parentsOf, propertyRows, type TreeNode, type Twirl } from './tree'
+import { ExpressionRow, explainError, type ExprError } from './ExpressionRow'
 import { leftOf } from './view'
 
 /** An animated property's keyframes on its track, each shaped by its interpolation (`prop.get`). */
@@ -38,8 +39,10 @@ export const pathId = (path: string) => path.replaceAll('/', '.')
  * on an animated property an edit sets a keyframe here), and its keyframes on the track.
  */
 export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { layer: MotionLayer; twirl: Twirl; toggled: ReadonlySet<string>; onToggle: (path: string) => void; selected: ReadonlySet<string> }) {
-  const { phrase } = useKitEditor()
+  const { phrase, t } = useKitEditor()
   const { info, view, readOnly } = useTimeline()
+  // Expressions that fail now (the engine evaluates them at the current time).
+  const failing = useEngineQuery<{ errors?: ExprError[] }>('expr.errors', { time: info.time })
   const paramsOf = useEffectParams()
   const tree = useEngineQuery<{ properties?: TreeNode }>('layer.tree', { layer: layer.id, depth: TREE_DEPTH, time: info.time })
   const parents = useMemo(() => (tree?.properties ? parentsOf(tree.properties) : new Map<string, TreeNode>()), [tree])
@@ -67,10 +70,26 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
         }
         const times = keyTimes(layer, node.path)
         const meta = propMeta(node, parents.get(node.path), paramsOf(effectOf(node.path, parents)))
-        return (
+        const failure = (failing?.errors ?? []).find((error) => error.layer === layer.id && error.path === node.path)
+        const expression =
+          node.expression !== undefined ? (
+            <ExpressionRow
+              key={`${node.path}=`}
+              layer={layer.id}
+              path={node.path}
+              name={name}
+              text={node.expression}
+              enabled={node.expressionEnabled !== false}
+              error={failure ? explainError(failure.message, t) : null}
+              depth={depth}
+              testId={`motion-expr-${id}`}
+              readOnly={readOnly}
+            />
+          ) : null
+        return [
           <div key={node.path} className="motion-row motion-prop-row" data-testid={`motion-prop-row-${id}`}>
             <div className="motion-timeline-names motion-prop-names" style={{ paddingLeft: 36 + depth * 14 }}>
-              <KeyDiamond layer={layer.id} path={node.path} name={name} times={times} time={info.time} frame={info.frame} testId={`motion-row-add-key-${id}`} readOnly={readOnly} />
+              <KeyDiamond layer={layer.id} path={node.path} name={name} times={times} time={info.time} frame={info.frame} testId={`motion-row-add-key-${id}`} readOnly={readOnly} expression={node.expression !== undefined} />
               <span className="motion-row-name motion-prop-label">{name}</span>
               <PropertyValue layer={layer} node={node} meta={meta} time={info.time} name={name} testId={`motion-row-value-${id}`} readOnly={readOnly} compact />
             </div>
@@ -78,8 +97,9 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
               {times.length ? <PropertyKeys layer={layer.id} path={node.path} times={times} selected={selected} name={name} row={id} /> : null}
               <span className="motion-playhead" style={{ left: leftOf(view, info.time) }} aria-hidden="true" />
             </div>
-          </div>
-        )
+          </div>,
+          expression,
+        ]
       })}
     </>
   )

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import { ChevronDownIcon as Open, ChevronRightIcon as Closed } from '@kition/tessera/icons/react'
-import { useKitEditor } from '@kition/sdk/editor'
+import { Select, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
 import { keyTimes } from '../timeline/keys'
 import { shown, type TreeNode } from '../timeline/tree'
@@ -50,7 +50,7 @@ export function PropertyRow({ node, parent, params, label }: { node: TreeNode; p
   const wide = node.type === 'text' || (node.type === 'scalar' && !!meta?.slider)
   return (
     <div className="motion-prop" data-wide={wide || undefined} data-testid={`motion-prop-${id}`}>
-      <KeyDiamond layer={layer.id} path={node.path} name={name} times={keyTimes(layer, node.path)} time={time} frame={frame} testId={`motion-add-key-${id}`} readOnly={readOnly} />
+      <KeyDiamond layer={layer.id} path={node.path} name={name} times={keyTimes(layer, node.path)} time={time} frame={frame} testId={`motion-add-key-${id}`} readOnly={readOnly} expression={node.expression !== undefined} />
       <span className="motion-prop-name kui-muted" title={name}>
         {name}
       </span>

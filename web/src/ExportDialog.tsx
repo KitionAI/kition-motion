@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Button, Dialog, Field, Select, TextInput, toast, useKitEditor, type KitEngine } from '@kition/sdk/editor'
+import { Button, Checkbox, Dialog, Field, Select, TextInput, toast, useKitEditor, type KitEngine } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
 
 /** The formats the web build encodes into one file (`bindings/wasm/src/movie.rs`), with their extensions. */
@@ -7,12 +7,14 @@ const FORMATS = [
   { id: 'h264', extension: 'mp4' },
   { id: 'webm', extension: 'webm' },
   { id: 'gif', extension: 'gif' },
+  // A Lottie animation (`file.exportLottie`): vector, for the web and apps; no size, range or rate to choose.
+  { id: 'lottie', extension: 'json' },
 ] as const
 
 type Format = (typeof FORMATS)[number]['id']
 
 /** What the dialog sends `renderMovie` (`movie::queue_params`). */
-type Settings = { format: Format; span: 'comp' | 'workArea'; size: 'full' | 'half' | { width: number; height: number }; frameRate: number | null }
+type Settings = { format: Exclude<Format, 'lottie'>; span: 'comp' | 'workArea'; size: 'full' | 'half' | { width: number; height: number }; frameRate: number | null }
 
 /** A whole number of pixels from 16 to 8192 typed in a field, or null. */
 function side(text: string) {
@@ -36,10 +38,10 @@ const STEP_MS = 120
  * finished, then `exportFinish` hands over the file), so the dialog shows the frames done and
  * Cancel stops the render between two steps and writes no file.
  */
-export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: KitEngine | null; onClose: () => void }) {
-  const { host, t } = useKitEditor()
+export function ExportDialog({ info, doc, lottie = false, onClose }: { info: MotionInfo; doc: KitEngine | null; lottie?: boolean; onClose: () => void }) {
+  const { host, t, run } = useKitEditor()
   const comp = info.comp
-  const [format, setFormat] = useState<Format>('h264')
+  const [format, setFormat] = useState<Format>(lottie ? 'lottie' : 'h264')
   const [span, setSpan] = useState<'comp' | 'workArea'>('comp')
   const [size, setSize] = useState<'full' | 'half' | 'custom'>('full')
   const [width, setWidth] = useState(String(comp?.width ?? 1920))
@@ -47,6 +49,10 @@ export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: Ki
   const [rate, setRate] = useState<'comp' | 'half'>('comp')
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<Progress | null>(null)
+  // Lottie: its options, and what the engine said the file could not carry (shown before closing).
+  const [expressions, setExpressions] = useState(false)
+  const [textAsShapes, setTextAsShapes] = useState(false)
+  const [warnings, setWarnings] = useState<string[] | null>(null)
   const cancelled = useRef(false)
   if (!comp) return null
   const w = side(width)
@@ -61,6 +67,10 @@ export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: Ki
     const extension = FORMATS.find((each) => each.id === format)?.extension ?? 'mp4'
     const folder = host.init.document.path.split('/').slice(0, -1).join('/')
     const path = [folder, `${fileName(comp.name)}.${extension}`].filter(Boolean).join('/')
+    if (format === 'lottie') {
+      await exportLottie(path)
+      return
+    }
     const settings: Settings = {
       format,
       span,
@@ -95,6 +105,31 @@ export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: Ki
     }
   }
 
+  /**
+   * Lottie: the engine writes the file in memory (`file.exportLottie`), the host saves it beside
+   * the project; what Lottie could not carry (the engine's warnings) stays in the dialog to read.
+   */
+  const exportLottie = async (path: string) => {
+    if (!doc) return
+    const name = path.split('/').pop() ?? path
+    try {
+      const answer = await run('file.exportLottie', { path: name, includeExpressions: expressions, textAsShapes })
+      if (answer === null) throw new Error(t('export.lottieFailed'))
+      const bytes = await doc.invoke<Uint8Array | undefined>('takeFile', name)
+      if (!bytes) throw new Error(t('export.lottieFailed'))
+      const written = await host.exportFile(path, bytes)
+      toast.success(t('export.done', { name: written.split('/').pop() ?? written }))
+      const said = (JSON.parse(answer) as { warnings?: unknown }).warnings
+      const list = Array.isArray(said) ? said.map((warning) => (typeof warning === 'string' ? warning : JSON.stringify(warning))) : []
+      setBusy(false)
+      if (list.length) setWarnings(list)
+      else onClose()
+    } catch (error) {
+      toast.error(t('renderFailed'), { description: error instanceof Error ? error.message : String(error) })
+      setBusy(false)
+    }
+  }
+
   /** Cancel while rendering stops the render (the loop above ends at the engine's next answer). */
   const cancel = () => {
     if (busy) cancelled.current = true
@@ -111,9 +146,15 @@ export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: Ki
           <Button onClick={cancel} data-testid="motion-export-dialog-cancel">
             {t('dialog.cancel')}
           </Button>
-          <Button variant="primary" disabled={!valid || busy || !doc} onClick={() => void render()} data-testid="motion-export-dialog-ok">
-            {t('export.render')}
-          </Button>
+          {warnings ? (
+            <Button variant="primary" onClick={onClose} data-testid="motion-export-dialog-close">
+              {t('export.close')}
+            </Button>
+          ) : (
+            <Button variant="primary" disabled={!valid || busy || !doc} onClick={() => void render()} data-testid="motion-export-dialog-ok">
+              {t('export.render')}
+            </Button>
+          )}
         </>
       }
     >
@@ -133,6 +174,14 @@ export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: Ki
             ))}
           </Select>
         </Field>
+        {format === 'lottie' ? (
+          <>
+            <Checkbox label={t('export.lottie.expressions')} checked={expressions} onChange={setExpressions} disabled={busy} testId="motion-export-lottie-expressions" />
+            <Checkbox label={t('export.lottie.textAsShapes')} checked={textAsShapes} onChange={setTextAsShapes} disabled={busy} testId="motion-export-lottie-text" />
+            <p className="kui-muted motion-export-note">{t('export.lottie.note')}</p>
+          </>
+        ) : (
+          <>
         <Field label={t('export.range')}>
           <Select value={span} disabled={busy} onChange={(event) => setSpan(event.target.value as 'comp' | 'workArea')} data-testid="motion-export-range">
             <option value="comp">{t('export.range.comp', { seconds: seconds(comp.duration) })}</option>
@@ -172,6 +221,18 @@ export function ExportDialog({ info, doc, onClose }: { info: MotionInfo; doc: Ki
             <option value="half">{t('export.rate.half', { fps: Math.round((comp.fps / 2) * 100) / 100 })}</option>
           </Select>
         </Field>
+          </>
+        )}
+        {warnings ? (
+          <div className="motion-export-warnings" role="status" data-testid="motion-export-warnings">
+            <p>{t('export.lottie.warnings', { count: warnings.length })}</p>
+            <ul>
+              {warnings.map((warning, index) => (
+                <li key={index}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {busy ? (
           <div className="motion-export-busy" role="status" data-testid="motion-export-busy">
             <div

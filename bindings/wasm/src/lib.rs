@@ -507,8 +507,17 @@ pub const MAX_SAMPLES: u32 = 2000;
 
 /// The commands [`MotionDocument::would_change`] tries: layer and keyframe edits that change
 /// only the project, never a file or the history beyond the copy.
-pub const TRIED_COMMANDS: &[&str] =
-    &["layer.centerAnchor", "layer.transform", "layer.timing", "layer.freezeFrame", "layer.align", "layer.distribute", "layer.sequence", "keys.timeReverse"];
+pub const TRIED_COMMANDS: &[&str] = &[
+    "layer.centerAnchor",
+    "layer.transform",
+    "layer.timing",
+    "layer.freezeFrame",
+    "layer.align",
+    "layer.distribute",
+    "layer.sequence",
+    "keys.timeReverse",
+    "prop.setExpression",
+];
 
 /// The longest stretch of sound [`MotionDocument::mix_audio`] mixes per call, in seconds.
 pub const MAX_AUDIO_SECONDS: f64 = 10.0;

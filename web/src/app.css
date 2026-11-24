@@ -1335,3 +1335,65 @@
   padding-block: 0;
   font-size: 12px;
 }
+
+/* A property's expression on the row under it (ExpressionRow.tsx): its switch, its text, its error. */
+.motion-row.motion-expr-row {
+  height: auto;
+  min-height: 30px;
+  align-items: stretch;
+}
+
+.motion-expr-names {
+  align-items: center;
+}
+
+.motion-expr-switch,
+.motion-expr-remove {
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid var(--kit-border);
+  border-radius: var(--kit-radius-control);
+  background: transparent;
+  color: var(--kit-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.motion-expr-switch {
+  font-family: var(--kit-font-mono);
+  font-weight: 600;
+}
+
+.motion-expr-switch[aria-pressed='true'] {
+  border-color: var(--kit-primary);
+  background: var(--kit-primary-soft);
+  color: var(--kit-text);
+}
+
+.motion-expr-remove {
+  margin-left: auto;
+}
+
+.motion-expr-track {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 6px;
+}
+
+.motion-expr-field {
+  width: 100%;
+  min-height: 22px;
+  resize: none;
+  font-family: var(--kit-font-mono);
+  font-size: 12px;
+}
+
+.motion-expr-error {
+  color: var(--kit-danger, #d9443a);
+  font-size: 12px;
+}
+
+.motion-expr-result {
+  font-size: 12px;
+}

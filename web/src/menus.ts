@@ -134,6 +134,8 @@ export const KIT_RUNS: Readonly<Record<string, readonly [command: string, params
 /** Engine rows that are hidden, like `KIT_RUNS`, where they would change nothing. */
 export const TRIED_ROWS: Readonly<Record<string, Record<string, unknown>>> = {
   'layer.centerAnchor': {},
+  // Add Expression acts on the properties selected in the timeline: hidden until one is.
+  'prop.setExpression': {},
   'layer.freezeFrame': {},
 }
 
@@ -161,6 +163,7 @@ const MENUS = (overlays: Overlays): ReadonlyArray<readonly [string, readonly Ent
       ['Import…', 'file.import', 'Cmd+I'],
       SEPARATOR,
       ['Export…', 'file.exportMovie'],
+      ['Export', [['Lottie JSON…', 'file.exportLottie']]],
       ['Save Frame As PNG…', KIT.saveFrame],
     ],
   ],
@@ -311,7 +314,10 @@ const MENUS = (overlays: Overlays): ReadonlyArray<readonly [string, readonly Ent
       ['Sequence Layers', 'kit:sequence'],
       SEPARATOR,
       ['Separate Dimensions', 'prop.separateDimensions'],
-
+      ['Add Expression', 'prop.setExpression'],
+      SEPARATOR,
+      ['Apply Animation Preset…', 'anim.applyPreset'],
+      ['Save Animation Preset…', 'anim.savePreset'],
     ],
   ],
   [
