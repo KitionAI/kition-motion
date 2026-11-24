@@ -3,6 +3,7 @@ import type { MotionInfo } from './motion'
 import { EFFECT_PREFIX, effectRows, type MotionEffect } from './effects'
 import { INTERPOLATIONS } from './timeline/interp'
 import type { Overlays } from './CanvasGuides'
+import { LABELS, labelRow } from './labels'
 
 /**
  * The editor's menus: the commands each menu shows, in order, with separators and submenus. A
@@ -56,8 +57,15 @@ export const EXTRA_SHORTCUTS = ['keys.nudgeForward', 'keys.nudgeBackward', 'keys
  * command shows no result in this editor or replaces the project (New Project, Cmd+Alt+N).
  */
 export function shortcutCommands(rows: readonly MenuRow[]): ReadonlySet<string> {
-  return new Set([...rows.map((row) => row.command).filter((command) => !command.startsWith('kit:') && command !== SEPARATOR && !(command in SHORTCUT_OVERRIDES)), ...EXTRA_SHORTCUTS])
+  return new Set([...rows.map((row) => row.command).filter((command) => !command.startsWith('kit:') && command !== SEPARATOR && !(command in SHORTCUT_OVERRIDES) && !BROWSER_KEYS.has(command)), ...EXTRA_SHORTCUTS])
 }
+
+/**
+ * Menu commands whose engine shortcut is the browser's own: Custom View 1's F11 is full screen, so
+ * the frame does not run it (the key stays the browser's); the editor's Alt+Shift+2 switches to it
+ * (`EDITOR_KEYS.view3dCustom`).
+ */
+const BROWSER_KEYS: ReadonlySet<string> = new Set(['view.3d.custom1'])
 
 /** The kit's own rows (`kit:` commands): the editor runs them, not the engine. */
 export const KIT = {
@@ -233,7 +241,14 @@ const styleLabel = (label: string, id: string, styled: ReadonlySet<string>) => (
 export type SelectedKeys = { spatial: boolean; roving: boolean; /** Whether turning roving on would change any (not on a first or last keyframe). */ rovable?: boolean; /** How many keyframes are selected (Wiggler takes two, Smoother three). */ count?: number }
 const NO_KEYS: SelectedKeys = { spatial: false, roving: false }
 
-const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean, styled: ReadonlySet<string>, keys: SelectedKeys, cacheAhead: boolean, twoViews: boolean): ReadonlyArray<readonly [string, readonly Entry[]]> => [
+/** The Keyframe Assistant rows, saying in the label what they wait for when they cannot run yet (choosing one then says it again). */
+export const ASSISTANT_NEEDS = {
+  wiggler: 'Wiggler… (Select Two or More Keyframes)',
+  smoother: 'Smoother… (Select Three or More Keyframes)',
+  convert: 'Convert Expression to Keyframes (Select a Property with an Expression)',
+} as const
+
+const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean, styled: ReadonlySet<string>, keys: SelectedKeys, cacheAhead: boolean, twoViews: boolean, convertible: boolean): ReadonlyArray<readonly [string, readonly Entry[]]> => [
   [
     'File',
     [
@@ -299,6 +314,8 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
       SEPARATOR,
       ['Solid Settings…', 'layer.settings'],
       ['Rename…', 'layer.rename'],
+      // The selected layers' colour label (as on the timeline's right-click menu).
+      ['Label', [...LABELS.map(([name]) => [name, labelRow(name)] as const), SEPARATOR, ['Select Label Group', 'edit.selectLabelGroup']]],
       SEPARATOR,
       ['Pre-compose', 'layer.precompose'],
       ['Reveal Layer Source in Project', 'layer.revealSource'],
@@ -400,7 +417,15 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
       [keys.roving ? 'Rove Across Time (On)' : keys.rovable === false ? 'Rove Across Time (Not on the First or Last Keyframe)' : 'Rove Across Time', KIT.rove],
       ['Time-Reverse Keyframes', 'keys.timeReverse'],
       ['Sequence Layers…', 'kit:sequence'],
-      ['Keyframe Assistant', [['Exponential Scale', 'keys.exponentialScale'], ['Convert Expression to Keyframes', KIT.convertExpression], ['Wiggler…', KIT.wiggler], ['Smoother…', KIT.smoother]]],
+      [
+        'Keyframe Assistant',
+        [
+          ['Exponential Scale', 'keys.exponentialScale'],
+          [convertible ? 'Convert Expression to Keyframes' : ASSISTANT_NEEDS.convert, KIT.convertExpression],
+          [(keys.count ?? 0) >= 2 ? 'Wiggler…' : ASSISTANT_NEEDS.wiggler, KIT.wiggler],
+          [(keys.count ?? 0) >= 3 ? 'Smoother…' : ASSISTANT_NEEDS.smoother, KIT.smoother],
+        ],
+      ],
       SEPARATOR,
       ['Select Equal Keyframes', 'keys.selectEqual'],
       ['Select Previous Keyframes', 'keys.selectPrevious'],
@@ -448,8 +473,8 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
 ]
 
 /** Every menu row, in menu order: the Effect menu (every effect the engine has, by category) after Layer. */
-export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo, skipFrames = true, remapOn = false, styled: ReadonlySet<string> = NO_STYLES, keys: SelectedKeys = NO_KEYS, cacheAhead = false, twoViews = false): MenuRow[] {
-  return MENUS(overlays, alignTo, skipFrames, remapOn, styled, keys, cacheAhead, twoViews).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
+export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo, skipFrames = true, remapOn = false, styled: ReadonlySet<string> = NO_STYLES, keys: SelectedKeys = NO_KEYS, cacheAhead = false, twoViews = false, convertible = true): MenuRow[] {
+  return MENUS(overlays, alignTo, skipFrames, remapOn, styled, keys, cacheAhead, twoViews, convertible).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
 }
 
 /** Menus kept in a read-only document. */
@@ -475,12 +500,17 @@ export const MOTION_PRIMARY: Record<string, readonly string[]> = {
  * Zoom 100% at 100%, the resolution the canvas shows, View ▸ 3D View without 3D layers (and the view shown), the Keyframe Interpolation rows without selected keyframes, and the
  * `KIT_RUNS` and `TRIED_ROWS` rows that would change nothing now (`idle`).
  */
-export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean; preview: number; alignTo: AlignTo; threeD: ThreeDView; region: boolean; cached: boolean; keys?: SelectedKeys; convertible?: boolean }, keysSelected: boolean, idle: ReadonlySet<string>) {
+export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { fitted: boolean; actual: boolean; preview: number; alignTo: AlignTo; threeD: ThreeDView; region: boolean; cached: boolean; keys?: SelectedKeys }, keysSelected: boolean, idle: ReadonlySet<string>) {
   const layers = info?.layers ?? []
   const selected = layers.some((layer) => layer.selected)
   const comp = info?.comp
   const hidden = new Set<string>()
-  if (!selected) for (const command of [...Object.keys(ARRANGE), 'edit.deselectAll']) hidden.add(command)
+  if (!selected) for (const command of [...Object.keys(ARRANGE), 'edit.deselectAll', 'edit.selectLabelGroup', ...LABELS.map(([name]) => labelRow(name))]) hidden.add(command)
+  // Layer ▸ Label: not the label every selected layer has already; Select Label Group only when it
+  // would select another layer.
+  const chosen = layers.filter((layer) => layer.selected)
+  if (chosen.length && chosen.every((layer) => layer.label === chosen[0].label)) hidden.add(labelRow(chosen[0].label))
+  if (!layers.some((layer) => !layer.selected && chosen.some((each) => each.label === layer.label))) hidden.add('edit.selectLabelGroup')
   if (layers.length && layers.every((layer) => layer.selected)) hidden.add('edit.selectAll')
   if (!layers.some((layer) => !layer.switches.video)) hidden.add('layer.showAllVideo')
   if (!layers.some((layer) => layer.switches.locked)) hidden.add('layer.unlockAll')
@@ -506,11 +536,9 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { 
   if (!keysSelected) for (const row of INTERPOLATIONS) hidden.add(row.command)
   // Rove Across Time: only for keyframes that move a layer through space.
   if (!keysSelected || !view.keys?.spatial) hidden.add(KIT.rove)
-  // Wiggler between two or more selected keyframes, Smoother over three or more.
-  if (!keysSelected || (view.keys?.count ?? 0) < 2) hidden.add(KIT.wiggler)
-  if (!keysSelected || (view.keys?.count ?? 0) < 3) hidden.add(KIT.smoother)
-  // Convert Expression to Keyframes: only while a property with an expression is selected.
-  if (!view.convertible) hidden.add(KIT.convertExpression)
+  // Wiggler (two or more selected keyframes), Smoother (three or more) and Convert Expression to
+  // Keyframes (a selected property with an expression turned on) stay in the menu: their labels
+  // say what they wait for (`ASSISTANT_NEEDS`).
   for (const command of idle) if (command !== 'view.reset3DView') hidden.add(command)
   // Aligning to the selection needs two or more selected layers.
   if (view.alignTo === 'selection' && layers.filter((layer) => layer.selected).length < 2) for (const command of Object.keys(KIT_RUNS)) if (command.startsWith('kit:align-')) hidden.add(command)

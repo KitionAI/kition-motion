@@ -186,6 +186,9 @@ fn pick_whip(s: &mut Session, p: &Value) -> Result<Value> {
         };
         let head: String = base.chars().take(a as usize).collect();
         let tail: String = base.chars().skip(b as usize).collect();
+        // A one-value property reads the first of a target's several values (`position[0]`), so
+        // the text says which one it uses.
+        let r = if dt > 1 && dm == 1 { format!("{r}[0]") } else { r };
         let text = format!("{head}{r}{tail}");
         s.execute("prop.setExpression", json!({"comp": cid.0, "layer": lid.0, "prop": uid, "expression": text}))?;
         return Ok(json!(text));

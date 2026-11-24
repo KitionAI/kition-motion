@@ -25,6 +25,24 @@ export const LABELS: ReadonlyArray<readonly [name: string, hex: string]> = [
   ['Dark Green', '#1e401e'],
 ]
 
+/**
+ * The label the editor gives a new layer it makes, by kind (`setLayerNames`' `labels`): a calm
+ * colour each, so the timeline groups the kinds at a glance; footage keeps its project item's
+ * label and a precomposition the engine's. Layers already in a document keep theirs.
+ */
+export const NEW_LAYER_LABELS: Readonly<Record<string, string>> = {
+  text: 'Peach',
+  shape: 'Blue',
+  solid: 'Sea Foam',
+  adjustment: 'Green',
+  null: 'Brown',
+  camera: 'Cyan',
+  light: 'Orange',
+}
+
+/** The Layer menu's Label rows: `kit:label-<name>` (the name without spaces). */
+export const labelRow = (name: string) => `kit:label-${name.replace(/ /g, '')}`
+
 /** A label's colour, or null for None (or a name the editor does not know). */
 export function labelHex(name: string | undefined): string | null {
   if (!name || name === 'None') return null

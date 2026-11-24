@@ -265,6 +265,26 @@ fn convert_expression_to_keyframes_on_a_reversed_layer_keeps_values() {
     assert!(before.iter().zip(after).all(|(b, a)| (b - a).abs() < 1e-6), "{before:?} -> {after:?}");
 }
 
+/// Convert Expression to Keyframes needs an expression turned on: on a property with only
+/// keyframes (or a turned-off expression) it is refused and the keyframes stay as they are.
+#[test]
+fn convert_expression_to_keyframes_needs_an_expression_turned_on() {
+    let (mut s, l) = setup();
+    animate(&mut s, l, "transform/rotation", &[(0.0, json!(0)), (2.0, json!(90))]);
+    let convert = |s: &mut Session| s.execute("prop.convertExpressionToKeyframes", json!({"layer": l, "path": "transform/rotation"}));
+    assert!(convert(&mut s).is_err());
+    assert_eq!(prop(&s, l, "transform/rotation").keys.len(), 2);
+    s.execute("prop.setExpression", json!({"layer": l, "path": "transform/rotation", "expression": "value"})).unwrap();
+    s.execute("prop.setExpression", json!({"layer": l, "path": "transform/rotation", "enabled": false})).unwrap();
+    assert!(convert(&mut s).is_err());
+    assert_eq!(prop(&s, l, "transform/rotation").keys.len(), 2);
+    s.execute("prop.setExpression", json!({"layer": l, "path": "transform/rotation", "enabled": true})).unwrap();
+    assert!(convert(&mut s).is_ok());
+    assert!(prop(&s, l, "transform/rotation").keys.len() > 2);
+    // Converted, the expression is off: a second conversion has nothing to do.
+    assert!(convert(&mut s).is_err());
+}
+
 #[test]
 fn time_reverse_keyframes() {
     let (mut s, l) = setup();
@@ -630,6 +650,29 @@ fn pick_whip_inserts_into_the_expression_being_edited() {
     assert!(whip(&mut s, "7", json!([1])).is_err());
     s.execute("edit.undo", json!({})).unwrap();
     assert_eq!(prop(&s, l, "transform/opacity").expr.unwrap().text, format!("x + {r}"));
+}
+
+/// Inserted into a one-value property's text, a several-value target names the value it gives
+/// (`position[0]`), as the whole-expression pick whip does.
+#[test]
+fn pick_whip_inserting_a_several_value_target_names_its_first_value() {
+    let (mut s, l) = setup();
+    let o = s.execute("layer.newSolid", json!({"name": "Other", "color": "#00ff00"})).unwrap()["layer"].as_u64().unwrap();
+    let got = s
+        .execute(
+            "prop.pickWhip",
+            json!({"layer": l, "path": "transform/rotation", "target": {"layer": o, "path": "transform/position"}, "expression": "10 + ", "range": [5, 5]}),
+        )
+        .unwrap();
+    assert_eq!(got, json!("10 + thisComp.layer(\"Other\").transform.position[0]"));
+    // A one-value target into a one-value property stays as it is.
+    let got = s
+        .execute(
+            "prop.pickWhip",
+            json!({"layer": l, "path": "transform/rotation", "target": {"layer": o, "path": "transform/opacity"}, "expression": "", "range": [0, 0]}),
+        )
+        .unwrap();
+    assert_eq!(got, json!("thisComp.layer(\"Other\").transform.opacity"));
 }
 
 /// Outer comp (4 s) containing a precomp whose 10×10 white solid moves x = 10 + 20·t (t in s).

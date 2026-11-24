@@ -20,9 +20,15 @@ const WAVEFORM_RATE: u32 = 2000;
 impl MotionDocument {
     /// What the canvas tools name the layers they make, in the editor's language: JSON
     /// `{"shape": "形状图层"}` (numbered `形状图层 2`); a missing or empty name keeps the engine's.
+    /// `labels` (`{"text": "Peach", …}`, by kind: text, shape, solid, adjustment, null, camera,
+    /// light) are the labels the `layer.new…` commands give the layers they make from now on; an
+    /// unknown label name is left out, and without `labels` new layers get the engine's.
     pub fn set_layer_names(&mut self, names: &str) {
         let names = serde_json::from_str::<Value>(names).unwrap_or(Value::Null);
         self.shape_layer_name = names.get("shape").and_then(Value::as_str).map(str::trim).filter(|name| !name.is_empty()).map(str::to_owned);
+        self.session.new_layer_labels = names.get("labels").and_then(Value::as_object).map(|labels| {
+            labels.iter().filter_map(|(kind, name)| Some((kind.clone(), kition_motion_engine::color::Label::from_name(name.as_str()?)?))).collect()
+        });
     }
 
     /// A new shape layer's name from [`MotionDocument::set_layer_names`]: the base and the
@@ -159,6 +165,40 @@ mod tests {
         assert_eq!(doc.new_shape_layer_name().as_deref(), Some("形状图层 2"));
         doc.set_layer_names("not json");
         assert_eq!(doc.new_shape_layer_name(), None);
+    }
+
+    /// The labels the editor gives new layers by kind: a Layer ▸ New text layer, null and camera
+    /// get theirs (one undo step each, as before); a duplicate keeps its original's.
+    #[test]
+    fn new_layers_get_the_editors_label_for_their_kind() {
+        let mut doc = doc();
+        let label = |doc: &MotionDocument, id: u64| {
+            doc.session.active_comp().and_then(|c| c.layer(kition_motion_project::LayerId(id)).map(|l| l.label.name().to_string()))
+        };
+        let made = |doc: &mut MotionDocument, command: &str| doc.execute(command, json!({})).unwrap()["layer"].as_u64().unwrap();
+        // Without labels from the editor: the engine's (a null is red).
+        let null = made(&mut doc, "layer.newNull");
+        assert_eq!(label(&doc, null).as_deref(), Some("Red"));
+        doc.set_layer_names(r#"{"labels": {"text": "Peach", "null": "Brown", "camera": "Cyan", "solid": "Not a label"}}"#);
+        let text = made(&mut doc, "layer.newText");
+        let null = made(&mut doc, "layer.newNull");
+        let camera = made(&mut doc, "layer.newCamera");
+        let solid = made(&mut doc, "layer.newSolid");
+        assert_eq!(label(&doc, text).as_deref(), Some("Peach"));
+        assert_eq!(label(&doc, null).as_deref(), Some("Brown"));
+        assert_eq!(label(&doc, camera).as_deref(), Some("Cyan"));
+        assert_eq!(label(&doc, solid).as_deref(), Some("Red"), "an unknown label name keeps the engine's");
+        // One undo step takes the new layer away whole.
+        let before = doc.session.active_comp().map(|c| c.layers.len()).unwrap();
+        doc.execute("edit.undo", json!({})).unwrap();
+        assert_eq!(doc.session.active_comp().map(|c| c.layers.len()).unwrap(), before - 1);
+        // A label set by hand stays on a duplicate.
+        doc.execute("edit.label", json!({"label": "Purple", "layers": [text], "target": "layers"})).unwrap();
+        let copy = doc.execute("edit.duplicate", json!({"layers": [text]})).unwrap();
+        let copy = copy["layers"].as_array().and_then(|a| a.first()).and_then(serde_json::Value::as_u64).or_else(|| copy["layer"].as_u64());
+        if let Some(copy) = copy {
+            assert_eq!(label(&doc, copy).as_deref(), Some("Purple"));
+        }
     }
 
     #[test]

@@ -71,30 +71,6 @@ const CJK = /[\u3400-\u9fff]/
 /** How many matches Find Effect lists at once. */
 const SHOWN = 60
 
-/** What each category's effects do, as the first half of an effect's one-line description (`effect.about.<category>`). */
-const ABOUT: Readonly<Record<string, string>> = {
-  '3D Channel': '3d',
-  Audio: 'audio',
-  'Blur & Sharpen': 'blur',
-  Channel: 'channel',
-  'Color Correction': 'color',
-  Distort: 'distort',
-  'Expression Controls': 'controls',
-  Generate: 'generate',
-  'Immersive Video': 'immersive',
-  Keying: 'keying',
-  Matte: 'matte',
-  'Noise & Grain': 'noise',
-  Paint: 'paint',
-  Perspective: 'perspective',
-  Simulation: 'simulation',
-  Stylize: 'stylize',
-  Text: 'text',
-  Time: 'time',
-  Transition: 'transition',
-  Utility: 'utility',
-}
-
 const RECENT_KEY = 'kition-motion.effects-recent'
 const FAVOURITE_KEY = 'kition-motion.effects-favourite'
 /** How many effects Recently Used keeps. */
@@ -124,7 +100,7 @@ export function rememberEffect(id: string) {
 /**
  * Find Effect, the effect browser: with nothing typed, the favourites (starred), the effects used
  * last, then every category (opened with a click), each effect with a one-line description (what
- * its category does and its first parameters); typing lists the effects whose name (English or
+ * it does, `effectAbout.ts`, and its first parameters); typing lists the effects whose name (English or
  * translated) or category contains it. Up and Down choose, Enter or a click applies to the
  * selected layers; the star beside an effect adds it to the favourites or takes it out (kept in
  * this browser).
@@ -180,9 +156,8 @@ export function FindEffectDialog({ effects, onApply, onClose }: { effects: reado
       store(FAVOURITE_KEY, next)
       return next
     })
-  /** An effect's one-line description: what its category does, and its first parameters. */
+  /** An effect's one-line description: what it does (`effect.desc.<id>`, where it has one), and its first parameters. */
   const about = (effect: MotionEffect) => {
-    const kind = ABOUT[effect.category]
     // Only settings named in the editor's language (a name without a translation is left out of a
     // Chinese description, rather than shown in English).
     const chinese = CJK.test(t('effect.noParams'))
@@ -191,7 +166,10 @@ export function FindEffectDialog({ effects, onApply, onClose }: { effects: reado
     const params = named.slice(0, 3)
     const more = all.length > params.length ? '…' : ''
     const settings = params.length ? t('effect.params', { names: params.join(t('effect.listSeparator')) + more }) : all.length ? t('effect.paramCount', { count: all.length }) : t('effect.noParams')
-    return [kind ? t(`effect.about.${kind}`) : p(effect.category), settings].join(' · ')
+    const key = `effect.desc.${effect.id}`
+    const own = t(key)
+    // Without its own line, only its settings (not its category's words standing in for it).
+    return own && own !== key ? `${own} · ${settings}` : settings
   }
   const option = (effect: MotionEffect, key: string, group: string) => (
     <div key={key} className="motion-effect-row" data-group={group}>
@@ -208,7 +186,8 @@ export function FindEffectDialog({ effects, onApply, onClose }: { effects: reado
       >
         <span className="motion-effect-name">
           <span>{p(effect.name)}</span>
-          <span className="kui-muted">{p(effect.category)}</span>
+          {/* Its category, where the list is not already under it. */}
+          {group.startsWith('category-') ? null : <span className="kui-muted">{p(effect.category)}</span>}
         </span>
         <span className="motion-effect-about kui-muted" data-testid={`motion-effect-about-${effect.id}`}>
           {about(effect)}

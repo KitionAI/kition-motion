@@ -36,6 +36,7 @@
     "test:shortcuts": "node scripts/shortcuts.mjs --check",
     "test:fixes7c": "node tests/fixes7c.mjs chromium && node tests/fixes7c.mjs webkit",
     "test:fixes7d": "node tests/fixes7d.mjs chromium && node tests/fixes7d.mjs webkit",
+    "test:fixes7e": "node tests/fixes7e.mjs chromium && node tests/fixes7e.mjs webkit",
     "test:gizmo": "node tests/gizmo.mjs chromium && node tests/gizmo.mjs webkit",
     "test:cacheAhead": "node tests/cacheAhead.mjs chromium && node tests/cacheAhead.mjs webkit",
     "test:outputs": "node tests/outputs.mjs chromium && node tests/outputs.mjs webkit",

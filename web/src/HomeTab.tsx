@@ -32,7 +32,7 @@ export function HomeTab({ info, onCommand, wholeWorkArea, lastEffect }: { info: 
             <MenuItem key={layer.id} label={t(`layerKind.${layer.id}`)} onSelect={() => (OWN_NEW_LAYERS.has(layer.command) ? onCommand(layer.command) : void run(layer.command, { ...layer.params }))} testId={`motion-home-new-${layer.id}`} />
           ))}
         </RibbonMenu>
-        <CommandButton command="layer.newText" params={{ text: 'Text' }} icon={Type} primary />
+        <CommandButton command="layer.newText" icon={Type} primary onRun={onCommand} />
         <CommandButton command="layer.newShape" params={{ kind: 'rect' }} icon={Square} primary onRun={onCommand} />
         <CommandButton command="layer.precompose" icon={Layers} primary />
         <CommandButton command="layer.addMask" icon={SquareDashed} />

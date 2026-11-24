@@ -1187,6 +1187,11 @@ fn convert_expr_to_keys(s: &mut Session, p: &Value) -> Result<Value> {
     let comp = s.project.comp(cid).ok_or(EngineError::NoComp)?.clone();
     let layer = comp.layer(lid).ok_or(EngineError::NoComp)?.clone();
     let pr = layer.props.find(uid).ok_or_else(|| bad("prop.convertExpressionToKeyframes", "no property"))?.clone();
+    // Without an expression turned on there is nothing to convert: baking the keyframes would
+    // only replace them with one key per frame.
+    if !pr.has_expression() {
+        return Err(bad("prop.convertExpressionToKeyframes", "the property has no expression turned on"));
+    }
     let mut keys = vec![];
     let fd = comp.frame_duration();
     let mut t = layer.in_point;

@@ -84,6 +84,36 @@ export function unbalanced(source: string): { kind: 'unclosed' | 'extra' | 'quot
   return open ? { kind: 'unclosed', open: open.char, close: PAIRS[open.char], line: open.line, column: open.column } : null
 }
 
+/** Messages of the expression language and the engine the editor words itself (`expr.msg.*`); a group is `{n}`. */
+const KNOWN_ERRORS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^(?:TypeError:\s*)?cannot convert '?null'? or '?undefined'? to object/i, 'expr.msg.empty'],
+  [/^(?:TypeError:\s*)?cannot read propert(?:y|ies)\b.*\b(?:null|undefined)/i, 'expr.msg.empty'],
+  [/^(?:TypeError:\s*)?not a callable function/i, 'expr.msg.notCallable'],
+  [/^(?:TypeError:\s*)?not a constructor/i, 'expr.msg.notConstructor'],
+  [/^expression result is undefined/i, 'expr.msg.noResult'],
+  [/^expression result is not a finite number/i, 'expr.msg.notFinite'],
+  [/^expression result must be a number/i, 'expr.msg.notNumber'],
+  [/^expression result must be of dimension (\d+)/i, 'expr.msg.dimension'],
+  [/^expression result array must contain numbers/i, 'expr.msg.arrayNumbers'],
+  [/^expression result must be a path/i, 'expr.msg.path'],
+  [/reference each other too deeply/i, 'expr.msg.circular'],
+  [/too many property reads/i, 'expr.msg.reads'],
+  [/nested too deeply/i, 'expr.msg.nested'],
+  [/maximum (?:call )?stack size/i, 'expr.msg.stack'],
+  [/^Layer named "(.*)" does not exist/i, 'expr.msg.noLayer'],
+  [/^Layer index (\S+) out of range/i, 'expr.msg.layerIndex'],
+  [/^Comp named "(.*)" does not exist/i, 'expr.msg.noComp'],
+  [/^Footage named "(.*)" does not exist/i, 'expr.msg.noFootage'],
+  [/^Effect "?(.*?)"? not found on layer/i, 'expr.msg.noEffect'],
+  [/^Layer ".*" has no parent/i, 'expr.msg.noParent'],
+  [/^Layer ".*" has no property "(.*)"/i, 'expr.msg.noProperty'],
+  [/^Property "?(.*?)"? not found in/i, 'expr.msg.noProperty'],
+  [/^Key index (\S+) out of range/i, 'expr.msg.keyIndex'],
+  [/^Property has no keyframes/i, 'expr.msg.noKeys'],
+  [/^(?:Marker .* (?:not found|out of range)|No markers)/i, 'expr.msg.noMarker'],
+  [/has no active camera/i, 'expr.msg.noCamera'],
+]
+
 /** `source`: the expression's text; a syntax error from a bracket or a quote left open says which one and where. */
 export function explainError(message: string, t: (key: string, values?: Record<string, string | number>) => string, source?: string) {
   // The engine says where: `Error at line 3: ReferenceError: foo is not defined`, or `Error: …`
@@ -104,6 +134,14 @@ export function explainError(message: string, t: (key: string, values?: Record<s
     if (found) return t('expr.error.syntax', { detail: t(`expr.syntax.${found.kind}`, { open: found.open, close: found.close, line: found.line, column: found.column }) })
   }
   let said = t('expr.error.other', { detail: body })
+  // What the expression language and the engine say in English, in the person's words; anything
+  // else keeps the engine's words on a second line under a translated headline.
+  const known = KNOWN_ERRORS.find(([pattern]) => pattern.test(body))
+  if (known) {
+    const n = known[0].exec(body)?.[1] ?? ''
+    said = t('expr.error.known', { detail: t(known[1], { n }) })
+    return line !== null && Number.isFinite(line) ? t('expr.error.atLine', { line, message: said }) : said
+  }
   for (const [pattern, key] of rules) {
     const found = pattern.exec(body)
     if (found) {
@@ -146,6 +184,16 @@ function pickTarget(x: number, y: number): { layer: number; path?: string; name?
   return { layer, ...(row.dataset.pickPath ? { path: row.dataset.pickPath } : {}), ...(row.dataset.pickName ? { name: row.dataset.pickName } : {}) }
 }
 
+/** Calls `onClosed` when a menu that was open closes. */
+function MenuClosed({ open, onClosed }: { open: boolean; onClosed: () => void }) {
+  const was = useRef(open)
+  useEffect(() => {
+    if (was.current && !open) onClosed()
+    was.current = open
+  }, [open, onClosed])
+  return null
+}
+
 /** A value as the row shows it: numbers to two decimals, several joined by commas. */
 function shownValue(value: unknown): string | null {
   const one = (part: unknown) => (typeof part === 'number' ? String(Math.round(part * 100) / 100) : null)
@@ -167,29 +215,68 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, line, d
   const { run, t } = useKitEditor()
   const [draft, setDraft] = useState(text)
   const dropped = useRef(false)
-  useEffect(() => setDraft(text), [text])
   const field = useRef<HTMLTextAreaElement>(null)
   const [scroll, setScroll] = useState(0)
-  // Where the cursor was in the field (what a pick-whip or a function goes in place of).
+  // Where the cursor was in the field while it is being edited (what a pick-whip or a function goes
+  // in place of); null when the field is not being edited: a pick-whip then replaces the whole text.
   const caret = useRef<[number, number] | null>(null)
+  // The draft is held (not committed when the field loses the focus) while a pick-whip is dragged
+  // or the function menu is open: what they insert goes into the draft, and the draft with it is
+  // one undo step when it is committed.
+  const held = useRef(false)
+  // A pick-whip let go into the text being edited: where the reference went, to put the cursor after
+  // it when the engine's text comes back.
+  const whipped = useRef<{ from: number; tail: number } | null>(null)
+  // A pick-whip's link on its way to the engine: until it is written the draft (the text before
+  // it) is not committed, or a click elsewhere in that moment would write the old text over the link.
+  const linking = useRef(false)
+  const link = (command: string, params: Record<string, unknown>) => {
+    linking.current = true
+    void run(command, params)
+      .then((answer) => {
+        // The engine's new text at once (its document update may come a moment later).
+        const written = typeof answer === 'string' ? answer : (answer as { expression?: unknown } | null)?.expression
+        if (typeof written === 'string') setDraft(written)
+      })
+      .finally(() => {
+        linking.current = false
+      })
+  }
+  useEffect(() => {
+    setDraft(text)
+    const insert = whipped.current
+    whipped.current = null
+    const element = field.current
+    if (insert && element && document.activeElement === element) {
+      const at = Math.max(insert.from, text.length - insert.tail)
+      caret.current = [at, at]
+      element.setSelectionRange(at, at)
+    }
+  }, [text])
   const remember = () => {
     const element = field.current
-    if (element) caret.current = [element.selectionStart, element.selectionEnd]
+    if (element && document.activeElement === element) caret.current = [element.selectionStart, element.selectionEnd]
   }
-  /** Puts `insert` where the cursor was (the end when it never was in the field), and puts the cursor after it. */
+  /** Gives the focus back to the field after a held draft was used (or nothing was chosen). */
+  const refocus = (at?: number) => {
+    // After the menu has given the focus back to its button.
+    window.setTimeout(() => {
+      held.current = false
+      const element = field.current
+      if (!element) return
+      element.focus({ preventScroll: true })
+      const [from, to] = at !== undefined ? [at, at] : (caret.current ?? [element.value.length, element.value.length])
+      element.setSelectionRange(from, to)
+    }, 0)
+  }
+  /** Puts `insert` where the cursor was (in place of the whole text when the field was not being edited), and puts the cursor after it. */
   const insertText = (insert: string) => {
-    const [from, to] = caret.current ?? [draft.length, draft.length]
+    const [from, to] = caret.current ?? [0, draft.length]
     const next = draft.slice(0, from) + insert + draft.slice(to)
     setDraft(next)
     const at = from + insert.length
     caret.current = [at, at]
-    // After the menu has given the focus back to its button.
-    window.setTimeout(() => {
-      const element = field.current
-      if (!element) return
-      element.focus({ preventScroll: true })
-      element.setSelectionRange(at, at)
-    }, 0)
+    refocus(at)
   }
   // The pick-whip being dragged: from its handle to the pointer, the row under it lit.
   const [whip, setWhip] = useState<{ from: [number, number]; to: [number, number] } | null>(null)
@@ -203,6 +290,9 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, line, d
   const whipDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (readOnly || event.button !== 0) return
     event.preventDefault()
+    // The text being typed stays a draft while the whip is out (it is not committed on the way).
+    held.current = true
+    remember()
     event.stopPropagation()
     event.currentTarget.setPointerCapture(event.pointerId)
     const box = event.currentTarget.getBoundingClientRect()
@@ -220,21 +310,36 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, line, d
     setWhip(null)
     light(null)
     const target = pickTarget(event.clientX, event.clientY)
-    if (!target) return
-    const [from, to] = caret.current ?? [draft.length, draft.length]
+    // In the text being edited the reference goes at the cursor (in place of the selection);
+    // otherwise it replaces the whole expression.
+    const editingText = caret.current !== null
+    const [from, to] = caret.current ?? [0, draft.length]
+    const unchanged = !target || (target.path !== undefined && target.layer === layer && target.path === path)
+    if (unchanged) {
+      if (editingText) refocus()
+      else held.current = false
+      return
+    }
+    if (editingText) whipped.current = { from, tail: draft.length - to }
+    if (editingText) refocus()
+    else held.current = false
     if (target.path) {
-      if (target.layer === layer && target.path === path) return
-      void run('prop.pickWhip', { layer, path, target: { layer: target.layer, path: target.path }, expression: draft, range: [from, to] })
+      // The engine counts characters, not UTF-16 units.
+      const chars = (end: number) => [...draft.slice(0, end)].length
+      link('prop.pickWhip', { layer, path, target: { layer: target.layer, path: target.path }, expression: draft, range: [chars(from), chars(to)] })
       return
     }
     const reference = target.layer === layer ? 'thisLayer' : `thisComp.layer(${JSON.stringify(target.name ?? '')})`
     const next = draft.slice(0, from) + reference + draft.slice(to)
-    void run('prop.setExpression', { layer, path, expression: next })
+    link('prop.setExpression', { layer, path, expression: next })
   }
   // What the expression makes of the property now (what renders), as `prop.get` evaluates it.
   const read = useEngineQuery<{ evaluated?: unknown }>('prop.get', { layer, path }, `${text} ${enabled} ${time}`)
   const result = shownValue(read?.evaluated)
   const commit = () => {
+    caret.current = null
+    // The link being written replaces the draft (the engine's text comes back with it).
+    if (linking.current) return
     if (dropped.current) {
       dropped.current = false
       setDraft(text)
@@ -276,7 +381,11 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, line, d
             onPointerCancel={() => {
               setWhip(null)
               light(null)
+              if (caret.current !== null) refocus()
+              else held.current = false
             }}
+            // The field keeps the focus (and its cursor) while the whip is pressed.
+            onMouseDown={(event) => event.preventDefault()}
             data-testid={`${testId}-whip`}
           >
             <LinkIcon size={13} aria-hidden="true" />
@@ -285,9 +394,33 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, line, d
             placement="auto"
             align="start"
             trigger={({ open, toggle }) => (
-              <button type="button" className="motion-expr-whip" aria-expanded={open} title={t('expr.functions')} aria-label={t('expr.functions')} disabled={readOnly} onClick={toggle} data-testid={`${testId}-functions`}>
-                <SigmaIcon size={13} aria-hidden="true" />
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="motion-expr-whip"
+                  aria-expanded={open}
+                  title={t('expr.functions')}
+                  aria-label={t('expr.functions')}
+                  disabled={readOnly}
+                  // Opening the menu does not commit the text being typed: what it inserts goes into the draft.
+                  onPointerDown={() => {
+                    remember()
+                    if (document.activeElement === field.current) held.current = true
+                  }}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    if (!open && document.activeElement === field.current) {
+                      remember()
+                      held.current = true
+                    }
+                    toggle()
+                  }}
+                  data-testid={`${testId}-functions`}
+                >
+                  <SigmaIcon size={13} aria-hidden="true" />
+                </button>
+                <MenuClosed open={open} onClosed={() => (held.current ? refocus() : undefined)} />
+              </>
             )}
           >
             {EXPRESSION_FUNCTIONS.map(([group, entries]) => (
@@ -305,7 +438,9 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, line, d
           ref={field}
           className="kui-field motion-expr-field"
           value={draft}
-          rows={Math.min(4, Math.max(1, draft.split('\n').length))}
+          // As tall as its text, up to eight lines (it does not jump when clicked: the rows under it
+          // stay where they are for a pick-whip); a person can drag it taller.
+          rows={Math.min(8, Math.max(1, draft.split('\n').length))}
           spellCheck={false}
           readOnly={readOnly}
           aria-label={t('expr.field', { name })}
@@ -314,7 +449,7 @@ export function ExpressionRow({ layer, path, name, text, enabled, error, line, d
           onKeyUp={remember}
           onScroll={(event) => setScroll(event.currentTarget.scrollTop)}
           onBlur={() => {
-            remember()
+            if (held.current) return
             commit()
           }}
           onKeyDown={(event) => {

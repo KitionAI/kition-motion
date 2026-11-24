@@ -102,6 +102,35 @@ fn overlays_seen(session: &Session, view: CameraState, out: &mut Vec<ToolOverlay
     });
 }
 
+/// Every 3D layer (not a camera or light) as `view` sees it, for the second view to fill and name:
+/// `{id, name, label: [r, g, b], selected, quad: [[x, y] × 4]}` in composition pixels, from the
+/// bottom of the stack up. A layer seen edge-on has a flat quad (a line).
+pub(crate) fn layers_through(session: &Session, view: CameraState) -> Vec<serde_json::Value> {
+    super::geometry::through_view(Some(view), || {
+        with_ctx_plain(session, |ctx| {
+            ctx.comp
+                .layers
+                .iter()
+                .rev()
+                .filter(|l| l.is_active_at(ctx.time) && l.switches.video && l.is_3d() && !l.is_camera() && !l.is_light())
+                .filter_map(|layer| {
+                    let quad = geometry::layer_box(ctx, layer)?.corners();
+                    quad.iter().all(|p| p[0].is_finite() && p[1].is_finite()).then(|| {
+                        serde_json::json!({
+                            "id": layer.id.0,
+                            "name": layer.name,
+                            "label": layer.label.rgb(),
+                            "selected": session.state.selected_layers.contains(&layer.id),
+                            "quad": quad,
+                        })
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+    })
+}
+
 /// A camera: a small box at its eye and its frustum towards the point of interest.
 fn camera_icon(view: &CameraState, w: f64, h: f64, eye: Vec3, poi: Vec3, out: &mut Vec<ToolOverlay>) {
     let ahead = poi - eye;

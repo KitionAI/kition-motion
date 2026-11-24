@@ -496,6 +496,12 @@ pub struct Session {
     /// is, settings that guard what scripts may do can't change (see
     /// [`prefs::Scripting::same_permissions`]).
     pub script_calls: ScriptCalls,
+    /// The labels the editor gives the layers its Layer ▸ New commands make, by kind (`text`,
+    /// `shape`, `solid`, `adjustment`, `null`, `camera`, `light`); None: the engine's own defaults
+    /// (agents and scripts). Not saved: the label a layer gets is stored as any other.
+    pub new_layer_labels: Option<std::collections::BTreeMap<String, color::Label>>,
+    /// Whether a `layer.new…` command is running (its new layers get `new_layer_labels`).
+    pub labeling_new_layers: bool,
     /// The project's link to its KDM replica ([`kdm_bridge`]): the replica (made when a host
     /// first asks for it), what it last saw, and who the running command acts for.
     pub bridge: kdm_bridge::Bridge,
@@ -525,6 +531,30 @@ pub type ScriptRunner = fn(&mut Session, &ScriptRequest) -> Value;
 /// Loads one WebAssembly effect plug-in (`bytes`, `source` path) into the effect registry and
 /// describes it (`{id, name, category, version, api, params}`).
 pub type PluginLoader = fn(&[u8], &str) -> std::result::Result<Value, String>;
+
+/// Gives the layers in `after` that `before` did not have the label `labels` names for their kind.
+fn label_new_layers(before: &Project, after: &mut Project, labels: &std::collections::BTreeMap<String, color::Label>) {
+    let comps: Vec<ItemId> = after.comps().map(|(id, _)| *id).collect();
+    for cid in comps {
+        let old: std::collections::BTreeSet<LayerId> = before.comp(cid).map(|c| c.layers.iter().map(|l| l.id).collect()).unwrap_or_default();
+        let Some(comp) = after.comp_mut(cid) else { continue };
+        for layer in comp.layers.iter_mut().filter(|l| !old.contains(&l.id)) {
+            let kind = match &layer.source {
+                kition_motion_project::LayerSource::Text => "text",
+                kition_motion_project::LayerSource::Shape => "shape",
+                kition_motion_project::LayerSource::Solid { .. } if layer.switches.adjustment => "adjustment",
+                kition_motion_project::LayerSource::Solid { .. } => "solid",
+                kition_motion_project::LayerSource::Null => "null",
+                kition_motion_project::LayerSource::Camera => "camera",
+                kition_motion_project::LayerSource::Light { .. } => "light",
+                _ => continue,
+            };
+            if let Some(label) = labels.get(kind) {
+                layer.label = *label;
+            }
+        }
+    }
+}
 
 impl Default for Session {
     fn default() -> Self {
@@ -596,6 +626,8 @@ impl Default for Session {
             footage_stamps: Default::default(),
             footage_scan: None,
             script_calls: ScriptCalls::default(),
+            new_layer_labels: None,
+            labeling_new_layers: false,
         }
     }
 }
@@ -627,8 +659,11 @@ impl Session {
         }
         let mark = outer.then(|| self.history.mark());
         self.bridge.depth = self.bridge.depth.saturating_add(1);
+        let labeling = self.labeling_new_layers;
+        self.labeling_new_layers = labeling || (id.starts_with("layer.new") && self.new_layer_labels.is_some());
         // Last-resort guard: a panicking command reports an error instead of crashing the app.
         let r = guard::guarded(&format!("command `{id}`"), || (spec.run)(self, &params));
+        self.labeling_new_layers = labeling;
         self.bridge.depth = self.bridge.depth.saturating_sub(1);
         if let Some(mark) = mark {
             self.sync_kdm_after_command(mark);
@@ -678,6 +713,12 @@ impl Session {
         let mut p = (*self.project).clone();
         let mut st = self.state.clone();
         let r = f(&mut p, &mut st)?;
+        // A layer a Layer ▸ New command made in the editor: the editor's label for its kind.
+        if self.labeling_new_layers
+            && let Some(labels) = &self.new_layer_labels
+        {
+            label_new_layers(&before, &mut p, labels);
+        }
         // Layer styles: one Global Light per comp, whichever layer edited it.
         kition_motion_project::styles::sync_global_light(&before, &mut p);
         // Template Properties of precomp layers follow their comps' Graphics Templates.

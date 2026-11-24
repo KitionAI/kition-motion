@@ -388,6 +388,10 @@ button.motion-switch:focus-visible {
 }
 
 .motion-row[data-selected='true'] .motion-bar[style*='--motion-label'] {
+  /* Selected: an accent ring around the bar, so a purple label never passes for the selection. */
+  box-shadow:
+    inset 4px 0 0 var(--motion-label),
+    0 0 0 1px var(--kit-primary);
   background: color-mix(in srgb, var(--motion-label) 22%, var(--kit-primary-soft));
 }
 
@@ -959,6 +963,12 @@ button.motion-switch:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* A field's unit (每秒, per second) stays on one line beside it. */
+.motion-form-input > .kui-muted {
+  flex: none;
+  white-space: nowrap;
 }
 
 .motion-swatch {
@@ -1602,7 +1612,9 @@ p.motion-effect-group-head {
   position: relative;
   width: 100%;
   min-height: 22px;
-  resize: none;
+  /* As tall as its rows (the field's own fixed height would hide them); a person may make it taller. */
+  height: auto;
+  resize: vertical;
   font-family: var(--kit-font-mono);
   font-size: 12px;
   line-height: 1.4;
@@ -1680,6 +1692,8 @@ p.motion-effect-group-head {
 .motion-expr-error {
   color: var(--kit-danger, #d9443a);
   font-size: 12px;
+  /* A headline and, under it, the engine's own words when the editor has none for them. */
+  white-space: pre-line;
 }
 
 .motion-expr-result {
@@ -2469,7 +2483,8 @@ p.motion-effect-group-head {
 
 .motion-second-view {
   display: flex;
-  flex: 0 0 34%;
+  /* The viewer keeps most of the width (at 1280 × 800 more than half the window). */
+  flex: 0 0 24%;
   flex-direction: column;
   min-width: 200px;
   border-left: 1px solid var(--kit-border);

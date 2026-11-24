@@ -341,8 +341,10 @@ impl MotionDocument {
     /// through 3D view `view` (`top`, `front`, `activeCamera`…; its edited camera, or its default),
     /// at most `width` pixels wide, as RGBA over the background (`rgba`, `width`, `height`), with
     /// the ground, the 3D layers' outlines, cameras and lights for that view as lines in
-    /// composition pixels (`lines`: `[ax, ay, bx, by, r, g, b, a, dashed]`).
-    pub fn view_frame(&self, view: &str, width: u32) -> Result<(Vec<u8>, u32, u32, Value), String> {
+    /// composition pixels (`lines`: `[ax, ay, bx, by, r, g, b, a, dashed]`), and each 3D layer's
+    /// outline with its name, label colour and whether it is selected (`layers`, see
+    /// [`view3d::layers_through`]).
+    pub fn view_frame(&self, view: &str, width: u32) -> Result<(Vec<u8>, u32, u32, Value, Value), String> {
         use kition_motion_engine::render::three_d::View3D;
         let cid = self.session.active_comp_id().ok_or("no composition is open")?;
         let comp = self.session.project.comp(cid).ok_or("no composition is open")?;
@@ -356,7 +358,9 @@ impl MotionDocument {
         let image = renderer.comp_frame(cid, comp.frame_rate.snap(self.session.time()));
         let rgba = image.to_rgba8_over(comp.background);
         let mut lines = Vec::new();
+        let mut layers = Vec::new();
         if let Some(camera) = camera {
+            layers = view3d::layers_through(&self.session, camera);
             let mut overlays = Vec::new();
             view3d::overlays_through(&self.session, camera, &mut overlays);
             for overlay in overlays {
@@ -365,7 +369,7 @@ impl MotionDocument {
                 }
             }
         }
-        Ok((rgba, image.width, image.height, Value::Array(lines)))
+        Ok((rgba, image.width, image.height, Value::Array(lines), Value::Array(layers)))
     }
 
     /// Runs an engine command for a tool, as the editor would.

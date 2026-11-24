@@ -758,7 +758,7 @@ function WigglerDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kin
           <option value="one">{t('wiggler.dimensions.one')}</option>
         </Select>
       </Field>
-      <TextRow label={t('wiggler.frequency')} value={frequency} onChange={setFrequency} error={perSecond === null ? t('dialog.badNumber') : null} testId="motion-wiggler-frequency" unit={t('wiggler.perSecond')} />
+      <TextRow label={t('wiggler.frequency')} value={frequency} onChange={setFrequency} error={perSecond === null ? t('dialog.badNumber') : null} testId="motion-wiggler-frequency" unit={t('wiggler.perSecond')} autoFocus />
       <TextRow label={t('wiggler.magnitude')} value={magnitude} onChange={setMagnitude} error={howFar === null ? t('dialog.badNumber') : null} testId="motion-wiggler-magnitude" />
     </FormDialog>
   )

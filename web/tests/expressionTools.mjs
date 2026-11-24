@@ -21,23 +21,21 @@ function node(tree, path) {
   return null
 }
 const expression = async () => node((await h.query('layer.tree', { layer: SHAPE })).properties, ROTATION)?.expression
-/** Waits until `locator`'s box stops moving (two reads 100 ms apart the same); answers its centre. */
-async function settled(locator) {
-  await locator.scrollIntoViewIfNeeded()
-  let last = null
-  for (let i = 0; i < 30; i += 1) {
-    const box = await locator.boundingBox()
-    if (box && last && Math.abs(box.x - last.x) < 0.5 && Math.abs(box.y - last.y) < 0.5) return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-    last = box
-    await page.waitForTimeout(100)
-  }
-  return h.centre(locator)
-}
-/** The pick-whip dragged from its handle to `target`'s middle and let go. */
+/** The pick-whip dragged from its handle to `target`'s middle and let go, once neither moves (the rows
+ * shift while the engine's answers arrive, the expression's result line among them). */
 async function whipTo(target) {
-  const from = await settled(kit.getByTestId(`${row}-whip`))
-  const to = await settled(target)
-  await h.drag(from, to, 12)
+  const handle = kit.getByTestId(`${row}-whip`)
+  await target.scrollIntoViewIfNeeded()
+  let last = ''
+  let at = null
+  for (let i = 0; i < 40; i += 1) {
+    at = [await h.centre(handle), await h.centre(target)]
+    const now = JSON.stringify(at)
+    if (now === last && at[0] && at[1]) break
+    last = now
+    await page.waitForTimeout(150)
+  }
+  await h.drag(at[0], at[1], 12)
 }
 
 try {

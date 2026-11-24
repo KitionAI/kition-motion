@@ -1587,13 +1587,13 @@ pub mod web {
             self.0.gizmo_handles(zoom).to_string()
         }
 
-        /// The two-view layout's second view: the length of a JSON header `{width, height, lines}`
+        /// The two-view layout's second view: the length of a JSON header `{width, height, lines, layers}`
         /// (four bytes, little-endian), the header, then the RGBA picture (see [`MotionDocument::view_frame`]).
         #[wasm_bindgen(js_name = viewFrame)]
         pub fn view_frame(&self, view: &str, width: u32) -> Result<Vec<u8>, JsError> {
-            let (rgba, w, h, lines) = self.0.view_frame(view, width).map_err(|message| JsError::new(&message))?;
+            let (rgba, w, h, lines, layers) = self.0.view_frame(view, width).map_err(|message| JsError::new(&message))?;
             // The header (JSON, its length first as four bytes) and the picture in one answer.
-            let head = json!({ "width": w, "height": h, "lines": lines }).to_string().into_bytes();
+            let head = json!({ "width": w, "height": h, "lines": lines, "layers": layers }).to_string().into_bytes();
             let mut out = Vec::with_capacity(4 + head.len() + rgba.len());
             out.extend_from_slice(&(head.len() as u32).to_le_bytes());
             out.extend_from_slice(&head);

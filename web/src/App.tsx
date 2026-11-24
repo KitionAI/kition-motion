@@ -26,7 +26,7 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
+import { ARRANGE, ASSISTANT_NEEDS, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, rememberEffect, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -34,6 +34,7 @@ import { motionReport } from './errors'
 import { MotionDialogs, toHex, type MotionDialog, type Rgb } from './dialogs'
 import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
+import { LABELS, NEW_LAYER_LABELS, labelRow } from './labels'
 import { Splitter, useTimelineHeight } from './Splitter'
 import { PropertiesPanel } from './properties/PropertiesPanel'
 import { DROP_SHADOW } from './properties/LayerStylesSection'
@@ -197,6 +198,8 @@ function usePreviewCache(doc: { invoke: <T>(name: string, ...args: unknown[]) =>
 
 /** What the engine's `cacheAhead` answers: frames of the work area held, of how many, and whether memory ran out. */
 type CacheAhead = { done: number; total: number; full: boolean }
+/** The most the preview cache keeps, in megabytes (the engine's `frames::BUDGET`). */
+const CACHE_BUDGET_MB = 400
 
 /**
  * View ▸ Cache Work Area in Background: while it is on and nothing plays, the engine renders the
@@ -397,7 +400,7 @@ const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).re
  * ones it asks values for in its own dialogs, Pre-compose (which then offers to open the new
  * composition), and the ones given another shortcut (`SHORTCUT_OVERRIDES`).
  */
-const OWN_SHORTCUTS = ['project.newFolder', 'comp.new', 'comp.settings', 'layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'anim.savePreset', 'anim.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
+const OWN_SHORTCUTS = ['project.newFolder', 'comp.new', 'comp.settings', 'layer.newText', 'layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'anim.savePreset', 'anim.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -1023,7 +1026,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   // What the canvas tools name the shape layers they make, in the editor's language.
   useEffect(() => {
     if (!session.doc) return
-    void session.doc.invoke('setLayerNames', JSON.stringify({ shape: t('layerName.shape') })).catch(() => undefined)
+    // And the labels the Layer ▸ New commands give new layers, by kind.
+    void session.doc.invoke('setLayerNames', JSON.stringify({ shape: t('layerName.shape'), labels: NEW_LAYER_LABELS })).catch(() => undefined)
   }, [session.doc, t])
   // The Pen's option on a shape layer: draw a mask on it instead of a new path in it.
   const [penMasks, setPenMasks] = useState(false)
@@ -1106,10 +1110,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       const project = (host.init.document.path.split('/').pop() ?? 'Project').replace(/\.[^.]*$/, '')
       setDialog({ kind: 'collect', folder: t('collect.folderName', { name: project }), onCollect: (folder) => void collectFiles(folder) })
     },
-    [KIT.wiggler]: () => setDialog({ kind: 'wiggler', spatial: keyState.spatial }),
-    [KIT.smoother]: () => setDialog({ kind: 'smoother' }),
+    // Chosen before they can run, they say what they wait for (their menu rows say it too).
+    [KIT.wiggler]: () => ((keyState.count ?? 0) >= 2 ? setDialog({ kind: 'wiggler', spatial: keyState.spatial }) : toast.info(phrase(ASSISTANT_NEEDS.wiggler))),
+    [KIT.smoother]: () => ((keyState.count ?? 0) >= 3 ? setDialog({ kind: 'smoother' }) : toast.info(phrase(ASSISTANT_NEEDS.smoother))),
     // One undo step per property (each its own `prop.convertExpressionToKeyframes`).
-    [KIT.convertExpression]: () => convertible.forEach((each) => void run('prop.convertExpressionToKeyframes', each)),
+    [KIT.convertExpression]: () => (convertible.length ? convertible.forEach((each) => void run('prop.convertExpressionToKeyframes', each)) : toast.info(phrase(ASSISTANT_NEEDS.convert))),
     'layer.revealSource': () => void revealSource(),
     'project.newFolder': () => void newFolder(),
     'file.removeUnusedFootage': () =>
@@ -1157,6 +1162,18 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       void run('layer.newLight', { kind: 'Point', name: unusedLayerName(t('layerName.light')), position: [comp.width / 2, comp.height * 0.3, -comp.width * 2] })
     },
     'layer.newShape': () => void run('layer.newShape', { kind: 'rect', name: unusedLayerName(t('layerName.shape')) }),
+    // A new text layer says “Text” in the editor's language (its name follows its text).
+    'layer.newText': () => void run('layer.newText', { text: t('layerName.text') }),
+    // Layer ▸ Label: the selected layers' colour label (one undo step).
+    ...Object.fromEntries(
+      LABELS.map(([name]) => [
+        labelRow(name),
+        () => {
+          const layers = state?.layers.filter((layer) => layer.selected).map((layer) => layer.id) ?? []
+          if (layers.length) void run('edit.label', { label: name, layers, target: 'layers' })
+        },
+      ]),
+    ),
     'layer.newNull': () => void run('layer.newNull', { name: unusedLayerName(t('layerName.null')) }),
     'layer.newAdjustment': () => void run('layer.newAdjustment', { name: unusedLayerName(t('layerName.adjustment')) }),
     'layer.settings': () => void openSolid('settings'),
@@ -1235,7 +1252,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       current = false
     }
   }, [session.doc, state, playback.playing])
-  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo, threeD: view3d, region: region !== null, cached: frameCache.cached.length > 0, keys: keyState, convertible: convertible.length > 0 }, keysSelected, idle)
+  const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo, threeD: view3d, region: region !== null, cached: frameCache.cached.length > 0, keys: keyState }, keysSelected, idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
   // The first selected layer's layer styles: Layer ▸ Layer Styles marks them (Added).
   const firstSelected = state?.layers.find((layer) => layer.selected)?.id
@@ -1257,7 +1274,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }, [firstSelected, state, query])
   // Layer ▸ Time ▸ Enable or Disable Time Remapping, by the first selected layer.
   const remapOn = state?.layers.find((layer) => layer.selected)?.animated.some((property) => property.path === 'timeRemap') ?? false
-  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews), [effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews])
+  const canConvert = convertible.length > 0
+  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews, canConvert), [effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews, canConvert])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
   const allowed = useMemo(() => shortcutCommands(rows), [rows])
   const hiddenCommands = useCallback((command: string) => !allowed.has(command), [allowed])
@@ -1446,7 +1464,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               data-total={ahead?.total}
               data-full={ahead?.full || undefined}
             >
-              {t('cacheAhead.label')}
+              {/* On: how far it got (N/M), or that the cache is full. */}
+              {!cacheAhead || !ahead || !(ahead.total > 0) ? t('cacheAhead.label') : ahead.full ? t('cacheAhead.fullShort', { megabytes: CACHE_BUDGET_MB }) : t('cacheAhead.progress', { done: ahead.done, total: ahead.total })}
             </Button>
           ) : null}
           {state?.comp && view3d.has3D ? (

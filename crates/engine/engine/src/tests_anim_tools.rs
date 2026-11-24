@@ -84,6 +84,44 @@ fn smoother_reduces_keys_within_tolerance() {
     assert_eq!(prop(&s, l, "transform/opacity").keys.len(), 61);
 }
 
+/// Smoother with part of a property's keyframes selected: the keyframes outside the selected
+/// span (before its first and after its last selected key) are kept as they were, whatever the
+/// selection's order and whether it has gaps, and a second run with the same tolerance leaves them
+/// alone too. (Inside the span it keeps the fewest keys that hold the curve within the tolerance:
+/// they replace every key there, selected or not, and can be more than were there, so the count
+/// is not asserted.)
+#[test]
+fn smoother_never_touches_keys_outside_the_selected_span() {
+    let keys = [(0.0, json!([100, 100])), (0.6, json!([400, 120])), (0.8, json!([150, 300])), (1.5, json!([500, 500])), (2.0, json!([100, 400]))];
+    for (order, tolerance) in [([0usize, 2, 3], 5.0), ([3, 0, 2], 5.0), ([1, 2, 3], 0.1), ([0, 1, 3], 1.0)] {
+        let (mut s, l) = setup();
+        animate(&mut s, l, "transform/position", &keys);
+        let orig = prop(&s, l, "transform/position");
+        let (first, last) = (order.iter().map(|&i| orig.keys[i].time).min().unwrap(), order.iter().map(|&i| orig.keys[i].time).max().unwrap());
+        let outside = |p: &kition_motion_project::Property| {
+            p.keys.iter().filter(|k| k.time < first || k.time > last).map(|k| (k.time, k.value.clone())).collect::<Vec<_>>()
+        };
+        let ends = |p: &kition_motion_project::Property| {
+            p.keys.iter().filter(|k| k.time == first || k.time == last).map(|k| (k.time, k.value.clone())).collect::<Vec<_>>()
+        };
+        let select = |s: &mut crate::Session, times: Vec<f64>| {
+            let picked: Vec<_> = times.into_iter().map(|t| json!({"layer": l, "path": "transform/position", "time": t})).collect();
+            s.execute("keys.select", json!({"keys": picked})).unwrap();
+        };
+        select(&mut s, order.iter().map(|&i| orig.keys[i].time.seconds()).collect());
+        s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+        let once = prop(&s, l, "transform/position");
+        assert_eq!(outside(&once), outside(&orig), "{order:?}: the keyframes outside the span are kept");
+        assert_eq!(ends(&once), ends(&orig), "{order:?}: the span's ends are kept");
+        // Again, with the same tolerance, over the same span.
+        select(&mut s, once.keys.iter().filter(|k| k.time >= first && k.time <= last).map(|k| k.time.seconds()).collect());
+        s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+        let twice = prop(&s, l, "transform/position");
+        assert_eq!(outside(&twice), outside(&orig), "{order:?}: a second run keeps them too");
+        assert_eq!(ends(&twice), ends(&orig));
+    }
+}
+
 #[test]
 fn motion_sketch_records_position_keys() {
     let (mut s, l) = setup();

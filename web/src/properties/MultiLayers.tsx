@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { DiamondIcon as Diamond } from '@kition/tessera/icons/react'
 import { Field, Select, useKitEditor } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
 import { editableNumbers, type TreeNode } from '../timeline/tree'
@@ -9,10 +10,14 @@ import { propMeta } from './meta'
 import { Section } from './Section'
 
 /** One property every selected layer has: its name and each layer's numbers (parts shown). */
-type Common = { path: string; name: string; values: Array<{ layer: number; parts: number[]; whole: number[] | number }>; decimals: number; unit?: string; min?: number; max?: number }
+type Common = { path: string; name: string; values: Array<{ layer: number; parts: number[]; whole: number[] | number; /** Whether the layer's property has keyframes. */ animated: boolean }>; decimals: number; unit?: string; min?: number; max?: number }
 
 /** The Transform properties several layers are edited by together, in the panel's order. */
 const ORDER = ['anchor', 'position', 'scale', 'orientation', 'rotationX', 'rotationY', 'rotation', 'opacity']
+/** The ones only a 3D layer has a use for: shown when every selected layer is 3D. */
+const THREE_D_ONLY = new Set(['orientation', 'rotationX', 'rotationY'])
+/** Units by property, when its own say nothing: Anchor Point and Position in pixels, Orientation in degrees. */
+const UNITS: Record<string, string> = { anchor: 'px', position: 'px', orientation: '°' }
 
 /** Whether every value of part `index` is the same (to the field's decimals). */
 const same = (values: Common['values'], index: number, decimals: number) => {
@@ -47,15 +52,18 @@ export function MultiLayers({ info, layers, readOnly }: { info: MotionInfo; laye
         return
       }
       const rows: Common[] = []
+      const allThreeD = layers.every((layer) => layer.switches.threeD)
       for (const match of ORDER) {
+        if (THREE_D_ONLY.has(match) && !allThreeD) continue
         const nodes = groups.map(({ layer, transform }) => ({ layer, node: transform?.children?.find((child) => child.match === match) }))
         if (nodes.some((each) => !each.node)) continue
-        const values = nodes.map(({ layer, node }) => ({ layer: layer.id, parts: (node && editableNumbers(node, layer)) ?? [], whole: node?.value as number[] | number }))
+        const values = nodes.map(({ layer, node }) => ({ layer: layer.id, parts: (node && editableNumbers(node, layer)) ?? [], whole: node?.value as number[] | number, animated: (node?.keys?.length ?? 0) > 0 }))
         const count = Math.min(...values.map((value) => value.parts.length))
         if (!(count > 0)) continue
         const first = nodes[0].node as TreeNode
-        const meta = propMeta(first, undefined, undefined)
-        rows.push({ path: first.path, name: phrase(first.name), values: values.map((value) => ({ ...value, parts: value.parts.slice(0, count) })), decimals: meta?.decimals ?? 2, unit: meta?.unit, min: meta?.min, max: meta?.max })
+        // Its Transform group as the parent: the units and decimals the single-layer panel shows.
+        const meta = propMeta(first, groups[0].transform, undefined)
+        rows.push({ path: first.path, name: phrase(first.name), values: values.map((value) => ({ ...value, parts: value.parts.slice(0, count) })), decimals: meta?.decimals ?? 2, unit: meta?.unit ?? UNITS[match], min: meta?.min, max: meta?.max })
       }
       setCommon((before) => (JSON.stringify(before) === JSON.stringify(rows) ? before : rows))
     })
@@ -143,6 +151,7 @@ export function MultiLayers({ info, layers, readOnly }: { info: MotionInfo; laye
             const parts = row.values[0]?.parts ?? []
             return (
               <div key={row.path} className="motion-prop" data-testid={`motion-multi-${id}`}>
+                <MultiStopwatch row={row} readOnly={readOnly} testId={`motion-multi-${id}-key`} />
                 <span className="motion-prop-name kui-muted">{row.name}</span>
                 <span className="motion-prop-values">
                   {parts.map((first, index) => {
@@ -156,7 +165,8 @@ export function MultiLayers({ info, layers, readOnly }: { info: MotionInfo; laye
                         decimals={row.decimals}
                         min={row.min}
                         max={row.max}
-                        unit={parts.length > 1 ? undefined : row.unit}
+                        // The unit once, after the last number.
+                        unit={index === parts.length - 1 ? row.unit : undefined}
                         readOnly={readOnly}
                         onCommit={(next) => {
                           edits += 1
@@ -187,5 +197,38 @@ export function MultiLayers({ info, layers, readOnly }: { info: MotionInfo; laye
         </div>
       </Section>
     </>
+  )
+}
+
+/**
+ * A row's stopwatch with several layers selected: on (accent) when every layer's property is
+ * animated; a click turns animation on for all of them (a keyframe here where there was none), or
+ * off for all when all were on, as one undo step (`prop.toggleAnimation` per layer, one `merge`).
+ */
+function MultiStopwatch({ row, readOnly, testId }: { row: Common; readOnly: boolean; testId: string }) {
+  const { run, t } = useKitEditor()
+  const all = row.values.length > 0 && row.values.every((value) => value.animated)
+  const some = row.values.some((value) => value.animated)
+  const label = t(all ? 'props.stopAnimatingMany' : 'props.animateMany', { name: row.name, count: row.values.length })
+  return (
+    <button
+      type="button"
+      className="motion-key-button"
+      data-animated={all}
+      data-mixed={!all && some ? true : undefined}
+      aria-label={label}
+      title={label}
+      disabled={readOnly}
+      onClick={() => {
+        edits += 1
+        const merge = `multi-key-${Date.now()}-${edits}`
+        void (async () => {
+          for (const value of row.values) await run('prop.toggleAnimation', { layer: value.layer, path: row.path, value: !all, merge }).catch(() => null)
+        })()
+      }}
+      data-testid={testId}
+    >
+      <Diamond size={12} aria-hidden="true" />
+    </button>
   )
 }

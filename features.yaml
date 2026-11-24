@@ -818,6 +818,15 @@ features:
     gap: "F11 is not offered (the browser's full screen almost everywhere). Gated by web/tests/fixes7d.mjs, the test:shortcuts check and the text selection test in bindings/wasm/src/tools/tests.rs."
     cases: []
     since: "2026-11-24"
+  - id: motion.editor.hand-fixes-7f
+    title: "The phase 7e audit's fixes: the pick-whip and the function menu keep the half-typed expression a draft (no commit, no error flash, one undo step when it is committed); a pick-whip with the field not being edited replaces the whole expression, and a one-value property takes a several-value target's first value ([0]) when it is inserted too; expression errors from the expression language and the engine are said in the editor's language (else a translated headline over the engine's words); the expression field grows with its text up to eight lines and can be dragged taller; edge-on X and Y rings are bands that a drag along turns, an arrow pointing at the viewer is a dot beside the origin that a vertical drag moves in depth, and every handle has a dark and a light outline; Convert Expression to Keyframes is refused on a property without an expression turned on; the Keyframe Assistant rows stay listed and say what they wait for (the keyframe menu's are off, saying it), the Wiggler's field takes the focus (Enter applies, Escape cancels) and its units stay on one line; Rove's reason is in its keyframe menu label; the multi-select panel lists 3D-only rows only when every selected layer is 3D, shows units and has a stopwatch per row for all of them (one undo step); Layer ▸ New gives text, shape, solid, adjustment, null, camera and light layers each its own label (setLayerNames' labels; documents keep theirs) and names a new text layer in the editor's language; Layer ▸ Label labels the selection; the cache button shows N/M and when the cache is full; Export and the Render Queue use the same words; Find Effect describes each effect of nine categories on its own line (effectAbout.ts) and the Chinese names drop the CC prefix; F11 is left to the browser; the second view fills, outlines and names each 3D layer (the selected in the accent colour) and leaves the viewer most of the width"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/timeline/ExpressionRow.tsx, web/src/timeline/KeyMenu.tsx, web/src/properties/MultiLayers.tsx, web/src/App.tsx, web/src/menus.ts, web/src/labels.tsx, web/src/effects.tsx, web/src/effectAbout.ts, web/src/effectNames.ts, web/src/SecondView.tsx, web/src/dialogs.tsx, web/src/HomeTab.tsx, web/src/Transport.tsx, web/src/strings.ts, web/src/app.css, bindings/wasm/src/tools/gizmo.rs, bindings/wasm/src/tools/view3d.rs, bindings/wasm/src/tools.rs, bindings/wasm/src/editor_reads.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/lib.rs, crates/engine/engine/src/commands/link.rs, crates/engine/engine/src/commands/prop.rs, web/tests/fixes7e.mjs]
+    gap: "In the menu bar a row that cannot run yet is listed with its reason in its label (the editor frame has no disabled state for a kit's rows); audio layers keep their footage item's label. Gated by web/tests/fixes7e.mjs, the edge-on ring test in bindings/wasm/src/tools/tests.rs, the new-layer label test in bindings/wasm/src/editor_reads.rs, and the pick-whip, Convert Expression to Keyframes and Smoother tests in crates/engine/engine/src."
+    cases: []
+    since: "2026-11-24"
   - id: motion.editor.3d-handles
     title: "3D handles on the canvas: with the Selection tool the first selected 3D layer, camera or light shows an arrow per world axis (X red, Y green, Z blue), a square per plane between two arrows and a ring about each of its rotation axes, in every 3D view (the active camera's too); an arrow moves the selected 3D layers, cameras and lights along its axis, a square in its plane, a ring turns X, Y or Z Rotation; each drag is one undo step (prop.set with the gesture's merge key) and Escape undoes it; Shift keeps a plane move to its main direction, an arrow to steps of 10 pixels and a ring to 15° steps; the handles keep their screen size at any zoom and depth"
     dimension: [function]
@@ -864,12 +873,12 @@ features:
     cases: []
     since: "2026-11-24"
   - id: motion.editor.effect-browser
-    title: "The effect browser (Effect ▸ Find Effect… and the Properties panel's Add effect): with nothing typed it lists Favourites (starred), Recently used (the last eight applied) and every category, opened with a click; each effect shows a one-line description (what its category does and its first settings, in the editor's language); typing lists the matches by name (English or translated) or category; Up, Down and Enter or a click apply to the selected layers; the star adds an effect to the favourites or takes it out (both kept in this browser)"
+    title: "The effect browser (Effect ▸ Find Effect… and the Properties panel's Add effect): with nothing typed it lists Favourites (starred), Recently used (the last eight applied) and every category, opened with a click; each effect shows a one-line description (what it does, written per effect, and its first settings, in the editor's language); typing lists the matches by name (English or translated) or category; Up, Down and Enter or a click apply to the selected layers; the star adds an effect to the favourites or takes it out (both kept in this browser)"
     dimension: [function]
     priority: P1
     status: has
     paths: [web/src/effects.tsx, web/src/App.tsx, web/src/app.css, web/src/strings.ts, web/tests/effectBrowser.mjs]
-    gap: "The descriptions are made from each effect's category and settings, not written per effect, and there is no picture preview. Gated by web/tests/effectBrowser.mjs."
+    gap: "Effects outside the Blur & Sharpen, Color Correction, Distort, Stylize, Generate, Keying, Matte, Time and Transition categories show their settings only (no description of their own yet), and there is no picture preview. Gated by web/tests/effectBrowser.mjs."
     cases: []
     since: "2026-11-24"
   - id: motion.editor.graph-tools

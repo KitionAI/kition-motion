@@ -757,17 +757,54 @@ fn tools_a_3d_ring_turns_the_layer_about_its_axis_and_shift_steps_15_degrees() {
     assert!(after[0] > before[0] + 1.0 && (after[1] - before[1]).abs() < 1e-6, "{before:?} → {after:?}");
 }
 
+/// In the default (front) view the X and Y rings are seen edge-on: each is a band around its line,
+/// clear of the arrows, and a drag along it turns X or Y Rotation; the Z arrow, pointing at the
+/// viewer, is a dot beside the origin that a vertical drag moves in depth (up: away).
+#[test]
+fn tools_edge_on_rings_turn_and_the_z_dot_moves_in_depth_in_the_front_view() {
+    use super::gizmo::{Part, spot};
+    let mut doc = doc();
+    let card = card(&mut doc);
+    let rx = spot(&doc.session, Part::Ring(0), 1.0).expect("the X ring shows edge-on");
+    let ry = spot(&doc.session, Part::Ring(1), 1.0).expect("the Y ring shows edge-on");
+    // The X ring's band is upright, the Y ring's level: a drag along each turns it.
+    drag(&mut doc, rx, [rx[0], rx[1] - 40.0], ToolMods::default());
+    let turned = value(&mut doc, card, "transform/rotationX")[0];
+    assert!(turned.abs() > 15.0, "the edge-on X ring turned the layer by {turned}°");
+    assert!(near(&value(&mut doc, card, "transform/rotationY"), &[0.0]) && near(&value(&mut doc, card, "transform/rotation"), &[0.0]));
+    doc.execute("edit.undo", json!({})).unwrap();
+    assert!(near(&value(&mut doc, card, "transform/rotationX"), &[0.0]), "one undo step");
+    drag(&mut doc, ry, [ry[0] + 40.0, ry[1]], ToolMods::default());
+    let turned = value(&mut doc, card, "transform/rotationY")[0];
+    assert!(turned.abs() > 15.0, "the edge-on Y ring turned the layer by {turned}°");
+    assert!(near(&value(&mut doc, card, "transform/rotationX"), &[0.0]));
+    doc.execute("edit.undo", json!({})).unwrap();
+    // The Z dot: up 45 px moves the layer 45 px away (the default camera shows z = 0 at 1:1).
+    let start = value(&mut doc, card, "transform/position");
+    let dot = spot(&doc.session, Part::Axis(2), 1.0).expect("the Z arrow is a dot in the front view");
+    drag(&mut doc, dot, [dot[0], dot[1] - 45.0], ToolMods::default());
+    let moved = value(&mut doc, card, "transform/position");
+    assert!((moved[2] - start[2] - 45.0).abs() < 2.0 && near(&moved[..2], &start[..2]), "{start:?} → {moved:?}");
+}
+
 #[test]
 fn tools_the_second_view_renders_another_3d_view_with_its_ground_and_outlines() {
     let mut doc = doc();
     card(&mut doc);
-    let (rgba, width, height, lines) = doc.view_frame("top", 320).unwrap();
+    let (rgba, width, height, lines, layers) = doc.view_frame("top", 320).unwrap();
     assert_eq!((width, height), (320, 180));
     assert_eq!(rgba.len(), 320 * 180 * 4);
     assert!(lines.as_array().is_some_and(|lines| lines.len() >= 10), "the Top view's ground and outlines: {lines}");
+    // The 3D layer with its name, label colour, selection and outline (edge-on from the top: flat).
+    let card = layers.as_array().and_then(|layers| layers.first()).cloned().unwrap_or_default();
+    assert_eq!(card["name"], "Card", "{layers}");
+    assert_eq!(card["selected"], true);
+    assert_eq!(card["quad"].as_array().map(Vec::len), Some(4));
+    assert_eq!(card["label"].as_array().map(Vec::len), Some(3));
     // The viewer's own view is untouched.
     assert!(doc.session.view_camera(doc.session.active_comp_id().unwrap()).is_none());
-    let (_, _, _, none) = doc.view_frame("activeCamera", 320).unwrap();
+    let (_, _, _, none, no_layers) = doc.view_frame("activeCamera", 320).unwrap();
     assert_eq!(none, serde_json::json!([]), "the active camera's view draws no ground");
+    assert_eq!(no_layers, serde_json::json!([]));
     assert!(doc.view_frame("sideways", 320).is_err());
 }

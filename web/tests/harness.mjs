@@ -12,13 +12,24 @@ import { delayEngineReplies } from './slowEngine.mjs'
  * The browser for `which`. WebKit on Linux (the CI runners: no GPU, Mesa's llvmpipe) paints with
  * Skia on the CPU: its GPU painting threads there died now and then inside WebKit, not in the page
  * (a Skia shader that failed to compile, "trap invalid opcode in libWPEWebKit", an llvmpipe or
- * SkiaGPUWorker segfault), which closed the page under the test. `KIT_WEBKIT_GPU=1` keeps the GPU path.
+ * SkiaGPUWorker segfault), which closed the page under the test. The switches, each one read by
+ * the WPE build Playwright runs there (the names are in its libWPEWebKit; checked for build 2272):
+ * `WEBKIT_SKIA_ENABLE_CPU_RENDERING=1` paints the page's tiles on the CPU,
+ * `WEBKIT_SKIA_GPU_PAINTING_THREADS=0` starts no GPU painting thread, and
+ * `WEBKIT_WEBGL_DISABLE_GBM=1` keeps WebGL off the GPU buffers; `LIBGL_ALWAYS_SOFTWARE=1` (Mesa's
+ * own) has whatever still opens OpenGL use Mesa's software path. Even so a web process died once
+ * compiling a Skia shader ("Unable to load module sksl_frag") during the first load, so `open`
+ * tries a fresh page once when that happens (a `RETRY` line). `KIT_WEBKIT_GPU=1` keeps the GPU path.
  */
 export function launchBrowser(which) {
   if (which !== 'webkit') return chromium.launch()
   const cpu = process.platform === 'linux' && process.env.KIT_WEBKIT_GPU !== '1'
-  return webkit.launch(cpu ? { env: { ...process.env, WEBKIT_SKIA_ENABLE_CPU_RENDERING: '1' } } : {})
+  const env = { WEBKIT_SKIA_ENABLE_CPU_RENDERING: '1', WEBKIT_SKIA_GPU_PAINTING_THREADS: '0', WEBKIT_WEBGL_DISABLE_GBM: '1', LIBGL_ALWAYS_SOFTWARE: '1' }
+  return webkit.launch(cpu ? { env: { ...process.env, ...env } } : {})
 }
+
+/** Whether an error means the page's browser process went away (it crashed) rather than a failed check. */
+export const browserGone = (error) => /crash|Target (page|closed)|has been closed|Page closed|document was closed|Browser closed/i.test(String(error?.message ?? error))
 
 /** A solid-colour PNG, `width` × `height`, made here (no file from anywhere else). */
 export function png(width, height, [r, g, b]) {
@@ -77,18 +88,47 @@ export async function start(which) {
   const server = await createServer({ configFile: new URL('../vite.config.ts', import.meta.url).pathname, server: { port: 0, host: '127.0.0.1', watch: null }, logLevel: 'error' })
   await server.listen()
   const origin = `http://127.0.0.1:${server.httpServer.address().port}`
-  const browser = await launchBrowser(which)
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
-  await delayEngineReplies(context)
-  const page = await context.newPage()
+  let browser = await launchBrowser(which)
   const errors = []
   let failures = 0
-  page.on('pageerror', (error) => errors.push(error.message))
-  const kit = page.frameLocator('#kit')
+  let page
+  let kit
+  /** A fresh context and page (on a new browser when the old one went away). */
+  async function fresh() {
+    if (!browser.isConnected()) browser = await launchBrowser(which)
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    await delayEngineReplies(context)
+    page = await context.newPage()
+    // `CPU_THROTTLE=4` (Chromium): the page runs that many times slower, as on a busy CI runner; to
+    // reproduce races that only show there.
+    if (which === 'chromium' && Number(process.env.CPU_THROTTLE) > 1) {
+      const cdp = await context.newCDPSession(page)
+      await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.CPU_THROTTLE) })
+      console.log(`(CPU throttled ${Number(process.env.CPU_THROTTLE)}×)`)
+    }
+    page.on('pageerror', (error) => errors.push(error.message))
+    kit = page.frameLocator('#kit')
+  }
+  await fresh()
+  /** Stands for the current page (or the frame's locator) in the scripts, also after `open` moved to a fresh one. */
+  const current = (get) =>
+    new Proxy(
+      {},
+      {
+        get(_, key) {
+          const target = get()
+          const value = target[key]
+          return typeof value === 'function' ? value.bind(target) : value
+        },
+        // `instanceof Page` (newCDPSession(page)) answers as for the page itself.
+        getPrototypeOf: () => Object.getPrototypeOf(get()),
+      },
+    )
+  let opened = false
   const h = {
     which,
-    page,
-    kit,
+    page: current(() => page),
+    kit: current(() => kit),
     primary: 'Meta',
     step(name, ok, detail = '') {
       if (!ok) failures += 1
@@ -128,9 +168,22 @@ export async function start(which) {
     },
     /** Opens the sample afresh. */
     async open() {
-      await page.goto(`${origin}/dev.html?locale=zh-CN`)
-      await page.waitForFunction(() => document.getElementById('status')?.textContent?.includes(' open in '), null, { timeout: 60000 })
-      await kit.getByTestId('motion-timeline').waitFor()
+      const load = async () => {
+        await page.goto(`${origin}/dev.html?locale=zh-CN`)
+        await page.waitForFunction(() => document.getElementById('status')?.textContent?.includes(' open in '), null, { timeout: 60000 })
+        await kit.getByTestId('motion-timeline').waitFor()
+      }
+      try {
+        await load()
+      } catch (error) {
+        // WebKit's web process dying during the first load (see launchBrowser): once more on a fresh page.
+        if (opened || which !== 'webkit' || !browserGone(error)) throw error
+        console.log(`RETRY ${clock()} open: the page's browser process went away during the first load (${String(error?.message ?? error).split('\n')[0]}); once more on a fresh page`)
+        await page.context().close().catch(() => {})
+        await fresh()
+        await load()
+      }
+      opened = true
       await page.waitForTimeout(500)
       h.primary = (await page.evaluate(() => /Mac|iPhone|iPad/i.test(navigator.platform))) ? 'Meta' : 'Control'
     },
@@ -185,7 +238,7 @@ export async function start(which) {
     },
     async finish() {
       h.step('no page errors', errors.length === 0, errors.slice(0, 8).join(' | '))
-      await browser.close()
+      await browser.close().catch(() => {})
       await server.close()
       console.log(failures ? `${failures} failed (${which})` : `all passed (${which})`)
       process.exit(failures ? 1 : 0)

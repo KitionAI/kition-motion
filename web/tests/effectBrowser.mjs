@@ -34,7 +34,9 @@ try {
   await gaussian.waitFor()
   h.step('a click opens a category', (await blurHead.getAttribute('aria-expanded')) === 'true')
   const about = (await kit.getByTestId(`motion-effect-about-${GAUSSIAN}`).first().textContent()) ?? ''
-  h.step('each effect has a one-line description in Chinese', about.includes('模糊或锐化画面') && about.includes('参数：') && about.includes('模糊度'), about)
+  // Round 7f: its own line (what Gaussian Blur does, not its category's words) before its settings.
+  const radial = (await kit.getByTestId('motion-effect-about-ec.blur.ccradial').first().textContent()) ?? ''
+  h.step('each effect has a one-line description in Chinese, its own', /[㐀-鿿]/.test(about.split(' · ')[0]) && !about.includes('模糊或锐化画面') && about.includes('参数：') && about.includes('模糊度') && radial.split(' · ')[0] !== about.split(' · ')[0], `${about} | ${radial}`)
 
   // 2. The star: Favourites, kept when the browser opens again.
   await kit.getByTestId(`motion-effect-star-category-Blur & Sharpen-${GAUSSIAN}`).click()
@@ -49,7 +51,8 @@ try {
   const before = (await effects()).length
   await kit.getByTestId('motion-effect-search').fill('发光')
   await kit.getByTestId(`motion-effect-option-${GLOW}`).waitFor()
-  h.step('typing lists the matches with their descriptions', ((await kit.getByTestId(`motion-effect-about-${GLOW}`).textContent()) ?? '').includes('风格'))
+  // Round 7f: Glow's own line (it brightens and spreads the bright parts), not the Stylize category's.
+  h.step('typing lists the matches with their descriptions', ((await kit.getByTestId(`motion-effect-about-${GLOW}`).textContent()) ?? '').includes('亮'), await kit.getByTestId(`motion-effect-about-${GLOW}`).textContent())
   await page.keyboard.press('Enter')
   await h.until(async () => (await effects()).length === before + 1)
   h.step('Enter applies the first match', (await effects()).length === before + 1)

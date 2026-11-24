@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ContextMenu, MenuItem, MenuSeparator, useKitEditor, type ContextMenuPoint } from '@kition/sdk/editor'
 import { INTERPOLATIONS } from './interp'
-import { SHORTCUT_OVERRIDES } from '../menus'
+import { ASSISTANT_NEEDS, SHORTCUT_OVERRIDES } from '../menus'
 
 /**
  * A keyframe's right-click menu, on the selected keyframes (the clicked one is selected first):
@@ -50,14 +50,15 @@ export function KeyMenu({ at, onClose, onCommand }: { at: ContextMenuPoint | nul
       {keys.spatial ? (
         // Off on a first or last keyframe, saying why.
         <div className="motion-menu-hinted" title={keys.rovable ? undefined : t('keyMenu.roveEnds')} data-testid="motion-key-menu-rove-row">
-          <MenuItem label={p(keys.roving ? 'Rove Across Time (On)' : 'Rove Across Time')} disabled={!keys.rovable} onSelect={() => onCommand('kit:rove-across-time')} testId="motion-key-menu-rove" />
+          <MenuItem label={p(keys.roving ? 'Rove Across Time (On)' : keys.rovable ? 'Rove Across Time' : 'Rove Across Time (Not on the First or Last Keyframe)')} disabled={!keys.rovable} onSelect={() => onCommand('kit:rove-across-time')} testId="motion-key-menu-rove" />
         </div>
       ) : null}
       <MenuSeparator />
       <MenuItem label={p('Time-Reverse Keyframes')} onSelect={() => onCommand('keys.timeReverse')} testId="motion-key-menu-reverse" />
       {keys.scale ? <MenuItem label={p('Exponential Scale')} onSelect={() => onCommand('keys.exponentialScale')} testId="motion-key-menu-exponential" /> : null}
-      {keys.count >= 2 ? <MenuItem label={t('keyMenu.wiggler')} onSelect={() => onCommand('kit:wiggler')} testId="motion-key-menu-wiggler" /> : null}
-      {keys.count >= 3 ? <MenuItem label={t('keyMenu.smoother')} onSelect={() => onCommand('kit:smoother')} testId="motion-key-menu-smoother" /> : null}
+      {/* Off (saying what they wait for) until enough keyframes are selected. */}
+      <MenuItem label={keys.count >= 2 ? t('keyMenu.wiggler') : p(ASSISTANT_NEEDS.wiggler)} disabled={keys.count < 2} onSelect={() => onCommand('kit:wiggler')} testId="motion-key-menu-wiggler" />
+      <MenuItem label={keys.count >= 3 ? t('keyMenu.smoother') : p(ASSISTANT_NEEDS.smoother)} disabled={keys.count < 3} onSelect={() => onCommand('kit:smoother')} testId="motion-key-menu-smoother" />
       <MenuSeparator />
       <MenuItem label={p('Select Equal Keyframes')} onSelect={() => onCommand('keys.selectEqual')} testId="motion-key-menu-select-equal" />
       <MenuItem label={p('Select Previous Keyframes')} onSelect={() => onCommand('keys.selectPrevious')} testId="motion-key-menu-select-previous" />

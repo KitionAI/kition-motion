@@ -6,7 +6,7 @@ import { CompSwitcher } from './CompSwitcher'
 
 /** The layers the add menu makes, as engine commands. */
 /** The new layers the editor makes itself (`ownLayer`): a solid asks in a dialog; a camera and a light get Chinese names, the light a sensible kind and place. */
-export const OWN_NEW_LAYERS: ReadonlySet<string> = new Set(['layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment'])
+export const OWN_NEW_LAYERS: ReadonlySet<string> = new Set(['layer.newText', 'layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment'])
 export const NEW_LAYERS = [
   { id: 'text', command: 'layer.newText', params: { text: 'Text' } },
   { id: 'shape', command: 'layer.newShape', params: { kind: 'rect' } },

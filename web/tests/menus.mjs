@@ -3,7 +3,7 @@
 // Walks every leaf of every menu and of Home's ribbon (its drop-downs too) with nothing selected and
 // with a layer selected, clicks each enabled one with the pointer, and fails when one ends in an
 // error notice or changes nothing (no document, selection, time, view, playback or command change,
-// no dialog). A dialog is filled, confirmed, and its result checked (and undone where it edits).
+// no dialog); a row whose label gives the reason it cannot run yet must say that reason again. A dialog is filled, confirmed, and its result checked (and undone where it edits).
 // In zh-CN every label must have Chinese characters, effect names excepted. Cmd+K, Cmd+Y and
 // Alt+Shift+J open their dialogs; Backspace deletes like Delete; the splitter resizes the timeline.
 // MENUS_OUT=<file> writes every leaf's result as JSON (the walkthrough's menu table is made from it).
@@ -246,11 +246,11 @@ async function finishDialog(ctx, leaf, state) {
       if (await dialogOpen(kit)) throw new Error('Escape did not close Find Effect')
       return 'lists effects and asks for a selection first'
     }
-    // A CC effect reads in Chinese after its prefix and is still found by its English name.
+    // A CC effect reads in Chinese (without the prefix, round 7f) and is still found by its English name.
     await page.keyboard.type('Ball Action')
     await page.waitForTimeout(200)
     const cc = await field('motion-effect-list').locator('[role=option]').first().textContent()
-    if (!cc.includes('CC 球体动作')) throw new Error(`typing Ball Action does not find CC 球体动作: ${cc}`)
+    if (!cc.includes('球体动作') || cc.includes('CC ')) throw new Error(`typing Ball Action does not find 球体动作: ${cc}`)
     await page.keyboard.press(`${ctx.primary}+KeyA`)
     await page.keyboard.press('Backspace')
     await page.keyboard.type('高斯')
@@ -258,7 +258,7 @@ async function finishDialog(ctx, leaf, state) {
     if (!first.includes('高斯模糊')) throw new Error(`typing 高斯 does not find Gaussian Blur first: ${first}`)
     await confirm()
     if ((await revision()) === startRevision) throw new Error('no effect applied')
-    return 'found CC 球体动作 by its English name, then 高斯模糊 by typing, and applied it'
+    return 'found 球体动作 by its English name, then 高斯模糊 by typing, and applied it'
   }
   if (await field('motion-preset-dialog').count()) {
     await field('motion-preset-name').fill('Walk preset')
@@ -362,7 +362,13 @@ async function run(state, leaf, again = false) {
     const after = await snapshot(ctx)
     const changed = changes(before, after)
     if (ctx.errors.length) return { result: 'error', note: `page error: ${ctx.errors[0]}` }
-    return changed.length ? { result: 'changed', note: changed.join(', ') } : { result: 'nothing', note: '' }
+    if (changed.length) return { result: 'changed', note: changed.join(', ') }
+    // A row that cannot run yet says why in its label (the frame has no disabled state for the
+    // editor's rows): chosen, it must say it again in a notice whose words are the label's reason.
+    const told = ((await ctx.kit.locator('.kui-toast').last().textContent().catch(() => '')) ?? '').trim()
+    const reason = /（([^）]+)）$/.exec(leaf.path[leaf.path.length - 1])?.[1]
+    if (told && reason && told.includes(reason)) return { result: 'told', note: told }
+    return { result: 'nothing', note: '' }
   } catch (error) {
     if (crashed(error, ctx) && !again) {
       console.log(`RETRY ${clock()} ${mark}: the page's browser process crashed; once more on a fresh page`)
@@ -474,11 +480,11 @@ try {
       for (const chunk of await Promise.all(chunks.map((chunk) => (chunk.length ? runEffects(chunk) : [])))) results.push(...chunk)
     }
     for (const { leaf, result, note } of results) {
-      const ok = result === 'changed' || result === 'dialog'
+      const ok = result === 'changed' || result === 'dialog' || result === 'told'
       if (!ok || process.env.MENUS_VERBOSE) step(`${state}: ${leaf.path.join(' › ')} (${result})`, ok, note)
       report.push({ state, path: leaf.path, testid: leaf.testid, shortcut: leaf.shortcut ?? '', result, note })
     }
-    const bad = results.filter((item) => item.result !== 'changed' && item.result !== 'dialog')
+    const bad = results.filter((item) => item.result !== 'changed' && item.result !== 'dialog' && item.result !== 'told')
     step(`${state}: every enabled item does something (${results.length} clicked)`, bad.length === 0, `${bad.length} did not`)
     for (const leaf of leaves.filter((item) => item.kind === 'leaf' && item.disabled)) report.push({ state, path: leaf.path, testid: leaf.testid, shortcut: leaf.shortcut ?? '', result: 'disabled', note: '' })
   }
