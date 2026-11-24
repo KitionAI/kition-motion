@@ -261,9 +261,8 @@ try {
   await until(async () => (await layers()).length === before.length)
   step('undo removes it', (await layers()).length === before.length)
   // And onto the timeline: a layer at the current time.
-  // WebKit gives the first press after a drag-and-drop no pointerdown (the drag took the pointer),
-  // so a press on the empty status bar comes first and the ruler gets a whole press.
-  await kit.getByTestId('motion-status').click({ position: { x: 4, y: 4 } })
+  // The first press after the drag-and-drop above goes straight to the ruler (WebKit gives it no
+  // pointerdown; the editor makes one from its mousedown, pointerFallback.ts).
   const now = await seekRuler(200)
   await drag(centre(await row.boundingBox()), centre(await kit.getByTestId('motion-timeline-rows').boundingBox()))
   await until(async () => (await layers()).length === before.length + 1)

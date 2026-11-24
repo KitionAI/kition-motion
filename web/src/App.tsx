@@ -40,6 +40,7 @@ import { EffectCatalog } from './properties/catalog'
 import { ProjectPanel, useProjectPanel } from './ProjectPanel'
 import { ExportDialog } from './ExportDialog'
 import { CanvasGuides, OVERLAY_KEYS, useOverlays } from './CanvasGuides'
+import { installPointerdownFallback } from './pointerFallback'
 import { ITEM_MIME, parseAnswer, relativePath, useFootage } from './footage'
 import { EDITOR_KEYS, pressed } from './keys'
 import { INTERPOLATIONS } from './timeline/interp'
@@ -436,6 +437,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     }
   }
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
+  // The first press after a drag-and-drop gets its pointerdown in WebKit too (pointerFallback.ts).
+  useEffect(() => installPointerdownFallback(document), [])
   // View's rulers, guides, grid and safe areas, and what a moved layer snaps to (the engine's Selection tool asks).
   const { overlays, toggle: toggleOverlay } = useOverlays()
   const [gridSpacing, setGridSpacing] = useState(100)

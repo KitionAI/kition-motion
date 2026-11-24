@@ -647,3 +647,12 @@ features:
     gap: "The composing box sits where the canvas was last pressed, not at the text caret; the Source Text box in the Properties panel is the browser's own field (its IME is the browser's). Gated in Chromium by web/tests/canvas.mjs and web/tests/properties.mjs (the Source Text box; while composing there the engine already gets the field's intermediate text) through a real composition over the DevTools protocol; WebKit skips them with a printed reason."
     cases: []
     since: "2026-11-23"
+  - id: motion.editor.pressAfterDrop
+    title: "The first press after an HTML5 drag-and-drop (a project item dragged onto the composition or the timeline) works in WebKit as in Chromium: WebKit delivers it with no pointerdown (the drag's pointer never got its pointerup or pointercancel), so the editor makes the missing pointerdown from its mousedown on the same element before any handler sees it"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/pointerFallback.ts, web/src/App.tsx, web/tests/footage.mjs]
+    gap: "Observed in Playwright's WebKit (events: mousedown, pointerup, mouseup, click and no pointerdown for the first press, then normal); not checked in Safari itself, which shares the engine. Gated by web/tests/footage.mjs in WebKit (the ruler press right after a drop)."
+    cases: []
+    since: "2026-11-23"
