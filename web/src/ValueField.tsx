@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 /** A value as the field shows it: at most `decimals` decimals. */
 const rounded = (value: number, decimals: number) => {
@@ -78,6 +78,14 @@ export function NumberField({ value, label, onCommit, testId, readOnly, onScrub,
     if (text.trim() !== '' && Number.isFinite(next) && (mixed || next !== rounded(value, decimals))) onCommit(Math.min(max, Math.max(min, next)))
     else setText(show(value))
   }
+  // Selecting the whole value waits only for the render that shows it, never for a later frame:
+  // a key typed straight after the click must not be selected over by a late selection.
+  const selectWhole = useRef(false)
+  useLayoutEffect(() => {
+    if (!focused || !selectWhole.current) return
+    selectWhole.current = false
+    if (document.activeElement === input.current) input.current?.select()
+  }, [focused])
   const scrubbing = !!onScrub && !readOnly
   return (
     <span className="motion-number-wrap" data-scrub={scrubbing || undefined}>
@@ -99,10 +107,7 @@ export function NumberField({ value, label, onCommit, testId, readOnly, onScrub,
           // Typing shows the whole value; where it replaces the shortened one, select it once it is there.
           setFocused(true)
           if (shown === text) return
-          const field = event.currentTarget
-          requestAnimationFrame(() => {
-            if (document.activeElement === field) field.select()
-          })
+          selectWhole.current = true
         }}
         onBlur={() => {
           setFocused(false)
