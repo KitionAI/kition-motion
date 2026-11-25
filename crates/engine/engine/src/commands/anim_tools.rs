@@ -156,11 +156,27 @@ fn max_error(keys: &[Keyframe], samples: &[(Tick, Vec<f64>)], spatial: bool) -> 
     worst
 }
 
-/// Smoother: replace the keys strictly between `a` and `b` (indices) by the fewest auto-Bezier
-/// keys at sample times that keep the curve within `tolerance` of `samples` (the original
-/// curve, usually one sample per frame). Keys outside `a..=b` are kept.
+/// Smoother: replace the keys strictly between `a` and `b` (indices) by the fewest smooth keys at
+/// sample times that keep the curve within `tolerance` of `samples` (the original curve, usually
+/// one sample per frame), never more keys than were there. When fewer keys cannot hold the curve
+/// within the tolerance, the keys there stay where they are and are made smooth instead. Keys
+/// outside `a..=b` are kept, and so is the path outside the span.
+///
+/// Temporal properties get auto-Bezier keys. On a motion path each key inside the span gets
+/// tangents along the line from its previous key to its next, each a third of the way to its
+/// neighbour on that side, so a path through keys on a straight line stays on the line and never
+/// runs back (the auto-Bezier tangents a key gets by default, a sixth of the previous-to-next
+/// distance whatever the spacing, overshoot where keys are unevenly spaced). The span's end keys
+/// keep their outside tangents, and their inside ones are kept no longer than a third of the way
+/// to their new neighbour.
 pub fn smooth_keys(keys: &[Keyframe], a: usize, b: usize, samples: &[(Tick, Vec<f64>)], tolerance: f64, spatial: bool) -> Vec<Keyframe> {
-    let template = keys[a].value.clone();
+    let (Some(first), Some(last)) = (keys.get(a), keys.get(b)) else { return keys.to_vec() };
+    if a >= b {
+        return keys.to_vec();
+    }
+    let (t0, t1) = (first.time, last.time);
+    let path = spatial && matches!(first.value, KValue::Vec2(_) | KValue::Vec3(_));
+    let template = first.value.clone();
     let make = |t: Tick, c: &[f64]| {
         let mut k = Keyframe::new(t, template.with_components(c));
         if !spatial {
@@ -170,23 +186,75 @@ pub fn smooth_keys(keys: &[Keyframe], a: usize, b: usize, samples: &[(Tick, Vec<
         }
         k
     };
-    let mut chosen: Vec<usize> = vec![];
-    let build = |chosen: &[usize]| {
+    let ends = (kition_motion_keyframe::spatial_tangents(keys, a), kition_motion_keyframe::spatial_tangents(keys, b));
+    let build = |inside: Vec<Keyframe>| {
         let mut v: Vec<Keyframe> = keys[..=a].to_vec();
-        v.extend(chosen.iter().map(|&i| make(samples[i].0, &samples[i].1)));
+        v.extend(inside);
         v.extend(keys[b..].iter().cloned());
         v.sort_by_key(|k| k.time);
+        if path {
+            settle_path(&mut v, t0, t1, ends);
+        }
         v
     };
+    // The keys there now: the most the smoothed span may hold.
+    let given = b - a - 1;
+    let mut chosen: Vec<usize> = vec![];
     loop {
-        let cur = build(&chosen);
+        let cur = build(chosen.iter().filter_map(|&i| samples.get(i)).map(|(t, c)| make(*t, c)).collect());
         let (err, at) = max_error(&cur, samples, spatial);
-        let t = samples[at].0;
-        if err <= tolerance || chosen.contains(&at) || t <= keys[a].time || t >= keys[b].time || chosen.len() >= samples.len() {
+        let Some(&(t, _)) = samples.get(at) else { return cur };
+        if err <= tolerance || chosen.contains(&at) || t <= t0 || t >= t1 {
             return cur;
+        }
+        if chosen.len() >= given {
+            break;
         }
         chosen.push(at);
         chosen.sort_unstable();
+    }
+    // No fewer keys hold the curve: the same keys, made smooth.
+    build(keys[a + 1..b].iter().map(|k| make(k.time, &k.value.components())).collect())
+}
+
+/// Motion-path tangents for the Smoother's span `t0..=t1` of `keys` (see [`smooth_keys`]);
+/// `ends` are the spatial tangents the span's end keys had before.
+fn settle_path(keys: &mut [Keyframe], t0: Tick, t1: Tick, ends: (([f64; 3], [f64; 3]), ([f64; 3], [f64; 3]))) {
+    let point = |k: &Keyframe| k.value.as_vec3();
+    let sub = |p: [f64; 3], q: [f64; 3]| [p[0] - q[0], p[1] - q[1], p[2] - q[2]];
+    let len = |v: [f64; 3]| (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    let scaled = |v: [f64; 3], to: f64| {
+        let l = len(v);
+        if l > 1e-12 && to.is_finite() { v.map(|x| x * to / l) } else { [0.0; 3] }
+    };
+    let points: Vec<[f64; 3]> = keys.iter().map(point).collect();
+    for (i, key) in keys.iter_mut().enumerate() {
+        if key.time < t0 || key.time > t1 {
+            continue;
+        }
+        let p = points[i];
+        let prev = i.checked_sub(1).and_then(|j| points.get(j)).copied();
+        let next = points.get(i + 1).copied();
+        let third = |q: Option<[f64; 3]>| q.map_or(0.0, |q| len(sub(q, p)) / 3.0);
+        key.spatial_auto = false;
+        if key.time == t0 {
+            // The span's first key: its in side as before; its out side no longer than a third of
+            // the way to its new neighbour.
+            let (tin, tout) = ends.0;
+            key.spatial_in = tin;
+            key.spatial_out = scaled(tout, len(tout).min(third(next)));
+        } else if key.time == t1 {
+            let (tin, tout) = ends.1;
+            key.spatial_in = scaled(tin, len(tin).min(third(prev)));
+            key.spatial_out = tout;
+        } else {
+            let along = match (prev, next) {
+                (Some(prev), Some(next)) => sub(next, prev),
+                _ => [0.0; 3],
+            };
+            key.spatial_in = scaled(along.map(|x| -x), third(prev));
+            key.spatial_out = scaled(along, third(next));
+        }
     }
 }
 

@@ -2,16 +2,17 @@ import { useRef, useState, type RefObject } from 'react'
 import { useKitEditor } from '@kition/sdk/editor'
 
 const KEY = 'kition-motion.timeline-height'
-const DEFAULT_HEIGHT = 264
+/** The timeline's share of the window's height when nothing is kept (about 342 px at 900 px). */
+const DEFAULT_SHARE = 0.38
 const MIN_HEIGHT = 120
 /** The composition keeps at least this much height above the transport. */
 const MIN_CANVAS = 180
 
-/** The timeline's height, kept for the session (sessionStorage). */
+/** The timeline's height, kept for the session (sessionStorage); 38 % of the window's height at first. */
 export function useTimelineHeight() {
   const [height, setHeight] = useState(() => {
     const stored = Number(globalThis.sessionStorage?.getItem(KEY))
-    return Number.isFinite(stored) && stored >= MIN_HEIGHT ? stored : DEFAULT_HEIGHT
+    return Number.isFinite(stored) && stored >= MIN_HEIGHT ? stored : Math.max(MIN_HEIGHT, Math.round((globalThis.innerHeight || 700) * DEFAULT_SHARE))
   })
   const set = (next: number) => {
     setHeight(next)

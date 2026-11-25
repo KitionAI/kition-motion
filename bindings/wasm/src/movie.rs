@@ -147,7 +147,7 @@ pub(crate) fn queue_item(settings: &str) -> Option<u64> {
 }
 
 /// The `renderQueue.add` parameters that render comp `comp` to `path` with `settings`: a format
-/// name, or a JSON object `{format, span: "comp"|"workArea", size: "full"|"half"|{width, height},
+/// name, or a JSON object `{format, span: "comp"|"workArea", size: "full"|"half"|"third"|"quarter"|{width, height},
 /// frameRate: fps|null}`. Anything else is refused with what it takes.
 pub(crate) fn queue_params(comp: u64, path: &str, settings: &str) -> Result<Value, String> {
     let settings = settings.trim();
@@ -162,7 +162,7 @@ pub(crate) fn queue_params(comp: u64, path: &str, settings: &str) -> Result<Valu
             ("span", Value::String(span)) if span == "comp" || span == "workArea" => params["timeSpan"] = json!(span),
             // A PNG sequence with its alpha (RGB + Alpha) or without.
             ("channels", Value::String(channels)) if channels == "rgb" || channels == "rgba" => params["channels"] = json!(channels),
-            ("size", Value::String(size)) if size == "full" || size == "half" => params["resolution"] = json!(size),
+            ("size", Value::String(size)) if ["full", "half", "third", "quarter"].contains(&size.as_str()) => params["resolution"] = json!(size),
             ("size", Value::Object(size)) => {
                 let side = |name: &str| size.get(name).and_then(Value::as_u64).filter(|n| SIZE.contains(n));
                 let (Some(width), Some(height)) = (side("width"), side("height")) else {
@@ -176,7 +176,7 @@ pub(crate) fn queue_params(comp: u64, path: &str, settings: &str) -> Result<Valu
             }
             _ => {
                 return Err(format!(
-                    "the export setting `{key}` is {value}: it takes format ({}), span (comp or workArea), size (full, half or {{width, height}}), frameRate (fps or null) and channels (rgb or rgba)",
+                    "the export setting `{key}` is {value}: it takes format ({}), span (comp or workArea), size (full, half, third, quarter or {{width, height}}), frameRate (fps or null) and channels (rgb or rgba)",
                     FORMATS.join(", ")
                 ));
             }
@@ -206,6 +206,11 @@ mod tests {
         assert_eq!(params["resize"], json!({ "enabled": true, "width": 320, "height": 180, "lockAspect": false }));
         assert_eq!(params["frameRate"], 15);
         assert_eq!(queue_params(3, "a.mp4", r#"{"size":"half","frameRate":null}"#).unwrap()["resolution"], "half");
+        // Third and Quarter, as the Render Queue offers them.
+        for size in ["third", "quarter"] {
+            assert_eq!(queue_params(3, "a.mp4", &format!(r#"{{"size":"{size}"}}"#)).unwrap()["resolution"], size);
+        }
+        assert!(queue_params(3, "a.mp4", r#"{"size":"fifth"}"#).is_err());
     }
 
     #[test]

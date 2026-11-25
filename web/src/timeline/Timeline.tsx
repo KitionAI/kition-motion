@@ -101,6 +101,25 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
     [targetsKey, phrase], // eslint-disable-line react-hooks/exhaustive-deps
   )
   const graphRevision = JSON.stringify([info.layers.map((layer) => [layer.id, layer.in, layer.start, layer.animated]), selection])
+  // Opening the graph editor fits its time to the selected properties' keys (and again when the
+  // selected layers or properties change, until the person zooms or scrolls); closing it puts the
+  // layer bars' zoom back as it was, so neither the fit nor 适合全部 changes the layer bars' view.
+  const [autoFit, setAutoFit] = useState(0)
+  const beforeGraph = useRef<{ view: ReturnType<typeof time.snapshot>; moved: number } | null>(null)
+  const graphWas = useRef(false)
+  useEffect(() => {
+    if (graph && !graphWas.current) {
+      beforeGraph.current = { view: time.snapshot(), moved: time.moved }
+      setAutoFit((count) => count + 1)
+    } else if (!graph && graphWas.current && beforeGraph.current) {
+      time.restore(beforeGraph.current.view)
+      beforeGraph.current = null
+    }
+    graphWas.current = graph
+  }, [graph]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (graph && beforeGraph.current && time.moved === beforeGraph.current.moved) setAutoFit((count) => count + 1)
+  }, [targetsKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const markerFlags = (layer: number | null) => <MarkerFlags layer={layer} selected={marker} onSelect={setMarker} onRename={(target, comment) => setNaming({ marker: target, comment })} />
 
   const twirl = (layer: number) =>
@@ -338,7 +357,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
             </Ruler>
           </div>
           {graph ? (
-            <GraphEditor targets={graphTargets} selected={selectedKeys} revision={graphRevision} onFit={time.fit} fitRef={fitGraph} />
+            <GraphEditor targets={graphTargets} selected={selectedKeys} revision={graphRevision} onFit={time.fit} fitRef={fitGraph} autoFit={autoFit} />
           ) : info.layers.length ? (
             info.layers.map((layer) => (
               <div key={layer.id} className="motion-layer-block" data-layer-block={layer.id} data-testid={`motion-layer-block-${layer.id}`}>

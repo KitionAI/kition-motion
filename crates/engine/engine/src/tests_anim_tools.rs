@@ -87,9 +87,8 @@ fn smoother_reduces_keys_within_tolerance() {
 /// Smoother with part of a property's keyframes selected: the keyframes outside the selected
 /// span (before its first and after its last selected key) are kept as they were, whatever the
 /// selection's order and whether it has gaps, and a second run with the same tolerance leaves them
-/// alone too. (Inside the span it keeps the fewest keys that hold the curve within the tolerance:
-/// they replace every key there, selected or not, and can be more than were there, so the count
-/// is not asserted.)
+/// alone too. (Inside the span it keeps the fewest keys that hold the curve within the tolerance,
+/// never more than were there: they replace every key there, selected or not.)
 #[test]
 fn smoother_never_touches_keys_outside_the_selected_span() {
     let keys = [(0.0, json!([100, 100])), (0.6, json!([400, 120])), (0.8, json!([150, 300])), (1.5, json!([500, 500])), (2.0, json!([100, 400]))];
@@ -113,12 +112,102 @@ fn smoother_never_touches_keys_outside_the_selected_span() {
         let once = prop(&s, l, "transform/position");
         assert_eq!(outside(&once), outside(&orig), "{order:?}: the keyframes outside the span are kept");
         assert_eq!(ends(&once), ends(&orig), "{order:?}: the span's ends are kept");
+        let inside = |p: &kition_motion_project::Property| p.keys.iter().filter(|k| k.time >= first && k.time <= last).count();
+        assert!(inside(&once) <= inside(&orig), "{order:?}: no more keys than were there");
         // Again, with the same tolerance, over the same span.
         select(&mut s, once.keys.iter().filter(|k| k.time >= first && k.time <= last).map(|k| k.time.seconds()).collect());
         s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
         let twice = prop(&s, l, "transform/position");
         assert_eq!(outside(&twice), outside(&orig), "{order:?}: a second run keeps them too");
         assert_eq!(ends(&twice), ends(&orig));
+    }
+}
+
+/// The X of `p`'s motion every frame from `from` to `to` seconds (30 fps).
+fn xs(s: &crate::Session, p: &kition_motion_project::Property, from: f64, to: f64) -> Vec<(f64, f64)> {
+    let fr = s.active_comp().unwrap().frame_rate;
+    ((from * 30.0).round() as i64..=(to * 30.0).round() as i64)
+        .map(|f| {
+            let v = evaluate(&p.keys, fr.tick_of(f), true).unwrap().as_vec2();
+            (v[0], v[1])
+        })
+        .collect()
+}
+
+/// Four Position keys on one horizontal line, unevenly spaced (the hand test's 200, 300, 340, 900).
+const LINE: [(f64, [f64; 2]); 4] = [(0.0, [200.0, 360.0]), (1.0, [300.0, 360.0]), (1.4, [340.0, 360.0]), (2.5, [900.0, 360.0])];
+
+/// The Smoother never gives more keys than it was given in the span, whatever the tolerance and
+/// whether the path through the keys was straight or the default auto-Bezier one (which on these
+/// unevenly spaced keys runs back between 300 and 340: before, the Smoother followed that with up
+/// to 11 keys).
+#[test]
+fn smoother_never_adds_keys() {
+    for straight in [true, false] {
+        for tolerance in [0.0, 0.1, 1.0, 5.0, 50.0] {
+            let (mut s, l) = setup();
+            s.prefs.general.default_spatial_linear = straight;
+            animate(&mut s, l, "transform/position", &LINE.map(|(t, v)| (t, json!(v))));
+            select(&mut s, l, "transform/position");
+            let r = s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+            let after = prop(&s, l, "transform/position").keys.len();
+            assert!(after <= 4, "straight {straight}, tolerance {tolerance}: {after} keys ({r})");
+            assert!(r["after"].as_u64() <= r["before"].as_u64(), "{r}");
+        }
+    }
+    // Opacity keyed on a zigzag: no more keys either.
+    let (mut s, l) = setup();
+    animate(&mut s, l, "transform/opacity", &[(0.0, json!(0)), (0.3, json!(90)), (0.5, json!(10)), (0.9, json!(80)), (1.0, json!(20))]);
+    select(&mut s, l, "transform/opacity");
+    s.execute("keys.smooth", json!({"tolerance": 0.5})).unwrap();
+    assert!(prop(&s, l, "transform/opacity").keys.len() <= 5);
+}
+
+/// Keys on a straight line with linear interpolation: the smoothed motion stays on the line and
+/// moves one way only, inside the keys' range (no running back past a key, no overshoot), at every
+/// tolerance. The default auto-Bezier path of the same keys, smoothed, no longer runs back either.
+#[test]
+fn smoothing_collinear_keys_stays_on_the_line_and_moves_one_way() {
+    for straight in [true, false] {
+        for tolerance in [0.1, 1.0, 5.0, 40.0] {
+            let (mut s, l) = setup();
+            s.prefs.general.default_spatial_linear = straight;
+            animate(&mut s, l, "transform/position", &LINE.map(|(t, v)| (t, json!(v))));
+            select(&mut s, l, "transform/position");
+            s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+            let p = prop(&s, l, "transform/position");
+            let path = xs(&s, &p, 0.0, 2.5);
+            for (i, (x, y)) in path.iter().enumerate() {
+                assert!((y - 360.0).abs() < 1e-6, "straight {straight}, tolerance {tolerance}: frame {i} left the line ({y})");
+                assert!((200.0 - 1e-6..=900.0 + 1e-6).contains(x), "straight {straight}, tolerance {tolerance}: frame {i} overshoots ({x})");
+            }
+            for (i, pair) in path.windows(2).enumerate() {
+                assert!(pair[1].0 >= pair[0].0 - 1e-6, "straight {straight}, tolerance {tolerance}: runs back at frame {i}: {} → {}", pair[0].0, pair[1].0);
+            }
+        }
+    }
+}
+
+/// Smoothing a curve the Smoother already smoothed changes nothing. (Keys it could not thin out
+/// the first time, because the original path ran back, it made smooth; the smooth path can then
+/// be thinned out: that second run's result stays as it is.)
+#[test]
+fn smoothing_smooth_keys_again_changes_nothing() {
+    for (straight, tolerance) in [(true, 1.0), (false, 1.0), (false, 0.1), (true, 20.0), (false, 20.0)] {
+        let (mut s, l) = setup();
+        s.prefs.general.default_spatial_linear = straight;
+        animate(&mut s, l, "transform/position", &LINE.map(|(t, v)| (t, json!(v))));
+        let mut runs = Vec::new();
+        for _ in 0..3 {
+            select(&mut s, l, "transform/position");
+            s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+            runs.push(prop(&s, l, "transform/position").keys);
+        }
+        assert_eq!(runs[2], runs[1], "straight {straight}, tolerance {tolerance}: a third run changes nothing");
+        if runs[0].len() < LINE.len() {
+            assert_eq!(runs[1], runs[0], "straight {straight}, tolerance {tolerance}: thinned out once, a second run changes nothing");
+        }
+        assert!(runs[1].len() <= runs[0].len());
     }
 }
 

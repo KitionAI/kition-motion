@@ -1932,6 +1932,7 @@ dependencies = [
  "kition-motion-project",
  "kition-motion-text",
  "kition-motion-time",
+ "lz4_flex",
  "serde_json",
  "web-time",
 ]

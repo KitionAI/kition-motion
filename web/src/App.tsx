@@ -26,7 +26,7 @@ import {
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, ASSISTANT_NEEDS, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
+import { ARRANGE, ASSISTANT_NEEDS, type Convertible, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, rememberEffect, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -34,7 +34,7 @@ import { motionReport } from './errors'
 import { MotionDialogs, toHex, type MotionDialog, type Rgb } from './dialogs'
 import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
-import { LABELS, NEW_LAYER_LABELS, labelRow } from './labels'
+import { LABELS, LABEL_ROW_STYLES, NEW_LAYER_LABELS, currentLabel, labelRow } from './labels'
 import { Splitter, useTimelineHeight } from './Splitter'
 import { PropertiesPanel } from './properties/PropertiesPanel'
 import { DROP_SHADOW } from './properties/LayerStylesSection'
@@ -196,10 +196,22 @@ function usePreviewCache(doc: { invoke: <T>(name: string, ...args: unknown[]) =>
   return { cached: cache?.cached ?? [], fps, refresh: ask, stats }
 }
 
-/** What the engine's `cacheAhead` answers: frames of the work area held, of how many, and whether memory ran out. */
-type CacheAhead = { done: number; total: number; full: boolean }
-/** The most the preview cache keeps, in megabytes (the engine's `frames::BUDGET`). */
-const CACHE_BUDGET_MB = 400
+/**
+ * What the engine's `cacheAhead` answers: frames of the work area held, of how many, whether memory
+ * ran out, the bytes the cache holds (its frames are kept at the preview resolution and packed
+ * without loss), its budget in bytes and the preview resolution's divisor.
+ */
+type CacheAhead = { done: number; total: number; full: boolean; bytes?: number; budget?: number; preview?: number }
+
+/**
+ * The most memory the preview cache keeps, in megabytes: 192 MB per gigabyte the browser reports
+ * (`navigator.deviceMemory`, which it rounds and caps at 8), at least 400 MB and at most 1536 MB.
+ * A browser that does not report it gets 400 MB.
+ */
+export function cacheBudgetMb(deviceMemory: number | undefined): number {
+  if (!(typeof deviceMemory === 'number' && Number.isFinite(deviceMemory) && deviceMemory > 0)) return 400
+  return Math.min(1536, Math.max(400, Math.round(deviceMemory * 192)))
+}
 
 /**
  * View ▸ Cache Work Area in Background: while it is on and nothing plays, the engine renders the
@@ -208,10 +220,14 @@ const CACHE_BUDGET_MB = 400
  * or the cache's memory budget is reached; the cache bar fills as it goes. An edit empties the
  * cache (the engine cannot tell which frames it changed): caching starts again a moment later.
  */
-function useCacheAhead(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, on: boolean, playing: boolean, state: unknown, refresh: () => Promise<unknown>) {
+function useCacheAhead(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, on: boolean, playing: boolean, state: unknown, preview: number, refresh: () => Promise<unknown>) {
   const [progress, setProgress] = useState<CacheAhead | null>(null)
   const latestRefresh = useRef(refresh)
   latestRefresh.current = refresh
+  // Turned off, or another preview resolution: what it reached is forgotten (it shows its new progress).
+  useEffect(() => {
+    setProgress(null)
+  }, [on, preview])
   useEffect(() => {
     if (!doc || !on || playing) return undefined
     let stopped = false
@@ -232,7 +248,7 @@ function useCacheAhead(doc: { invoke: <T>(name: string, ...args: unknown[]) => P
     return () => {
       stopped = true
     }
-  }, [doc, on, playing, state])
+  }, [doc, on, playing, state, preview])
   return on ? progress : null
 }
 
@@ -582,7 +598,6 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       return !current
     })
   }, [])
-  const ahead = useCacheAhead(session.doc, cacheAhead, playback.playing, state, frameCache.refresh)
   // While playing, the transport and the timeline show the time playback has reached.
   const shownState = useMemo(() => (state && playback.at !== null ? { ...state, time: playback.at } : state), [state, playback.at])
   useSpaceTap(playback.toggle)
@@ -767,6 +782,15 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       // Kept for this page only.
     }
   }, [session.doc, preview])
+  // The preview cache's memory budget, from the device's memory.
+  useEffect(() => {
+    if (!session.doc) return
+    const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+    void session.doc.invoke<number>('setPreviewCacheBudget', cacheBudgetMb(memory)).catch(() => undefined)
+  }, [session.doc])
+  const ahead = useCacheAhead(session.doc, cacheAhead, playback.playing, state, preview, frameCache.refresh)
+  // The cache is full: the next lower preview resolution holds about that many times more frames.
+  const lowerResolution = ahead?.full ? RESOLUTIONS.find(([, , divisor]) => divisor === preview + 1) : undefined
   useEffect(() => {
     if (!session.doc) return
     void session.doc.invoke<number>('setSnapTargets', overlays.snapGuides, overlays.snapGrid).catch(() => undefined)
@@ -1114,7 +1138,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [KIT.wiggler]: () => ((keyState.count ?? 0) >= 2 ? setDialog({ kind: 'wiggler', spatial: keyState.spatial }) : toast.info(phrase(ASSISTANT_NEEDS.wiggler))),
     [KIT.smoother]: () => ((keyState.count ?? 0) >= 3 ? setDialog({ kind: 'smoother' }) : toast.info(phrase(ASSISTANT_NEEDS.smoother))),
     // One undo step per property (each its own `prop.convertExpressionToKeyframes`).
-    [KIT.convertExpression]: () => (convertible.length ? convertible.forEach((each) => void run('prop.convertExpressionToKeyframes', each)) : toast.info(phrase(ASSISTANT_NEEDS.convert))),
+    [KIT.convertExpression]: () => (convertible.length ? convertible.forEach((each) => void run('prop.convertExpressionToKeyframes', each)) : toast.info(phrase(expressionOff ? ASSISTANT_NEEDS.convertOff : ASSISTANT_NEEDS.convert))),
     'layer.revealSource': () => void revealSource(),
     'project.newFolder': () => void newFolder(),
     'file.removeUnusedFootage': () =>
@@ -1170,7 +1194,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         labelRow(name),
         () => {
           const layers = state?.layers.filter((layer) => layer.selected).map((layer) => layer.id) ?? []
-          if (layers.length) void run('edit.label', { label: name, layers, target: 'layers' })
+          // The label they all have already (its row says “Current”): choosing it says so.
+          if (state && currentLabel(state.layers) === name) toast.info(t('label.already', { name: t(`label.${name.replace(/ /g, '')}`) }))
+          else if (layers.length) void run('edit.label', { label: name, layers, target: 'layers' })
         },
       ]),
     ),
@@ -1235,23 +1261,33 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }, [state, keysSelected, playback.playing, query])
   // Animation ▸ Keyframe Assistant ▸ Convert Expression to Keyframes: the selected properties whose expression it would turn into keyframes.
   const [convertible, setConvertible] = useState<Array<{ layer: number; path: string }>>([])
+  // A selected property has an expression that is turned off: Convert says to turn it on first.
+  const [expressionOff, setExpressionOff] = useState(false)
   useEffect(() => {
     const doc = session.doc
     const chosen = (state?.layers ?? []).flatMap((layer) => (layer.selected ? layer.selectedProps.map((path) => ({ layer: layer.id, path })) : []))
     if (!doc || playback.playing || !chosen.length) {
       setConvertible((before) => (before.length ? [] : before))
+      setExpressionOff(false)
       return undefined
     }
     let current = true
-    void Promise.all(chosen.map((each) => doc.invoke<boolean>('wouldChange', 'prop.convertExpressionToKeyframes', JSON.stringify(each)).catch(() => false))).then((answers) => {
+    void Promise.all(chosen.map((each) => doc.invoke<boolean>('wouldChange', 'prop.convertExpressionToKeyframes', JSON.stringify(each)).catch(() => false))).then(async (answers) => {
       if (!current) return
       const next = chosen.filter((_, at) => answers[at])
       setConvertible((before) => (JSON.stringify(before) === JSON.stringify(next) ? before : next))
+      if (next.length) {
+        setExpressionOff(false)
+        return
+      }
+      // None would change: is there an expression there, turned off?
+      const reads = await Promise.all(chosen.map((each) => query<{ expression?: string | null }>('prop.get', each).catch(() => null)))
+      if (current) setExpressionOff(reads.some((read) => (read?.expression ?? '').trim() !== ''))
     })
     return () => {
       current = false
     }
-  }, [session.doc, state, playback.playing])
+  }, [session.doc, state, playback.playing, query])
   const hiding = hiddenRow(state, lastEffect, { fitted: fitView === viewKey, actual: zoom === 1, preview, alignTo, threeD: view3d, region: region !== null, cached: frameCache.cached.length > 0, keys: keyState }, keysSelected, idle)
   const hidden = useMemo(() => hiding.hidden, [hiding.key]) // eslint-disable-line react-hooks/exhaustive-deps
   // The first selected layer's layer styles: Layer ▸ Layer Styles marks them (Added).
@@ -1274,22 +1310,26 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }, [firstSelected, state, query])
   // Layer ▸ Time ▸ Enable or Disable Time Remapping, by the first selected layer.
   const remapOn = state?.layers.find((layer) => layer.selected)?.animated.some((property) => property.path === 'timeRemap') ?? false
-  const canConvert = convertible.length > 0
-  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews, canConvert), [effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews, canConvert])
+  // The label every selected layer has (Layer ▸ Label ticks it and calls it current).
+  const labelNow = state ? currentLabel(state.layers) : null
+  const canConvert: Convertible = convertible.length > 0 ? true : expressionOff ? 'off' : false
+  const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews, canConvert, labelNow), [effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews, canConvert, labelNow])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
   const allowed = useMemo(() => shortcutCommands(rows), [rows])
   const hiddenCommands = useCallback((command: string) => !allowed.has(command), [allowed])
   const wholeWorkArea = hiding.key.includes('comp.trimToWorkArea')
+  // Layer ▸ Label ticks the label every selected layer has.
+  const checked = useCallback((command: string) => (command.startsWith('kit:label-') ? labelNow !== null && labelRow(labelNow) === command : undefined), [labelNow])
   // Home first (its own ribbon; a drop-down panel in Menus), then the editor's menus.
   const tabs = useMemo<FrameTab[]>(
     () => [
       { id: 'home', label: t('homeTab'), ribbon: <HomeTab info={state} onCommand={dispatch} wholeWorkArea={wholeWorkArea} lastEffect={lastEffect} /> },
-      ...catalogTabs(rows, { phrase, view: VIEW_MENUS, primary: MOTION_PRIMARY, hidden, onCommand: dispatch, onKitCommand: dispatch }).map((tab) =>
+      ...catalogTabs(rows, { phrase, view: VIEW_MENUS, primary: MOTION_PRIMARY, hidden, checked, onCommand: dispatch, onKitCommand: dispatch }).map((tab) =>
         // The Effect tab's ribbon: a drop-down per category rather than a button per effect.
         tab.id === 'Effect' ? { ...tab, ribbon: <EffectRibbon effects={effects} onCommand={dispatch} lastEffect={lastEffect} /> } : tab,
       ),
     ],
-    [dispatch, effects, hidden, lastEffect, phrase, rows, t, wholeWorkArea, state],
+    [dispatch, effects, hidden, checked, lastEffect, phrase, rows, t, wholeWorkArea, state],
   )
 
   // What the active tool says (the engine's words, translated), else how to use the Pen.
@@ -1377,6 +1417,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
 
   return (
     <KitEditorProvider editor={editor} tools={tools}>
+      <style>{LABEL_ROW_STYLES}</style>
       <EffectCatalog.Provider value={effects}>
       <SamplerContext.Provider value={sampler}>
       <WaveformContext.Provider value={waveform}>
@@ -1457,15 +1498,30 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               variant="ghost"
               className="motion-toggle"
               aria-pressed={cacheAhead}
-              title={!cacheAhead ? t('cacheAhead.off') : ahead?.full ? t('cacheAhead.full', { done: ahead.done, total: ahead.total }) : t('cacheAhead.on', { done: ahead?.done ?? 0, total: ahead?.total ?? 0 })}
+              title={
+                !cacheAhead
+                  ? t('cacheAhead.off')
+                  : ahead?.full
+                    ? lowerResolution
+                      ? t('cacheAhead.fullLower', { done: ahead.done, total: ahead.total, megabytes: Math.round((ahead.budget ?? 0) / 1048576), resolution: phrase(lowerResolution[1]) })
+                      : t('cacheAhead.full', { done: ahead.done, total: ahead.total, megabytes: Math.round((ahead.budget ?? 0) / 1048576) })
+                    : t('cacheAhead.on', { done: ahead?.done ?? 0, total: ahead?.total ?? 0 })
+              }
               onClick={toggleCacheAhead}
               data-testid="motion-cache-ahead"
               data-done={ahead?.done}
               data-total={ahead?.total}
               data-full={ahead?.full || undefined}
+              data-bytes={ahead?.bytes}
+              data-budget={ahead?.budget}
             >
               {/* On: how far it got (N/M), or that the cache is full. */}
-              {!cacheAhead || !ahead || !(ahead.total > 0) ? t('cacheAhead.label') : ahead.full ? t('cacheAhead.fullShort', { megabytes: CACHE_BUDGET_MB }) : t('cacheAhead.progress', { done: ahead.done, total: ahead.total })}
+              {!cacheAhead || !ahead || !(ahead.total > 0) ? t('cacheAhead.label') : ahead.full ? t('cacheAhead.fullShort', { done: ahead.done, total: ahead.total }) : t('cacheAhead.progress', { done: ahead.done, total: ahead.total })}
+            </Button>
+          ) : null}
+          {state?.comp && cacheAhead && lowerResolution ? (
+            <Button variant="ghost" title={t('cacheAhead.lowerHint', { resolution: phrase(lowerResolution[1]) })} onClick={() => setPreview(lowerResolution[2])} data-testid="motion-cache-lower">
+              {t('cacheAhead.lower', { resolution: phrase(lowerResolution[1]) })}
             </Button>
           ) : null}
           {state?.comp && view3d.has3D ? (
@@ -1642,7 +1698,19 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               {state?.comp ? <RegionOfInterest views={views} comp={state.comp} region={region} drawing={drawingRegion} onDrawn={setRegionOfInterest} onCancel={() => setDrawingRegion(false)} /> : null}
             </KitDocumentCanvas>
             {twoViews && view3d.has3D && state?.comp ? (
-              <SecondView doc={session.doc} view={secondView} onView={setChosenSecond} main={view3d.view} onMakeMain={swapViews} onClose={toggleTwoViews} version={state} playing={playback.playing} compWidth={state.comp.width} />
+              <SecondView
+                doc={session.doc}
+                view={secondView}
+                onView={setChosenSecond}
+                main={view3d.view}
+                onMakeMain={swapViews}
+                onClose={toggleTwoViews}
+                onSelect={(layer, add) => void run('layer.select', add ? { layers: [layer], add: true, toggle: true } : { layers: [layer] })}
+                version={state}
+                playing={playback.playing}
+                compWidth={state.comp.width}
+                compHeight={state.comp.height}
+              />
             ) : null}
             </div>
             {/* The transport and the timeline are the kit's own bars: Focus shows the composition alone. */}

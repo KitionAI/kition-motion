@@ -65,9 +65,6 @@ export function EffectRibbon({ effects, onCommand, lastEffect }: { effects: read
   )
 }
 
-/** Chinese (and Japanese) characters: a name in the editor's Chinese. */
-const CJK = /[\u3400-\u9fff]/
-
 /** How many matches Find Effect lists at once. */
 const SHOWN = 60
 
@@ -158,11 +155,10 @@ export function FindEffectDialog({ effects, onApply, onClose }: { effects: reado
     })
   /** An effect's one-line description: what it does (`effect.desc.<id>`, where it has one), and its first parameters. */
   const about = (effect: MotionEffect) => {
-    // Only settings named in the editor's language (a name without a translation is left out of a
-    // Chinese description, rather than shown in English).
-    const chinese = CJK.test(t('effect.noParams'))
+    // Its first settings, by their names in the editor's language (`PARAM_NAMES_ZH` names them in
+    // Chinese; none is left out).
     const all = effect.params ?? []
-    const named = all.map((param) => p(param.name)).filter((name) => !chinese || CJK.test(name) || !/[A-Za-z]/.test(name))
+    const named = all.map((param) => p(param.name))
     const params = named.slice(0, 3)
     const more = all.length > params.length ? '…' : ''
     const settings = params.length ? t('effect.params', { names: params.join(t('effect.listSeparator')) + more }) : all.length ? t('effect.paramCount', { count: all.length }) : t('effect.noParams')

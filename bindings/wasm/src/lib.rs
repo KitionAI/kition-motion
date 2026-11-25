@@ -115,17 +115,26 @@ impl Services for KitServices {
 /// transparent black where it has no pixel.
 fn blow_up(rgba: &[u8], from_w: u32, from_h: u32, to_w: u32, to_h: u32) -> Vec<u8> {
     let (fw, fh, tw, th) = (from_w.max(1) as usize, from_h.max(1) as usize, to_w as usize, to_h as usize);
-    let mut out = vec![0u8; tw.saturating_mul(th).saturating_mul(4)];
+    let row_bytes = tw.saturating_mul(4);
+    let mut out = vec![0u8; row_bytes.saturating_mul(th)];
+    let columns: Vec<usize> = (0..tw).map(|x| (x * fw / tw.max(1)).min(fw - 1)).collect();
+    let mut previous: Option<(usize, usize)> = None;
     for y in 0..th {
         let sy = (y * fh / th.max(1)).min(fh - 1);
-        for x in 0..tw {
-            let sx = (x * fw / tw.max(1)).min(fw - 1);
+        let to = y * row_bytes;
+        // Rows drawn from the same source row are the same: copied rather than drawn again.
+        if let Some((_, from)) = previous.filter(|(source, _)| *source == sy) {
+            out.copy_within(from..from + row_bytes, to);
+            continue;
+        }
+        for (x, sx) in columns.iter().enumerate() {
             let from = (sy * fw + sx) * 4;
-            let to = (y * tw + x) * 4;
-            if let (Some(src), Some(dst)) = (rgba.get(from..from + 4), out.get_mut(to..to + 4)) {
+            let at = to + x * 4;
+            if let (Some(src), Some(dst)) = (rgba.get(from..from + 4), out.get_mut(at..at + 4)) {
                 dst.copy_from_slice(src);
             }
         }
+        previous = Some((sy, to));
     }
     out
 }
@@ -180,6 +189,9 @@ pub struct MotionDocument {
     lent: HashSet<String>,
     /// The viewer's frames already drawn (see [`frames`]).
     frames: RefCell<frames::FrameCache>,
+    /// The last frame the viewer was given, at the composition's size (unpacked and blown up
+    /// from the cache once, not at each repaint or pixel read): its revision and key.
+    shown: RefCell<Option<(u64, frames::FrameKey, Arc<Vec<u8>>, u32, u32)>>,
     /// The movie the Export dialog is rendering, a little at a time (kept per thread, see
     /// [`movie::ExportKey`]).
     export: movie::ExportKey,
@@ -248,6 +260,7 @@ impl MotionDocument {
             pool,
             lent: HashSet::new(),
             frames: RefCell::new(frames::FrameCache::default()),
+            shown: RefCell::new(None),
             export: movie::ExportKey::new(),
             snap_guides: true,
             snap_grid: false,
@@ -321,25 +334,48 @@ impl MotionDocument {
 
     /// The active composition's frame at the current time, at the composition's size, over its
     /// background colour as the viewer shows it: through the 3D view chosen (View ▸ 3D View), only
-    /// the region of interest rendered (the rest grey), at View ▸ Resolution. A frame drawn
-    /// before (same revision and settings) comes from the frame cache.
+    /// the region of interest rendered (the rest grey), at View ▸ Resolution (rendered at that
+    /// resolution and blown up to the composition's size). A frame drawn before (same revision and
+    /// settings) comes from the frame cache, which keeps it as rendered.
     fn frame(&self) -> Result<(Arc<Vec<u8>>, u32, u32), String> {
         let key = self.frame_key().ok_or("no composition is open")?;
         let revision = self.session.revision;
-        if let Some(drawn) = self.frames.borrow_mut().get(revision, &key) {
-            return Ok((drawn.rgba, drawn.width, drawn.height));
+        let cached = self.frames.borrow_mut().get(revision, &key);
+        if let Some(drawn) = cached {
+            if let Some((_, _, rgba, w, h)) = self.shown.borrow().as_ref().filter(|(at, shown, ..)| *at == revision && *shown == key) {
+                return Ok((rgba.clone(), *w, *h));
+            }
+            if let Some(rgba) = drawn.rgba() {
+                return Ok(self.show(revision, key, &rgba, drawn.width, drawn.height));
+            }
         }
         let (rgba, width, height, ms) = self.render_frame(&key)?;
-        self.frames.borrow_mut().put(revision, key, rgba.clone(), width, height, ms);
-        Ok((rgba, width, height))
+        self.frames.borrow_mut().put(revision, key.clone(), &rgba, width, height, ms);
+        Ok(self.show(revision, key, &rgba, width, height))
     }
 
-    /// Renders the viewer's frame for `key` (see [`Self::frame`]); answers it and the milliseconds it took.
-    fn render_frame(&self, key: &frames::FrameKey) -> Result<(Arc<Vec<u8>>, u32, u32, f64), String> {
+    /// A frame as rendered for `key` (at the preview resolution), at the composition's size as the
+    /// viewer shows it, remembered as the last frame shown.
+    fn show(&self, revision: u64, key: frames::FrameKey, rgba: &[u8], width: u32, height: u32) -> (Arc<Vec<u8>>, u32, u32) {
+        let size = self.session.project.comp(key.comp).map(|comp| (comp.width.max(1), comp.height.max(1)));
+        let blown = match size {
+            Some((to_w, to_h)) if (key.preview > 1 || !key.roi.is_empty()) && (width, height) != (to_w, to_h) => {
+                (Arc::new(blow_up(rgba, width, height, to_w, to_h)), to_w, to_h)
+            }
+            _ => (Arc::new(rgba.to_vec()), width, height),
+        };
+        *self.shown.borrow_mut() = Some((revision, key, blown.0.clone(), blown.1, blown.2));
+        blown
+    }
+
+    /// Renders the viewer's frame for `key` (see [`Self::frame`]) at the preview resolution (a
+    /// region of interest drawn where it is in that frame, the rest grey); answers it and the
+    /// milliseconds it took.
+    fn render_frame(&self, key: &frames::FrameKey) -> Result<(Vec<u8>, u32, u32, f64), String> {
         let comp_id = key.comp;
         let started = web_time::Instant::now();
         let comp = self.session.project.comp(comp_id).ok_or("no composition is open")?;
-        let scale = 1.0 / f64::from(self.preview.max(1));
+        let scale = 1.0 / f64::from(key.preview.max(1));
         let roi = self.region(comp);
         let opts = RenderOpts { scale, view: self.session.view_camera(comp_id), roi, ..Default::default() };
         let mut renderer = Renderer::new(&self.session.project, &*self.session.footage, opts);
@@ -364,13 +400,7 @@ impl MotionDocument {
             rendered = full;
             (width, height) = (fw, fh);
         }
-        let (rgba, width, height) = if self.preview > 1 || (roi.is_some() && (width != comp.width || height != comp.height)) {
-            let (to_w, to_h) = (comp.width.max(1), comp.height.max(1));
-            (Arc::new(blow_up(&rendered, width, height, to_w, to_h)), to_w, to_h)
-        } else {
-            (Arc::new(rendered), width, height)
-        };
-        Ok((rgba, width, height, started.elapsed().as_secs_f64() * 1000.0))
+        Ok((rendered, width, height, started.elapsed().as_secs_f64() * 1000.0))
     }
 
     /// Cache Work Area in Background: renders, for about `milliseconds`, the work area's frames
@@ -402,14 +432,16 @@ impl MotionDocument {
                 break;
             }
             let Ok((rgba, width, height, ms)) = self.render_frame(&key) else { break };
-            if !self.frames.borrow_mut().put_ahead(revision, key, rgba, width, height, ms) {
+            if !self.frames.borrow_mut().put_ahead(revision, key, &rgba, width, height, ms) {
                 full = true;
                 break;
             }
         }
         let held =
             (0..total).filter(|step| self.frame_key_at(rate.tick_of(first + step)).is_some_and(|key| self.frames.borrow().holds(revision, &key))).count();
-        json!({ "done": held, "total": total, "full": full })
+        let cache = self.frames.borrow();
+        let report = cache.report(revision, None, |_| 0);
+        json!({ "done": held, "total": total, "full": full, "bytes": report["bytes"], "budget": cache.budget(), "preview": self.preview })
     }
 
     /// What the frame cache holds for the viewer's settings now (the frames of the active
@@ -424,6 +456,19 @@ impl MotionDocument {
     /// View ▸ Purge ▸ Image Cache: drops every frame kept.
     pub fn purge_preview_cache(&mut self) {
         self.frames.borrow_mut().clear();
+        *self.shown.borrow_mut() = None;
+    }
+
+    /// The most memory the frame cache keeps, in megabytes (the editor sets it from the device's
+    /// memory), kept between 400 and 1536; a number that is not finite leaves it as it was.
+    /// Answers the budget now, in megabytes.
+    pub fn set_preview_cache_budget(&self, megabytes: f64) -> f64 {
+        let mut cache = self.frames.borrow_mut();
+        if megabytes.is_finite() && megabytes > 0.0 {
+            let bytes = (megabytes.min(1_000_000.0) * 1024.0 * 1024.0) as usize;
+            cache.set_budget(bytes);
+        }
+        cache.budget() as f64 / (1024.0 * 1024.0)
     }
 
     /// What `comp.info` reports for the active composition (layers, timing), with each layer's
@@ -1540,6 +1585,13 @@ pub mod web {
             self.0.cache_ahead(milliseconds).to_string()
         }
 
+        /// The frame cache's memory budget in megabytes; answers the budget now (see
+        /// [`MotionDocument::set_preview_cache_budget`]).
+        #[wasm_bindgen(js_name = setPreviewCacheBudget)]
+        pub fn set_preview_cache_budget(&self, megabytes: f64) -> f64 {
+            self.0.set_preview_cache_budget(megabytes)
+        }
+
         /// Drops every frame the cache keeps (see [`MotionDocument::purge_preview_cache`]).
         #[wasm_bindgen(js_name = purgePreviewCache)]
         pub fn purge_preview_cache(&mut self) {
@@ -1838,6 +1890,53 @@ mod tests {
         assert!(doc.set_preview_resolution(0).is_err() && doc.set_preview_resolution(5).is_err());
         doc.set_preview_resolution(1).unwrap();
         assert_eq!(doc.frame().unwrap().0, full.0, "Full draws as before");
+    }
+
+    #[test]
+    fn a_cached_frame_shows_the_same_pixels_as_one_just_rendered_at_every_resolution() {
+        let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        doc.execute("time.set", json!({ "time": 0.5 })).unwrap();
+        let mut held = Vec::new();
+        for preview in 1..=4 {
+            doc.set_preview_resolution(preview).unwrap();
+            doc.purge_preview_cache();
+            let rendered = doc.frame().unwrap();
+            let hits = doc.frames.borrow().hits;
+            // Not the frame remembered as shown: unpacked from the cache and blown up again.
+            *doc.shown.borrow_mut() = None;
+            doc.frames.borrow_mut().clear_last_for_tests();
+            let cached = doc.frame().unwrap();
+            assert_eq!(doc.frames.borrow().hits, hits + 1, "at 1/{preview} the second frame came from the cache");
+            assert_eq!((cached.1, cached.2), (rendered.1, rendered.2));
+            assert!(cached.0 == rendered.0, "at 1/{preview} the cached frame has the same pixels");
+            held.push(doc.preview_cache()["rawBytes"].as_u64().unwrap());
+        }
+        // The cache keeps a frame at its preview resolution: Half a quarter of Full, and so on.
+        let (w, h) = (doc.width() as u64, doc.height() as u64);
+        assert_eq!(held[0], w * h * 4);
+        for (preview, bytes) in held.iter().enumerate().skip(1) {
+            let d = preview as u64 + 1;
+            assert!(*bytes <= w.div_ceil(d) * h.div_ceil(d) * 4, "1/{d}: {bytes} bytes held");
+        }
+    }
+
+    #[test]
+    fn a_default_composition_is_cached_from_end_to_end_within_the_budget() {
+        let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        doc.execute("comp.new", json!({ "name": "Comp 1", "width": 1920, "height": 1080, "frameRate": 30, "duration": 10, "open": true })).unwrap();
+        doc.execute("layer.newSolid", json!({ "name": "Red", "color": "#ff0000" })).unwrap();
+        let mut answer = json!({});
+        for _ in 0..200 {
+            answer = doc.cache_ahead(2000.0);
+            if answer["done"] == answer["total"] || answer["full"] == json!(true) {
+                break;
+            }
+        }
+        assert_eq!((answer["done"].as_u64(), answer["total"].as_u64(), answer["full"].as_bool()), (Some(300), Some(300), Some(false)), "{answer}");
+        let report = doc.preview_cache();
+        let (bytes, raw) = (report["bytes"].as_u64().unwrap(), report["rawBytes"].as_u64().unwrap());
+        assert_eq!(raw, 300 * 1920 * 1080 * 4, "300 full frames");
+        assert!(bytes <= frames::BUDGET as u64 && bytes * 10 < raw, "{bytes} bytes held for {raw} bytes of pixels");
     }
 
     #[test]

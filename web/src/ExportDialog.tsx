@@ -26,7 +26,7 @@ type Format = (typeof FORMATS)[number]['id']
 export const SEQUENCES: ReadonlySet<string> = new Set(['png', 'jpeg'])
 
 /** What the dialog sends `renderMovie` (`movie::queue_params`). */
-type Settings = { format: Exclude<Format, 'lottie' | 'frame'>; span: 'comp' | 'workArea'; size: 'full' | 'half' | { width: number; height: number }; frameRate: number | null; channels?: 'rgb' | 'rgba' }
+type Settings = { format: Exclude<Format, 'lottie' | 'frame'>; span: 'comp' | 'workArea'; size: 'full' | 'half' | 'third' | 'quarter' | { width: number; height: number }; frameRate: number | null; channels?: 'rgb' | 'rgba' }
 
 /** An image sequence's file names: the name, an underscore and the frame number (`[#####]`, five digits). */
 export const sequenceName = (name: string, extension: string) => `${name}_[#####].${extension}`
@@ -63,7 +63,7 @@ type Progress = { done: number; total: number; finished: boolean }
 const STEP_MS = 120
 
 /**
- * Export: the active composition (all of it or its work area) at full, half or a custom size, at
+ * Export: the active composition (all of it or its work area) at full, half, third, quarter or a custom size, at
  * its frame rate or half of it, as H.264 MP4, WebM or animated GIF, written beside the project by
  * the host. The engine renders a little at a time (`exportStart`, then `exportStep` until it has
  * finished, then `exportFinish` hands over the file), so the dialog shows the frames done and
@@ -74,7 +74,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose, onSaveFrame }
   const comp = info.comp
   const [format, setFormat] = useState<Format>(lottie ? 'lottie' : 'h264')
   const [span, setSpan] = useState<'comp' | 'workArea'>('comp')
-  const [size, setSize] = useState<'full' | 'half' | 'custom'>('full')
+  const [size, setSize] = useState<'full' | 'half' | 'third' | 'quarter' | 'custom'>('full')
   const [width, setWidth] = useState(String(comp?.width ?? 1920))
   const [height, setHeight] = useState(String(comp?.height ?? 1080))
   const [rate, setRate] = useState<'comp' | 'half'>('comp')
@@ -121,7 +121,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose, onSaveFrame }
     const settings: Settings = {
       format,
       span,
-      size: size === 'custom' && w !== null && h !== null ? { width: w, height: h } : size === 'half' ? 'half' : 'full',
+      size: size === 'custom' && w !== null && h !== null ? { width: w, height: h } : size === 'custom' ? 'full' : size,
       frameRate: rate === 'half' ? Math.round((comp.fps / 2) * 1000) / 1000 : null,
       ...(format === 'png' ? { channels: alpha ? ('rgba' as const) : ('rgb' as const) } : {}),
     }
@@ -274,9 +274,11 @@ export function ExportDialog({ info, doc, lottie = false, onClose, onSaveFrame }
         {format !== 'wav' ? (
           <>
         <Field label={t('export.size')}>
-          <Select value={size} disabled={busy} onChange={(event) => setSize(event.target.value as 'full' | 'half' | 'custom')} data-testid="motion-export-size">
+          <Select value={size} disabled={busy} onChange={(event) => setSize(event.target.value as 'full' | 'half' | 'third' | 'quarter' | 'custom')} data-testid="motion-export-size">
             <option value="full">{t('export.size.full', { width: comp.width, height: comp.height })}</option>
             <option value="half">{t('export.size.half', { width: Math.round(comp.width / 2), height: Math.round(comp.height / 2) })}</option>
+            <option value="third">{t('export.size.third', { width: Math.round(comp.width / 3), height: Math.round(comp.height / 3) })}</option>
+            <option value="quarter">{t('export.size.quarter', { width: Math.round(comp.width / 4), height: Math.round(comp.height / 4) })}</option>
             <option value="custom">{t('dialog.custom')}</option>
           </Select>
         </Field>

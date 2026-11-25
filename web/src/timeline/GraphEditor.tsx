@@ -191,12 +191,15 @@ export function GraphEditor({
   revision,
   onFit,
   fitRef,
+  autoFit = 0,
 }: {
   targets: readonly GraphTarget[]
   selected: ReadonlySet<string>
   revision: string
   onFit: (start: number, end: number) => void
   fitRef: MutableRefObject<(() => void) | null>
+  /** Each new number fits the time to the keys once they are read (the graph opening, the selection changing). */
+  autoFit?: number
 }) {
   const { run, t } = useKitEditor()
   const frame = useTimeline()
@@ -272,6 +275,14 @@ export function GraphEditor({
     onFit(Math.max(0, first - room), last + room)
   }
   fitRef.current = fit
+  // Fits once per `autoFit`, as soon as the curves with keys are read.
+  const fitted = useRef(0)
+  const hasKeys = curves.some((curve) => curve.keys.length > 0)
+  useEffect(() => {
+    if (autoFit === fitted.current || !hasKeys) return
+    fitted.current = autoFit
+    fit()
+  }) // eslint-disable-line react-hooks/exhaustive-deps
 
   const local = (event: { clientX: number; clientY: number }) => {
     const rect = box.current?.querySelector('.motion-graph-plot > svg')?.getBoundingClientRect()

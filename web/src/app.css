@@ -403,6 +403,34 @@ button.motion-switch:focus-visible {
   border-radius: 2px;
 }
 
+/* A label row's icon in a right-click menu: the tick (or its blank) beside the colour's square. */
+.motion-label-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.motion-label-tick {
+  display: inline-block;
+  width: 12px;
+  font-size: 12px;
+  line-height: 1;
+  text-align: center;
+}
+
+/* The menu bar's Layer ▸ Label rows: the colour's square before the name (colours from LABEL_ROW_STYLES). */
+.kui-menu-item[data-kit-ui-id^='control:label-'] > span:last-of-type::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border: 1px solid rgb(0 0 0 / 25%);
+  border-radius: 2px;
+  vertical-align: -2px;
+}
+
 .motion-key {
   z-index: 3;
   touch-action: none;
@@ -1028,11 +1056,17 @@ button.motion-switch:focus-visible {
   gap: 8px;
 }
 
+/* The description wraps to two lines (the whole of it is the row's hover text). */
 .motion-effect-about {
+  display: -webkit-box;
   overflow: hidden;
   font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .motion-effect-star {
@@ -1073,14 +1107,30 @@ p.motion-effect-group-head {
 }
 
 /* The splitter between the composition and the timeline: dragged, it sets the timeline's height. */
+/* The bar between the viewer and the timeline: a visible grip in its middle, dragged up or down. */
 .motion-splitter {
   flex: none;
-  height: 5px;
-  margin-bottom: -5px;
+  box-sizing: border-box;
+  height: 6px;
   position: relative;
   z-index: 6;
+  border-top: 1px solid var(--kit-border);
+  background: var(--kit-surface);
   cursor: row-resize;
   touch-action: none;
+}
+
+.motion-splitter::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  width: 40px;
+  height: 3px;
+  margin-left: -20px;
+  border-radius: 2px;
+  background: var(--kit-text-muted);
+  opacity: 0.7;
 }
 
 .motion-splitter:hover,
@@ -2305,6 +2355,13 @@ p.motion-effect-group-head {
   fill: currentColor;
 }
 
+/* A job's destination folder, on a line of its own (a new job takes the one used last). */
+.motion-queue-folder {
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .motion-queue-detail,
 .motion-queue-status {
   font-size: 11px;
@@ -2482,13 +2539,45 @@ p.motion-effect-group-head {
 }
 
 .motion-second-view {
+  position: relative;
   display: flex;
-  /* The viewer keeps most of the width (at 1280 × 800 more than half the window). */
-  flex: 0 0 24%;
+  /* Its width (flex-basis) is set by its divider: about 28–32 % of the window by default. */
+  flex: 0 0 auto;
   flex-direction: column;
   min-width: 200px;
   border-left: 1px solid var(--kit-border);
   background: var(--kit-surface);
+}
+
+/* The bar on the second view's left edge: dragged left or right it sets the view's width. */
+.motion-second-divider {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.motion-second-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 3px;
+  height: 40px;
+  margin-top: -20px;
+  border-radius: 2px;
+  background: var(--kit-text-muted);
+  opacity: 0.7;
+}
+
+.motion-second-divider:hover,
+.motion-second-divider:focus-visible {
+  background: color-mix(in srgb, var(--kit-primary) 45%, transparent);
+  outline: none;
 }
 
 .motion-second-head {
@@ -2500,17 +2589,31 @@ p.motion-effect-group-head {
   border-bottom: 1px solid var(--kit-border);
 }
 
+/* The picture on the viewer's own background, over the pane's whole height. */
 .motion-second-body {
+  position: relative;
   display: flex;
   flex: 1;
-  align-items: center;
-  justify-content: center;
   min-height: 0;
   overflow: hidden;
-  padding: 6px;
+  background: var(--kit-canvas);
+}
+
+.motion-second-note {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  margin: 0;
+  padding: 2px 6px;
+  border-radius: var(--kit-radius-control);
+  background: var(--kit-surface);
+  font-size: 11px;
+  pointer-events: none;
 }
 
 .motion-second-canvas {
-  max-width: 100%;
-  max-height: 100%;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
 }

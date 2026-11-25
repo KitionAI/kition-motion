@@ -49,27 +49,49 @@ export function labelHex(name: string | undefined): string | null {
   return LABELS.find(([each]) => each.toLowerCase() === name.toLowerCase())?.[1] ?? null
 }
 
-/** A label's square, as a menu row's icon. */
+/**
+ * A label's row icon: a tick where it is the current label (a blank of the same width elsewhere,
+ * so the names line up), then the colour's square; the tick never takes the square's place.
+ */
 const swatches = new Map<string, ComponentType<{ size?: number }>>()
-function swatch(hex: string) {
-  let found = swatches.get(hex)
+function swatch(hex: string, current: boolean) {
+  const key = `${hex} ${current}`
+  let found = swatches.get(key)
   if (!found) {
-    found = ({ size = 14 }: { size?: number }) => <span className="motion-label-swatch" style={{ width: size - 2, height: size - 2, background: hex }} aria-hidden="true" />
-    swatches.set(hex, found)
+    found = ({ size = 14 }: { size?: number }) => (
+      <span className="motion-label-icon" data-current={current || undefined} aria-hidden="true">
+        <span className="motion-label-tick">{current ? '✓' : ''}</span>
+        <span className="motion-label-swatch" style={{ width: size - 2, height: size - 2, background: hex }} />
+      </span>
+    )
+    swatches.set(key, found)
   }
   return found
 }
 
 /**
- * A Label submenu: each colour (checked where `current` is it), then Select Label Group when
- * `onSelectGroup` is given. `onLabel` sets the label (one undo step).
+ * The menu bar's Layer ▸ Label rows (`kit:label-<name>`, drawn by the SDK without an icon): each
+ * colour's square before its name, from a style sheet keyed by the rows' Kit UI ids; the current
+ * one is ticked by the menu's own check mark (`checked`).
+ */
+export const LABEL_ROW_STYLES = LABELS.map(([name, hex]) => `.kui-menu-item[data-kit-ui-id="control:label-${name.replace(/ /g, '')}"] > span:last-of-type::before { background: ${hex}; }`).join('\n')
+
+/** The label every selected layer has, or null (none selected, or several labels). */
+export function currentLabel(layers: ReadonlyArray<{ selected: boolean; label: string }>): string | null {
+  const chosen = layers.filter((layer) => layer.selected)
+  return chosen.length && chosen.every((layer) => layer.label === chosen[0].label) ? chosen[0].label : null
+}
+
+/**
+ * A Label submenu: each colour with its square (a tick beside the square where `current` is it),
+ * then Select Label Group when `onSelectGroup` is given. `onLabel` sets the label (one undo step).
  */
 export function LabelMenu({ current, onLabel, onSelectGroup, testId }: { current?: string; onLabel: (name: string) => void; onSelectGroup?: () => void; testId: string }) {
   const { t } = useKitEditor()
   return (
     <SubMenu label={t('label.menu')} path={`${testId}/label`} testId={`${testId}-label`}>
       {LABELS.map(([name, hex]) => (
-        <MenuItem key={name} icon={swatch(hex) as never} label={t(`label.${name.replace(/ /g, '')}`)} checked={current === name} onSelect={() => onLabel(name)} testId={`${testId}-label-${name.replace(/ /g, '')}`} />
+        <MenuItem key={name} icon={swatch(hex, current === name) as never} label={t(`label.${name.replace(/ /g, '')}`)} onSelect={() => onLabel(name)} testId={`${testId}-label-${name.replace(/ /g, '')}`} />
       ))}
       {onSelectGroup ? <MenuItem label={t('label.selectGroup')} onSelect={onSelectGroup} testId={`${testId}-label-group`} /> : null}
     </SubMenu>

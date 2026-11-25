@@ -24,6 +24,8 @@ kition-motion-time = { workspace = true }
 kition-motion-text = { workspace = true }
 # PNG pictures of `file.render` (and the conformance fixtures' expected previews).
 image = { workspace = true }
+# The frame cache packs the viewer's frames without loss (the render crate uses the same).
+lz4_flex = { version = "0.11", default-features = false, features = ["std", "safe-encode", "safe-decode", "checked-decode"] }
 serde_json = { workspace = true }
 # How long the viewer's frames take to render (a clock that works in a browser).
 web-time = { workspace = true }

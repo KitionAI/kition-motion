@@ -398,6 +398,10 @@ export function RenderQueuePanel({ queue, onClose }: { queue: RenderQueueRuns; o
                     <IconButton icon={TrashIcon} label={t('queue.remove')} disabled={locked} onClick={() => void run('renderQueue.remove', { item: item.id })} data-testid={`motion-queue-item-${item.id}-remove`} />
                   </span>
                 </div>
+                {/* Where it goes, on a line of its own: a new job takes the folder used last. */}
+                <div className="motion-queue-folder" data-testid={`motion-queue-item-${item.id}-folder`} data-folder={folder} title={t('queue.folderHint')}>
+                  {t('queue.into', { folder: folder ? `${folder}/` : t('queue.projectFolder') })}
+                </div>
                 <div className="motion-queue-detail kui-muted" data-testid={`motion-queue-item-${item.id}-detail`}>
                   {[folder ? `${folder}/${file}` : file, format ? t(`export.format.${format.id}`) : t('queue.unsupported', { format: item.output?.format ?? '' }), item.width && item.height ? `${item.width} × ${item.height}` : '', item.frameRate ? t('queue.fps', { fps: Math.round(item.frameRate * 100) / 100 }) : '', item.span ? t(`queue.span.${item.span.kind}`, { start: Math.round(item.span.start * 100) / 100, end: Math.round(item.span.end * 100) / 100 }) : '']
                     .filter(Boolean)

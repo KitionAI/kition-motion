@@ -15,6 +15,9 @@ const WHEEL_ZOOM = 0.002
  */
 export function useTimeView(rows: RefObject<HTMLDivElement | null>, duration: number, frame: number, playhead: number, width: number) {
   const [stored, setStored] = useState<TimeView | null>(null)
+  // How many times the person zoomed or scrolled (not `fit`, not `restore`): the graph editor fits
+  // itself to the keys only until the person zooms.
+  const [moved, setMoved] = useState(0)
   const view = stored ? clampView(stored, duration, frame) : { start: 0, span: duration }
   const latest = useRef({ view, duration, frame, width })
   latest.current = { view, duration, frame, width }
@@ -23,9 +26,10 @@ export function useTimeView(rows: RefObject<HTMLDivElement | null>, duration: nu
    * `next`, or the whole composition when it shows all of it. The next key press or wheel notch
    * zooms from `next` even when it comes before React draws it (two quick presses are two steps).
    */
-  const settle = useCallback((next: TimeView) => {
+  const settle = useCallback((next: TimeView, byHand = true) => {
     latest.current = { ...latest.current, view: next }
     setStored(next.span >= latest.current.duration - 1e-9 ? null : next)
+    if (byHand) setMoved((count) => count + 1)
   }, [])
 
   const zoomBy = useCallback(
@@ -60,8 +64,21 @@ export function useTimeView(rows: RefObject<HTMLDivElement | null>, duration: nu
     return () => element.removeEventListener('wheel', wheel)
   }, [rows, settle])
 
-  /** Shows from `start` to `end` seconds (the graph editor's 适合全部). */
-  const fit = useCallback((start: number, end: number) => settle(clampView({ start, span: Math.max(latest.current.frame * 2, end - start) }, latest.current.duration, latest.current.frame)), [settle])
+  /** Shows from `start` to `end` seconds (the graph editor's 适合全部, and its fit when it opens). */
+  const fit = useCallback((start: number, end: number) => settle(clampView({ start, span: Math.max(latest.current.frame * 2, end - start) }, latest.current.duration, latest.current.frame), false), [settle])
 
-  return { view, zoomed: stored !== null, zoomIn: () => zoomBy(ZOOM_STEP), zoomOut: () => zoomBy(1 / ZOOM_STEP), scrollTo, fit }
+  /** The stretch shown now, to put back with `restore` (null: the whole composition). */
+  const snapshot = useCallback(() => {
+    const { view: current, duration: length } = latest.current
+    return current.span >= length - 1e-9 ? null : current
+  }, [])
+  /** Shows again what `snapshot` gave (the graph editor closing puts back the layer bars' zoom). */
+  const restore = useCallback(
+    (saved: TimeView | null) => {
+      settle(saved ? clampView(saved, latest.current.duration, latest.current.frame) : { start: 0, span: latest.current.duration }, false)
+    },
+    [settle],
+  )
+
+  return { view, zoomed: stored !== null, zoomIn: () => zoomBy(ZOOM_STEP), zoomOut: () => zoomBy(1 / ZOOM_STEP), scrollTo, fit, snapshot, restore, moved }
 }

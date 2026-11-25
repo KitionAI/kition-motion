@@ -2,7 +2,10 @@
 // Find Effect lists the categories (opened with a click), each effect with a one-line description
 // in Chinese; the star adds an effect to Favourites (kept when the browser opens again) and takes
 // it out; an effect applied shows under Recently used; typing still finds an effect and Enter
-// applies it. Results are read from the engine (`layer.tree`'s effects). Prints PASS or FAIL per step.
+// applies it. Round 7g: with every category open, no two effects share a name, in Chinese or in
+// English, and every effect has its own description in both (in American spelling), wrapped to two
+// lines rather than cut. Results are read from the engine (`layer.tree`'s effects). Prints PASS or
+// FAIL per step.
 import { start } from './harness.mjs'
 
 const h = await start(process.argv[2] ?? 'chromium')
@@ -12,11 +15,13 @@ const GAUSSIAN = 'ec.blur.gaussian'
 const GLOW = 'ec.stylize.glow'
 const effects = async () => ((await h.query('layer.tree', { layer: SHAPE })).properties.children ?? []).find((node) => node.match === 'effects')?.children ?? []
 const dialog = () => kit.getByTestId('motion-effect-dialog')
-async function openBrowser() {
+/** Opens Find Effect from the menu bar (in the page's language: `openBrowserHere`). */
+let openBrowserHere = async () => {
   await kit.getByTestId('motion-menu-Effect').click()
   await kit.locator('[role=menu] [role=menuitem]', { hasText: '查找效果' }).first().click()
   await dialog().waitFor()
 }
+const openBrowser = () => openBrowserHere()
 
 try {
   await h.open()
@@ -71,6 +76,57 @@ try {
   await kit.getByTestId(`motion-effect-star-favourites-${GAUSSIAN}`).click()
   await h.until(async () => (await kit.getByTestId('motion-effect-group-favourites').count()) === 0)
   h.step('starred again, it leaves Favourites', (await kit.getByTestId('motion-effect-group-favourites').count()) === 0)
+  await page.keyboard.press('Escape')
+
+  // 5. Round 7g: every effect listed, in Chinese and in English: distinct names, its own description.
+  const everyEffect = async () => {
+    await openBrowser()
+    const closed = kit.locator('[data-testid^="motion-effect-head-category-"][aria-expanded="false"]')
+    for (let i = 0; i < 40 && (await closed.count()) > 0; i += 1) await closed.first().click()
+    const rows = await kit.locator('[data-testid^="motion-effect-option-"]').evaluateAll((options) =>
+      options.map((option) => ({ id: option.getAttribute('data-testid').slice('motion-effect-option-'.length), name: option.querySelector('.motion-effect-name > span')?.textContent ?? '', about: option.querySelector('.motion-effect-about')?.textContent ?? '' })),
+    )
+    return rows
+  }
+  const checkLocale = async (locale, own) => {
+    const rows = await everyEffect()
+    const byName = new Map()
+    for (const row of rows) byName.set(row.name, [...(byName.get(row.name) ?? []), row.id])
+    const shared = [...byName].filter(([, ids]) => ids.length > 1)
+    h.step(`${locale}: no two effects share a name`, rows.length > 250 && shared.length === 0, `${rows.length} effects; ${shared.map(([name, ids]) => `${name}: ${ids.join(', ')}`).join(' | ')}`)
+    const without = rows.filter((row) => !own(row.about.split(' · ')[0] ?? '') || !row.about.includes(' · '))
+    h.step(`${locale}: every effect has its own description`, without.length === 0, `${without.length} without: ${without.slice(0, 6).map((row) => row.id).join(', ')}`)
+    return rows
+  }
+  const zhRows = await checkLocale('zh-CN', (line) => /[㐀-鿿]/.test(line))
+  // The settings listed in Chinese are all named in Chinese (none left out, none in English).
+  const fourColor = zhRows.find((row) => row.id === 'ec.generate.fourcolor')
+  const fastBox = zhRows.find((row) => row.id === 'ec.blur.fastbox')
+  h.step('zh-CN: the settings are listed in Chinese, none left out', fourColor?.about.includes('点 1') && fastBox?.about.includes('模糊半径') && fastBox?.about.includes('迭代') && !zhRows.some((row) => /[A-Za-z][a-z]{5,}/.test(row.about.split(' · ')[1] ?? '')), `${fourColor?.about} | ${fastBox?.about} | ${zhRows.filter((row) => /[A-Za-z][a-z]{5,}/.test(row.about.split(' · ')[1] ?? '')).slice(0, 4).map((row) => row.about).join(' | ')}`)
+  // A long description wraps to a second line instead of being cut.
+  const keylight = kit.getByTestId('motion-effect-about-ec.keying.keylight').first()
+  await keylight.scrollIntoViewIfNeeded()
+  const lines = await keylight.evaluate((element) => element.getBoundingClientRect().height / parseFloat(getComputedStyle(element).lineHeight))
+  h.step('a long description wraps to two lines', lines > 1.6 && lines < 2.4, `${lines.toFixed(2)} lines`)
+  // Searching by the English name still finds an effect renamed in Chinese.
+  await kit.getByTestId('motion-effect-search').fill('CC Radial Blur')
+  await kit.getByTestId('motion-effect-option-ec.blur.ccradial').waitFor()
+  h.step('zh-CN: the English name still finds it', ((await kit.getByTestId('motion-effect-option-ec.blur.ccradial').textContent()) ?? '').includes('放射状模糊'))
+  await page.keyboard.press('Escape')
+  await page.goto(page.url().replace('locale=zh-CN', 'locale=en'))
+  await page.waitForFunction(() => document.getElementById('status')?.textContent?.includes(' open in '), null, { timeout: 60000 })
+  await kit.getByTestId('motion-timeline').waitFor()
+  await page.waitForTimeout(500)
+  await kit.getByTestId(`motion-layer-${SHAPE}`).locator('.motion-row-name').click()
+  await h.until(async () => (await h.layer(SHAPE))?.selected)
+  const openBrowserEn = async () => {
+    await kit.getByTestId('motion-menu-Effect').click()
+    await kit.locator('[role=menu] [role=menuitem]', { hasText: 'Find Effect' }).first().click()
+    await dialog().waitFor()
+  }
+  openBrowserHere = openBrowserEn
+  const enRows = await checkLocale('en', (line) => /[A-Za-z]{3}/.test(line) && !/[㐀-鿿]/.test(line))
+  h.step('en: the descriptions spell "color", never "colour"', enRows.length > 250 && !enRows.some((row) => /colour/i.test(row.about)), enRows.filter((row) => /colour/i.test(row.about)).map((row) => row.id).join(', '))
   await page.keyboard.press('Escape')
 } catch (error) {
   h.crashed(error)

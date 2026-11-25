@@ -3,7 +3,7 @@ import { connectHost, createKitStrings, loadPhrases, withPhrases, type Phrases }
 import '@kition/sdk/editor/styles.css'
 import './app.css'
 import { App } from './App'
-import { CATALOGS, PHRASES } from './strings'
+import { AMERICAN, CATALOGS, PHRASES } from './strings'
 import manifest from '../../kit.json'
 import './commandIcons'
 
@@ -35,7 +35,10 @@ const alone = window.setTimeout(() => {
 void connectHost({ id: 'kit.motion', version: '0.1.3', capabilities: ['ai', 'replica'], brand: manifest.ui.brand, display: manifest.ui.display }).then(async (host) => {
   window.clearTimeout(alone)
   // Kition Motion ships no catalogs of its own; this editor's phrases translate its menus.
-  const phrase = numbered(withPhrases(await loadPhrases({}, host.init.locale), PHRASES, host.init.locale))
+  const translated = withPhrases(await loadPhrases({}, host.init.locale), PHRASES, host.init.locale)
+  // In English, the engine's few British spellings read American ("Screen Color").
+  const english = host.init.locale.toLowerCase().startsWith('en')
+  const phrase = numbered(english ? (text: string) => AMERICAN[text] ?? translated(text) : translated)
   // No StrictMode: its doubled effects would open the document twice, in two engine workers.
   root.render(<App host={host} phrase={phrase} />)
 })

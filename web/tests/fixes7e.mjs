@@ -305,7 +305,10 @@ try {
   await h.until(async () => ((await second.getAttribute('data-layers')) ?? '').includes(`${SHAPE}*`))
   h.step('the second view names the 3D layer and marks it selected', ((await second.getAttribute('data-layers')) ?? '').includes(`${SHAPE}*`), await second.getAttribute('data-layers'))
   const viewer = await kit.locator('.motion-views > .kui-canvas-region').boundingBox()
-  h.step('the viewer keeps over 55% of the window', viewer.width >= 1280 * 0.55, `${viewer.width}`)
+  const pane = await second.boundingBox()
+  // Round 7g widened the second view (about 28 % of the window at 1280 px, its divider drags): the
+  // viewer keeps most of the two views' width, still more than half of it.
+  h.step('the viewer keeps most of the width beside the second view', viewer.width >= (viewer.width + pane.width) * 0.55, `${viewer.width} beside ${pane.width}`)
 } catch (error) {
   h.crashed(error)
 } finally {

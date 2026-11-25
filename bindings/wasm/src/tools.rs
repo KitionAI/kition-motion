@@ -139,6 +139,8 @@ pub(crate) struct ToolState {
     path_edit: Vec<LayerId>,
     /// Whether the status bar says paths are being edited ([`PATH_EDIT_HINT`]).
     path_hint: bool,
+    /// What the 3D handle under the pointer does, as the status bar says it ([`gizmo::hover_hint`]).
+    gizmo_hint: Option<&'static str>,
     /// The Pen has just finished drawing a path (nothing else done with it since): the Selection
     /// tool picked next shows the layers' transform boxes, not the new path's vertices.
     pen_drew: bool,
@@ -162,6 +164,7 @@ impl Default for ToolState {
             pen: None,
             path_edit: Vec::new(),
             path_hint: false,
+            gizmo_hint: None,
             pen_drew: false,
         }
     }
@@ -304,6 +307,18 @@ fn rotate_cursor(degrees: f64) -> String {
         ]);
     }
     drawn_cursor(&lines, "grab")
+}
+
+/// The status bar says what the 3D handle under `p` does (and nothing once the pointer leaves the
+/// handles).
+fn hover_status(session: &Session, st: &mut ToolState, p: Pt) {
+    let hint = gizmo::hover_hint(session, p, st.zoom);
+    if hint != st.gizmo_hint {
+        st.gizmo_hint = hint;
+        if st.status.is_none() {
+            st.status = Some(hint.unwrap_or("").to_owned());
+        }
+    }
 }
 
 /// What the Selection tool would do with a press at `p`: the cursor that says so.
@@ -537,6 +552,7 @@ impl KitTools for MotionDocument {
                         } else {
                             hover_cursor(&self.session, p, st.zoom)
                         };
+                        hover_status(&self.session, st, p);
                     }
                     None
                 }
@@ -605,6 +621,7 @@ impl KitTools for MotionDocument {
             st.zoom = zoom_of(zoom);
             if st.tool == Tool::Selection && matches!(st.gesture, Gesture::Idle) && x.is_finite() && y.is_finite() && self.session.state.text_edit.is_none() {
                 st.cursor = hover_cursor(&self.session, [x, y], st.zoom);
+                hover_status(&self.session, st, [x, y]);
             }
             self.respond(st, None)
         })

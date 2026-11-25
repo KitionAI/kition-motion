@@ -2,7 +2,7 @@
 //! back through the engine's own queries.
 
 use kition_kit::KitDocument;
-use kition_kit::tools::{KitTools, PointerAction, ToolMods, ToolPointer};
+use kition_kit::tools::{KitTools, PointerAction, ToolMods, ToolPointer, ToolRequest};
 use serde_json::{Value, json};
 
 use crate::MotionDocument;
@@ -785,6 +785,39 @@ fn tools_edge_on_rings_turn_and_the_z_dot_moves_in_depth_in_the_front_view() {
     drag(&mut doc, dot, [dot[0], dot[1] - 45.0], ToolMods::default());
     let moved = value(&mut doc, card, "transform/position");
     assert!((moved[2] - start[2] - 45.0).abs() < 2.0 && near(&moved[..2], &start[..2]), "{start:?} → {moved:?}");
+}
+
+/// Over a 3D handle the status bar says what it does (the depth dot: moving forward or back);
+/// leaving the handles clears it.
+#[test]
+fn tools_the_status_bar_says_what_the_3d_handle_under_the_pointer_does() {
+    use super::gizmo::{Part, spot};
+    let mut doc = doc();
+    card(&mut doc);
+    let status = |doc: &mut MotionDocument, p: [f64; 2]| -> Option<String> {
+        let response = doc.pointer(&event(PointerAction::Move, p[0], p[1], ToolMods::default())).unwrap();
+        response.requests.iter().find_map(|request| match request {
+            ToolRequest::Status { text } => Some(text.clone()),
+            _ => None,
+        })
+    };
+    let cases = [
+        (Part::Axis(0), "Drag to move along X"),
+        (Part::Axis(1), "Drag to move along Y"),
+        (Part::Axis(2), "Drag up or down to move forward or back (depth)"),
+        (Part::Ring(0), "Drag to rotate around X"),
+        (Part::Ring(1), "Drag to rotate around Y"),
+    ];
+    for (part, said) in cases {
+        let at = spot(&doc.session, part, 1.0).unwrap_or_else(|| panic!("{part:?} shows in the front view"));
+        assert_eq!(status(&mut doc, at).as_deref(), Some(said), "{part:?}");
+        // Off the handles: cleared.
+        assert_eq!(status(&mut doc, [5.0, 5.0]).as_deref(), Some(""), "{part:?}");
+    }
+    // Still on the same handle: said once.
+    let dot = spot(&doc.session, Part::Axis(2), 1.0).unwrap();
+    status(&mut doc, dot);
+    assert_eq!(status(&mut doc, [dot[0] + 0.5, dot[1]]), None);
 }
 
 #[test]

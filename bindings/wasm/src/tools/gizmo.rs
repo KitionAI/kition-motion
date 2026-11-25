@@ -552,6 +552,24 @@ pub(super) fn hover(session: &Session, p: Pt, zoom: f64) -> Option<&'static str>
     part_at(&g, p, zoom).map(|part| if matches!(part, Part::Ring(_)) { "grab" } else { "move" })
 }
 
+/// What the handle under `p` does, for the status bar (the editor translates it), if `p` is on
+/// the handles: move along an axis or in depth (the dot), move in a plane, or turn about an axis.
+pub(super) fn hover_hint(session: &Session, p: Pt, zoom: f64) -> Option<&'static str> {
+    let g = handles(session, zoom)?;
+    Some(match part_at(&g, p, zoom)? {
+        Part::Axis(axis) if g.stubbed(axis, zoom) => "Drag up or down to move forward or back (depth)",
+        Part::Axis(0) => "Drag to move along X",
+        Part::Axis(1) => "Drag to move along Y",
+        Part::Axis(_) => "Drag to move along Z",
+        Part::Plane(0, 1) => "Drag to move in the XY plane",
+        Part::Plane(1, 2) => "Drag to move in the YZ plane",
+        Part::Plane(..) => "Drag to move in the XZ plane",
+        Part::Ring(0) => "Drag to rotate around X",
+        Part::Ring(1) => "Drag to rotate around Y",
+        Part::Ring(_) => "Drag to rotate around Z",
+    })
+}
+
 /// Where a part of the handles is on the canvas (comp pixels) for the selection now: an arrow's
 /// tip, a square's middle, a ring's point farthest from the arrows (for the browser tests, which
 /// press there, and the unit tests).

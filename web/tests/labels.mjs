@@ -2,8 +2,10 @@
 // A layer's menu sets its colour label (its bar shows it) and Select Label Group selects the
 // layers with the same label; a Project item's menu labels it (its row shows it); each label is
 // one undo step. File ▸ Dependencies ▸ Collect Files… writes a copy of the project and its footage
-// into a folder through the host. Results are read from the engine (`comp.info`, `project.summary`)
-// and the host's files. Prints PASS or FAIL per step.
+// into a folder through the host. Round 7g: the menu bar's Layer ▸ 标签 lists every colour with its
+// square, the current one ticked beside its square; the layer menu ticks the current one beside its
+// square too. Results are read from the engine (`comp.info`, `project.summary`) and the host's
+// files. Prints PASS or FAIL per step.
 import { start, png } from './harness.mjs'
 
 const h = await start(process.argv[2] ?? 'chromium')
@@ -33,6 +35,35 @@ try {
   await h.undo()
   await h.until(async () => (await labelOf(SHAPE)) === startShape)
   h.step('one undo puts the label back', (await labelOf(SHAPE)) === startShape)
+
+  // 1b. Round 7g: the menu bar's Layer ▸ 标签 lists all 17 rows (Shape is Blue), each with its
+  // colour's square, Blue ticked beside its square; the layer menu ticks it beside its square.
+  await layerLabel(SHAPE, 'Blue')
+  await h.until(async () => (await labelOf(SHAPE)) === 'Blue')
+  await kit.getByTestId(`motion-layer-${SHAPE}`).locator('.motion-row-name').click()
+  await h.until(async () => (await h.layer(SHAPE))?.selected)
+  await kit.getByTestId('motion-menu-Layer').click()
+  await kit.locator('[data-kit-ui-id="menu:Layer/Label"]').hover()
+  const rows = kit.locator('[role=menu] [data-kit-ui-id^="control:label-"]')
+  await h.until(async () => (await rows.count()) === 17)
+  const shown = await rows.evaluateAll((items) =>
+    items.map((item) => ({ id: item.getAttribute('data-kit-ui-id'), checked: item.getAttribute('aria-checked'), tick: item.querySelector('svg') != null, square: getComputedStyle(item.querySelector('span:last-of-type'), '::before').backgroundColor })),
+  )
+  const blue = shown.find((row) => row.id === 'control:label-Blue')
+  h.step('Layer ▸ 标签 lists all 17 colours, the current one too', shown.length === 17 && blue != null, shown.map((row) => row.id.slice(14)).join(' '))
+  h.step('each colour shows its square', shown.every((row) => row.square && row.square !== 'rgba(0, 0, 0, 0)') && blue?.square === 'rgb(103, 125, 224)' && new Set(shown.map((row) => row.square)).size === 17, shown.map((row) => row.square).join(' '))
+  h.step('the current one (蓝色) is ticked beside its square, the others not', blue?.checked === 'true' && blue.tick && shown.filter((row) => row.checked === 'true').length === 1, JSON.stringify(blue))
+  await page.keyboard.press('Escape')
+  await kit.getByTestId(`motion-layer-${SHAPE}`).locator('.motion-row-name').click({ button: 'right' })
+  await kit.getByTestId('motion-layer-menu').waitFor()
+  await kit.getByTestId('motion-layer-menu-label').hover()
+  const current = kit.getByTestId('motion-layer-menu-label-Blue')
+  await current.waitFor()
+  const inMenu = await current.evaluate((item) => ({ tick: item.querySelector('.motion-label-icon[data-current] .motion-label-tick')?.textContent, square: getComputedStyle(item.querySelector('.motion-label-swatch')).backgroundColor }))
+  h.step('the layer menu ticks 蓝色 beside its square (not instead of it)', inMenu.tick === '✓' && inMenu.square === 'rgb(103, 125, 224)', JSON.stringify(inMenu))
+  await page.keyboard.press('Escape')
+  await h.undo()
+  await h.until(async () => (await labelOf(SHAPE)) === startShape)
 
   // 2. Select Label Group: Night and Shape Layer 1 both Blue; from Shape alone both get selected.
   await layerLabel(SHAPE, 'Blue')

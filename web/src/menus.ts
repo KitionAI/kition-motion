@@ -246,9 +246,14 @@ export const ASSISTANT_NEEDS = {
   wiggler: 'Wiggler… (Select Two or More Keyframes)',
   smoother: 'Smoother… (Select Three or More Keyframes)',
   convert: 'Convert Expression to Keyframes (Select a Property with an Expression)',
+  convertOff: 'Convert Expression to Keyframes (Turn the Expression On First)',
 } as const
 
-const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean, styled: ReadonlySet<string>, keys: SelectedKeys, cacheAhead: boolean, twoViews: boolean, convertible: boolean): ReadonlyArray<readonly [string, readonly Entry[]]> => [
+/** Whether Convert Expression to Keyframes can run: yes, not until the selected expression is turned on, or not without a selected property with an expression. */
+export type Convertible = boolean | 'off'
+
+
+const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean, styled: ReadonlySet<string>, keys: SelectedKeys, cacheAhead: boolean, twoViews: boolean, convertible: Convertible, labelNow: string | null): ReadonlyArray<readonly [string, readonly Entry[]]> => [
   [
     'File',
     [
@@ -315,7 +320,8 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
       ['Solid Settings…', 'layer.settings'],
       ['Rename…', 'layer.rename'],
       // The selected layers' colour label (as on the timeline's right-click menu).
-      ['Label', [...LABELS.map(([name]) => [name, labelRow(name)] as const), SEPARATOR, ['Select Label Group', 'edit.selectLabelGroup']]],
+      // The current one (every selected layer has it) says so; the menu also ticks it.
+      ['Label', [...LABELS.map(([name]) => [name === labelNow ? `${name} (Current)` : name, labelRow(name)] as const), SEPARATOR, ['Select Label Group', 'edit.selectLabelGroup']]],
       SEPARATOR,
       ['Pre-compose', 'layer.precompose'],
       ['Reveal Layer Source in Project', 'layer.revealSource'],
@@ -421,7 +427,7 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
         'Keyframe Assistant',
         [
           ['Exponential Scale', 'keys.exponentialScale'],
-          [convertible ? 'Convert Expression to Keyframes' : ASSISTANT_NEEDS.convert, KIT.convertExpression],
+          [convertible === true ? 'Convert Expression to Keyframes' : convertible === 'off' ? ASSISTANT_NEEDS.convertOff : ASSISTANT_NEEDS.convert, KIT.convertExpression],
           [(keys.count ?? 0) >= 2 ? 'Wiggler…' : ASSISTANT_NEEDS.wiggler, KIT.wiggler],
           [(keys.count ?? 0) >= 3 ? 'Smoother…' : ASSISTANT_NEEDS.smoother, KIT.smoother],
         ],
@@ -473,8 +479,8 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
 ]
 
 /** Every menu row, in menu order: the Effect menu (every effect the engine has, by category) after Layer. */
-export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo, skipFrames = true, remapOn = false, styled: ReadonlySet<string> = NO_STYLES, keys: SelectedKeys = NO_KEYS, cacheAhead = false, twoViews = false, convertible = true): MenuRow[] {
-  return MENUS(overlays, alignTo, skipFrames, remapOn, styled, keys, cacheAhead, twoViews, convertible).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
+export function menuRows(effects: readonly MotionEffect[], overlays: Overlays, alignTo: AlignTo, skipFrames = true, remapOn = false, styled: ReadonlySet<string> = NO_STYLES, keys: SelectedKeys = NO_KEYS, cacheAhead = false, twoViews = false, convertible: Convertible = true, labelNow: string | null = null): MenuRow[] {
+  return MENUS(overlays, alignTo, skipFrames, remapOn, styled, keys, cacheAhead, twoViews, convertible, labelNow).flatMap(([name, entries]) => [...rowsOf([name], entries), ...(name === 'Layer' ? effectRows(effects) : [])])
 }
 
 /** Menus kept in a read-only document. */
@@ -506,10 +512,9 @@ export function hiddenRow(info: MotionInfo | null, lastEffect: boolean, view: { 
   const comp = info?.comp
   const hidden = new Set<string>()
   if (!selected) for (const command of [...Object.keys(ARRANGE), 'edit.deselectAll', 'edit.selectLabelGroup', ...LABELS.map(([name]) => labelRow(name))]) hidden.add(command)
-  // Layer ▸ Label: not the label every selected layer has already; Select Label Group only when it
-  // would select another layer.
+  // Layer ▸ Label lists every colour (the current one ticked, `currentLabel`); Select Label Group
+  // only when it would select another layer.
   const chosen = layers.filter((layer) => layer.selected)
-  if (chosen.length && chosen.every((layer) => layer.label === chosen[0].label)) hidden.add(labelRow(chosen[0].label))
   if (!layers.some((layer) => !layer.selected && chosen.some((each) => each.label === layer.label))) hidden.add('edit.selectLabelGroup')
   if (layers.length && layers.every((layer) => layer.selected)) hidden.add('edit.selectAll')
   if (!layers.some((layer) => !layer.switches.video)) hidden.add('layer.showAllVideo')
