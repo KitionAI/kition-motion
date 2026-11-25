@@ -523,18 +523,27 @@ function JobDialog({ item, comp, queued, onClose }: { item: QueueItem | null; co
   const [settings0] = useState<JobSettings>(() => ({ ...start, frameRate: item?.frameRate != null && Math.abs(item.frameRate - fps) > 1e-3 ? item.frameRate : null }))
   const [settings, setSettings] = useState<JobSettings>(settings0)
   // While the folder is still the one the editor chose (empty, the composition's sequence folder,
-  // or the folder this job took from the job before it), a change of format chooses it again: an
-  // image sequence its own folder, anything else the folder it started with (when that was the
-  // editor's too) or the folder a new job of that format would get. A folder typed or taken from a
-  // preset in this job's dialog stays, unless the box is emptied again: an empty box is automatic.
+  // numbered or not, or the folder this job took from the job before it), a change of format
+  // chooses it again: an image sequence its own folder, anything else the folder it started with
+  // (when that was the editor's too) or the folder a new job of that format would get. A box that
+  // is empty or holds the composition's sequence folder is automatic whatever was typed before (a
+  // typed name equal to the generated one cannot be told apart from it); any other folder typed or
+  // taken from a preset in this job's dialog stays.
   const [startedAuto] = useState(() => automaticFolder(settings0.folder, compName, t) || (item != null && inheritedFolders.get(item.id) === settings0.folder))
   const [autoFolder, setAutoFolder] = useState(startedAuto)
+  const isAuto = (value: string) => autoFolder || automaticFolder(value.trim(), compName, t)
+  /** The folder a job that is not a sequence gets by itself: never the composition's sequence folder. */
+  const movieFolder = (format: QueueFormat) => {
+    const folder = startedAuto && !SEQUENCES.has(settings0.format) ? settings0.folder : defaultFolder(format, compName, t, new Set())
+    return folder && automaticFolder(folder, compName, t) ? '' : folder
+  }
   const changeFormat = (format: QueueFormat) => {
-    if (!(autoFolder || !settings.folder.trim()) || SEQUENCES.has(format) === SEQUENCES.has(settings.format)) return set({ format })
+    if (!isAuto(settings.folder) || SEQUENCES.has(format) === SEQUENCES.has(settings.format)) return set({ format })
     const own = item ? jobFolder(item, t) : ''
     const others = new Set([...foldersOf(queued, t)].filter((each) => each !== own))
-    const folder = !SEQUENCES.has(format) && startedAuto && !SEQUENCES.has(settings0.format) ? settings0.folder : defaultFolder(format, compName, t, others)
-    set({ format, folder })
+    // The folder chosen here is the editor's again, not the person's.
+    setAutoFolder(true)
+    set({ format, folder: SEQUENCES.has(format) ? defaultFolder(format, compName, t, others) : movieFolder(format) })
   }
   const [from, setFrom] = useState(formatTimecode(start.start, fps))
   const [to, setTo] = useState(formatTimecode(start.end, fps))
@@ -558,7 +567,9 @@ function JobDialog({ item, comp, queued, onClose }: { item: QueueItem | null; co
   const sizeOk = settings.size !== 'custom' || (w !== null && h !== null)
   const folder = presetFolder(settings.folder)
   const valid = spanOk && sizeOk && rateOk && folder !== null && !/[\\/:*?"<>|]/.test(settings.name)
-  const final = (): JobSettings => ({ ...settings, start: startAt ?? 0, end: endAt ?? 1, width: w ?? settings.width, height: h ?? settings.height, frameRate: settings.frameRate === null ? null : customRate, folder: folder ?? '' })
+  // A job that is not a sequence never keeps the composition's sequence folder: that box is automatic.
+  const finalFolder = () => (folder && !SEQUENCES.has(settings.format) && automaticFolder(folder, compName, t) ? movieFolder(settings.format) : (folder ?? ''))
+  const final = (): JobSettings => ({ ...settings, start: startAt ?? 0, end: endAt ?? 1, width: w ?? settings.width, height: h ?? settings.height, frameRate: settings.frameRate === null ? null : customRate, folder: finalFolder() })
   const save = async () => {
     if (!valid || !item) return
     const values = final()
@@ -573,7 +584,7 @@ function JobDialog({ item, comp, queued, onClose }: { item: QueueItem | null; co
     if (renderChanged && (await run('renderQueue.setRenderSettings', { item: item.id, ...renderParams(values) })) === null) return
     if (outputChanged && (await run('renderQueue.setOutputModule', { item: item.id, ...outputParams(values, compName) })) === null) return
     // A folder the person chose here is theirs from now on.
-    if (!autoFolder && values.folder) inheritedFolders.delete(item.id)
+    if (!isAuto(settings.folder) && values.folder) inheritedFolders.delete(item.id)
     onClose()
   }
   const applyPreset = (name: string) => {

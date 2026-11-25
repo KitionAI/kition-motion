@@ -1,6 +1,6 @@
 // The fixes after the round 7i hand test, by hand, in a real browser through the development host: node tests/fixes7i.mjs [chromium|webkit]
 // Every layer setting's source choice, wherever it sits in an effect (inside a group, or declared
-// by the effect itself), offers Source / Masks / Effects & Masks and reads "<setting> 取用"; no
+// by the effect itself), offers Source / Masks / Effects & Masks and reads "<setting> 画面"; no
 // effect setting anywhere offers the bare digits 0 to 9; every group heading inside an effect card
 // reads in Chinese; the misleading setting and option names say what they do; a 3D layer's fourth
 // rotation row reads Z 轴旋转; a new Render Queue job that is an image sequence writes into a folder
@@ -83,7 +83,7 @@ try {
   await selectOnly(SHAPE)
   await card(1)
   const displacement = await setting('effects/#1/displacementMapLayerSource')
-  h.step('Displacement Map ▸ 置换图层 取用 offers 源 / 蒙版 / 效果和蒙版 (its own default 源)', displacement.name === '置换图层 取用' && same(displacement.options, SOURCE_ZH) && displacement.chosen === '源', JSON.stringify(displacement))
+  h.step('Displacement Map ▸ 置换图层 画面 offers 源 / 蒙版 / 效果和蒙版 (its own default 源)', displacement.name === '置换图层 画面' && same(displacement.options, SOURCE_ZH) && displacement.chosen === '源', JSON.stringify(displacement))
   await kit.getByTestId('motion-value-effects.#1.displacementMapLayerSource').selectOption({ label: '蒙版' })
   const sourceValue = async () => (await h.query('prop.get', { layer: SHAPE, path: 'effects/#1/displacementMapLayerSource' })).value
   await h.until(async () => (await sourceValue()) === 1)
@@ -91,19 +91,19 @@ try {
   await card(2)
   const blurMap = await openGroup('effects/#2/blurMap')
   const lensSource = await setting('effects/#2/blurMap/blurMapLayerSource')
-  h.step('Camera Lens Blur ▸ 模糊图 (a group) ▸ 图层 取用 offers the three, 效果和蒙版 chosen', blurMap === '模糊图' && lensSource.name === '图层 取用' && same(lensSource.options, SOURCE_ZH) && lensSource.chosen === '效果和蒙版', `${blurMap}: ${JSON.stringify(lensSource)}`)
+  h.step('Camera Lens Blur ▸ 模糊图 (a group) ▸ 图层 画面 offers the three, 效果和蒙版 chosen', blurMap === '模糊图' && lensSource.name === '图层 画面' && same(lensSource.options, SOURCE_ZH) && lensSource.chosen === '效果和蒙版', `${blurMap}: ${JSON.stringify(lensSource)}`)
   const placement = await setting('effects/#2/blurMap/placement')
   h.step('and 模糊图位置 reads 居中 / 伸缩以适合', placement.name === '模糊图位置' && same(placement.options, ['居中', '伸缩以适合']), JSON.stringify(placement))
   await card(3)
   const bottom = await openGroup('effects/#3/bottom')
   const bottomSource = await setting('effects/#3/bottom/bottomSource')
-  h.step('Caustics ▸ 底部 ▸ 底部 取用 offers the three', bottom === '底部' && bottomSource.name === '底部 取用' && same(bottomSource.options, SOURCE_ZH), `${bottom}: ${JSON.stringify(bottomSource)}`)
+  h.step('Caustics ▸ 底部 ▸ 底部 画面 offers the three', bottom === '底部' && bottomSource.name === '底部 画面' && same(bottomSource.options, SOURCE_ZH), `${bottom}: ${JSON.stringify(bottomSource)}`)
   const anyDigits = await kit.locator('.motion-effect-card select').evaluateAll((selects) => selects.filter((select) => select.options.length > 0 && [...select.options].every((option) => /^\d+$/.test(option.textContent ?? ''))).map((select) => select.getAttribute('aria-label')))
   h.step('no drop-down in these cards lists bare digits', anyDigits.length === 0, anyDigits.join(' | '))
 
   // 2. Every effect, scanned: each drop-down (wherever it sits) has named options, each group
   // heading reads in Chinese (but for abbreviations), each layer setting's source reads
-  // "<setting> 取用" / "<setting> Source". The effects go on a hidden layer in batches; the names
+  // "<setting> 画面" / "<setting> Source". The effects go on a hidden layer in batches; the names
   // and options come from the editor's own `propMeta` and `nodeName` over the engine's tree.
   const list = await h.query('effect.list', {})
   await h.setUp([
@@ -173,7 +173,7 @@ try {
           if (meta?.source) {
             out.sources += 1
             const [inZh, inEn] = [nodeName(child, effect, meta, false, named, tZh), nodeName(child, effect, meta, false, (text) => text, tEn)]
-            if (!inZh.endsWith(' 取用') || /的源|图层源/.test(inZh) || !inEn.endsWith(' Source')) out.badSources.push(`${effect.id}/${child.path}: ${inZh} / ${inEn}`)
+            if (!inZh.endsWith(' 画面') || /的源|图层源/.test(inZh) || !inEn.endsWith(' Source')) out.badSources.push(`${effect.id}/${child.path}: ${inZh} / ${inEn}`)
           }
         }
       }
@@ -189,7 +189,7 @@ try {
   const HEADINGS_ALLOWED = new Set(['Alpha', 'RGB'])
   const headingsLeft = [...new Set(scan.headings)].filter((name) => !HEADINGS_ALLOWED.has(name))
   h.step(`no drop-down of any effect lists bare digits (${scan.enums} drop-downs in ${trees.length} effects)`, scan.digits.length === 0 && scan.enums > 500, scan.digits.slice(0, 20).join(' | '))
-  h.step(`every layer setting’s source reads "<setting> 取用" / "<setting> Source" (${scan.sources})`, scan.sources >= 70 && scan.badSources.length === 0, scan.badSources.slice(0, 10).join(' | '))
+  h.step(`every layer setting’s source reads "<setting> 画面" / "<setting> Source" (${scan.sources})`, scan.sources >= 70 && scan.badSources.length === 0, scan.badSources.slice(0, 10).join(' | '))
   h.step(`every group heading inside an effect card reads in Chinese, but for abbreviations (${scan.groups} headings)`, scan.groups > 150 && headingsLeft.length === 0, headingsLeft.slice(0, 20).join(' | '))
   // (7k) "添加相位来源" and "添加相位 来源" were two settings of one effect: within an effect no two
   // setting names differ only by their spaces, and no group has one name twice, in Chinese or English.

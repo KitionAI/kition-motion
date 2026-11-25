@@ -4,7 +4,8 @@
 // sequence job whose box is left empty still writes into `<comp>_序列` (its row says so before it
 // renders); a folder a new job took from the job before it is a default, so a change to a sequence
 // gives it a sequence folder and a change back gives the inherited folder again, while a folder
-// typed in the job's own dialog stays. The cache-full ▾'s three rows start their text at one left
+// typed in the job's own dialog stays. (7m) A box holding the composition's sequence folder is
+// automatic too, even after typing or when typed by hand: a movie job never saves into it. The cache-full ▾'s three rows start their text at one left
 // edge, with Loop only the cached part off and on. Results are read from the engine
 // (`renderQueue.list`), the host's files and the elements' own boxes. Prints PASS or FAIL per step.
 import { start } from './harness.mjs'
@@ -169,6 +170,44 @@ try {
   h.step('and back to H.264 it is renders again', inheritedBack === 'renders', JSON.stringify(inheritedBack))
   await closeWith('motion-job-dialog-cancel')
   h.step('Cancel changes nothing', (await folderOf(fourth.id).getAttribute('data-folder')) === 'renders' && (await job(fourth.id))?.output?.format === 'H264', `${await folderOf(fourth.id).getAttribute('data-folder')} · ${(await job(fourth.id))?.output?.format}`)
+
+  // (7m) A box holding the composition's sequence folder is automatic whatever was typed before: in
+  // one visit typed into, emptied, PNG sequence (the box becomes <comp>_序列), then H.264: the box
+  // goes back to the inherited folder, and OK keeps the movie out of the sequence folder. The first
+  // two jobs go first, so the sequence folder is <comp>_序列 itself, unnumbered.
+  for (const gone of [first, second]) {
+    await kit.getByTestId(`motion-queue-item-${gone.id}-remove`).click()
+    await h.until(async () => !(await job(gone.id)))
+  }
+  h.step('(set-up) the first two jobs removed', (await jobs()).length === 2, JSON.stringify((await jobs()).map((each) => each.id)))
+  await addJob()
+  await h.until(async () => (await jobs()).length === 3)
+  const fifth = (await jobs())[2]
+  await h.until(async () => (await folderOf(fifth.id).getAttribute('data-folder')) === 'renders')
+  h.step('(set-up) the new job is a movie into renders/ (the folder used last)', fifth.output?.format === 'H264' && (await folderOf(fifth.id).getAttribute('data-folder')) === 'renders', await folderOf(fifth.id).textContent())
+  await openSettings(fifth.id)
+  await typeFolder('x')
+  await emptyFolder()
+  const roundPng = await pickFormat('png')
+  h.step(`typed x, emptied the box, then PNG sequence: the box becomes ${own}`, roundPng === own, JSON.stringify(roundPng))
+  const roundMovie = await pickFormat('h264')
+  h.step(`then H.264: the box no longer holds ${own}, it is the inherited renders again`, roundMovie === 'renders', JSON.stringify(roundMovie))
+  await closeWith('motion-job-dialog-ok')
+  await h.until(async () => (await job(fifth.id))?.output?.format === 'H264' && (await folderOf(fifth.id).getAttribute('data-folder')) === 'renders')
+  const fifthOut = (await job(fifth.id))?.output?.output ?? ''
+  h.step(`OK: the movie job is saved into renders/, its row says so, nothing goes into ${own}`, (await folderOf(fifth.id).getAttribute('data-folder')) === 'renders' && fifthOut.startsWith('renders/') && !fifthOut.includes(own), `${fifthOut} · ${await folderOf(fifth.id).textContent()}`)
+
+  // Typed by hand, <comp>_序列 cannot be told apart from the generated name: for a movie it counts
+  // as automatic too (the folder hint says so), and OK saves the movie into its default folder.
+  await openSettings(fifth.id)
+  await emptyFolder()
+  await typeFolder(own)
+  await closeWith('motion-job-dialog-ok')
+  const typedOwnOut = (await job(fifth.id))?.output?.output ?? ''
+  const typedOwnRow = await folderOf(fifth.id).getAttribute('data-folder')
+  h.step(`${own} typed for a movie counts as automatic: OK keeps it in renders/, never in ${own}/`, typedOwnRow === 'renders' && typedOwnOut.startsWith('renders/') && !typedOwnOut.includes(own), `${typedOwnOut} · ${await folderOf(fifth.id).textContent()}`)
+  const hint = (await folderOf(fifth.id).getAttribute('title')) ?? ''
+  h.step('the folder hint says a typed sequence-folder name counts as not set', hint.includes('手动输入的也算') && hint.includes('单个文件不会存进这个文件夹'), hint)
 
   // 2. The cache-full ▾: the three rows' texts start at one left edge, with the loop off and on.
   await page.context().addInitScript(() => Object.defineProperty(Navigator.prototype, 'deviceMemory', { get: () => undefined, configurable: true }))
