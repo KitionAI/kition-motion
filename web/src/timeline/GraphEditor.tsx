@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type PointerEvent as ReactPointerEvent } from 'react'
 import { EyeIcon, EyeOffIcon, TargetIcon } from '@kition/tessera/icons/react'
-import { useKitEditor } from '@kition/sdk/editor'
+import { Select, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
 import { snapIn, useTimeline } from './context'
 import { sideOf, type PropRead, type Side } from './interp'
@@ -430,6 +430,30 @@ export function GraphEditor({
     if (ease) void run('keys.setEase', { layer: layer.id, path, time: key.layerTime, side: drag.side, dim, influence: ease.influence, speed: ease.speed })
   }
 
+  // The layer whose curves show, chosen here as well as in the viewer (the timeline's layer rows
+  // are hidden while the graph is open): choosing one selects it, and its animated properties show.
+  const chosen = info.layers.filter((layer) => layer.selected)
+  const picker = (
+    <Select
+      className="motion-graph-layer"
+      value={chosen.length === 1 ? String(chosen[0].id) : ''}
+      aria-label={t('graph.layer')}
+      title={t('graph.layerHint')}
+      disabled={!info.layers.length}
+      onChange={(event) => {
+        const id = Number(event.target.value)
+        if (id) void run('layer.select', { layers: [id] })
+      }}
+      data-testid="motion-graph-layer"
+    >
+      {chosen.length !== 1 ? <option value="">{chosen.length ? t('graph.layerSeveral') : t('graph.layerNone')}</option> : null}
+      {info.layers.map((layer, index) => (
+        <option key={layer.id} value={String(layer.id)} data-animated={layer.animated.length > 0 || undefined}>
+          {layer.animated.length ? t('graph.layerAnimated', { index: index + 1, name: layer.name, count: layer.animated.length }) : `${index + 1}. ${layer.name}`}
+        </option>
+      ))}
+    </Select>
+  )
   const head = (
     <div className="motion-graph-tools">
       <div className="motion-graph-modes" role="group" aria-label={t('graph.mode')}>
@@ -448,7 +472,10 @@ export function GraphEditor({
   if (!targets.length) {
     return (
       <div className="motion-graph" ref={box} data-testid="motion-graph">
-        <div className="motion-timeline-names motion-graph-names">{head}</div>
+        <div className="motion-timeline-names motion-graph-names">
+          {picker}
+          {head}
+        </div>
         <p className="kui-muted motion-graph-empty">{t('graph.empty')}</p>
       </div>
     )
@@ -458,6 +485,7 @@ export function GraphEditor({
   return (
     <div className="motion-graph" ref={box} data-testid="motion-graph" data-mode={mode} data-scale={owner ? curveId(owner) : undefined}>
       <div className="motion-timeline-names motion-graph-names">
+        {picker}
         {head}
         <ul className="motion-graph-legend">
           {all.map((curve, curveIndex) => {

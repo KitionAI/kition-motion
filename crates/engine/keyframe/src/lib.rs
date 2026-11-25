@@ -1,4 +1,4 @@
-//! Animated values with After Effects keyframe semantics.
+//! Animated values with the target app's keyframe semantics.
 //!
 //! * **Temporal** interpolation between two keys is linear, Bezier or hold. Bezier eases are given
 //!   per dimension as *speed* (value units per second) and *influence* (fraction of the segment's
@@ -218,7 +218,7 @@ fn solve_u(x0: f64, x1: f64, x2: f64, x3: f64, x: f64) -> f64 {
 /// Fraction of progress 0..1 through a 1D Bezier temporal segment whose value goes from 0 to 1,
 /// with normalised out/in speeds (speed × duration / Δvalue) and influences.
 pub fn ease_progress(out_speed_n: f64, out_inf: f64, in_speed_n: f64, in_inf: f64, x: f64) -> f64 {
-    // The time handles may cross. AE keeps both influences; rescaling them changes the ease.
+    // The time handles may cross. The target app keeps both influences; rescaling them changes the ease.
     let (i0, i1) = (out_inf.clamp(0.0, 1.0), in_inf.clamp(0.0, 1.0));
     let u = solve_u(0.0, i0, 1.0 - i1, 1.0, x);
     bez(0.0, out_speed_n * i0, 1.0 - in_speed_n * i1, 1.0, u)
@@ -314,7 +314,7 @@ fn v3(v: &Value) -> [f64; 3] {
     v.as_vec3()
 }
 
-/// Auto-Bezier spatial tangents for key `i`, as After Effects computes them (Catmull-Rom): the out
+/// Auto-Bezier spatial tangents for key `i`, as the target app computes them (Catmull-Rom): the out
 /// tangent is a sixth of the way from the previous key to the next, the in tangent its mirror, and
 /// key times play no part. An end key uses its one neighbour, so the path leaves the first key
 /// and enters the last one toward the neighbouring key instead of with no tangent.
@@ -337,7 +337,7 @@ pub fn spatial_tangents(keys: &[Keyframe], i: usize) -> ([f64; 3], [f64; 3]) {
 /// Spatial tangents of key `i` as motion-path handles: [`spatial_tangents`], with a side that
 /// has none but a neighbour (a key whose stored tangents are zero, as on a straight path) pointing
 /// where the path leaves the key, toward the segment's next control point, a third of the way to
-/// the neighbouring key. After Effects shows Bezier handles there to drag the path into a curve.
+/// the neighbouring key. The target app shows Bezier handles there to drag the path into a curve.
 pub fn spatial_handles(keys: &[Keyframe], i: usize) -> ([f64; 3], [f64; 3]) {
     let (mut tin, mut tout) = spatial_tangents(keys, i);
     let Some(p) = keys.get(i).map(|k| v3(&k.value)) else { return (tin, tout) };
@@ -426,7 +426,7 @@ pub fn spatial_segment_length(keys: &[Keyframe], i: usize) -> f64 {
 
 /// Re-time roving keyframes: each run of roving keys between two fixed (non-roving) keys gets
 /// times proportional to the motion-path length, so the layer moves through them at one
-/// constant speed (After Effects' "Rove Across Time"). The first and last keys never rove.
+/// constant speed (the usual "Rove Across Time"). The first and last keys never rove.
 /// Returns true when any key time changed. Key order is preserved.
 pub fn retime_roving(keys: &mut [Keyframe], spatial: bool) -> bool {
     let n = keys.len();
@@ -702,8 +702,8 @@ mod tests {
 
     #[test]
     fn temporal_ease_matches_live_ae_with_overlapping_influences() {
-        // Original Rotation probe via AEsync 2.0.4, AE 26.3x87.
-        // AE retains each handle's requested influence even when their sum exceeds 100%.
+        // Original Rotation probe via a sync script 2.0.4, target app 26.3x87.
+        // The target app retains each handle's requested influence even when their sum exceeds 100%.
         for (from, to, out_speed, out_inf, in_speed, in_inf, samples) in [
             (0.0, 100.0, 0.0, 0.8, 0.0, 0.8, [(0.1, 0.59243939036327), (0.25, 4.76438030608764), (0.4, 18.4284394271562), (0.75, 95.2356196939123)]),
             (0.0, 100.0, 20.0, 0.8, 80.0, 0.6, [(0.1, 2.25754942621577), (0.25, 6.99841889412931), (0.4, 14.9334636959052), (0.75, 73.8196785378389)]),
@@ -848,7 +848,7 @@ mod tests {
 
     #[test]
     fn spatial_auto_bezier_tangents_follow_after_effects() {
-        // Measured on After Effects 26.3 with original paths (docs/parity/fidelity/README.md): each
+        // Measured on the target app 26.3 with original paths (docs/parity/fidelity/README.md): each
         // auto-Bezier key's out tangent is (next - previous) / 6 and its in tangent the mirror,
         // whatever the key times. End keys use their one neighbour: (neighbour - key) / 6.
         let p = [[40.0, 300.0, 0.0], [260.0, 80.0, 20.0], [700.0, 420.0, -40.0], [1100.0, 150.0, 0.0]];

@@ -14,7 +14,7 @@ use kition_motion_time::{FrameRate, Tick};
 pub const MAIN_COMP: &str = "Kition Motion Intro";
 pub const SHOWCASE_3D: &str = "3D Showcase";
 
-/// Seconds → the nearest frame of the demo's 29.97 fps comps (AE keeps times frame-aligned).
+/// Seconds → the nearest frame of the demo's 29.97 fps comps (times stay frame-aligned).
 fn t(s: f64) -> Tick {
     FrameRate::FPS_29_97.snap_nearest(Tick::from_seconds_f64(s))
 }

@@ -1,7 +1,7 @@
 //! Geometry for Kition Motion: 2D/3D vectors, 3×3 (2D projective) and 4×4 matrices, rectangles and
 //! the layer-transform composition used by the compositor.
 //!
-//! Conventions follow After Effects' public documentation: y grows downwards, angles are degrees
+//! Conventions follow the target app's public documentation: y grows downwards, angles are degrees
 //! clockwise on screen, 3D uses a left-handed system with +z pointing into the screen, and a 3D
 //! layer's rotation is Orientation (X, Y, Z) followed by X Rotation, Y Rotation, Z Rotation.
 
@@ -198,7 +198,7 @@ impl Mat3 {
         let k = skew.to_radians().tan();
         Mat3::rotate_deg(axis_deg) * Mat3([[1.0, k, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]) * Mat3::rotate_deg(-axis_deg)
     }
-    /// The After Effects 2D layer transform: layer space → parent space.
+    /// The usual 2D layer transform: layer space → parent space.
     /// `p' = position + R(rotation) · S(scale/100) · (p - anchor)`.
     pub fn layer_2d(anchor: Vec2, position: Vec2, scale_pct: Vec2, rotation_deg: f64) -> Mat3 {
         Mat3::translate(position) * Mat3::rotate_deg(rotation_deg) * Mat3::scale(scale_pct / 100.0) * Mat3::translate(-anchor)
@@ -409,7 +409,7 @@ impl Mul for Mat4 {
     }
 }
 
-/// After Effects-style camera: the comp is viewed from `position` towards `poi` with `zoom` = the
+/// Compositing-style camera: the comp is viewed from `position` towards `poi` with `zoom` = the
 /// distance (in pixels) from the eye to the image plane. Returns view×projection that maps world
 /// points to comp pixels (x, y) with depth in z and the perspective divide in w.
 pub fn camera_matrix(comp_w: f64, comp_h: f64, position: Vec3, view: Mat4, zoom: f64) -> Mat4 {
@@ -419,14 +419,14 @@ pub fn camera_matrix(comp_w: f64, comp_h: f64, position: Vec3, view: Mat4, zoom:
     proj * view
 }
 
-/// The default camera AE uses when a comp has 3D layers but no camera: 50 mm equivalent, placed
+/// The default camera used when a comp has 3D layers but no camera: 50 mm equivalent, placed
 /// at (w/2, h/2, -zoom) looking at the comp centre.
 pub fn default_camera_zoom(comp_w: f64) -> f64 {
     // 50mm preset on a 36mm film width: zoom = w * 50 / 36.
     comp_w * 50.0 / 36.0
 }
 
-/// View matrix for a camera at `pos` looking at `poi` (AE: one-node cameras look along +z of
+/// View matrix for a camera at `pos` looking at `poi` (one-node cameras look along +z of
 /// their own orientation; two-node cameras auto-orient to the point of interest).
 pub fn look_at(pos: Vec3, poi: Vec3, extra: Mat4) -> Mat4 {
     let f = (poi - pos).normalize();

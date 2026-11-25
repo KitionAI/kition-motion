@@ -237,7 +237,7 @@ fn enable_per_char(s: &mut Session, p: &Value) -> Result<Value> {
         if let Some(pr) = l.props.prop_mut("text/perChar3d") {
             pr.value = KV::Bool(on);
         }
-        // Per-character 3D makes the layer 3D (as in AE).
+        // Per-character 3D makes the layer 3D (as is usual).
         if on {
             l.switches.three_d = true;
         }

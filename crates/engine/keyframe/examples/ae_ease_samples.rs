@@ -1,4 +1,4 @@
-//! Original scalar keyframe cases for comparison with AE through AEsync.
+//! Original scalar keyframe cases for comparison with the target app through a sync script.
 use kition_motion_keyframe::{Ease, Interp, Keyframe, Value, evaluate};
 use kition_motion_time::Tick;
 use serde_json::json;

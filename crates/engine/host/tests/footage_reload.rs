@@ -1,5 +1,5 @@
 //! Footage changed on disk by another app, through the fully wired session (media decoding
-//! included): File ▸ Reload Footage shows the new pixels and keeps a Photoshop layer item on its
+//! included): File ▸ Reload Footage shows the new pixels and keeps a PSD layer item on its
 //! layer, and `footage.reloadChanged` (Settings ▸ Import ▸ Automatically Reload Footage) finds
 //! changed files by itself.
 
@@ -182,7 +182,7 @@ fn image_sequences_reload_by_themselves_only_with_all_footage() {
     let r = s.execute_checked("file.import", json!({"paths": [&a], "sequence": true})).unwrap();
     let item = ItemId(r["items"][0].as_u64().unwrap());
     assert_eq!(footage(&s, item).sequence.len(), 2, "imported as a sequence");
-    // Non-Sequence Footage (the default, as in After Effects): sequences are never stamped.
+    // Non-Sequence Footage (the default, as is usual): sequences are never stamped.
     assert_eq!(s.prefs.import.auto_reload_footage, "nonSequence");
     assert_eq!(s.execute_checked("footage.reloadChanged", json!({})).unwrap(), json!({"files": 0, "reloaded": 0}));
     png(&a, 0);

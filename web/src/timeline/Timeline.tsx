@@ -42,7 +42,7 @@ function useWidth() {
 }
 
 /**
- * The composition's layers over time, as in After Effects: one row per layer with its switches,
+ * The composition's layers over time: one row per layer with its switches,
  * name, bar from in to out point, and keyframes; the ruler scrubs the current time. A bar drags
  * the layer in time and its ends trim it; a row drags to a new place in the stack; a double-click
  * renames; a right-click opens the layer menu. Keyframes select, drag and marquee-select
@@ -213,7 +213,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
       solo('KeyU', { kind: 'only', key: 'KeyU', paths: 'animated' })
       return true
     }
-    for (const binding of [K.position, K.scale, K.rotation, K.opacity]) {
+    for (const binding of [K.anchor, K.position, K.scale, K.rotation, K.opacity]) {
       if (!pressed(binding, event)) continue
       const code = `Key${binding.keys[0]}`
       solo(code, { kind: 'only', key: code, paths: SOLO_PATHS[code] })

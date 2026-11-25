@@ -1,4 +1,4 @@
-// Kition Motion expression runtime: the After Effects expression object model and global
+// Kition Motion expression runtime: the usual expression object model and global
 // functions, written from the public Expression Language Reference (behaviour only).
 //
 // Natives (Rust): __h(op, ...) host data request; __wig(...) wiggle offsets; __noise(x, y, z);

@@ -116,7 +116,7 @@ fn linearized_working_space_blends_linear_and_round_trips_colours() {
     add_solid(&mut p, cid, [0.2, 0.5, 0.9], BlendMode::Normal, 100.0);
     let o = px(&p, cid);
     assert!((o[0] - 0.2).abs() < 1e-4 && (o[1] - 0.5).abs() < 1e-4 && (o[2] - 0.9).abs() < 1e-4, "{o:?}");
-    // Linearize needs a working space (like AE, where it is disabled without one).
+    // Linearize needs a working space (as is usual: it is disabled without one).
     let (mut p, cid, _) = setup(BitDepth::Bpc32);
     p.settings.linearize = true;
     add_solid(&mut p, cid, [0.0, 1.0, 0.0], BlendMode::Normal, 100.0);
@@ -256,7 +256,7 @@ fn layer_cache_is_keyed_by_colour_settings() {
 }
 
 /// #495: with no working space, Interpret As Linear Light footage is encoded with the project's
-/// Working Gamma: the sRGB curve at 2.2, a pure 2.4 power curve at 2.4 (as After Effects does);
+/// Working Gamma: the sRGB curve at 2.2, a pure 2.4 power curve at 2.4 (as is usual);
 /// Blend Colors Using 1.0 Gamma linearizes with the same curve. A working space ignores it.
 #[test]
 fn working_gamma_24_encodes_linear_footage_with_a_power_curve() {

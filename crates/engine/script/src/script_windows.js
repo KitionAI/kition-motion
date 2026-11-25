@@ -1,11 +1,11 @@
-// Kition Motion scripting: ScriptUI, the dialog / panel object model After Effects scripts use
+// Kition Motion scripting: ScriptUI, the dialog / panel object model scripts usually use
 // (`new Window("dialog", "Title")`, `win.add("button", undefined, "OK")`, `onClick`, `show()`…).
 //
 // Written from the behaviour Adobe's public JavaScript Tools Guide documents. Controls are plain
 // JavaScript objects; after each script step the host reads `__uiSnapshot()` (a JSON
 // description of the open windows) and lays them out, frontends draw them, and user actions come
 // back through `__uiDispatch(window, control, kind, valueJson)`. Modal dialogs block in
-// `show()` (`__uiModal`) until they close, as in After Effects.
+// `show()` (`__uiModal`) until they close, as is usual.
 
 var __uiWins = [];
 // show() results of closed dialogs, by window id.

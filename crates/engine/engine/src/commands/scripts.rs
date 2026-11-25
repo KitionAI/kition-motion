@@ -5,10 +5,10 @@
 //!   settings on the desktop, so dropping `.jsx` files in those folders works too. File ▸ Scripts
 //!   lists them with the bundled sample scripts and extensions ([`BUNDLED`]) and runs them by name; script
 //!   panels appear at the bottom of the Window menu and open as dockable panels
-//!   (`window.scriptPanel`), running with `this` = the panel as in After Effects.
+//!   (`window.scriptPanel`), running with `this` = the panel as is usual.
 //! * **Script windows** (`scriptWindow.*`): list the open script windows, read their control
 //!   trees, click buttons and set values like a user, close them (see [`crate::script_windows`]).
-//! * **Script settings** (`script.settings.*`): After Effects' `app.settings`, string values by
+//! * **Script settings** (`script.settings.*`): the scripting `app.settings`, string values by
 //!   section and key that last between runs ([`SCRIPT_SETTINGS_FILE`]).
 
 use std::collections::BTreeMap;
@@ -24,7 +24,7 @@ pub const SCRIPTS_DIR: &str = "Scripts";
 pub const PANELS_DIR: &str = "Scripts/Script Panels";
 /// The script panels open when Kition Motion last quit (settings store), reopened at launch.
 pub const OPEN_PANELS_FILE: &str = "script_panels.json";
-/// Scripts' `app.settings` in the settings store: `{section: {key: value}}`, as After Effects
+/// Scripts' `app.settings` in the settings store: `{section: {key: value}}`, as compositing apps
 /// keeps them in its preferences.
 pub const SCRIPT_SETTINGS_FILE: &str = "script_settings.json";
 /// User presets of the core Ease Presets panel of v0.6.0 (#254) and where the Ease Presets
@@ -98,7 +98,7 @@ fn settings_save(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// Scripts that ship with Kition Motion (original work): (file name, script panel, source, code).
 /// `sample`s show how to script Kition Motion; `extension`s (in this crate's `extensions/`) are optional tools
-/// built on the public scripting API, outside the core, like third-party scripts in After Effects.
+/// built on the public scripting API, outside the core, like third-party scripts in other compositing apps.
 pub const BUNDLED: &[(&str, bool, &str, &str)] = &[
     ("Create Null at Selected Layers.jsx", false, "sample", include_str!("../../scripts/Create Null at Selected Layers.jsx")),
     ("Rename Layers.jsx", false, "sample", include_str!("../../scripts/Rename Layers.jsx")),
@@ -203,7 +203,7 @@ fn install(s: &mut Session, p: &Value, panel: bool) -> Result<Value> {
     let cfg = s.config.clone().ok_or_else(|| EngineError::Other("this session has no settings folder to install scripts into".into()))?;
     let dir = if panel { PANELS_DIR } else { SCRIPTS_DIR };
     cfg.write(&format!("{dir}/{name}"), &code).map_err(|e| EngineError::Other(format!("cannot install {name}: {e}")))?;
-    // After Effects asks for a restart; our menus pick it up at once.
+    // Other apps ask for a restart; our menus pick it up at once.
     s.toast(if panel {
         format!("Installed script panel {name}: find it at the bottom of the Window menu")
     } else {
@@ -264,7 +264,7 @@ fn remembered_panels(s: &Session) -> Vec<String> {
 }
 
 /// Change the remembered panels with `f` (written only when it changed). The list is kept so
-/// the next launch reopens them, as After Effects reopens the panels of its workspace; quitting
+/// the next launch reopens them, as compositing apps reopen the panels of their workspace; quitting
 /// leaves it as it is.
 fn edit_remembered_panels(s: &Session, f: impl FnOnce(&mut Vec<String>)) {
     let Some(cfg) = &s.config else { return };

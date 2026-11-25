@@ -267,7 +267,7 @@ pub(crate) fn fit(px: Vec<u8>, iw: u32, ih: u32, w: u32, h: u32) -> Vec<u8> {
     out
 }
 
-/// The comp frame number of output frame 0 (sequence numbering follows comp frames, like AE).
+/// The comp frame number of output frame 0 (sequence numbering follows comp frames, as is usual).
 fn first_frame_number(job: &Job, comp: &Comp) -> i64 {
     job.settings.first_frame(comp)
 }

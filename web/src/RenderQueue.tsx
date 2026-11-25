@@ -174,7 +174,7 @@ function settingsOf(item: QueueItem): JobSettings {
   }
 }
 
-/** A new job's settings for `comp`: the ones used last (format, size, rate, folder), the whole composition, its name. */
+/** A new job's settings for `comp`: the ones used last (format, size, rate; the folder of the last job that was not a sequence), the whole composition, its name. */
 function newSettings(comp: { name: string; width: number; height: number }): JobSettings {
   const last = lastSettings()
   return {
@@ -477,7 +477,10 @@ function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: Proj
   const save = async () => {
     if (!valid || !item) return
     const values = final()
-    writeStored(LAST_KEY, { format: values.format, span: values.span === 'custom' ? 'comp' : values.span, size: values.size, width: values.width, height: values.height, frameRate: values.frameRate, folder: values.folder, alpha: values.alpha })
+    // A sequence's folder holds that sequence's frames: the next job does not take it (it keeps
+    // the folder of the last job that was not a sequence, else the project's folder).
+    const folderNext = SEQUENCES.has(values.format) ? (lastSettings().folder ?? '') : values.folder
+    writeStored(LAST_KEY, { format: values.format, span: values.span === 'custom' ? 'comp' : values.span, size: values.size, width: values.width, height: values.height, frameRate: values.frameRate, folder: folderNext, alpha: values.alpha })
     // Only what changed: the engine refuses a change that changes nothing.
     const was = { ...start, frameRate: settings0.frameRate }
     const renderChanged = JSON.stringify(renderParams(values)) !== JSON.stringify(renderParams(was))

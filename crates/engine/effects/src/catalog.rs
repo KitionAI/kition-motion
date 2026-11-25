@@ -11,7 +11,7 @@ pub const PARTIAL: &[(&str, &str)] = &[];
 
 /// Whether Effect Controls shows parameter (or twirl-down group) `param` (spec id path,
 /// `group/param`) of an instance of effect `effect`, given the instance's current values
-/// (`value(spec id)`). After Effects shows only the controls a popup selects: Levels' channel,
+/// (`value(spec id)`). The target app shows only the controls a popup selects: Levels' channel,
 /// Hue/Saturation's Channel Control, the camera system of the card effects, and so on. Every
 /// parameter stays animatable and addressable; this is presentation only.
 pub fn param_shown(effect: &str, param: &str, value: &dyn Fn(&str) -> Option<kition_motion_keyframe::Value>) -> bool {
@@ -230,6 +230,36 @@ mod tests {
         assert!(shown("ec.color.selectivecolor", "details", &[]));
         // Everything else is always shown.
         assert!(shown("ec.blur.gaussian", "blurriness", &[]));
+    }
+
+    #[test]
+    fn shown_names_name_no_other_product() {
+        // Effect, setting and option names are what people read: no other product's name. Equalize's
+        // combined style and the glass and plastic effects' light choice keep their stored values
+        // (the option's position), so projects saved before these names keep their choice.
+        let other = |text: &str| {
+            let lower = text.to_ascii_lowercase();
+            lower.contains("photoshop") || lower.contains("after effects") || text.split(|c: char| !c.is_ascii_alphanumeric()).any(|word| word == "AE")
+        };
+        let mut found = Vec::new();
+        for e in crate::registry() {
+            for p in &e.params {
+                let mut texts = vec![p.name.to_string()];
+                if let kition_motion_project::ParamUi::Popup { options } = &p.ui {
+                    texts.extend(options.iter().cloned());
+                }
+                found.extend(texts.into_iter().filter(|t| other(t)).map(|t| format!("{}/{}: {t}", e.id, p.id)));
+            }
+        }
+        assert!(found.is_empty(), "{found:?}");
+        let options = |id: &str, param: &str| match crate::find(id).and_then(|e| e.params.iter().find(|p| p.id == param)).map(|p| &p.ui) {
+            Some(kition_motion_project::ParamUi::Popup { options }) => options.clone(),
+            _ => Vec::new(),
+        };
+        assert_eq!(options("ec.color.equalize", "style"), ["RGB", "Brightness", "Image Editor Style"]);
+        for id in ["ec.stylize.ccglass", "ec.stylize.ccplastic"] {
+            assert_eq!(options(id, "using"), ["Effect Light", "Composition Lights"], "{id}");
+        }
     }
 
     #[test]

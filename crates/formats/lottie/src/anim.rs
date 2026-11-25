@@ -2,7 +2,7 @@
 //!
 //! A Lottie keyframe holds the start value `s` of a segment and the segment's normalised cubic
 //! Bezier ease: `o` (out tangent of this key) and `i` (in tangent of the next key), each with `x`
-//! (time fraction) and `y` (value progress fraction), per dimension. After Effects' temporal ease
+//! (time fraction) and `y` (value progress fraction), per dimension. The usual temporal ease
 //! is speed (units/s) and influence (fraction of the segment): for a segment of duration `d` and
 //! value change `Δv`,
 //!

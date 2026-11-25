@@ -63,7 +63,7 @@ fn builds_a_comp_end_to_end() {
     let (cid, c) = comp_named(&s, "Main");
     assert_eq!((c.width, c.height), (640, 360));
     assert_eq!(c.duration.seconds(), 4.0);
-    // AE adds new layers at the top.
+    // New layers go at the top, as is usual.
     let names: Vec<&str> = c.layers.iter().map(|l| l.name.as_str()).collect();
     assert_eq!(names, ["Null 1", "Title", "BG"]);
     let title = layer(c, "Title");

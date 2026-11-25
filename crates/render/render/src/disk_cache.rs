@@ -1,5 +1,5 @@
 //! The persistent disk cache (Settings ▸ Media & Disk Cache ▸ Disk Cache): RAM-preview frames
-//! and layer cache entries kept on disk between sessions, like After Effects' disk cache.
+//! and layer cache entries kept on disk between sessions, like the usual disk cache.
 //!
 //! * Entries are files keyed by a 128-bit content hash (`<folder>/v1/<kind>/<2 hex>/<32 hex>.ecc`):
 //!   frames by the hash of the composition's content (the comp and everything it uses, footage

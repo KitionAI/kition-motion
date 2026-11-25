@@ -1,6 +1,6 @@
 [package]
 name = "kition-motion-expr"
-description = "After Effects-compatible expressions: a boa JavaScript runtime with the AE object model (thisComp, thisLayer, wiggle, loopOut, valueAtTime…) and array maths"
+description = "Compositing expressions: a boa JavaScript runtime with the usual expression object model (thisComp, thisLayer, wiggle, loopOut, valueAtTime…) and array maths"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

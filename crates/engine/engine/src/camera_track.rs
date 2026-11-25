@@ -7,7 +7,7 @@
 //! camera"). Each analysis renders and tracks fresh inputs: stored tracks do not prove the
 //! complete preceding-effect, precomp and expression dependencies. Results are written into
 //! the effect's hidden parameters as one undo step; edits that change the layer's frames clear
-//! them and queue the effect again ([`invalidate`], run after every edit), like After Effects.
+//! them and queue the effect again ([`invalidate`], run after every edit), as is usual.
 //!
 //! Composition space: the solve's canonical frame maps to comp world by
 //! [`CameraSolve::world`] with the zoom of the first solved frame (focal length × the layer's
@@ -49,7 +49,7 @@ pub struct CameraProgress {
 }
 
 impl CameraProgress {
-    /// The viewer banner text, as After Effects words it.
+    /// The viewer banner text, in the usual wording.
     pub fn banner(&self) -> String {
         match self.step {
             2 => "Solving camera".into(),
@@ -541,7 +541,7 @@ impl Session {
     }
 
     /// Frontends call this every frame: finishes analyses and (with `auto`) starts queued
-    /// (re-)analyses in the background, like After Effects.
+    /// (re-)analyses in the background, as is usual.
     pub fn poll_camera(&mut self, auto: bool) -> bool {
         let changed = self.poll_camera_job();
         if auto && self.camera_job.is_none() && self.offloaded(JobKind::Camera).is_none() {

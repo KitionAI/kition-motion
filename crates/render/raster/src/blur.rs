@@ -157,7 +157,7 @@ pub fn gaussian_blur(img: &Image, sigma_x: f64, sigma_y: f64, repeat: bool) -> I
     box_passes(img, &rx, &ry, repeat)
 }
 
-/// Motion blur along `angle_deg` (0 = vertical in AE's Directional Blur, measured clockwise from
+/// Motion blur along `angle_deg` (0 = vertical in the usual Directional Blur, measured clockwise from
 /// up) over `length` pixels.
 pub fn directional_blur(img: &Image, angle_deg: f64, length: f64) -> Image {
     if length < 0.5 {

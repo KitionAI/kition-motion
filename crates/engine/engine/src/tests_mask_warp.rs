@@ -313,7 +313,7 @@ fn warp_stabilizer_analyzes_and_stabilizes() {
     assert_eq!(r["frames"], 25, "{r}");
     assert_eq!(r["status"]["analyzed"], true, "{r}");
     assert!(s.warp_pending.is_empty() && s.warp_job.is_none());
-    // Groups and AE parameter names.
+    // Groups and target-app parameter names.
     let g = s.active_comp().unwrap().layer(clip).unwrap().props.find_group(fx).unwrap().clone();
     let names: Vec<&str> = g.groups().map(|g| g.name.as_str()).collect();
     assert_eq!(names, ["Stabilization", "Borders", "Advanced"]);

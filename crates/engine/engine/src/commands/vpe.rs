@@ -1,5 +1,5 @@
-//! File ▸ Import ▸ Vanishing Point (.vpe): present in the menu like After Effects', but always
-//! disabled. The `.vpe` exchange format Photoshop's Vanishing Point filter writes has no public
+//! File ▸ Import ▸ Vanishing Point (.vpe): present in the menu as is usual, but always
+//! disabled. The `.vpe` exchange format a Vanishing Point filter writes has no public
 //! specification, and Kition Motion implements formats only from published specs (clean room), so
 //! the entry explains that instead of importing. See docs/parity/file-format-parity.md.
 

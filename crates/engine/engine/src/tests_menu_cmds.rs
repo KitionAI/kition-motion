@@ -348,7 +348,7 @@ fn keyframe_clipboard_paste_and_paste_reversed() {
 
 /// #493: Edit ▸ Copy with a property selected copies that property (its value when it isn't
 /// animated, its keys when it is), and Paste sets the same property of the selected layer, as
-/// in After Effects, instead of copying the whole layer.
+/// as is usual, instead of copying the whole layer.
 #[test]
 fn copy_a_selected_property_pastes_onto_the_same_property() {
     let mut s = comp();
@@ -1156,7 +1156,7 @@ fn dragging_a_key_past_another_keeps_it() {
         s.execute("keys.move", json!({"delta": 1.0 / 30.0, "merge": "key-drag"})).unwrap();
     }
     assert_eq!(key_times(&s, a), vec![2.0, 3.0], "the 2 s key passed over is still there");
-    // Dropped exactly on a key: it replaces it, as in After Effects.
+    // Dropped exactly on a key: it replaces it, as is usual.
     s.history.merge_key = None;
     s.execute("keys.move", json!({"delta": -1.0, "merge": "key-drag-2"})).unwrap();
     assert_eq!(key_times(&s, a), vec![2.0]);

@@ -86,14 +86,14 @@ mod imp {
         Duration::from_secs_f64(p.get("timeout").and_then(J::as_f64).unwrap_or(10.0).clamp(0.0, 3600.0))
     }
 
-    /// `host:port` (After Effects' form) → socket addresses.
+    /// `host:port` (the usual form) → socket addresses.
     fn addr(host: &str) -> Result<Vec<std::net::SocketAddr>, String> {
         let a = host.to_socket_addrs().map_err(|e| format!("bad address `{host}` (use host:port): {e}"))?;
         Ok(a.collect())
     }
 
     /// Text ↔ bytes in the socket's encoding: UTF-8, else one byte per character (ASCII /
-    /// BINARY, as in After Effects).
+    /// BINARY, as is usual).
     fn encode(s: &str, utf8: bool) -> Vec<u8> {
         if utf8 { s.as_bytes().to_vec() } else { s.chars().map(|c| (c as u32).min(255) as u8).collect() }
     }

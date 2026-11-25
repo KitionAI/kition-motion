@@ -1,4 +1,4 @@
-//! Motion trackers in the property tree, laid out like After Effects':
+//! Motion trackers in the property tree, laid out as is usual:
 //!
 //! ```text
 //! Motion Trackers                      (match `motionTrackers`, first group of the layer)
@@ -234,7 +234,7 @@ impl Layer {
     pub fn tracker(&self, uid: Uid) -> Option<(&PropGroup, &TrackerSettings)> {
         self.trackers().find(|(g, _)| g.uid == uid)
     }
-    /// The Motion Trackers group, created (first in the layer's tree, like AE) when missing.
+    /// The Motion Trackers group, created (first in the layer's tree, as is usual) when missing.
     pub fn motion_trackers_mut(&mut self, ids: &mut Ids) -> Option<&mut PropGroup> {
         if self.props.sub(MOTION_TRACKERS).is_none() {
             self.props.children.insert(0, motion_trackers(ids).into());

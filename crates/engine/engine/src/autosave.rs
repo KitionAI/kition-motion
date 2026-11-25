@@ -1,7 +1,7 @@
 //! Auto-save and crash recovery (PRJ-7).
 //!
 //! - **Auto-save**: every *n* minutes a dirty project is written to an "Kition Motion Auto-Save"
-//!   folder next to it (or a custom folder) as `<name> auto-save N.kmotion`, the After Effects
+//!   folder next to it (or a custom folder) as `<name> auto-save N.kmotion`, the usual
 //!   naming. Slots rotate through 1…max versions, overwriting the oldest. Writes are atomic
 //!   (temporary file + rename), so a crash mid-write never damages the previous auto-save.
 //! - **Crash recovery**: while the app runs, a sentinel (`session.lock` in the config store)
@@ -244,7 +244,7 @@ pub fn end(store: &dyn ConfigStore) {
     let _ = store.remove(SENTINEL);
 }
 
-/// After Effects' Increment and Save name: `Intro.kmotion` → `Intro 2.kmotion`, `Intro 2.kmotion`
+/// The usual Increment and Save name: `Intro.kmotion` → `Intro 2.kmotion`, `Intro 2.kmotion`
 /// → `Intro 3.kmotion` (skipping names that exist; the extension, `.ecprojx` too, is kept).
 pub fn increment_path(path: &str, exists: impl Fn(&str) -> bool) -> String {
     let p = Path::new(path);

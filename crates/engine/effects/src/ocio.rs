@@ -1485,7 +1485,7 @@ pub fn specs() -> Vec<EffectSpec> {
             "Color Stabilizer",
             cc,
             vec![
-                // The pivot frame (After Effects' Set Frame button stores it).
+                // The pivot frame (the Set Frame button stores it).
                 p("referenceFrame", "Reference Frame (s)", num(0.0), slider(-100000.0, 100000.0, 0.0, 60.0, 2)),
                 p("stabilize", "Stabilize", Value::Enum(0), popup(&["Brightness", "Levels", "Curves"])),
                 p("blackPoint", "Black Point", Value::Vec2([0.25, 0.75]), ParamUi::Point),

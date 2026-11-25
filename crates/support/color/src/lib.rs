@@ -77,7 +77,7 @@ pub fn linear_to_srgb(v: f32) -> f32 {
     if v <= 0.003_130_8 { v * 12.92 } else { 1.055 * v.max(0.0).powf(1.0 / 2.4) - 0.055 }
 }
 
-/// Rec. 709 luma weights (AE's luminance for luma mattes/keys).
+/// Rec. 709 luma weights (the usual luminance for luma mattes/keys).
 pub fn luminance(r: f32, g: f32, b: f32) -> f32 {
     0.2126 * r + 0.7152 * g + 0.0722 * b
 }

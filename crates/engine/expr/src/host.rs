@@ -232,7 +232,7 @@ fn compact(s: &str) -> String {
     s.chars().filter(|c| !c.is_whitespace()).flat_map(char::to_lowercase).collect()
 }
 
-/// AE attribute names that differ from our match ids.
+/// Target-app attribute names that differ from our match ids.
 fn alias(key: &str) -> &str {
     match key {
         "anchorPoint" => "anchor",

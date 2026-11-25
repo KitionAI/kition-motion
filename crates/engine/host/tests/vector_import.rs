@@ -1,4 +1,4 @@
-//! Photoshop and SVG import through the fully wired session (media decoding included): pixels
+//! PSD and SVG import through the fully wired session (media decoding included): pixels
 //! of imported compositions, SVG footage at any scale, and Create Shapes from Vector Layer.
 
 use kition_motion_engine::render::RenderOpts;
@@ -45,7 +45,7 @@ fn psd_doc() -> WDoc {
     d
 }
 
-/// Straight-alpha over of the layers as Photoshop composites them (normal blending), as the
+/// Straight-alpha over of the layers as PSD readers composite them (normal blending), as the
 /// merged image to compare the imported composition with.
 fn reference(bytes: &[u8]) -> Vec<[f32; 4]> {
     let p = kition_motion_psd::Psd::parse(bytes.to_vec()).unwrap();

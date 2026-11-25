@@ -267,7 +267,10 @@ export function waitingRows(keys: SelectedKeys, convertible: Convertible): strin
 
 /** A style sheet greying `rows` (`kit:…` ids) in the menu bar, keyed by their Kit UI ids (`control:…`). */
 export function waitingRowStyles(rows: readonly string[]): string {
-  return rows.map((row) => `.kui-menu-item[data-kit-ui-id="control:${row.replace(/^kit:/, '')}"] { color: var(--kit-text-muted); cursor: default; }`).join('\n')
+  // The SDK's look of a disabled row (`.kui-menu-item:disabled`: faded, no hand cursor, no hover).
+  return rows
+    .map((row) => `.kui-menu-item[data-kit-ui-id="control:${row.replace(/^kit:/, '')}"] { opacity: 0.4; cursor: default; }\n.kui-menu-item[data-kit-ui-id="control:${row.replace(/^kit:/, '')}"]:hover { background: transparent; }`)
+    .join('\n')
 }
 
 

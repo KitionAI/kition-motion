@@ -1,4 +1,4 @@
-//! Script Panels, as in After Effects: scripts in the user's `Scripts/Script Panels` folder
+//! Script Panels, as is usual: scripts in the user's `Scripts/Script Panels` folder
 //! (in the settings folder) are listed at the bottom of the Window menu, open as dockable panels
 //! with `this` = the panel, and the panels open when the app quits open again at the next launch.
 

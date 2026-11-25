@@ -1,6 +1,6 @@
 //! Paint: the Brush, Clone Stamp and Eraser tools' strokes.
 //!
-//! Paint is non-destructive, as in After Effects: strokes live in the layer's **Paint** effect
+//! Paint is non-destructive, as is usual: strokes live in the layer's **Paint** effect
 //! as property groups, so every stroke property animates and the layer source is never changed.
 //!
 //! ```text
@@ -38,7 +38,7 @@ use crate::{Buf, EffectCtx, EffectSpec, Params, p, popup, slider};
 /// Effect id of the Paint effect.
 pub const ID: &str = "ec.paint.paint";
 
-/// Paint panel blending modes (AE's paint mode list).
+/// Paint panel blending modes (the usual paint mode list).
 pub const MODES: [BlendMode; 22] = [
     BlendMode::Normal,
     BlendMode::Darken,

@@ -176,7 +176,7 @@ impl Importer for LentImporter {
     }
 }
 
-/// The transform properties a properties panel shows, in After Effects' order.
+/// The transform properties a properties panel shows, in the timeline's order.
 const TRANSFORM: [&str; 5] = ["transform/anchor", "transform/position", "transform/scale", "transform/rotation", "transform/opacity"];
 
 /// One open Kition Motion project.

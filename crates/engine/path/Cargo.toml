@@ -1,6 +1,6 @@
 [package]
 name = "kition-motion-path"
-description = "Bezier shapes: AE vertex model ⇄ kurbo, parametric shapes, path operations, stroking/dashing and anti-aliased coverage rasterisation"
+description = "Bezier shapes: vertex/tangent model ⇄ kurbo, parametric shapes, path operations, stroking/dashing and anti-aliased coverage rasterisation"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

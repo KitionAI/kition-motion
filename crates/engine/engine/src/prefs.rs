@@ -1,4 +1,4 @@
-//! Settings (After Effects' Preferences): a versioned serde model, addressed by dotted keys
+//! Settings (the Preferences dialog): a versioned serde model, addressed by dotted keys
 //! (`general.undoLevels`, `autoSave.intervalMinutes`, `labels.3.name`), plus the page schema the
 //! Settings dialog and agents (`prefs.pages`) are built from.
 //!
@@ -7,7 +7,7 @@
 //! version) are kept and written back, and older layouts are migrated ([`migrate`]).
 //!
 //! Every setting in [`pages`] says whether it already changes behaviour (`live`). Settings that
-//! don't yet are still shown (After Effects parity of the dialog) and are listed in
+//! don't yet are still shown (target-app parity of the dialog) and are listed in
 //! `docs/features/preferences.md`; a test keeps that list in step with the schema.
 
 use std::collections::BTreeMap;
@@ -217,7 +217,7 @@ page!(Import {
     report_missing_frames: bool = true,
     /// Automatically Reload Footage whose file another app changed (size or modification time),
     /// checked every two seconds and when the window comes back to the front: `off`,
-    /// `nonSequence` (the default, as in After Effects: image sequences are left alone) or `all`.
+    /// `nonSequence` (the default, as is usual: image sequences are left alone) or `all`.
     auto_reload_footage: String = "nonSequence".into(),
     /// Interpret unlabeled alpha as: `ask`, `guess`, `ignore`, `straight`, `premultiplied`.
     unlabeled_alpha: String = "ask".into(),
@@ -934,7 +934,7 @@ pub fn section_key(page: &str) -> Option<&'static str> {
     })
 }
 
-/// Settings page id for a page name, including older After Effects page names
+/// Settings page id for a page name, including older target-app page names
 /// (Auto-Save → Project, Media & Disk Cache → Disk, Memory & Performance → Memory & CPU…).
 pub fn page_id(name: &str) -> Option<&'static str> {
     let n = name.to_ascii_lowercase().replace([' ', '&', '-', '_'], "");
@@ -1066,7 +1066,7 @@ const B: Kind = Kind::Bool;
 const ON_OFF_RES: &[(&str, &str)] = &[("1/2", "1/2"), ("1/4", "1/4"), ("1/8", "1/8")];
 const STYLES: &[(&str, &str)] = &[("Lines", "lines"), ("Dashed Lines", "dashed"), ("Dots", "dots")];
 
-/// The Settings pages in After Effects 2026 order.
+/// The Settings pages in the target app's 2026 order.
 pub fn pages() -> Vec<Page> {
     use Item::*;
     vec![

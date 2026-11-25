@@ -42,7 +42,7 @@ pub fn noise1(seed: u64, x: f64) -> f64 {
     a + (b - a) * u
 }
 
-/// Smooth 3D value noise in `[-1, 1]` (AE's `noise()`: nearby inputs give nearby outputs).
+/// Smooth 3D value noise in `[-1, 1]` (the usual `noise()`: nearby inputs give nearby outputs).
 pub fn noise3(x: f64, y: f64, z: f64) -> f64 {
     if !(x.is_finite() && y.is_finite() && z.is_finite()) {
         return 0.0;

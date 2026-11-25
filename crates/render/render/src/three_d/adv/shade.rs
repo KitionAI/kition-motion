@@ -156,7 +156,7 @@ pub fn sample(t: &TexInfo, texels: &[[f32; 4]], u: f32, v: f32) -> [f32; 4] {
     o
 }
 
-/// Equirectangular coordinates of a world direction (AE world: +Y down; the environment's up
+/// Equirectangular coordinates of a world direction (world space: +Y down; the environment's up
 /// is −Y), rotated about the vertical axis by `rot` radians.
 #[inline]
 pub fn equirect_uv(d: [f32; 3], rot: f32) -> (f32, f32) {
@@ -262,7 +262,7 @@ pub fn light_shadow(s: &Scene, l: &Light, p: [f32; 3], n_l: f32) -> f32 {
     1.0 - l.shadow_darkness * (1.0 - f)
 }
 
-/// Distance attenuation × spot cone of a light at `p` (AE falloff modes).
+/// Distance attenuation × spot cone of a light at `p` (the usual falloff modes).
 pub fn attenuation(l: &Light, p: [f32; 3], to_l: [f32; 3], dist: f32) -> f32 {
     let mut k = match l.falloff {
         1 if l.kind != 0 => {

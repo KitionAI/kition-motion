@@ -116,7 +116,7 @@ pub fn basis_view(eye: Vec3, forward: Vec3, down_hint: Vec3) -> Mat4 {
     Mat4([[r.x, r.y, r.z, 0.0], [d.x, d.y, d.z, 0.0], [f.x, f.y, f.z, 0.0], [0.0, 0.0, 0.0, 1.0]]) * Mat4::translate(-eye)
 }
 
-/// Orientation angles (degrees, AE order X→Y→Z with Z = 0) that point +z along `dir`.
+/// Orientation angles (degrees, X→Y→Z order with Z = 0) that point +z along `dir`.
 pub fn orientation_for(dir: Vec3) -> [f64; 3] {
     let d = dir.normalize();
     let x = (-d.y).clamp(-1.0, 1.0).asin().to_degrees();
@@ -129,7 +129,7 @@ fn norm360(a: f64) -> f64 {
     if (r - 360.0).abs() < 1e-9 { 0.0 } else { r }
 }
 
-/// AE's camera presets (35 mm film width 36 mm): (name, focal length mm).
+/// The usual camera presets (35 mm film width 36 mm): (name, focal length mm).
 pub const PRESETS: [(&str, f64); 9] =
     [("15mm", 15.0), ("20mm", 20.0), ("24mm", 24.0), ("28mm", 28.0), ("35mm", 35.0), ("50mm", 50.0), ("80mm", 80.0), ("135mm", 135.0), ("200mm", 200.0)];
 

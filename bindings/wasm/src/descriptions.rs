@@ -26,7 +26,7 @@ pub fn description(id: &str) -> &'static str {
         }
         "app.about" => "Editor window only: shows the About box. Headless sessions accept it and change nothing.",
         "app.capabilities" => {
-            "Returns what this build can do: version, command count, effect counts (total, GPU, float), export formats, whether import, expressions, scripting and GPU are available, and the After Effects parity summary."
+            "Returns what this build can do: version, command count, effect counts (total, GPU, float), export formats, whether import, expressions, scripting and GPU are available, and the feature parity summary."
         }
         "app.commandPalette" => {
             "Editor window only: opens Quick Apply to search commands and effects by name. Headless sessions accept it and change nothing; agents use <prefix>_commands."
@@ -164,7 +164,7 @@ pub fn description(id: &str) -> &'static str {
             "Writes the frame at `time` as a multi-layer OpenEXR to `path` (.exr): the composite plus R,G,B,A per visible layer, linear and premultiplied. Returns path, channels, width, height and time."
         }
         "comp.saveFrameAsPsd" => {
-            "Writes the frame at `time` as a layered Photoshop file to `path` (.psd): one layer per visible comp layer with its blend mode and opacity, plus the merged frame. Returns path, layer count and size."
+            "Writes the frame at `time` as a layered PSD file to `path` (.psd): one layer per visible comp layer with its blend mode and opacity, plus the merged frame. Returns path, layer count and size."
         }
         "comp.setPosterTime" => "Sets the composition's poster frame (its thumbnail in the project) to the current time. Changes no layers.",
         "comp.setSwitch" => {
@@ -263,7 +263,7 @@ pub fn description(id: &str) -> &'static str {
             "Returns the editor's session state: active comp, current time, selected layers, properties, keyframes and mask vertices, open panels and viewer settings. Use it to see what selection-based commands will act on."
         }
         "effect.apply" => {
-            "Applies an effect (`effect`: id or name, e.g. \"Gaussian Blur\", \"Gradient Ramp\", \"Glow\") to `layers` (default selected). `params` sets its settings in the same step, by name or match id (`{\"Blurriness\": 30}`, `{\"Start Color\": \"#1d4ed8\"}`); a wrong name changes nothing and the error lists the right ones. Settings start at After Effects' defaults (blurs, Sharpen and Noise at 0, where they change nothing). Answers each instance's path (`effects/#2`) and the parameters with their paths and values, to change or animate with prop.set and prop.addKey."
+            "Applies an effect (`effect`: id or name, e.g. \"Gaussian Blur\", \"Gradient Ramp\", \"Glow\") to `layers` (default selected). `params` sets its settings in the same step, by name or match id (`{\"Blurriness\": 30}`, `{\"Start Color\": \"#1d4ed8\"}`); a wrong name changes nothing and the error lists the right ones. Settings start at the usual defaults (blurs, Sharpen and Noise at 0, where they change nothing). Answers each instance's path (`effects/#2`) and the parameters with their paths and values, to change or animate with prop.set and prop.addKey."
         }
         "effect.applyLast" => {
             "Applies the most recently applied effect again, to `layers` or the selection, with the same parameters as effect.apply. Fails when no effect has been applied in this session."
@@ -297,7 +297,7 @@ pub fn description(id: &str) -> &'static str {
             "Moves one effect (`effect` by uid, name or index) on `layer` to position `index` (1-based) in the effect stack; effects render top to bottom, so order changes the result."
         }
         "effect.reset" => {
-            "Effect Controls' Reset: every parameter back to its default. Animated parameters get a keyframe at the current time with the default value (as in After Effects); static ones change their value."
+            "Effect Controls' Reset: every parameter back to its default. Animated parameters get a keyframe at the current time with the default value; static ones change their value."
         }
         "effect.toggle" => "Switches the effect `effect` on `layer` on or off (`value`; without it, toggles). A switched-off effect does not render.",
         "effect.warning" => {
@@ -490,7 +490,7 @@ pub fn description(id: &str) -> &'static str {
             "Points footage `item` (default selected) at the file at `path`, keeping every layer that uses it; a numbered still brings its image sequence unless `sequence: false`. Use for swapping media without rebuilding layers."
         }
         "file.replaceWithLayeredComp" => {
-            "File ▸ Replace Footage ▸ With Layered Comp: a layered (Photoshop) footage item becomes a composition of its layers; every layer using the footage now uses the comp, and the footage item goes. One undo step."
+            "File ▸ Replace Footage ▸ With Layered Comp: a layered (PSD) footage item becomes a composition of its layers; every layer using the footage now uses the comp, and the footage item goes. One undo step."
         }
         "file.replaceWithPlaceholder" => {
             "Turns footage `item` into a placeholder with its size, frame rate and duration (override with `width`, `height`, `frameRate`, `duration`), keeping the layers that use it."
@@ -501,7 +501,7 @@ pub fn description(id: &str) -> &'static str {
         }
         "file.revert" => "Reloads the project from its saved file, discarding every change since the last save. Fails if the project was never saved.",
         "file.runScript" => {
-            "File ▸ Scripts ▸ Run Script File…: `.jsx` / `.js` files run as JavaScript against the After Effects-style object model ([`Session::script`]); anything else is a command script: a JSON array or JSON lines of `{\"command\": id, \"params\": {…}}` (also accepts the control channel's `{\"method\": \"engine.execute\", \"params\": {\"id\", \"params\"}}`)."
+            "File ▸ Scripts ▸ Run Script File…: `.jsx` / `.js` files run as JavaScript against the scripting object model ([`Session::script`]); anything else is a command script: a JSON array or JSON lines of `{\"command\": id, \"params\": {…}}` (also accepts the control channel's `{\"method\": \"engine.execute\", \"params\": {\"id\", \"params\"}}`)."
         }
         "file.save" => {
             "Saves the project to its file, or to `path` when given (the project then continues in that file). Fails when the project has no path yet: use file.saveAs."
@@ -628,7 +628,7 @@ pub fn description(id: &str) -> &'static str {
         "keys.selectPrevious" => "Adds to the selection every keyframe before the first selected one on the same properties.",
         "keys.set" => "Edit one key directly: move it in time and/or set its value (Graph Editor drags).",
         "keys.applyEase" => {
-            "Eases every segment between consecutive keyframes of one property (`path` or `prop`; `from`/`to` in layer seconds limit the keys) with a named curve: snappy, out, smooth, swift, linear, or the overshoot landings settle, pop, reseat, fly (`bezier: [x1,y1,x2,y2]` for any CSS cubic-bezier). Curves become exact AE temporal ease (speed and influence); on a motion path an overshoot inserts a key at each turning point. Spring presets (crisp, lively, noBounce, cardFlip, or spring with damping/stiffness/mass) attach an expression that springs the motion into the last key. One undo step."
+            "Eases every segment between consecutive keyframes of one property (`path` or `prop`; `from`/`to` in layer seconds limit the keys) with a named curve: snappy, out, smooth, swift, linear, or the overshoot landings settle, pop, reseat, fly (`bezier: [x1,y1,x2,y2]` for any CSS cubic-bezier). Curves become exact temporal ease (speed and influence); on a motion path an overshoot inserts a key at each turning point. Spring presets (crisp, lively, noBounce, cardFlip, or spring with damping/stiffness/mass) attach an expression that springs the motion into the last key. One undo step."
         }
         "keys.easePresets" => {
             "Lists the ease presets keys.applyEase takes: curves (id, CSS bezier, when to use) and springs (id, damping, stiffness, mass, when to use). Read-only."
@@ -709,7 +709,7 @@ pub fn description(id: &str) -> &'static str {
             "Returns the layers and channels of a multi-layer OpenEXR footage `layer` and what each EXR layer maps to red, green, blue and alpha; these are the names EXtractoR's channel parameters take. Empty for other layers."
         }
         "layer.create" => {
-            "Converts the selected layer by `op`: editableText (Photoshop type layer to a text layer), shapesFromText (a shape layer of the glyph outlines), masksFromText (masks on a solid) or shapesFromVector (SVG/vector footage to a shape layer)."
+            "Converts the selected layer by `op`: editableText (PSD type layer to a text layer), shapesFromText (a shape layer of the glyph outlines), masksFromText (masks on a solid) or shapesFromVector (SVG/vector footage to a shape layer)."
         }
         "layer.deleteAllMarkers" => "Deletes every marker on `layers` (default selected); layers whose markers are locked are skipped.",
         "layer.distribute" => {
@@ -796,7 +796,7 @@ pub fn description(id: &str) -> &'static str {
             "Adds a text layer with `text` (point text at `position`, or paragraph text in `box` [x, y, w, h]) and character options: `font`, `size`, `fill`, `stroke`, `tracking`, `leading`, `justify`. Edit it later with layer.setText. Returns the layer."
         }
         "layer.nudge" => {
-            "The arrow keys in the Composition panel: move the selected (unlocked) layers by `x`, `y` comp pixels; After Effects nudges 1 pixel at the panel's magnification, 10 with Shift. Each call is one undo step."
+            "The arrow keys in the Composition panel: move the selected (unlocked) layers by `x`, `y` comp pixels; the arrow keys nudge 1 pixel at the panel's magnification, 10 with Shift. Each call is one undo step."
         }
         "layer.openLayer" => "Editor window only: opens `layer` in the Layer panel. Headless sessions accept it and change nothing.",
         "layer.openSource" => {
@@ -857,7 +857,7 @@ pub fn description(id: &str) -> &'static str {
         }
         "layer.showAllVideo" => "Turns the video switch on for every layer in `comp` except track mattes, undoing layer.hideOtherVideo.",
         "layer.slip" => {
-            "Slip edit: move a layer's source (footage or precomp) under its fixed in and out points, like dragging the source-duration bar in After Effects. `delta` in seconds or `frames`; positive moves the source later. Clamped so the source still covers the in–out span."
+            "Slip edit: move a layer's source (footage or precomp) under its fixed in and out points, like dragging the source-duration bar. `delta` in seconds or `frames`; positive moves the source later. Clamped so the source still covers the in–out span."
         }
         "layer.slipBack" => {
             "Slip edit: moves the layers' source one frame earlier under their fixed In and Out points, so the same span shows different content. Footage and comp layers only; layers with time remapping are skipped."
@@ -875,7 +875,7 @@ pub fn description(id: &str) -> &'static str {
             "Adds a Color Overlay layer style to `layers` (default selected), filling their visible pixels with one colour. Same as layer.style.add with colorOverlay."
         }
         "layer.style.convertToEditable" => {
-            "Converts the Photoshop layer styles of layers imported from PSD files into editable styles. Layers made here have none to convert."
+            "Converts the PSD layer styles of layers imported from PSD files into editable styles. Layers made here have none to convert."
         }
         "layer.style.dropShadow" => {
             "Adds a Drop Shadow layer style to `layers` (default selected): a shadow offset behind their visible pixels, using the comp's global light angle by default. Same as layer.style.add with dropShadow."
@@ -1100,7 +1100,7 @@ pub fn description(id: &str) -> &'static str {
             "Changes settings: `key` and `value` (e.g. general.undoLevels), or several at once as `values` {key: value}. Saved to the preferences; scripts can't change scripting permissions. Affects the app, not the project file."
         }
         "project.delete" => {
-            "Delete project items (folders with their contents). Layers that use a deleted item and Render Queue items of deleted comps go too, like After Effects' Edit ▸ Clear in the Project panel."
+            "Delete project items (folders with their contents). Layers that use a deleted item and Render Queue items of deleted comps go too, like Edit ▸ Clear in the Project panel."
         }
         "project.deleteWithoutConfirmation" => {
             "Editor window only: deletes the selected project items without the confirmation dialog. Headless sessions accept it and change nothing; check project.usage first."
@@ -1288,7 +1288,7 @@ pub fn description(id: &str) -> &'static str {
             "Analyses the comp's frame at `time`: `scope` waveform (RGB, luma, YC), vectorscope, histogram or parade, with `standard` rec601/709/2020; returns the scope data plus mean RGB and min, max and mean luma. Use to check exposure and colour."
         }
         "script.run" => {
-            "run JavaScript (the After Effects scripting object model: `app.project`, comps, layers, properties…) and report `{ok, result, output, error}`; script errors are reported in `error` (with line and column), not as a command failure."
+            "run JavaScript (the scripting object model: `app.project`, comps, layers, properties…) and report `{ok, result, output, error}`; script errors are reported in `error` (with line and column), not as a command failure."
         }
         "script.settings.get" => {
             "Reads a script setting (`section`, `key`) from the settings store, as the scripting API's app.settings.getSetting() does. Returns {have, value}."
@@ -1310,7 +1310,7 @@ pub fn description(id: &str) -> &'static str {
         }
         "shape.dashes.remove" => "Removes the last dash/gap pair from a shape stroke (`prop` = the stroke's uid); removing the last one turns dashes off.",
         "shape.fillStroke" => {
-            "The toolbar's Fill and Stroke options with shape layers selected (as in After Effects, they change the layers' fills and strokes): `fill` sets every Fill's colour, `stroke` every Stroke's, `strokeWidth` every stroke's width. A stroke colour or a width above 0 gives the paths that have no stroke one."
+            "The toolbar's Fill and Stroke options with shape layers selected (they change the layers' fills and strokes): `fill` sets every Fill's colour, `stroke` every Stroke's, `strokeWidth` every stroke's width. A stroke colour or a width above 0 gives the paths that have no stroke one."
         }
         "shape.newPath" => {
             "Pen tool on a shape layer: a new Shape group (\"Shape n\" with Path 1 and the Tools bar's Stroke and Fill unless given) on the given / selected shape layer, or on a new shape layer when none is given. Vertices are in the layer's space, or comp space (`space: \"comp\"`, the default for a new layer)."

@@ -1,6 +1,6 @@
 //! Channel effects, batch 2: layer-to-layer combinations (Blend, Calculations, Compound
 //! Arithmetic) and CC Composite. Second layers come from layer parameters through the effect
-//! host; with no layer chosen the effect uses the layer itself, as After Effects does.
+//! host; with no layer chosen the effect uses the layer itself, as is usual.
 
 use kition_motion_color::{BlendMode, blend_pixel, hsl_to_rgb, luminance, rgb_to_hsl};
 use kition_motion_keyframe::Value;

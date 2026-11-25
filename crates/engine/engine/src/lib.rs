@@ -172,7 +172,7 @@ pub struct KeyRef {
 /// A keyframe drag in progress (`keys.move` steps sharing a merge key): the selection it
 /// started from and the total offset so far, so every step is applied to the keys as they were
 /// before the drag. A key passed over on the way is never overwritten; only the drop position
-/// counts, as in After Effects.
+/// counts, as is usual.
 #[derive(Clone, Debug)]
 pub struct KeyMove {
     pub merge: String,

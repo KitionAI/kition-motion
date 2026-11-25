@@ -1,8 +1,8 @@
-//! After Effects-compatible match names for our property tree and effects, so common scripts
+//! Target-app-compatible match names for our property tree and effects, so common scripts
 //! (`layer.property("ADBE Transform Group").property("ADBE Position")`,
 //! `layer.Effects.addProperty("ADBE Gaussian Blur 2")`) work unchanged.
 //!
-//! The names are the stable identifiers After Effects documents for scripting (Scripting Guide
+//! The names are the stable identifiers the target app documents for scripting (Scripting Guide
 //! ▸ match names). Properties without a documented equivalent keep our own match id
 //! (`perChar3d`, `ec.blur.bilateral`), which `property()` and `addProperty()` accept too.
 
@@ -96,7 +96,7 @@ const MATERIAL: &[(&str, &str)] = &[
     ("metal", "ADBE Metal Coefficient"),
 ];
 
-/// Shape items (Contents ▸ Add): our match id → AE match name.
+/// Shape items (Contents ▸ Add): our match id → target-app match name.
 pub const SHAPE_ITEMS: &[(&str, &str)] = &[
     ("group", "ADBE Vector Group"),
     ("rect", "ADBE Vector Shape - Rect"),
@@ -118,7 +118,7 @@ pub const SHAPE_ITEMS: &[(&str, &str)] = &[
     ("zigzag", "ADBE Vector Filter - Zigzag"),
 ];
 
-/// Properties inside shape items: (item match id, property match id, AE match name).
+/// Properties inside shape items: (item match id, property match id, target-app match name).
 const SHAPE_PROPS: &[(&str, &str, &str)] = &[
     ("group", "blend", "ADBE Vector Blend Mode"),
     ("group", "contents", "ADBE Vectors Group"),
@@ -179,7 +179,7 @@ const SHAPE_PROPS: &[(&str, &str, &str)] = &[
     ("merge", "mode", "ADBE Vector Merge Type"),
 ];
 
-/// Effects: our effect id → AE match name (the documented ones; the rest keep our id).
+/// Effects: our effect id → target-app match name (the documented ones; the rest keep our id).
 pub const EFFECTS: &[(&str, &str)] = &[
     ("ec.blur.gaussian", "ADBE Gaussian Blur 2"),
     ("ec.blur.fastbox", "ADBE Box Blur2"),
@@ -326,17 +326,17 @@ fn find<'a>(t: &'a [(&str, &'a str)], k: &str) -> Option<&'a str> {
     t.iter().find(|(a, _)| *a == k).map(|(_, b)| *b)
 }
 
-/// AE match name of an effect id (falls back to the id).
+/// Target-app match name of an effect id (falls back to the id).
 pub fn effect(id: &str) -> String {
     find(EFFECTS, id).map(str::to_string).unwrap_or_else(|| id.to_string())
 }
 
-/// Our effect id for an AE effect match name.
+/// Our effect id for a target-app effect match name.
 pub fn effect_from_match(m: &str) -> Option<&'static str> {
     EFFECTS.iter().find(|(_, b)| b.eq_ignore_ascii_case(m)).map(|(a, _)| *a)
 }
 
-/// Our shape item kind (`layer.addShapeItem`) for an AE match name, our match id or a display
+/// Our shape item kind (`layer.addShapeItem`) for a target-app match name, our match id or a display
 /// name (`Rectangle`, `Fill`, `Trim Paths`).
 pub fn shape_kind(name: &str) -> Option<&'static str> {
     if let Some((k, _)) = SHAPE_ITEMS.iter().find(|(k, m)| m.eq_ignore_ascii_case(name) || k.eq_ignore_ascii_case(name)) {
@@ -379,7 +379,7 @@ const PARAM_NUMBERS: &[(&str, &str, usize)] = &[
 ];
 
 /// Match name of the node at the end of `chain` (layer root's children → … → node). `effect`
-/// params are numbered `<effect match name>-0001…` in parameter order, like After Effects.
+/// params are numbered `<effect match name>-0001…` in parameter order, as is usual.
 pub fn node(chain: &[&Node]) -> String {
     let Some(last) = chain.last() else { return String::new() };
     let id = last.match_id();

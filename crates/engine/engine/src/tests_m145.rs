@@ -1,5 +1,5 @@
 //! M14.5: settings that change behaviour, the keyframe assistants and labels, and the menu
-//! entries added for After Effects parity (History, recent footage / presets, XML copies, VR,
+//! entries added for target-app parity (History, recent footage / presets, XML copies, VR,
 //! shortcut slots, logging and the compatibility report).
 
 use std::path::PathBuf;
@@ -535,7 +535,7 @@ fn create_vr_environment_and_extract_cubemap() {
 /// The equirectangular output sees each wall of a box around the rig in the right direction.
 #[test]
 fn vr_environment_faces_look_the_right_way() {
-    // One wall at a time (centre 100,100,0; AE's −Y is up), and where the equirectangular output
+    // One wall at a time (centre 100,100,0; −Y is up in comp space), and where the equirectangular output
     // must show it: front +Z, back −Z, right +X, left −X, up, down.
     let walls = [
         ("front", [100.0, 100.0, 150.0], [0.0, 0.0], (0.5, 0.5)),

@@ -95,7 +95,7 @@ fn cc_bender(ctx: &EffectCtx, mut b: Buf) -> Buf {
 
 // ---------------------------------------------------------------- shading helpers
 
-/// Unit light vector from AE-style direction (0° = up, clockwise) and height (0–100 %).
+/// Unit light vector from the usual direction (0° = up, clockwise) and height (0–100 %).
 fn distant_light(dir_deg: f64, height_pct: f64) -> [f64; 3] {
     let el = (height_pct / 100.0).clamp(0.0, 1.0) * PI * 0.5;
     let d = dir_deg.to_radians();
@@ -1149,7 +1149,7 @@ mod tests {
     }
 
     /// #659: CC Smear and CC Tiler on a text layer reach past the text's box to the layer bounds
-    /// (comp-sized, as in After Effects), not cut off where the glyphs end.
+    /// (comp-sized, as is usual), not cut off where the glyphs end.
     #[test]
     fn effects_on_text_reach_past_its_box() {
         let smear = on_text("ec.distort.ccsmear", &[("from", pt(100.0, 50.0)), ("to", pt(140.0, 50.0)), ("reach", num(100.0)), ("radius", num(30.0))]);

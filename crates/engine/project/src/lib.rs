@@ -220,7 +220,7 @@ pub struct ProjectSettings {
     /// Working Gamma, 2.2 or 2.4 (`app.project.workingGamma`): with no working space, the curve
     /// Interpret As Linear Light footage is encoded with and Blend Colors Using 1.0 Gamma
     /// linearizes with: the sRGB curve at 2.2, a pure 2.4 power curve at 2.4. Ignored with a
-    /// working space (as in After Effects).
+    /// working space (as is usual).
     #[serde(default = "gamma_22")]
     pub working_gamma: f64,
 }
@@ -967,7 +967,7 @@ pub struct Footage {
     /// Colour profile (from the file's metadata, or Interpret Footage). `None` = sRGB.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color_profile: Option<ColorSpace>,
-    /// One layer of a layered file (Photoshop) instead of its merged image.
+    /// One layer of a layered file (PSD) instead of its merged image.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub layer: Option<SourceLayer>,
     /// Interpret Footage ▸ Fields and Pulldown ▸ Separate Fields.
@@ -998,7 +998,7 @@ pub struct Footage {
     pub alphabetical: bool,
     /// Interpret Footage ▸ Start Timecode ▸ Override Start: the frame (at the footage's frame
     /// rate) its timecode shows at its first frame. `None` = Use Source File Timecode (0: file
-    /// timecode isn't read). It only relabels source time, as in After Effects.
+    /// timecode isn't read). It only relabels source time, as is usual.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start_timecode: Option<i64>,
 }
@@ -1077,7 +1077,7 @@ pub struct Proxy {
     pub enabled: bool,
 }
 
-/// A layer of a layered still (a Photoshop document, or a PDF / Illustrator / EPS file) used as
+/// A layer of a layered still (a PSD document, or a PDF / Illustrator / EPS file) used as
 /// footage (File ▸ Import ▸ Composition / Composition – Retain Layer Sizes, or Choose Layer).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceLayer {
@@ -1087,7 +1087,7 @@ pub struct SourceLayer {
     /// The footage is the layer's own bounds (Retain Layer Sizes) rather than the document size.
     #[serde(default)]
     pub layer_size: bool,
-    /// A Photoshop smart object: the unique id of its embedded file (linked layer data), which
+    /// A PSD smart object: the unique id of its embedded file (linked layer data), which
     /// is the footage instead of the layer's pixels.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embedded: Option<String>,

@@ -43,7 +43,7 @@ export type TextStyle = {
   justify: 'left' | 'center' | 'right' | 'other'
 }
 
-/** What a layer's twirl shows: its whole property tree, or only some properties (After Effects' U, P, S, R, T). */
+/** What a layer's twirl shows: its whole property tree, or only some properties (the U, P, S, R, T keys). */
 export type Twirl = { kind: 'tree' } | { kind: 'only'; key: string; paths: readonly string[] | 'animated'; waveform?: boolean }
 
 /** One row under a layer: a group that opens and closes, or a property. */
@@ -52,15 +52,19 @@ export type PropertyRow = { kind: 'group'; node: TreeNode; depth: number; open: 
 /** A layer's Audio group: its Waveform row shows under Audio Levels (LL, or the group twirled open). */
 const AUDIO = 'audio'
 
-/** The properties the solo keys show (P, S, R, T), as After Effects shows them for a 2D layer. */
+/**
+ * The properties the solo keys show (A, P, S, R, T); R on a 3D layer also shows Orientation and the
+ * X and Y Rotation (a 2D layer hides those, see `shown`).
+ */
 export const SOLO_PATHS: Record<string, readonly string[]> = {
+  KeyA: ['transform/anchor'],
   KeyP: ['transform/position'],
   KeyS: ['transform/scale'],
-  KeyR: ['transform/rotation'],
+  KeyR: ['transform/orientation', 'transform/rotationX', 'transform/rotationY', 'transform/rotation'],
   KeyT: ['transform/opacity'],
 }
 
-/** Groups and properties only a 3D layer has: hidden on a 2D layer, as After Effects hides them. */
+/** Groups and properties only a 3D layer has: hidden on a 2D layer. */
 const THREE_D_ONLY = new Set(['materialOptions', 'geometryOptions', 'transform/orientation', 'transform/rotationX', 'transform/rotationY'])
 
 /** The groups open until the person closes them. */

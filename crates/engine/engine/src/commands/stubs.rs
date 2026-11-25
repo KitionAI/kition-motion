@@ -1,6 +1,6 @@
 //! Menu entries whose implementation is owned by another milestone (3D, render queue/export,
 //! time remapping, pen/mask-vertex editing, motion tracking, layer styles…) or that have no
-//! Kition Motion equivalent yet. They are registered so the menu bar matches After Effects, and are
+//! Kition Motion equivalent yet. They are registered so the menu bar matches the target app's, and are
 //! always disabled. When a feature lands, delete its line here and register the real command
 //! with the same id (the menu tree in `menus.rs` already points at it).
 
@@ -18,6 +18,6 @@ macro_rules! stub {
 }
 
 pub fn specs() -> Vec<CommandSpec> {
-    // Every After Effects menu entry has a real command now.
+    // Every target-app menu entry has a real command now.
     vec![]
 }

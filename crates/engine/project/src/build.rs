@@ -57,7 +57,7 @@ pub fn effects(ids: &mut Ids) -> PropGroup {
     ids.group("effects", "Effects")
 }
 
-/// Mask colours cycle like AE's default mask colours.
+/// Mask colours cycle like the usual default mask colours.
 pub const MASK_COLORS: [[u8; 3]; 8] = [
     [0xb1, 0xb4, 0x4f],
     [0x4f, 0x8c, 0xc9],
@@ -116,7 +116,7 @@ pub const INTER_CHAR_BLEND_MODES: &[&str] = &[
     "Luminosity",
 ];
 
-/// A non-keyframable header-like property (no stopwatch, as in AE's selector popups).
+/// A non-keyframable header-like property (no stopwatch, as in the usual selector popups).
 fn fixed(mut p: Property) -> Property {
     p.static_only = true;
     p
@@ -277,7 +277,7 @@ fn pct_slider(ids: &mut Ids, m: &str, name: &str, v: f64, min: f64) -> Property 
     ids.prop(m, name, Value::Scalar(v)).with_ui(slider(min, 100.0, min, 100.0, 0))
 }
 
-/// The properties one Animate / Add ▸ Property entry adds (AE adds companions: Skew Axis with
+/// The properties one Animate / Add ▸ Property entry adds (the usual companions are added: Skew Axis with
 /// Skew, Tracking Type with Tracking, Character Alignment / Range with Character Offset, X / Y
 /// Rotation with Rotation when per-character 3D is on). `three_d` shows Z components.
 pub fn text_anim_props(ids: &mut Ids, kind: &str, three_d: bool) -> Vec<Property> {
@@ -442,7 +442,7 @@ pub fn shape_stroke(ids: &mut Ids, color: [f64; 4], width: f64) -> PropGroup {
         .with(stroke_wave(ids))
 }
 
-/// Stroke ▸ Taper (After Effects 17.1+): width ramps at the start and end of each path.
+/// Stroke ▸ Taper (target app 17.1+): width ramps at the start and end of each path.
 pub fn stroke_taper(ids: &mut Ids) -> PropGroup {
     ids.group("taper", "Taper")
         .with(ids.prop("units", "Length Units", Value::Enum(0)).with_ui(popup(&["Pixels", "Percent"])))
@@ -464,7 +464,7 @@ pub fn stroke_wave(ids: &mut Ids) -> PropGroup {
         .with(ids.prop("phase", "Phase", Value::Scalar(0.0)).with_ui(ParamUi::Angle))
 }
 
-/// Match ids of the optional Dash/Gap pairs After Effects adds with the Dashes "+" button.
+/// Match ids of the optional Dash/Gap pairs the target app adds with the Dashes "+" button.
 pub const EXTRA_DASHES: [(&str, &str); 2] = [("dash2", "gap2"), ("dash3", "gap3")];
 
 pub fn shape_gradient_fill(ids: &mut Ids, radial: bool, start: [f64; 2], end: [f64; 2], g: Gradient) -> PropGroup {
@@ -761,7 +761,7 @@ pub fn layer(project: &mut Project, comp: &Comp, name: &str, source: LayerSource
         _ => {}
     }
     if source.is_model() {
-        // Model layers have no masks or effects (as in After Effects).
+        // Model layers have no masks or effects (as is usual).
     } else if source.is_av() {
         root.children.push(masks(&mut ids).into());
         root.children.push(effects(&mut ids).into());

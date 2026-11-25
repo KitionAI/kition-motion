@@ -12,7 +12,7 @@ fn spec(id: &'static str, name: &'static str, category: &'static str, params: Ve
     EffectSpec { id, name, category, params, render, gpu: false, float: true }
 }
 
-/// AE's Blurriness is roughly a radius; our Gaussian uses sigma = blurriness / 2.
+/// The target app's Blurriness is roughly a radius; our Gaussian uses sigma = blurriness / 2.
 fn blur_sigma(blurriness: f64) -> f64 {
     blurriness.max(0.0) * 0.5
 }
@@ -260,7 +260,7 @@ fn drop_shadow(ctx: &EffectCtx, mut b: Buf) -> Buf {
     b
 }
 
-/// Invert's Channel options (After Effects order): RGB / HLS / YIQ groups, each followed by its
+/// Invert's Channel options (the target app's order): RGB / HLS / YIQ groups, each followed by its
 /// single channels, then Alpha.
 pub const INVERT_CHANNELS: [&str; 13] =
     ["RGB", "Red", "Green", "Blue", "HLS", "Hue", "Lightness", "Saturation", "YIQ", "Luminance", "In Phase Chrominance", "Quadrature Chrominance", "Alpha"];
@@ -545,7 +545,7 @@ fn venetian(ctx: &EffectCtx, mut b: Buf) -> Buf {
     b
 }
 
-/// Defaults are After Effects': Gaussian Blur, Fast Box Blur, Directional Blur, Sharpen and Noise
+/// Defaults are the target app's: Gaussian Blur, Fast Box Blur, Directional Blur, Sharpen and Noise
 /// start at 0, where they change nothing; an agent gives the amount when it applies them
 /// (`effect.apply {params}`).
 pub fn specs() -> Vec<EffectSpec> {

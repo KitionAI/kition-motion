@@ -3,9 +3,9 @@
 //! Every menu entry, registry command and frontend command is *bindable*: it has a binding key
 //! (the command id, plus its bound parameters for entries such as `app.settings
 //! {"page":"general"}`), a scope (application-wide or a panel) and default keys. The built-in
-//! preset "Kition Motion Default" is After Effects' default keyboard layout and is read-only; custom
+//! preset "Kition Motion Default" is the target app's default keyboard layout and is read-only; custom
 //! presets store only their differences from it. Editing the default preset first duplicates it
-//! (as After Effects asks you to "Save As" a custom set). The shortcut dispatcher and the menus
+//! (as is usual, you "Save As" a custom set). The shortcut dispatcher and the menus
 //! read the active preset through [`ShortcutTable`].
 //!
 //! Shortcut text is `Ctrl+Cmd+Alt+Shift+Key` (`Cmd` is ⌘ on macOS and Ctrl elsewhere).
@@ -43,7 +43,7 @@ pub struct Bindable {
     pub path: Vec<String>,
     /// `Application` or the panel the shortcut works in (`Timeline`, `Composition`…).
     pub scope: String,
-    /// After Effects default keys.
+    /// The target app's default keys.
     pub defaults: Vec<String>,
 }
 

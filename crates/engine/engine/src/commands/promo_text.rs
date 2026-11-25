@@ -1,6 +1,6 @@
 //! Promo text presets for `layer.applyTextPreset`: per-unit timed entrances (an Expression
 //! Selector gives every word or character its own start, duration and cubic-bezier ease, as
-//! After Effects motion designers do), a fast typewriter and a count-up (Source Text
+//! motion designers do), a fast typewriter and a count-up (Source Text
 //! expressions), and an odometer digit roll (one masked strip layer per digit, parented to the
 //! text). Chinese and other CJK text animates per character.
 //!

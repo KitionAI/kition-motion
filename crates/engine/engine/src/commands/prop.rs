@@ -232,7 +232,7 @@ fn property_reply(p: &Value, layer: &Layer, pr: &Property, time: Tick, value: Va
 /// With `selected: true` (the Timeline, Properties and Effect Controls panels pass it): the same
 /// property (by match path, `transform/position`, `effects/<effect>#n/<param>`) of every other
 /// selected, unlocked layer of the comp whose value is of the same kind, as (layer, uid). Empty
-/// when `selected` is not set or the edited layer isn't selected. After Effects applies a value
+/// when `selected` is not set or the edited layer isn't selected. Edits apply a value
 /// edit, the stopwatch and the keyframe button to all selected layers (#355, #491).
 fn selected_twins(s: &Session, p: &Value, cmd: &str) -> Result<Vec<(LayerId, Uid)>> {
     if b_p(p, "selected") != Some(true) {
@@ -604,7 +604,7 @@ fn set_expr(s: &mut Session, p: &Value) -> Result<Value> {
     }
     let text = p.get("expression").and_then(Value::as_str).map(str::to_string);
     let mut enabled = b_p(p, "enabled");
-    // A syntax error keeps the text but disables the expression (AE shows the warning bar).
+    // A syntax error keeps the text but disables the expression (the warning bar shows).
     let error = match (&text, s.expr_check) {
         (Some(t), Some(check)) if !t.trim().is_empty() => check(t).err(),
         _ => None,
@@ -692,13 +692,13 @@ fn select_prop(s: &mut Session, p: &Value) -> Result<Value> {
     }
     s.state.selected_props.push((lid, uid));
     // Selecting a mask (or its Mask Path, or a shape's Path) selects all its points, so the
-    // viewer drags the whole mask (as in AE, #203).
+    // viewer drags the whole mask (as is usual, #203).
     let t = s.time();
     if let Some((mask, n)) = s.active_comp().and_then(|c| c.layer(lid)).and_then(|l| path_points(l, uid, l.layer_time(t))) {
         s.state.selected_vertices.retain(|v| !(v.layer == lid && v.mask == mask));
         s.state.selected_vertices.extend((0..n).map(|index| VertexRef { layer: lid, mask, index }));
     }
-    // Selecting a property selects all its keys (as in AE).
+    // Selecting a property selects all its keys (as is usual).
     if b_p(p, "selectKeys").unwrap_or(true)
         && let Some(pr) = s.active_comp().and_then(|c| c.layer(lid)).and_then(|l| l.props.find(uid))
     {

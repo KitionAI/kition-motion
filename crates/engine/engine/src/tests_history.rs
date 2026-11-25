@@ -37,12 +37,12 @@ fn undo_then_new_step_keeps_a_branch() {
     assert_eq!(st.len(), 5, "{st:?}");
     assert!(st.iter().all(|n| n["depth"] == 0));
     assert_eq!(st.last().unwrap()["current"], true);
-    // Undo twice (B and C undone), then a new step: AE would forget B and C.
+    // Undo twice (B and C undone), then a new step: a linear history would forget B and C.
     assert!(s.undo() && s.undo());
     let st = list(&mut s);
     assert_eq!(st.iter().filter(|n| n["future"] == true).count(), 2);
     solid(&mut s, "D");
-    assert!(s.history.redo.is_empty(), "the new step clears Redo, as in After Effects");
+    assert!(s.history.redo.is_empty(), "the new step clears Redo, as is usual");
     assert_eq!(s.history.branches.len(), 1);
     assert_eq!(names(&s), ["D", "A"]);
     let st = list(&mut s);

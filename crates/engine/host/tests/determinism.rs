@@ -1,4 +1,4 @@
-//! Deterministic rendering (better than After Effects): the same project renders bit-identical
+//! Deterministic rendering (better than the target app): the same project renders bit-identical
 //! frames every time and whatever the number of render threads. Renders the demo comps (and a
 //! comp of seeded-random effects: particles, grain, noise, wiggle expressions, Shatter) twice
 //! on one thread and on several, and compares every float of every pixel.

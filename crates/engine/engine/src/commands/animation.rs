@@ -324,7 +324,7 @@ fn reveal(s: &mut Session, p: &Value) -> Result<Value> {
                     found.push(pr.uid);
                 }
             });
-            // Modified: effects and masks count as modifications in full (AE reveals them).
+            // Modified: effects and masks count as modifications in full (as the usual reveal does).
             if kind == "modified" && matches!(top.match_id.as_str(), "effects" | "masks") {
                 for g in top.groups() {
                     found.push(g.uid);

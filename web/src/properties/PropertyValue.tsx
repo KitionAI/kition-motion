@@ -6,10 +6,10 @@ import { editableNumbers, type TreeNode } from '../timeline/tree'
 import { NumberField } from '../ValueField'
 import { GradientEditor } from './GradientEditor'
 import { ColorSwatch, hexOf } from './ColorSwatch'
-import type { PropMeta } from './meta'
+import { LAYER_SOURCE_OPTIONS, type PropMeta } from './meta'
 import { useSetProp } from './useSetProp'
 
-/** Whether Scale keeps its proportions, for the session (on by default, as in After Effects). */
+/** Whether Scale keeps its proportions, for the session (on by default). */
 let scaleLinked = true
 
 /** The characters a number shows in the timeline's three-number rows while it is not typed in. */
@@ -111,14 +111,16 @@ export function PropertyValue({ layer, node, meta, time, name, testId, readOnly,
     )
   }
   if (node.type === 'enum') {
-    const value = typeof node.value === 'number' ? node.value : 0
-    const options = meta?.options ?? Array.from({ length: Math.max(value + 1, 10) }, (_, at) => ({ label: String(at), value: at }))
+    const stored = typeof node.value === 'number' ? node.value : 0
+    const options: NonNullable<PropMeta['options']> = meta?.options ?? Array.from({ length: Math.max(stored + 1, 10) }, (_, at) => ({ label: String(at), value: at }))
+    // A layer source's values from 2 up all mean Effects & Masks.
+    const value = options === LAYER_SOURCE_OPTIONS ? Math.min(stored, 2) : stored
     return (
       <span className="motion-prop-values">
         <Select value={String(value)} aria-label={name} disabled={readOnly} onChange={(event) => set(Number(event.target.value))} data-testid={testId}>
           {options.map((option) => (
             <option key={option.value} value={String(option.value)}>
-              {phrase(option.label)}
+              {option.key ? t(option.key) : phrase(option.label)}
             </option>
           ))}
         </Select>

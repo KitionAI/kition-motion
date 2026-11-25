@@ -7,7 +7,7 @@
 //! equation, and the fragment shaded by the comp's lights. The pixel's fragments are then sorted
 //! far→near (coplanar fragments keep layer-stack order) and blended with each layer's mode and
 //! opacity. Sorting per pixel handles intersecting layers exactly, and blend modes and partial
-//! transparency still compose in depth order, as in AE's Classic 3D renderer.
+//! transparency still compose in depth order, as in the usual Classic 3D renderer.
 //!
 //! Shadows are ray-cast against the shadow-casting planes (exact for planar layers, including
 //! alpha-shaped and coloured shadows through Light Transmission); Shadow Diffusion softens them

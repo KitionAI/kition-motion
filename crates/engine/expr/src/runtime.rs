@@ -342,7 +342,7 @@ fn out_vec(o: &Out, n: usize) -> Vec<f64> {
     v
 }
 
-/// Make boa's messages read like AE's: `Error at line N: message`.
+/// Make boa's messages read like the target app's: `Error at line N: message`.
 fn format_error(msg: &str, max_line: usize) -> String {
     let msg = msg.trim();
     let first = msg.lines().next().unwrap_or("").trim();

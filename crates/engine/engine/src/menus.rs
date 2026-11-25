@@ -1,4 +1,4 @@
-//! The menu bar, laid out like After Effects' (same menus, order, submenus, separators and
+//! The menu bar, laid out like the target app's (same menus, order, submenus, separators and
 //! labels). Every entry runs a registered command (`commands::find`), optionally with bound
 //! parameters (e.g. `layer.setBlendMode {"mode":"Multiply"}`). Frontends render this tree; agents
 //! read it through `ui.menu.list` / the command registry.
@@ -153,7 +153,7 @@ pub fn dynamic(s: &Session, name: &str, cx: &DynCtx) -> (Vec<MenuEntry>, Option<
 }
 
 /// Display label of a submenu (the "Assign Shortcut to …" submenus name the current view or
-/// workspace, like After Effects).
+/// workspace, as is usual).
 pub fn submenu_label(s: &Session, label: &str, cx: &DynCtx) -> String {
     match label {
         "Assign Shortcut to 3D View" => {
@@ -355,7 +355,7 @@ pub fn checked(s: &Session, command: &str, params: &Value) -> Option<bool> {
 }
 
 /// Labels that name the platform's own tools: "Reveal in Finder" is "Reveal in Explorer" on
-/// Windows (as in After Effects) and "Reveal in File Manager" elsewhere.
+/// Windows (as is usual) and "Reveal in File Manager" elsewhere.
 fn platform_label(label: &str, mac: bool) -> String {
     match label.strip_prefix("Reveal in Finder") {
         Some(rest) if !mac => format!("Reveal in {}{rest}", if cfg!(target_os = "windows") { "Explorer" } else { "File Manager" }),
@@ -470,7 +470,7 @@ fn effect_categories() -> Vec<MenuNode> {
     cats.into_iter().map(|(c, children)| MenuNode::Submenu { label: c.to_string(), children }).collect()
 }
 
-/// The After Effects menu layout. Labels use "..." like AE's macOS menus.
+/// The target app's menu layout. Labels use "..." like its macOS menus.
 pub const TREE: &str = r#"
 [mac] Kition Motion
   About Kition Motion... | app.about
@@ -691,7 +691,7 @@ Composition
     Audio | playback.audio
   Save Frame As
     File... | comp.saveFrameAs
-    Photoshop Layers... | comp.saveFrameAsPsd
+    PSD Layers... | comp.saveFrameAsPsd
     ProEXR... | comp.saveFrameAsExr
   Pre-render... | render.preRender
   Save Current Preview... | render.saveCurrentPreview

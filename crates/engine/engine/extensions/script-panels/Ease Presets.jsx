@@ -1,7 +1,7 @@
 // Ease Presets: easing curves kept by name and applied to pairs of neighbouring selected keyframes.
 //
 // A script panel that ships with Kition Motion as an optional extension (Window ▸ Ease
-// Presets.jsx). It uses only After Effects' documented scripting API: comp.selectedProperties,
+// Presets.jsx). It uses only the documented scripting API: comp.selectedProperties,
 // Property.selectedKeys, keyInTemporalEase / keyOutTemporalEase, setTemporalEaseAtKey with
 // KeyframeEase, setInterpolationTypeAtKey, app.settings and ScriptUI. Original work by the
 // contributors of the upstream project credited in NOTICE, MIT.

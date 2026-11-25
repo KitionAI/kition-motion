@@ -402,7 +402,7 @@ fn png_sequence_import() {
     assert_eq!(*img, load_png(&first.with_file_name("seq_0004.png")));
 }
 
-/// A gap in a sequence's numbering shows colour bars, as in After Effects; in Force
+/// A gap in a sequence's numbering shows colour bars, as is usual; in Force
 /// Alphabetical Order the files play back to back (#297).
 #[test]
 fn sequence_gaps_show_placeholders() {

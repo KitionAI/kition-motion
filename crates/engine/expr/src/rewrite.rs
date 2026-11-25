@@ -1,6 +1,6 @@
-//! Source-to-source rewrite that gives JavaScript After Effects' array maths.
+//! Source-to-source rewrite that gives JavaScript the usual expression array maths.
 //!
-//! AE's legacy expression engine lets `+ - * /` operate on arrays (`value + [10, 0]`,
+//! The usual legacy expression engine lets `+ - * /` operate on arrays (`value + [10, 0]`,
 //! `[1, 2] * 2`). We get the same by rewriting every binary `+ - * /` into a helper call
 //! (`__add(a, b)`, `__sub`, `__mul`, `__div`) and unary minus into `__neg(a)`; the helpers fall
 //! back to the native operator for numbers and strings, so string concatenation is unchanged.

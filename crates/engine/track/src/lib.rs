@@ -1,7 +1,7 @@
 //! Motion tracking, clean-room from textbook methods:
 //!
 //! - each **track point** has a *feature region* (the pattern to follow) and a *search region*
-//!   (where to look for it in the next frame), as in After Effects' Tracker;
+//!   (where to look for it in the next frame), as in the usual Tracker;
 //! - the pattern is located by **normalized cross-correlation** (Lewis, "Fast Normalized
 //!   Cross-Correlation", 1995) searched **coarse to fine over an image pyramid**;
 //! - the integer match is refined to **sub-pixel** precision (and, optionally, the feature's
@@ -9,7 +9,7 @@
 //!   Baker & Matthews, "Lucas-Kanade 20 Years On", 2004) with a gain/bias photometric model;
 //! - **confidence** is the correlation of the template with the matched region, in percent;
 //!   when it drops below a threshold the tracker continues, stops, extrapolates the motion or
-//!   adapts the feature (re-samples the template), like AE's Motion Tracker Options.
+//!   adapts the feature (re-samples the template), like the usual Motion Tracker Options.
 //!
 //! Only the pixels around each search region are converted and pre-processed, so tracking cost is
 //! independent of the frame size. Points are tracked in parallel and the coarse correlation search

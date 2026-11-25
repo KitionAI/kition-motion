@@ -1,6 +1,6 @@
-// Kition Motion scripting: an After Effects-style object model over the engine.
+// Kition Motion scripting: the usual scripting object model over the engine.
 //
-// Written from the behaviour the After Effects Scripting Guide documents (object names,
+// Written from the behaviour the target app's Scripting Guide documents (object names,
 // attributes, methods). Reads go through `__query(kind, json)`; every edit runs an engine command
 // through `__exec(id, json)`, so it is undoable and identical to the UI's action.
 
@@ -157,7 +157,7 @@ File.prototype = {
       this.__buf = this.exists ? JSON.parse(__file("read", this.__path)) : "";
       this.__pos = this.__buf.length;
     } else {
-      // Check the gate now, like After Effects refusing to open a file for writing.
+      // Check the gate now, like compositing apps refusing to open a file for writing.
       JSON.parse(__file("write", this.__path, ""));
       this.__buf = "";
     }
@@ -834,7 +834,7 @@ Property.prototype.property = function () { return null; };
   P.keyTime = function (i) { return this.__key(i).time; };
   P.keyValue = function (i) { return this.__fromEngine(this.__key(i).value, this.__info()); };
   // Run a keyframe command that acts on the selected keys on key `i` only; the user's key
-  // selection stays as it was, as with After Effects' per-key methods.
+  // selection stays as it was, as with the usual per-key methods.
   P.__keyCmd = function (i, id, params) {
     this.__key(i);
     params = params || {};
@@ -1727,7 +1727,7 @@ Project.prototype = {
     var f = opts instanceof ImportOptions ? opts.file : opts;
     if (!f) throw __err("importFile(): no file");
     var args = { paths: [__str(f)] };
-    // After Effects imports just the picked file unless ImportOptions.sequence is set.
+    // The usual behaviour imports just the picked file unless ImportOptions.sequence is set.
     if (opts instanceof ImportOptions) args.sequence = !!opts.sequence;
     var r = __call("file.import", args);
     if (r.errors && r.errors.length) throw __err(r.errors.join("; "));

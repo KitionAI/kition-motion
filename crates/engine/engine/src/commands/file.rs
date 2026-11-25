@@ -64,7 +64,7 @@ pub(crate) fn open(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 /// Footage saved with a relative path (imported by the CLI or an agent as `clip.mp4`, or written
-/// by hand) is found next to the project file, as After Effects looks for footage relative to
+/// by hand) is found next to the project file, as compositing apps look for footage relative to
 /// the project. It used to be looked up from the working directory: the CLI started in the
 /// project's folder found it, the desktop app (started from the Finder, Explorer or a launcher,
 /// in another folder) showed and rendered nothing (#652). A path that exists from the working
@@ -115,7 +115,7 @@ fn save_as(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn increment_save(s: &mut Session, _: &Value) -> Result<Value> {
     let cur = s.path.clone().ok_or_else(|| bad("file.incrementAndSave", "save the project first"))?;
-    // After Effects: `Intro.aep` → `Intro 2.aep` → `Intro 3.aep`.
+    // The usual numbering: `Intro.kmotion` → `Intro 2.kmotion` → `Intro 3.kmotion`.
     let next = crate::autosave::increment_path(&cur, |p| s.file_ops().is_file(std::path::Path::new(p)));
     save_to(s, &next)
 }
@@ -252,7 +252,7 @@ struct Prober {
     sequence_rate: kition_motion_time::FrameRate,
     /// PDF / Illustrator page (0-based).
     page: u32,
-    /// Choose Layer: one layer of a Photoshop document.
+    /// Choose Layer: one layer of a PSD document.
     psd_layer: Option<Value>,
 }
 
@@ -313,7 +313,7 @@ impl Prober {
             (f.width, f.height) = doc.pixel_size();
             f.page = self.page;
         }
-        // Choose Layer: one layer of a Photoshop document (document-sized).
+        // Choose Layer: one layer of a PSD document (document-sized).
         if let Some(sel) = &self.psd_layer
             && f.codec == "PSD"
         {
@@ -331,7 +331,7 @@ impl Prober {
 }
 
 /// The first part of an import: read the parameters, note the files as recent footage, and
-/// import layered files (Photoshop, PDF, Illustrator, EPS) as compositions when `importAs` (or,
+/// import layered files (PSD, PDF, Illustrator, EPS) as compositions when `importAs` (or,
 /// for dropped files, Default Drag Import As) asks for that. The other files are left to probe.
 fn prepare_import(s: &mut Session, p: &Value) -> Result<PendingImport> {
     let paths: Vec<String> = match p.get("paths").or(p.get("path")) {
@@ -339,7 +339,7 @@ fn prepare_import(s: &mut Session, p: &Value) -> Result<PendingImport> {
         Some(Value::String(x)) => vec![x.clone()],
         _ => return Err(bad("file.import", "missing `paths`")),
     };
-    // Photoshop documents as compositions (Import As: Composition / – Retain Layer Sizes).
+    // PSD documents as compositions (Import As: Composition / – Retain Layer Sizes).
     // Files dragged in follow Settings ▸ Import ▸ Default Drag Import As.
     let drag = p.get("drag").and_then(Value::as_bool).unwrap_or(false);
     let import_as = str_p(p, "importAs").unwrap_or(if drag { s.prefs.drag_import_as() } else { "footage" });
@@ -483,7 +483,7 @@ fn alpha_is_labeled(path: &str, codec: &str) -> bool {
     matches!(ext.as_str(), "png" | "gif" | "webp" | "psd" | "psb" | "exr" | "svg" | "jpg" | "jpeg" | "ai" | "pdf" | "eps") || codec.eq_ignore_ascii_case("PSD")
 }
 
-/// A Photoshop layer by index or name (pixel layers only).
+/// A PSD layer by index or name (pixel layers only).
 fn find_psd_layer(d: &kition_motion_psd::Psd, sel: &Value) -> Option<(usize, String)> {
     let l = match sel {
         Value::Number(n) => d.layers.get(n.as_u64()? as usize)?,
@@ -493,10 +493,10 @@ fn find_psd_layer(d: &kition_motion_psd::Psd, sel: &Value) -> Option<(usize, Str
     Some((l.index, l.name.clone()))
 }
 
-/// Import a Photoshop document as a composition (one undo step). Returns (comp, items, warnings).
+/// Import a PSD document as a composition (one undo step). Returns (comp, items, warnings).
 pub(crate) fn import_psd_comp(s: &mut Session, path: &str, bytes: Vec<u8>, retain: bool) -> Result<(u64, Vec<u64>, Vec<String>)> {
     let psd = kition_motion_psd::Psd::parse(bytes).map_err(|e| EngineError::Other(e.to_string()))?;
-    let name = std::path::Path::new(path).file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Photoshop".into());
+    let name = std::path::Path::new(path).file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "PSD".into());
     let rate = kition_motion_time::FrameRate::FPS_29_97;
     let secs = if s.prefs.import.still_footage == "seconds" { s.prefs.import.still_seconds } else { 10.0 };
     let duration = rate.snap_nearest(kition_motion_time::Tick::from_seconds_f64(secs));
@@ -607,7 +607,7 @@ fn project_settings(s: &mut Session, p: &Value) -> Result<Value> {
             };
         }
         if let Some(g) = p.get("workingGamma") {
-            // After Effects takes 2.2 or 2.4 only (`app.project.workingGamma`).
+            // Scripts take 2.2 or 2.4 only (`app.project.workingGamma`).
             proj.settings.working_gamma = match g.as_f64() {
                 Some(g) if (g - 2.2).abs() < 1e-6 => 2.2,
                 Some(g) if (g - 2.4).abs() < 1e-6 => 2.4,
@@ -717,7 +717,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "File...",
             ["File", "Import"],
             Some("Cmd+I"),
-            "{paths: [string] (files or folders), sequence?: bool (the Sequence checkbox: true imports numbered stills of one run as one image sequence, one picked file bringing its whole run and several picked files that range; default: a numbered still brings its run, except dropped files (drag), which import as stills as in After Effects; folders' runs import as sequences; false imports stills and a folder's files individually), alphabetical?: bool (Force Alphabetical Order: every image of that type in the folder, by name), frameRate?: fps (image sequences; default Settings ▸ Import ▸ Sequence Footage), importAs?: footage|composition|compositionLayerSizes (Photoshop, PDF, Illustrator and EPS files), layer?: name|index (footage of one Photoshop layer), page?: number from 1 (PDF / Illustrator page), drag?: bool (dropped files: Settings ▸ Import ▸ Default Drag Import As; files import as stills unless sequence), addToComp?: bool (also add them to the active comp, at time?, index?, position?: as in layer.addItem), background?: bool (probe the files in a background job, jobs.list / jobs.wait; returns {job})}",
+            "{paths: [string] (files or folders), sequence?: bool (the Sequence checkbox: true imports numbered stills of one run as one image sequence, one picked file bringing its whole run and several picked files that range; default: a numbered still brings its run, except dropped files (drag), which import as stills as is usual; folders' runs import as sequences; false imports stills and a folder's files individually), alphabetical?: bool (Force Alphabetical Order: every image of that type in the folder, by name), frameRate?: fps (image sequences; default Settings ▸ Import ▸ Sequence Footage), importAs?: footage|composition|compositionLayerSizes (PSD, PDF, Illustrator and EPS files), layer?: name|index (footage of one PSD layer), page?: number from 1 (PDF / Illustrator page), drag?: bool (dropped files: Settings ▸ Import ▸ Default Drag Import As; files import as stills unless sequence), addToComp?: bool (also add them to the active comp, at time?, index?, position?: as in layer.addItem), background?: bool (probe the files in a background job, jobs.list / jobs.wait; returns {job})}",
             always,
             import_cmd
         ),

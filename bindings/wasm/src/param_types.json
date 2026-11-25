@@ -1148,7 +1148,7 @@
    "type": "number"
   },
   "layer": {
-   "description": "name|index (footage of one Photoshop layer); footage of one Photoshop layer",
+   "description": "name|index (footage of one PSD layer); footage of one PSD layer",
    "type": "integer"
   },
   "page": {
@@ -4615,7 +4615,7 @@
  },
  "script.run": {
   "code": {
-   "description": "JavaScript: app, app.project, CompItem, Layer, Property… like After Effects scripting",
+   "description": "JavaScript: app, app.project, CompItem, Layer, Property… as in the usual scripting object model",
    "type": "string"
   },
   "console": {

@@ -1,4 +1,4 @@
-//! Effects start at After Effects' defaults (the kit's target app). Blurs, Sharpen and Noise start
+//! Effects start at the defaults of the kit's target app. Blurs, Sharpen and Noise start
 //! at 0, where they change nothing; an agent gives the amount when it applies them
 //! (`effect.apply {params}`, see agent/guide.md).
 #![allow(clippy::unwrap_used)]

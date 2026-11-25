@@ -4,7 +4,7 @@
 //! Faces are addressed by [`FaceId`] (an index that never changes for the life of the process).
 //! [`resolve`] maps a family + style name (as stored in projects) to a face and the synthetic
 //! bold/italic needed when the family lacks that style; a full name (`Yu Gothic Bold`) or
-//! PostScript name (`YuGothic-Bold`, how After Effects scripts name fonts) is accepted too.
+//! PostScript name (`YuGothic-Bold`, how target-app scripts name fonts) is accepted too.
 //! Unknown families fall back to Inter. [`fallback_for`] finds a face for a character the chosen
 //! face lacks: bundled faces first, then the system's usual family for the character's script
 //! (CJK), then any installed face that covers it.
@@ -55,7 +55,7 @@ pub struct FaceInfo {
     /// The family name in the font's own (non-English) language, when it has one.
     pub native_family: Option<String>,
     /// The full name (`Yu Gothic Bold`) and PostScript name (`YuGothic-Bold`), so a face can also
-    /// be requested the way After Effects scripts name fonts.
+    /// be requested the way target-app scripts name fonts.
     pub full_name: String,
     pub postscript: Option<String>,
 }
@@ -523,7 +523,7 @@ fn resolve_in(family: &str, style: &str) -> Option<Resolved> {
     Some(Resolved { face: best.id, synth_bold: w >= 600 && best.info.weight <= 500, synth_italic: it && !best.info.italic, missing: false })
 }
 
-/// A face whose full name or PostScript name is `name` (case-insensitive), the way After Effects
+/// A face whose full name or PostScript name is `name` (case-insensitive), the way target-app
 /// scripts (`textDocument.font = "YuGothic-Bold"`) and `.aep`-derived data refer to fonts.
 fn resolve_by_name(name: &str) -> Option<Resolved> {
     let name = name.trim();

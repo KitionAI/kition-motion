@@ -240,10 +240,13 @@ try {
   await h.until(async () => (await glow.locator('select').count()) > 3)
   const chosen = await glow.locator('select').evaluateAll((selects) => selects.map((select) => select.selectedOptions[0]?.textContent ?? ''))
   const looping = await glow.locator('select option').allTextContents()
-  h.step('Glow’s 颜色循环 reads 三角形 A>B>A, its other choices in Chinese too', chosen.includes('三角形 A>B>A') && ['锯齿 A>B', '锯齿 B>A', '三角形 B>A>B'].every((label) => looping.includes(label)), chosen.join(' | '))
+  // (7i: the loops are waves, so 三角波 / 锯齿波 rather than the shapes 三角形 / 锯齿.)
+  h.step('Glow’s 颜色循环 reads 三角波 A>B>A, its other choices in Chinese too', chosen.includes('三角波 A>B>A') && ['锯齿波 A>B', '锯齿波 B>A', '三角波 B>A>B'].every((label) => looping.includes(label)), chosen.join(' | '))
   const legacy = (await kit.getByTestId('motion-effect-toggle-2').textContent()) ?? ''
   h.step('the legacy tracked-shape effect is named in Chinese', legacy.includes('跟踪形状'), legacy)
   const ALLOWED = new Set(["1.0", "10%", "100%", "105%", "109%", "1x", "2.0", "20%", "2x", "3%", "3.0", "3x", "4x", "5%", "90%", "95%", "ACES2065-1", "ACEScct", "ACEScg", "ARGB", "ASC CDL v1.2", "Alpha", "Alpha 1", "Alpha 2", "CIE-XYZ-D65", "CryptoAsset", "CryptoMaterial", "CryptoObject", "Cryptomatte", "Display P3", "EXtractoR", "HDTV (Rec. 709)", "HLS", "IDentifier", "Lab", "NTSC", "PAL", "RGB", "RGBA", "Rec. 2020", "Rec.1886 Rec.709", "Rec.2100-PQ", "SMPTE HH:MM:SS:FF", "X", "XY", "XZ", "Y", "YIQ", "YUV", "YZ", "Z", "sRGB", "sRGB IEC61966-2.1", "z = z^2 + c", "z = z^3 + c", "z = z^4 + c"])
+  // Setting names that are abbreviations or letters only (Color's H, S and L keys of its HSL secondary).
+  const NAMES_ALLOWED = new Set(['Alpha', 'CCC ID', 'FOV', 'H', 'ID', 'L', 'LUT', 'RGB', 'S', 'X', 'Y', 'Z'])
   const list = await h.query('effect.list', {})
   const untranslated = await kit.locator('body').evaluate(async (_, effects) => {
     const { PHRASES } = await import('/src/strings.ts')
@@ -251,14 +254,29 @@ try {
     const zh = PHRASES['zh-CN']
     const shown = (text) => LEARNED_NAMES_ZH.get(text) ?? (zh[text] && zh[text] !== text ? zh[text] : (shapedZh(text) ?? text))
     const out = new Set()
+    // A numbered name the phrases lack reads as its translated base and the number (`main.tsx`).
+    const named = (text) => {
+      const whole = shown(text)
+      const match = whole === text ? /^(.*\S) (\d+)$/.exec(text) : null
+      return match && shown(match[1]) !== match[1] ? `${shown(match[1])} ${match[2]}` : whole
+    }
+    const names = new Set()
     for (const effect of effects) {
       if (shown(effect.name) === effect.name) out.add(effect.name)
-      for (const param of effect.params ?? []) for (const option of param.options ?? []) if (shown(option.label) === option.label) out.add(option.label)
+      const ids = new Set((effect.params ?? []).map((param) => param.id))
+      for (const param of effect.params ?? []) {
+        for (const option of param.options ?? []) if (shown(option.label) === option.label) out.add(option.label)
+        // Every setting's name, and a layer setting's source choice (`<name> Source`) beside it.
+        const settings = param.type === 'layer' && !ids.has(`${param.id}Source`) ? [param.name, `${param.name} Source`] : [param.name]
+        for (const name of settings) if (named(name) === name) names.add(name)
+      }
     }
-    return [...out]
+    return [[...out], [...names]]
   }, list)
-  const left = untranslated.filter((text) => !ALLOWED.has(text))
+  const [left, leftNames] = [untranslated[0].filter((text) => !ALLOWED.has(text)), untranslated[1].filter((text) => !NAMES_ALLOWED.has(text))]
   h.step(`every effect name and drop-down option (${list.length} effects) reads in Chinese, but for proper nouns and abbreviations`, left.length === 0, left.slice(0, 20).join(' | '))
+  const settingCount = list.reduce((sum, effect) => sum + (effect.params ?? []).length, 0)
+  h.step(`(7i) every setting name of every effect (${settingCount} settings) reads in Chinese, but for abbreviations`, leftNames.length === 0, leftNames.slice(0, 20).join(' | '))
 
   // 5. Layers with different labels selected: neither the right-click menu nor the menu bar ticks a colour.
   const NIGHT = 4
@@ -302,14 +320,7 @@ try {
   ])
   await rowName(SHAPE).click()
   await h.until(async () => (await h.layers()).filter((layer) => layer.selected).map((layer) => layer.id).join() === String(SHAPE))
-  const muted = await kit.locator('.kui-app').evaluate((element) => {
-    const probe = document.createElement('span')
-    probe.style.color = 'var(--kit-text-muted)'
-    element.appendChild(probe)
-    const color = getComputedStyle(probe).color
-    probe.remove()
-    return color
-  })
+  // (7i: greyed as the SDK greys a disabled row, `.kui-menu-item:disabled`, rather than in the muted text colour.)
   const assistant = async () => {
     let looks = {}
     await h.until(async () => {
@@ -320,20 +331,29 @@ try {
       await kit.locator('[role=menu] [data-testid="motion-control-smoother"]').first().waitFor({ timeout: 3000 })
       looks = await kit.locator('[role=menu]').last().evaluate((menu) => {
         const out = {}
+        const look = (element) => ({ color: getComputedStyle(element).color, cursor: getComputedStyle(element).cursor, opacity: getComputedStyle(element).opacity, text: element.textContent })
         for (const id of ['wiggler', 'smoother', 'convert-expression']) {
           const element = menu.querySelector(`[data-testid="motion-control-${id}"]`)
-          if (element) out[id] = { color: getComputedStyle(element).color, cursor: getComputedStyle(element).cursor, text: element.textContent }
+          if (element) out[id] = look(element)
         }
+        // A row the SDK itself disables, in the same menu, for the look to match.
+        const probe = document.createElement('button')
+        probe.className = 'kui-menu-item'
+        probe.disabled = true
+        menu.appendChild(probe)
+        out.disabled = look(probe)
+        probe.remove()
         return out
       })
       // A menu redrawn while it is read gives detached rows (no computed style): read it again.
-      return Object.keys(looks).length === 3 && Object.values(looks).every((look) => look.color !== '')
+      return Object.keys(looks).length === 4 && Object.values(looks).every((look) => look.color !== '')
     }, 10)
     return looks
   }
   const waiting = await assistant()
-  const isMuted = (look) => look.color === muted && look.cursor === 'default'
-  h.step('with no keyframes selected Wiggler, Smoother and Convert Expression to Keyframes look greyed, saying why', isMuted(waiting.wiggler) && isMuted(waiting.smoother) && isMuted(waiting['convert-expression']) && waiting.wiggler.text.includes('至少两个关键帧'), JSON.stringify({ muted, waiting }))
+  const disabled = waiting.disabled
+  const isMuted = (look) => look.color === disabled.color && look.opacity === disabled.opacity && look.cursor === 'default'
+  h.step('with no keyframes selected Wiggler, Smoother and Convert Expression to Keyframes look greyed as the SDK’s disabled rows, saying why', isMuted(waiting.wiggler) && isMuted(waiting.smoother) && isMuted(waiting['convert-expression']) && waiting.wiggler.text.includes('至少两个关键帧'), JSON.stringify(waiting))
   await page.keyboard.press('Escape')
   await page.keyboard.press('Escape')
   await kit.getByTestId('motion-menu-Animation').click()

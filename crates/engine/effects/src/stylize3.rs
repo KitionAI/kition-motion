@@ -453,7 +453,7 @@ fn smoothie(ctx: &EffectCtx, mut b: Buf) -> Buf {
 
 fn light_params() -> Vec<crate::ParamSpec> {
     vec![
-        p("using", "Using", Value::Enum(0), popup(&["Effect Light", "AE Lights"])),
+        p("using", "Using", Value::Enum(0), popup(&["Effect Light", "Composition Lights"])),
         p("lightIntensity", "Light Intensity", num(100.0), slider(0.0, 400.0, 0.0, 200.0, 1)),
         p("lightColor", "Light Color", col(1.0, 1.0, 1.0), ParamUi::Color),
         p("lightType", "Light Type", Value::Enum(0), popup(&["Distant Light", "Point Light"])),

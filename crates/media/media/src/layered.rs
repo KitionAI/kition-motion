@@ -1,4 +1,4 @@
-//! Layered and vector stills: Photoshop documents (`kition-motion-psd`: the merged image, or one
+//! Layered and vector stills: PSD documents (`kition-motion-psd`: the merged image, or one
 //! layer for footage imported as a composition) and vector files rasterised at any scale: SVG
 //! (`kition-motion-svg`), PDF / Illustrator / EPS (`kition-motion-pdf`; one layer of the file for
 //! footage imported as a composition).
@@ -40,7 +40,7 @@ fn is_pdf_like(path: &str, bytes: &[u8]) -> bool {
     kition_motion_pdf::sniff(bytes).is_some() && (kition_motion_pdf::EXTENSIONS.contains(&ext.as_str()) || bytes.starts_with(b"%PDF"))
 }
 
-/// Footage for a Photoshop or vector file (`None` for other formats).
+/// Footage for a PSD or vector file (`None` for other formats).
 pub(crate) fn probe(path: &str, bytes: &[u8]) -> Result<Option<Footage>> {
     if kition_motion_psd::is_psd(bytes) {
         let psd = kition_motion_psd::Psd::parse(bytes.to_vec()).map_err(|e| MediaError::Decode(format!("{path}: {e}")))?;
@@ -68,7 +68,7 @@ pub(crate) fn probe(path: &str, bytes: &[u8]) -> Result<Option<Footage>> {
     Ok(None)
 }
 
-/// Decode a Photoshop or SVG still (`None` for other formats).
+/// Decode a PSD or SVG still (`None` for other formats).
 pub(crate) fn decode(path: &str, bytes: &[u8], footage: &Footage, op: AlphaOp) -> Result<Option<Image>> {
     if kition_motion_psd::is_psd(bytes) {
         let psd = kition_motion_psd::Psd::parse(bytes.to_vec()).map_err(|e| MediaError::Decode(format!("{path}: {e}")))?;

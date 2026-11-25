@@ -650,7 +650,7 @@ impl<'a> Renderer<'a> {
 
     /// The nested comp of a precomp layer whose transformations collapse into this comp: the
     /// Collapse Transformations switch is on and the layer has no masks, effects or layer
-    /// styles (those force a flattened render of the precomp, as in After Effects).
+    /// styles (those force a flattened render of the precomp, as is usual).
     pub fn collapsed(&self, ctx: &EvalCtx, layer: &Layer) -> Option<ItemId> {
         if !layer.switches.collapse || layer.switches.adjustment || self.depth > 12 {
             return None;
@@ -1330,7 +1330,7 @@ impl<'a> Renderer<'a> {
     }
 
     /// A layer's source pixels at the context time, before masks, effects and the transform
-    /// (what the motion tracker analyses, like After Effects' Layer panel). `None` for layers
+    /// (what the motion tracker analyses, like the usual Layer panel). `None` for layers
     /// without pixels.
     pub fn layer_source(&self, ctx: &EvalCtx, layer: &Layer) -> Option<Buf> {
         self.source(ctx, layer)
@@ -1433,7 +1433,7 @@ impl<'a> Renderer<'a> {
 
     fn sampling(&self, layer: &Layer) -> kition_motion_raster::Sampling {
         if self.quality(layer) == Quality::Draft {
-            // Draft quality: no interpolation (nearest neighbour), as After Effects' Draft.
+            // Draft quality: no interpolation (nearest neighbour), as the usual Draft quality.
             kition_motion_raster::Sampling::Nearest
         } else if self.opts.draft {
             kition_motion_raster::Sampling::Bilinear
@@ -1541,7 +1541,7 @@ impl<'a> Renderer<'a> {
 
     /// Shape and text content that animates within the shutter (paths, Trim Paths, text
     /// animators…) of a motion-blurred layer: the times its source is drawn at and averaged,
-    /// Samples Per Frame of them, as After Effects does for shape layers. `None` when the content
+    /// Samples Per Frame of them, as is usual for shape layers. `None` when the content
     /// holds still (compared through its cache key, which leaves the transform out).
     fn content_times(&self, ctx: &EvalCtx, layer: &Layer) -> Option<Vec<Tick>> {
         if !matches!(layer.source, LayerSource::Shape | LayerSource::Text) || !self.mb_on(ctx, layer) {
@@ -1606,7 +1606,7 @@ impl<'a> Renderer<'a> {
         }
     }
 
-    /// Motion-blur sub-samples for a layer buffer (1 = no motion blur). As in After Effects, a 2D
+    /// Motion-blur sub-samples for a layer buffer (1 = no motion blur). As is usual, a 2D
     /// layer gets about one sample per output pixel its corners travel during the shutter,
     /// at least Samples Per Frame and at most the comp's Adaptive Sample Limit; a layer that
     /// does not move within the shutter is drawn once.

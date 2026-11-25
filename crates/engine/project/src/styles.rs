@@ -1,9 +1,9 @@
 //! Layer Styles (Layer ▸ Layer Styles): the `layerStyles` property group and its styles.
 //!
-//! After Effects' layer styles are Photoshop's: Blending Options (Global Light, Advanced
+//! Layer styles are the PSD format's: Blending Options (Global Light, Advanced
 //! Blending), Drop Shadow, Inner Shadow, Outer Glow, Inner Glow, Bevel and Emboss, Satin, Color
 //! Overlay, Gradient Overlay and Stroke. Every style is a group under the layer's `layerStyles`
-//! group (which sits after Transform, as in the AE timeline), with AE's property names, order,
+//! group (which sits after Transform, as in the usual timeline), with the usual property names, order,
 //! defaults and ranges; every property animates. A style group's `enabled` flag is its eye
 //! switch. Styles appear in the group in menu order whatever order they were added in.
 //!
@@ -42,7 +42,7 @@ pub fn style_id(s: &str) -> Option<&'static str> {
     STYLES.iter().find(|(id, name)| id.eq_ignore_ascii_case(s) || name.eq_ignore_ascii_case(s)).map(|(id, _)| *id)
 }
 
-/// The Blend Mode popup of layer styles (Photoshop's list) and the compositor mode for each.
+/// The Blend Mode popup of layer styles (the PSD format's list) and the compositor mode for each.
 pub const STYLE_BLEND_MODES: &[(&str, BlendMode)] = &[
     ("Normal", BlendMode::Normal),
     ("Dissolve", BlendMode::Dissolve),
@@ -92,7 +92,7 @@ pub const BEVEL_DIRECTION: &[&str] = &["Up", "Down"];
 pub const GRADIENT_STYLE: &[&str] = &["Linear", "Radial", "Angle", "Reflected", "Diamond"];
 pub const STROKE_POSITION: &[&str] = &["Outside", "Inside", "Center"];
 
-/// Default Global Light (Photoshop / After Effects defaults).
+/// Default Global Light (the usual PSD layer style defaults).
 pub const DEFAULT_ANGLE: f64 = 120.0;
 pub const DEFAULT_ALTITUDE: f64 = 30.0;
 
@@ -189,7 +189,7 @@ pub fn layer_styles(ids: &mut Ids, gl: &GlobalLight) -> PropGroup {
     ids.group(GROUP, "Layer Styles").with(bo)
 }
 
-/// A style group with AE's defaults (`id` from [`STYLES`]).
+/// A style group with the usual defaults (`id` from [`STYLES`]).
 pub fn style(ids: &mut Ids, id: &str) -> Option<PropGroup> {
     let (_, name) = STYLES.iter().find(|s| s.0 == id)?;
     let mut g = ids.group(id, name);
@@ -443,7 +443,7 @@ mod tests {
         let top: Vec<&str> = l.props.children.iter().map(|c| c.match_id()).collect();
         let t = top.iter().position(|m| *m == "transform").unwrap();
         assert_eq!(top[t + 1], GROUP);
-        // Defaults from AE.
+        // The usual defaults.
         let ds = ls.sub("dropShadow").unwrap();
         assert_eq!(ds.get("opacity").unwrap().value, Value::Scalar(75.0));
         assert_eq!(style_blend_mode(ds.get("blendMode").unwrap().value.as_enum()), BlendMode::Multiply);

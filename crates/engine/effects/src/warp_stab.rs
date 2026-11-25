@@ -145,7 +145,7 @@ pub fn settings(params: &Params, fps: f64) -> StabSettings {
         max_scale: f(params, "borders/autoScale/maximumScale"),
         action_safe: f(params, "borders/autoScale/actionSafeMargin"),
         additional_scale: f(params, "borders/additionalScale"),
-        // AE's 0…100 slider (50 = balanced) onto the planner's −100…100.
+        // The target app's 0…100 slider (50 = balanced) onto the planner's −100…100.
         crop_less_smooth_more: (f(params, "advanced/cropLessSmoothMore") - 50.0) * 2.0,
         fps,
         ripple: if e(params, "advanced/rollingShutterRipple") == 1 { Ripple::Enhanced } else { Ripple::Automatic },

@@ -7,7 +7,7 @@
 //! [`TextDoc::paragraphs`] (one entry per `\n`-separated paragraph). Both lists are empty while the
 //! document is uniform, so single-style documents serialize exactly as before.
 //!
-//! Positions are **character** indices (Unicode scalar values), as in After Effects' expression
+//! Positions are **character** indices (Unicode scalar values), as in the usual expression
 //! and scripting APIs.
 
 use std::ops::Range;
@@ -15,7 +15,7 @@ use std::ops::Range;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as J;
 
-/// Horizontal paragraph alignment (AE's seven Paragraph panel buttons).
+/// Horizontal paragraph alignment (the usual seven Paragraph panel buttons).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Justify {
     #[default]
@@ -129,7 +129,7 @@ pub enum Direction {
 /// Line-breaking composer.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Composer {
-    /// Balances the breaks of the whole paragraph (AE's default for new text).
+    /// Balances the breaks of the whole paragraph (the usual default for new text).
     #[default]
     EveryLine,
     /// Breaks each line as soon as it is full.

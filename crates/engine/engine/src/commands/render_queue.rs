@@ -469,7 +469,7 @@ fn module_mut(it: &mut RenderQueueItem, m: usize) -> &mut OutputModule {
     if m == 0 { &mut it.output } else { &mut it.extra_outputs[m - 1] }
 }
 
-/// A finished item that is edited goes back to Queued (AE re-queues on change).
+/// A finished item that is edited goes back to Queued (re-queued on change, as is usual).
 fn requeue(it: &mut RenderQueueItem) {
     if it.render && !matches!(it.status, RenderStatus::Rendering) {
         it.status = RenderStatus::Queued;

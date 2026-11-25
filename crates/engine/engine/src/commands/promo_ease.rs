@@ -2,7 +2,7 @@
 //! promo presets (text, light, camera) build their keyframes with.
 //!
 //! A curve is written as a CSS `cubic-bezier(x1, y1, x2, y2)` from 0 to 1 and converted exactly
-//! into After Effects temporal ease: the out side of the first key gets influence `x1` and the
+//! into the usual temporal ease: the out side of the first key gets influence `x1` and the
 //! speed of the handle's slope (`y1 / x1` × Δvalue / duration), the in side of the second key
 //! influence `1 − x2` and speed `(1 − y2) / (1 − x2)` × Δvalue / duration. The keyframe engine
 //! draws a Bezier segment in (time, value) space from exactly those handles, so the motion is the

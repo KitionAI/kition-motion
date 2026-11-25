@@ -1,4 +1,4 @@
-//! The command registry. Ids follow After Effects' menu structure; every menu item, panel button,
+//! The command registry. Ids follow the target app's menu structure; every menu item, panel button,
 //! shortcut and viewer/timeline gesture maps to one of these.
 
 mod align;
@@ -544,7 +544,7 @@ pub(crate) fn selectable(comp: &Comp, l: &Layer) -> bool {
     !(l.switches.locked || (comp.hide_shy && l.switches.shy))
 }
 
-/// The layers of `ids` a command may edit: locked layers are left alone, as in After Effects.
+/// The layers of `ids` a command may edit: locked layers are left alone, as is usual.
 /// An error when every one of them is locked.
 pub(crate) fn unlocked(s: &Session, cid: ItemId, ids: Vec<LayerId>, cmd: &str) -> Result<Vec<LayerId>> {
     let comp = s.project.comp(cid).ok_or(EngineError::NoComp)?;
@@ -559,7 +559,7 @@ pub(crate) fn unlocked(s: &Session, cid: ItemId, ids: Vec<LayerId>, cmd: &str) -
 }
 
 /// `visible: [{layer, prop}]`: the properties the Timeline shows (J / K and Select All
-/// Keyframes use only those, as in After Effects). `None` when not given.
+/// Keyframes use only those, as is usual). `None` when not given.
 pub(crate) fn visible_p(p: &Value) -> Option<Vec<(LayerId, kition_motion_project::Uid)>> {
     let a = p.get("visible")?.as_array()?;
     Some(a.iter().filter_map(|v| Some((LayerId(v.get("layer")?.as_u64()?), v.get("prop")?.as_u64()?))).collect())

@@ -524,7 +524,7 @@ pub fn shapes_from_text(proj: &mut Project, comp: &Comp, ctx_project: &Project, 
             groups.push(group(&mut ids, &name, items, 1.0));
         }
     }
-    // First character on top, as in After Effects.
+    // First character on top, as is usual.
     if let Some(c) = l.props.sub_mut("contents") {
         c.children.extend(groups.into_iter().map(Into::into));
     }

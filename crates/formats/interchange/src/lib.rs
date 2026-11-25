@@ -1,5 +1,5 @@
 //! Premiere Pro interop through the public timeline interchange formats Premiere itself reads and
-//! writes (After Effects' File ▸ Import / Export ▸ Adobe Premiere Pro Project…):
+//! writes (File ▸ Import / Export ▸ Adobe Premiere Pro Project…):
 //!
 //! - **Final Cut Pro 7 XML** (`xmeml`, `.xml`): Premiere's File ▸ Export ▸ Final Cut Pro XML and
 //!   File ▸ Import; the default for export;

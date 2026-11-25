@@ -118,7 +118,9 @@ function usePlayback(run: (command: string, params?: Record<string, unknown>, da
       const { duration, frame, skip, loop } = latest.current
       const [from, to] = loop ? span() : [0, duration]
       let next = skip ? origin.current.time + (performance.now() - origin.current.wall) / 1000 : first ? shown : shown + frame
-      if (next >= to - (skip ? 0 : frame / 2)) {
+      // Past the last frame inside: a time within half a frame of the end shows the end's frame
+      // (the time snaps to the nearest), which is outside the loop.
+      if (next >= to - frame / 2) {
         if (!loop) {
           stop()
           return
@@ -213,6 +215,26 @@ type CacheAhead = { done: number; total: number; full: boolean; bytes?: number; 
 export const MORE_MEMORY_MB = 1024
 /** The most the preview cache ever takes. */
 export const MOST_MEMORY_MB = 1536
+
+/**
+ * The runs of consecutive frames the cache holds inside the work area (`cached` are comp frame
+ * numbers, `fps` the comp's rate): each as its first frame and its frame count, in time order.
+ */
+export function cachedRuns(cached: readonly number[], workArea: readonly [number, number], fps: number): Array<{ first: number; count: number }> {
+  const low = Math.round(workArea[0] * fps)
+  const high = Number.isFinite(workArea[1]) ? Math.round(workArea[1] * fps) : Number.POSITIVE_INFINITY
+  const frames = [...new Set(cached)].filter((frame) => frame >= low && frame < high).sort((a, b) => a - b)
+  const runs: Array<{ first: number; count: number }> = []
+  for (const frame of frames) {
+    const last = runs[runs.length - 1]
+    if (last && frame === last.first + last.count) last.count += 1
+    else runs.push({ first: frame, count: 1 })
+  }
+  return runs
+}
+
+/** Seconds with one decimal, as the cache's messages show them. */
+const tenths = (seconds: number) => (Math.round(seconds * 10) / 10).toFixed(1)
 
 export function cacheBudgetMb(deviceMemory: number | undefined): number {
   if (!(typeof deviceMemory === 'number' && Number.isFinite(deviceMemory) && deviceMemory > 0)) return 400
@@ -585,7 +607,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }, [])
   const paintNow = useCallback(async () => canvas.current?.retryRender(), [])
   const workArea = state?.comp?.workArea ?? NO_WORK_AREA
-  const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0, state?.frame ?? 1 / 30, skipFrames, paintNow, loop, workArea)
+  // 只循环已缓存的部分: looping playback goes round the cached frames only (set below, once the cache is known).
+  const [cachedArea, setCachedArea] = useState<readonly [number, number] | null>(null)
+  const playback = usePlayback(runQuietly, state?.time ?? 0, state?.comp?.duration ?? 0, state?.frame ?? 1 / 30, skipFrames, paintNow, loop, cachedArea ?? workArea)
   const frameCache = usePreviewCache(session.doc, state, playback.playing)
   // View ▸ Cache Work Area in Background (off by default), kept in this browser.
   const [cacheAhead, setCacheAhead] = useState(() => {
@@ -800,6 +824,29 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     void session.doc.invoke<number>('setPreviewCacheBudget', budgetMb).catch(() => undefined)
   }, [session.doc, budgetMb])
   const ahead = useCacheAhead(session.doc, cacheAhead, playback.playing, state, preview, frameCache.refresh, budgetMb)
+  // What a full cache holds: the runs of cached frames in the work area, and what the message says of them.
+  const compFps = state?.comp?.fps || 30
+  const runs = useMemo(() => (ahead?.full ? cachedRuns(frameCache.cached, workArea, compFps) : []), [ahead?.full, frameCache.cached, workArea, compFps])
+  const heldFrames = runs.reduce((sum, run) => sum + run.count, 0)
+  const startFrame = Math.round(workArea[0] * compFps)
+  const held =
+    runs.length === 1 && runs[0].first === startFrame
+      ? t('cacheAhead.heldFirst', { done: heldFrames, seconds: tenths(heldFrames / compFps) })
+      : runs.length === 1
+        ? t('cacheAhead.heldFrom', { done: heldFrames, seconds: tenths(heldFrames / compFps), from: tenths(runs[0].first / compFps), to: tenths((runs[0].first + runs[0].count) / compFps) })
+        : t('cacheAhead.heldSome', { done: heldFrames, seconds: tenths(heldFrames / compFps) })
+  // The cached run to loop: the longest (the earliest of equal ones); frames drawn while playing
+  // past it do not move the loop.
+  const [loopCached, setLoopCached] = useState(false)
+  const loopRun = runs.reduce<{ first: number; count: number } | undefined>((best, run) => (!best || run.count > best.count ? run : best), undefined)
+  const loopFrom = loopRun && loopRun.count > 1 ? loopRun.first / compFps : null
+  const loopTo = loopRun && loopRun.count > 1 ? (loopRun.first + loopRun.count) / compFps : null
+  useEffect(() => {
+    setCachedArea((before) => {
+      const next: readonly [number, number] | null = loopCached && loop && loopFrom !== null && loopTo !== null ? [loopFrom, loopTo] : null
+      return before?.[0] === next?.[0] && before?.[1] === next?.[1] ? before : next
+    })
+  }, [loopCached, loop, loopFrom, loopTo])
   // The cache is full: the next lower preview resolution holds about that many times more frames.
   const lowerResolution = ahead?.full ? RESOLUTIONS.find(([, , divisor]) => divisor === preview + 1) : undefined
   useEffect(() => {
@@ -1521,8 +1568,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
                   ? t('cacheAhead.off')
                   : ahead?.full
                     ? lowerResolution
-                      ? t('cacheAhead.fullLower', { done: ahead.done, total: ahead.total, megabytes: Math.round((ahead.budget ?? 0) / 1048576), resolution: phrase(lowerResolution[1]) })
-                      : t('cacheAhead.full', { done: ahead.done, total: ahead.total, megabytes: Math.round((ahead.budget ?? 0) / 1048576) })
+                      ? t('cacheAhead.fullLower', { held, total: ahead.total, megabytes: Math.round((ahead.budget ?? 0) / 1048576), resolution: phrase(lowerResolution[1]) })
+                      : t('cacheAhead.full', { held, total: ahead.total, megabytes: Math.round((ahead.budget ?? 0) / 1048576) })
                     : t('cacheAhead.on', { done: ahead?.done ?? 0, total: ahead?.total ?? 0 })
               }
               onClick={toggleCacheAhead}
@@ -1540,6 +1587,19 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           {state?.comp && cacheAhead && lowerResolution ? (
             <Button variant="ghost" title={t('cacheAhead.lowerHint', { resolution: phrase(lowerResolution[1]) })} onClick={() => setPreview(lowerResolution[2])} data-testid="motion-cache-lower">
               {t('cacheAhead.lower', { resolution: phrase(lowerResolution[1]) })}
+            </Button>
+          ) : null}
+          {state?.comp && cacheAhead && ahead?.full && loopFrom !== null ? (
+            <Button
+              variant="ghost"
+              className="motion-toggle"
+              aria-pressed={loopCached}
+              title={t('cacheAhead.loopCachedHint', { held })}
+              onClick={() => setLoopCached((on) => !on)}
+              data-testid="motion-cache-loop-cached"
+              data-area={cachedArea ? cachedArea.map((each) => each.toFixed(3)).join(' ') : undefined}
+            >
+              {t('cacheAhead.loopCached')}
             </Button>
           ) : null}
           {state?.comp && cacheAhead && ahead?.full && !memoryReported && !moreMemory ? (

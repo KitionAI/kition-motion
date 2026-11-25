@@ -15,7 +15,7 @@
 //! producer, a selection map, characters, age with feather). The Options' cannon / grid text
 //! turns particles into characters (the built-in stroke font). Map layers are read at the frame
 //! being rendered (their pixels are part of the cache key). Particles replace the layer's own
-//! pixels, as in After Effects.
+//! pixels, as is usual.
 //!
 //! **CC Hair** grows strands from the layer's opaque pixels (Density per 1 000 px²), each a
 //! quadratic curve of Length that droops with Weight, optionally steered and scaled by a hairfall
@@ -120,7 +120,7 @@ struct MapImg {
 
 impl MapImg {
     fn from(ctx: &EffectCtx, lp: crate::LayerPixels) -> MapImg {
-        // Fit the map layer to this layer (stretch), like AE's layer maps.
+        // Fit the map layer to this layer (stretch), like the usual layer maps.
         let (ls, os) = (ctx.layer_size, lp.size);
         let sx = if ls[0] > 0.0 { os[0] / ls[0] } else { 1.0 };
         let sy = if ls[1] > 0.0 { os[1] / ls[1] } else { 1.0 };
@@ -132,7 +132,7 @@ impl MapImg {
     }
 }
 
-/// Particle properties a Property Mapper channel can drive, in After Effects' order.
+/// Particle properties a Property Mapper channel can drive, in the target app's order.
 pub const MAP_TARGETS: [&str; 27] = [
     "None",
     "Red",
@@ -383,7 +383,7 @@ impl Pg {
     fn spawn(&self, id: u32) -> PgParticle {
         let s = self.seed;
         let h = |k: u32| hash1(id, k, s) * 2.0 - 1.0;
-        // AE angles: 0° = up, clockwise.
+        // Comp angles: 0° = up, clockwise.
         let a = (self.barrel_angle + h(1) * self.dir_spread * 0.5).to_radians();
         let d = [a.sin(), -a.cos()];
         let speed = (self.vel + h(3) * self.vel_spread).max(0.0);
@@ -1053,7 +1053,7 @@ pub fn specs() -> Vec<EffectSpec> {
         p("options/cannonText", "Cannon Text", Value::Str(String::new()), ParamUi::Text),
         p("options/gridText", "Grid Text", Value::Str(String::new()), ParamUi::Text),
         p("options/autoOrientRotation", "Auto-Orient Rotation", Value::Bool(false), ParamUi::Checkbox),
-        // Generator switches (kept for saved projects; After Effects turns a generator off with
+        // Generator switches (kept for saved projects; the target app turns a generator off with
         // its rate / counts instead).
         p("cannonEnabled", "Cannon Enabled", Value::Bool(true), ParamUi::Hidden),
         p("gridEnabled", "Grid Enabled", Value::Bool(true), ParamUi::Hidden),

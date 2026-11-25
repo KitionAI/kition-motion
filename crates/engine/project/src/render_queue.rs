@@ -1,6 +1,6 @@
 //! The Render Queue: compositions queued for export, each with Render Settings (what to render:
 //! quality, resolution, time span, frame rate) and an Output Module (how to write it: format,
-//! channels, codec options, output path). Saved with the project, like After Effects.
+//! channels, codec options, output path). Saved with the project, as is usual.
 //!
 //! Output paths are templates: `[compName].[fileExtension]` (the default), with the tokens
 //! `[compName]`, `[projectName]`, `[fileExtension]`, `[width]`, `[height]`, `[frameRate]`,
@@ -457,7 +457,7 @@ impl RenderSettings {
             _ => "Custom",
         }
     }
-    /// One-line summary shown next to "Render Settings:" (the template name, like AE).
+    /// One-line summary shown next to "Render Settings:" (the template name, as is usual).
     pub fn summary(&self) -> String {
         if !self.name.is_empty() {
             return self.name.clone();

@@ -1,5 +1,5 @@
 //! File ▸ Save a Copy As XML…: the project as an XML document (`.ecprojx`), the counterpart of
-//! After Effects' `.aepx`. It is a lossless, element-per-value encoding of the `.kmotion` JSON, so
+//! the target app's XML project format. It is a lossless, element-per-value encoding of the `.kmotion` JSON, so
 //! File ▸ Open reads it back (and saving to a `.ecprojx` path writes XML again):
 //!
 //! ```xml

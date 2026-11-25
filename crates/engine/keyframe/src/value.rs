@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// A Bezier shape in the After Effects / Lottie vertex model: vertices with tangents relative to
+/// A Bezier shape in the usual (Lottie) vertex model: vertices with tangents relative to
 /// their vertex.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct ShapePath {
@@ -86,7 +86,7 @@ impl ShapePath {
     pub fn is_empty(&self) -> bool {
         self.vertices.is_empty()
     }
-    /// Rectangle centred at `c` (clockwise from top-left, as AE builds mask rectangles).
+    /// Rectangle centred at `c` (clockwise from top-left, as mask rectangles are usually built).
     pub fn rect(c: [f64; 2], w: f64, h: f64) -> ShapePath {
         let (x0, y0, x1, y1) = (c[0] - w / 2.0, c[1] - h / 2.0, c[0] + w / 2.0, c[1] + h / 2.0);
         ShapePath::polygon(&[[x0, y0], [x1, y0], [x1, y1], [x0, y1]], true)
@@ -250,7 +250,7 @@ pub enum Value {
     /// Straight RGBA 0..1.
     Color([f64; 4]),
     Bool(bool),
-    /// Index into a popup's options (1-based like AE's dropdown values is a UI concern; this is 0-based).
+    /// Index into a popup's options (1-based like the usual dropdown values is a UI concern; this is 0-based).
     Enum(u32),
     Path(ShapePath),
     Text(Box<TextDoc>),

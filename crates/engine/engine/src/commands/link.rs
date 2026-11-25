@@ -1,4 +1,4 @@
-//! Separate Dimensions and the property pick-whip (AE-style reference expressions).
+//! Separate Dimensions and the property pick-whip (the usual reference expressions).
 
 use kition_motion_keyframe::{Ease, Interp, Keyframe, Value as KV};
 use kition_motion_project::{Comp, Layer, Node, ParamUi, Property, Uid};
@@ -100,7 +100,7 @@ fn quote(s: &str) -> String {
     serde_json::to_string(s).unwrap_or_else(|_| format!("\"{s}\""))
 }
 
-/// The AE expression reference to property `uid` of `target` as seen from a property of `from`.
+/// The expression reference to property `uid` of `target` as seen from a property of `from`.
 pub(crate) fn reference(comp: &Comp, from: &Layer, target: &Layer, uid: Uid, compact: bool) -> Option<String> {
     let chain = target.props.node_chain(uid)?;
     let mut parts: Vec<String> = vec![];
@@ -126,7 +126,7 @@ pub(crate) fn reference(comp: &Comp, from: &Layer, target: &Layer, uid: Uid, com
     let mut out = if from.id == target.id { String::new() } else { format!("thisComp.layer({}).", quote(&target.name)) };
     let _ = comp;
     if !compact {
-        // Match names: language-independent, like After Effects with Compact English off.
+        // Match names: language-independent, as is usual with Compact English off.
         let chain = target.props.node_chain(uid)?;
         let mut out = if from.id == target.id { "thisLayer".to_string() } else { format!("thisComp.layer({})", quote(&target.name)) };
         for n in chain {
@@ -167,14 +167,14 @@ fn pick_whip(s: &mut Session, p: &Value) -> Result<Value> {
     let r = reference(comp, from, target, tu, s.prefs.general.expression_pick_whip_compact).ok_or_else(|| bad("prop.pickWhip", "no such target property"))?;
     let (me, them) = (from.props.find(uid).ok_or(EngineError::NoComp)?, target.props.find(tu).ok_or(EngineError::NoComp)?);
     let (dm, dt) = (dims(from, me), dims(target, them));
-    // Dropped on one of the target's values: that dimension (`position[0]`), as in After Effects.
+    // Dropped on one of the target's values: that dimension (`position[0]`), as is usual.
     let (r, dt) = match t.get("dimension").and_then(Value::as_u64) {
         Some(d) if d < dt as u64 => (format!("{r}[{d}]"), 1),
         Some(d) => return Err(bad("prop.pickWhip", format!("the target has {dt} dimension(s), no dimension {d}"))),
         None => (r, dt),
     };
     // While the expression is being edited the reference goes in at the cursor, replacing the
-    // selected text (After Effects): `expression` is the text being edited, `range` the
+    // selected text (as is usual): `expression` is the text being edited, `range` the
     // selection [start, end] in characters.
     if let Some(base) = str_p(p, "expression") {
         let range: Option<Vec<u64>> = p.get("range").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_u64).collect());
@@ -212,7 +212,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Pick Whip (Link Property)",
             [],
             None,
-            "{layer?, path|prop, target: {layer, path|prop, dimension?}, expression?, range?: [start, end]} → sets an AE reference expression (`dimension`: one of the target's values, `position[0]`; with `expression`: inserts it there, replacing the characters in `range`, default the end)",
+            "{layer?, path|prop, target: {layer, path|prop, dimension?}, expression?, range?: [start, end]} → sets a reference expression (`dimension`: one of the target's values, `position[0]`; with `expression`: inserts it there, replacing the characters in `range`, default the end)",
             has_layers,
             pick_whip
         ),

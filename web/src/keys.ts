@@ -41,9 +41,10 @@ export const TIMELINE_KEYS = {
   zoomOut: { keys: ['-'], zh: '缩小时间轴', en: 'Zoom the timeline out', match: (event: KeyLike) => !event.metaKey && !event.ctrlKey && !event.altKey && event.code === 'Minus' },
   levels: { keys: ['L'], zh: '只显示“音频电平”（连按两下 L 再加上波形）', en: 'Show only Audio Levels (L twice: the waveform too)' },
   animated: { keys: ['U'], zh: '只显示有关键帧的属性（再按一次收起）', en: 'Show only the animated properties (again: close)' },
+  anchor: { keys: ['A'], zh: '只显示“锚点”', en: 'Show only Anchor Point' },
   position: { keys: ['P'], zh: '只显示“位置”', en: 'Show only Position' },
   scale: { keys: ['S'], zh: '只显示“缩放”', en: 'Show only Scale' },
-  rotation: { keys: ['R'], zh: '只显示“旋转”', en: 'Show only Rotation' },
+  rotation: { keys: ['R'], zh: '只显示“旋转”（3D 图层上连同“方向”和 X、Y、Z 轴旋转）', en: 'Show only Rotation (on a 3D layer with Orientation and X, Y and Z Rotation)' },
   opacity: { keys: ['T'], zh: '只显示“不透明度”——上一次点的是时间轴时；上一次点的是画面时，T 是文字工具', en: 'Show only Opacity, when the last press was on the timeline; after a press on the composition T is the Text tool' },
   duplicate: { keys: ['Cmd+D'], zh: '复制选中的图层', en: 'Duplicate the selected layers' },
 } satisfies Record<string, Binding>

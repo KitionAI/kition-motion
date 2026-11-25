@@ -432,7 +432,7 @@ fn mask_reset(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn mask_remove(s: &mut Session, p: &Value) -> Result<Value> {
     let (cid, targets) = target_masks(s, p)?;
-    // Without an explicit `mask`, Remove Mask only removes selected masks (AE), else the first.
+    // Without an explicit `mask`, Remove Mask only removes selected masks (as is usual), else the first.
     let selected: Vec<(LayerId, Uid)> = targets
         .iter()
         .copied()
@@ -740,7 +740,7 @@ fn reveal_expression_errors(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn sequence(s: &mut Session, p: &Value) -> Result<Value> {
     let cid = comp_id(s, p)?;
-    // Selection order (AE sequences in the order layers were selected).
+    // Selection order (layers are sequenced in the order they were selected).
     let ids: Vec<LayerId> = match p.get("layers") {
         Some(_) => layers_p(s, p)?.1,
         None => s.state.selected_layers.clone(),

@@ -74,7 +74,7 @@ fn equirect_round_trip_and_env_brdf() {
         let (u2, v2) = shade::equirect_uv(d, 0.3);
         assert!((u - u2).abs() < 1e-4 && (v - v2).abs() < 1e-4);
     }
-    // Up (−Y in AE space) is the top row.
+    // Up (−Y in comp space) is the top row.
     assert!(shade::equirect_uv([0.0, -1.0, 0.0], 0.0).1 < 1e-3);
     let (a, b) = shade::env_brdf(1.0, 0.0);
     assert!(a + b > 0.9 && a + b <= 1.05);

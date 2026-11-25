@@ -479,7 +479,7 @@ fn paste(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 /// Effect Controls' Reset: every parameter back to its default. Animated parameters get a
-/// keyframe at the current time with the default value (as in After Effects); static ones
+/// keyframe at the current time with the default value (as is usual); static ones
 /// change their value.
 fn reset(s: &mut Session, p: &Value) -> Result<Value> {
     let (cid, lid, uid) = find_fx(s, p, "effect.reset")?;

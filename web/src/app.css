@@ -1406,6 +1406,12 @@ p.motion-effect-group-head {
   font-weight: 600;
 }
 
+/* The graph's layer picker, above its tools: the timeline's layer rows are hidden while it is open. */
+.motion-graph-layer {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
 /* The graph's tools above its list: value or speed, and fit all. */
 .motion-graph-tools {
   display: flex;

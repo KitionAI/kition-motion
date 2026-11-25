@@ -65,7 +65,7 @@ pub fn start(s: &mut Session, items: Option<Vec<ItemId>>, wait: bool) -> crate::
                 exists(services.as_ref(), &f.path)
             } else {
                 // A sequence is there while any of its frames is (missing frames render as
-                // placeholders, as in After Effects).
+                // placeholders, as is usual).
                 exists(services.as_ref(), &f.path) || f.sequence.iter().any(|p| exists(services.as_ref(), p))
             };
             // Saved without metadata (a hand-written or converted project): probe it now.
@@ -103,7 +103,7 @@ pub fn start(s: &mut Session, items: Option<Vec<ItemId>>, wait: bool) -> crate::
 }
 
 /// Write the findings into the project. Not an undo step: it records the state of the disk,
-/// not an edit (the same as After Effects marking footage missing at open).
+/// not an edit (the same as compositing apps marking footage missing at open).
 fn apply(s: &mut Session, found: Vec<(ItemId, Footage, Found)>, probe_available: bool) -> crate::Result<Value> {
     for (id, before, result) in &found {
         let current = s.project.item(*id).and_then(|item| match &item.kind {

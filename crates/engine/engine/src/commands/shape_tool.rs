@@ -1,7 +1,7 @@
 //! The shape tools (Rectangle, Rounded Rectangle, Ellipse, Polygon, Star) and the Pen's options
 //! in the Tools bar (Tool Creates Shape / Tool Creates Mask, Fill and Stroke with their Fill
 //! Options / Stroke Options), and drawing with them: a drawn shape goes into the selected shape
-//! layer's Contents as a new group, as in After Effects, or into a new shape layer.
+//! layer's Contents as a new group, as is usual, or into a new shape layer.
 
 use kition_motion_color::BlendMode;
 use kition_motion_geom::vec2;
@@ -42,7 +42,7 @@ impl PaintKind {
         }
     }
 
-    /// After Effects' name in Fill Options / Stroke Options.
+    /// The usual name in Fill Options / Stroke Options.
     pub fn label(self) -> &'static str {
         match self {
             PaintKind::None => "None",
@@ -325,7 +325,7 @@ pub(crate) fn size_p(p: &Value, c: &str, default: [f64; 2]) -> Result<[f64; 2]> 
 /// The shape tools: a rectangle, rounded rectangle, ellipse, polygon or star of `size`, centred
 /// at `position`, painted with the Tools bar's Fill and Stroke unless given. With a shape layer
 /// given or selected it goes on top of that layer's Contents as a new group ("Rectangle 2"…)
-/// placed by the group's Transform, as After Effects draws into the selected shape layer;
+/// placed by the group's Transform, as compositing apps draw into the selected shape layer;
 /// otherwise a new shape layer is centred on it. `position` and `size` are in comp pixels, or
 /// the layer's space with `space: "layer"`.
 fn new_shape(s: &mut Session, p: &Value) -> Result<Value> {

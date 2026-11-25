@@ -267,7 +267,7 @@ fn cameras_and_lights_from_model() {
     assert_eq!(cams.len(), 1);
     let c = layer_in(&s, cid(&s), cams[0].as_u64().unwrap());
     assert_eq!(c.name, "Shot");
-    // glTF +Z (towards the viewer) is AE −Z; the camera looks into the scene (+Z).
+    // glTF +Z (towards the viewer) is comp −Z; the camera looks into the scene (+Z).
     let want = [pos[0], pos[1], pos[2] - 5.0 * unit];
     assert!(close3(v3(&c, "transform/position"), want, 1e-6), "{:?} vs {want:?}", v3(&c, "transform/position"));
     let zoom = 180.0 / (0.3f64).tan();
@@ -284,7 +284,7 @@ fn cameras_and_lights_from_model() {
     assert!((key.props.prop("lightOptions/coneAngle").unwrap().value.as_f64() - 1.0f64.to_degrees()).abs() < 1e-6);
     assert!((key.props.prop("lightOptions/coneFeather").unwrap().value.as_f64() - 50.0).abs() < 1e-6);
     assert!((key.props.prop("lightOptions/intensity").unwrap().value.as_f64() - 150.0).abs() < 1e-9);
-    // Points down in glTF (−Y) = down on screen in AE (+Y).
+    // Points down in glTF (−Y) = down on screen in comp space (+Y).
     let (ke, kf) = frame(&s, key.id.0);
     assert!((kf - vec3(0.0, 1.0, 0.0)).length() < 1e-5, "{kf:?}");
     assert!((ke.y - (pos[1] - 3.0 * unit)).abs() < 1e-6, "{ke:?}");

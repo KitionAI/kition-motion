@@ -1,6 +1,6 @@
 # kition-motion-psd
 
-Reads Photoshop documents (`.psd`, and `.psb` large documents) for File ▸ Import (as footage, as a
+Reads PSD documents (`.psd`, and `.psb` large documents) for File ▸ Import (as footage, as a
 composition, or as a composition with layer sizes retained), and writes a minimal subset (used to
 generate test fixtures).
 
@@ -15,7 +15,7 @@ Bitmap, Grayscale, Indexed, RGB, CMYK (naive conversion) and Lab colour modes.
 
 Text engine data (`EngineData`) is read best-effort for the font, size, fill colour and
 justification of the first style run. Smart objects import as footage of their embedded file
-(a Photoshop document's merged image, or an image) placed by the smart object's corner quad
+(a PSD document's merged image, or an image) placed by the smart object's corner quad
 (position, scale, rotation). A non-affine quad (`nonAffineTransform`: perspective) or a placed
 layer warp (`warp`: the named styles with bend and horizontal / vertical distortion, and custom
 envelope warps whose quilt mesh of bicubic Bezier patches is read from `meshPoints` (`ObAr`)

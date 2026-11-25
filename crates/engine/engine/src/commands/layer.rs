@@ -437,7 +437,7 @@ fn set_switch_value(l: &mut Layer, name: &str, v: bool) {
     }
 }
 
-/// Turning the 3D switch off discards Z values, Orientation and X/Y Rotation (as in AE).
+/// Turning the 3D switch off discards Z values, Orientation and X/Y Rotation (as is usual).
 fn drop_3d_values(l: &mut Layer) {
     let Some(tr) = l.transform_mut() else { return };
     for (m, keep) in [("position", 0.0), ("anchor", 0.0), ("scale", 100.0)] {
@@ -828,7 +828,7 @@ fn set_parent(s: &mut Session, p: &Value) -> Result<Value> {
     // A loaded cycle need not include a selected child. Validate before compensation or edit;
     // do not impose the renderer's 64-ancestor truncation as a new ordinary hierarchy limit.
     check_parent_chain(comp, &ids, parent, 4096, 1_048_576)?;
-    // Like AE's pick-whip, parenting keeps the layer where it is: its transform is re-expressed
+    // Like the usual pick-whip, parenting keeps the layer where it is: its transform is re-expressed
     // in the new parent's space (Position, Rotation, Scale), unless `compensate: false`.
     let compensate = b_p(p, "compensate").unwrap_or(true);
     let fixes = if compensate { parent_fixes(s, cid, &ids, parent) } else { vec![] };
@@ -849,7 +849,7 @@ fn timing(s: &mut Session, p: &Value) -> Result<Value> {
     let (cid, ids) = layers_p(s, p)?;
     let t = s.time();
     let op = str_p(p, "op").unwrap_or("set").to_string();
-    // Layer times stay on frame boundaries of the comp (as in AE).
+    // Layer times stay on frame boundaries of the comp (as is usual).
     let fr = s.project.comp(cid).ok_or(EngineError::NoComp)?.frame_rate;
     let snap = |k: &str| f_p(p, k).map(|v| fr.snap_nearest(Tick::from_seconds_f64(v)));
     let (delta, start, inp, outp) = (snap("delta"), snap("start"), snap("in"), snap("out"));
@@ -896,7 +896,7 @@ fn timing(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 /// Slip edit: move a layer's source (footage or precomp) under its fixed in and out points, like
-/// dragging the source-duration bar in After Effects. `delta` in seconds or `frames`; positive
+/// dragging the source-duration bar in the timeline. `delta` in seconds or `frames`; positive
 /// moves the source later. Clamped so the source still covers the in–out span. Keyframes and
 /// layer markers are in layer time, so they travel with the source.
 fn slip(s: &mut Session, p: &Value) -> Result<Value> {
@@ -1395,7 +1395,7 @@ fn transform_op(s: &mut Session, p: &Value) -> Result<Value> {
 /// Layer ▸ Layer Settings: cameras and lights open their own settings; solids (and adjustment
 /// layers, which are solids) edit their Solid Settings. With `affectAll: false`, a solid other
 /// layers also use is copied into a new solid for this layer instead of being changed for all of
-/// them (After Effects' "Affect all layers that use this solid"). `name` renames the layer and
+/// them (the usual "Affect all layers that use this solid"). `name` renames the layer and
 /// its solid.
 fn layer_settings(s: &mut Session, p: &Value) -> Result<Value> {
     let (cid, lid) = layer_p(s, p, "layer.settings")?;

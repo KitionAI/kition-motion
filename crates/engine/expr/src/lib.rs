@@ -1,4 +1,4 @@
-//! After Effects-compatible expressions on the boa JavaScript engine.
+//! Compositing-app-compatible expressions on the boa JavaScript engine.
 //!
 //! [`Expressions`] implements [`ExprHost`] so the renderer can evaluate property expressions:
 //!
@@ -8,7 +8,7 @@
 //! r.expr = Some(&host);
 //! ```
 //!
-//! * **Language**: JavaScript plus AE's legacy array maths (`value + [10, 0]`, `[1, 2] * 2`),
+//! * **Language**: JavaScript plus the usual legacy array maths (`value + [10, 0]`, `[1, 2] * 2`),
 //!   implemented by rewriting `+ - * /` into helper calls ([`rewrite`]). The last evaluated
 //!   statement is the result (`var x = …; x`, `if/else` blocks).
 //! * **Object model** (`prelude.js`): `time`, `value`, `thisComp`, `thisLayer`, `thisProperty`,

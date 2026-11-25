@@ -12,7 +12,7 @@ use serde_json::{Value as J, json};
 
 const PRELUDE: &str = include_str!("prelude.js");
 
-/// Engine commands that create layers: like After Effects, scripts add new layers at the top of
+/// Engine commands that create layers: as is usual, scripts add new layers at the top of
 /// the stack (the UI inserts above the selection).
 const CREATES_LAYER: &[&str] =
     &["layer.newSolid", "layer.newNull", "layer.newText", "layer.newShape", "layer.newAdjustment", "layer.newCamera", "layer.newLight", "layer.addItem"];
@@ -172,7 +172,7 @@ pub(crate) fn exec(s: &mut Session, id: &str, params: J) -> Result<J, String> {
 
 /// Run a keyframe command that acts on the selected keys (`keys.velocity`, `keys.interpolation`,
 /// `keys.delete`) on the keys `targets` names instead (`[{layer, prop, index}]`, 0-based, in the
-/// command's comp): After Effects' per-key methods (`setTemporalEaseAtKey`, `removeKey`…) leave
+/// command's comp): the usual per-key methods (`setTemporalEaseAtKey`, `removeKey`…) leave
 /// the user's key selection as it was. Selected keys that no longer exist drop out of it.
 fn exec_on_keys(s: &mut Session, id: &str, params: J, targets: &J) -> Result<J, String> {
     use kition_motion_engine::KeyRef;
@@ -229,7 +229,7 @@ fn native_print(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<Js
     Ok(JsValue::undefined())
 }
 
-/// `__undo("begin" | "end", name)`: After Effects' `app.beginUndoGroup` / `endUndoGroup`. Every
+/// `__undo("begin" | "end", name)`: the scripting `app.beginUndoGroup` / `endUndoGroup`. Every
 /// command run inside the outermost group folds into one undo step named after the group.
 fn native_undo(_: &JsValue, args: &[JsValue], ctx: &mut Context) -> JsResult<JsValue> {
     let op = arg_string(args, 0, ctx)?;

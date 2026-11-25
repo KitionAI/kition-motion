@@ -1086,7 +1086,7 @@ enum PwCamera {
     /// layer centre) along −z, the world turned by `rot` (`None` = not turned) about the origin,
     /// `focal` the scale at unit depth; particles nearer than `near` aren't drawn.
     Effect { rot: Option<[[f32; 3]; 3]>, dist: f32, focal: f32, near: f32 },
-    /// The comp's active camera layer, on buffer-world points (After Effects then ignores the
+    /// The comp's active camera layer, on buffer-world points (the target app then ignores the
     /// Effect Camera).
     Comp(crate::card3d::Proj),
 }
@@ -1230,7 +1230,7 @@ fn ps2_phys(ctx: &EffectCtx) -> Phys {
         speed: pr.f("physics/velocity") as f32 * 0.25,
         gravity: [0.0, pr.f("physics/gravity") as f32 * 0.5, 0.0],
         resistance: pr.f("physics/resistance").max(0.0) as f32,
-        // AE angles: 0° = up, clockwise.
+        // Comp angles: 0° = up, clockwise.
         axis: [dir.sin(), -dir.cos(), 0.0],
         extra: pr.f("physics/extra") as f32,
         extra_angle: 45.0 * pr.f("physics/extra") as f32,

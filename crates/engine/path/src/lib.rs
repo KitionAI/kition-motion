@@ -22,7 +22,7 @@ use kition_motion_raster::Mask;
 pub use kurbo::{BezPath, PathEl, Point};
 use kurbo::{Shape, Vec2 as KVec2};
 
-/// Convert the AE vertex/tangent model to a kurbo path.
+/// Convert the usual vertex/tangent model to a kurbo path.
 pub fn to_kurbo(p: &ShapePath) -> BezPath {
     let mut out = BezPath::new();
     let n = p.vertices.len();
@@ -130,7 +130,7 @@ pub fn from_kurbo(path: &BezPath) -> Vec<ShapePath> {
     out
 }
 
-/// Rectangle path centred at `pos` with corner `roundness` (AE draws clockwise from the top-right).
+/// Rectangle path centred at `pos` with corner `roundness` (drawn clockwise from the top-right, as is usual).
 pub fn rect(size: [f64; 2], pos: [f64; 2], roundness: f64) -> BezPath {
     let r = kurbo::Rect::from_center_size(Point::new(pos[0], pos[1]), (size[0].abs(), size[1].abs()));
     // (`max`/`min`, not `clamp`: a NaN size from an expression must not panic.)
