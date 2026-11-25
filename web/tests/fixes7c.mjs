@@ -81,7 +81,7 @@ try {
   // On the active camera, Reset 3D View shows only when it would change the camera.
   await kit.getByTestId('motion-menu-View').click()
   await kit.locator('[data-kit-ui-id="menu:View/3D View"]').hover()
-  const front = kit.locator('[role=menu] [data-testid="motion-cmd-view.3d.front"]').first()
+  const front = kit.locator('[role=menu] [data-testid="motion-cmd-view.threeD.front"]').first()
   h.step('View ▸ 3D 视图 shows Alt+Shift+1 for Front', (await front.textContent()).includes('Alt+Shift+1'), await front.textContent())
   h.step('Reset 3D View is hidden on an untouched active camera', (await kit.locator('[role=menu] [data-testid="motion-cmd-view.reset3DView"]').count()) === 0)
   await page.keyboard.press('Escape')
@@ -154,7 +154,7 @@ try {
   await page.keyboard.press('Escape')
 
   // 10. Shift+8 and the full-width ＊ add a marker.
-  const markers = async () => (await h.query('markers.list', {})).length
+  const markers = async () => (await h.query('marker.list', {})).length
   // With no layer selected (a click on the timeline's empty space), * marks the composition.
   const rows = await kit.getByTestId('motion-timeline-rows').boundingBox()
   await page.mouse.click(rows.x + rows.width * 0.6, rows.y + rows.height - 12)

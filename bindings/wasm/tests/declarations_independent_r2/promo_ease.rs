@@ -2,7 +2,7 @@ use super::Row;
 
 pub(super) const ROWS: &[Row] = &[
     Row {
-        command: "keys.applyEase",
+        command: "keyframe.applyEase",
         path: "curve; segments whose both endpoints lie in snapped range",
         resolves: &[
             "comp:id|name|active",
@@ -38,7 +38,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/promo_ease.rs:223-279,423-469; commands/prop.rs:13-47,163-200; keyframe::spatial_segment_length closure",
     },
     Row {
-        command: "keys.applyEase",
+        command: "keyframe.applyEase",
         path: "spring expression",
         resolves: &["same property and range resolution as curve; range computed even though spring does not consume range"],
         reads: &[

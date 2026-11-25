@@ -1,5 +1,5 @@
 //! Regressions (timing): the text presets start at `start`
-//! (not the current time) and typewriter takes `frames` per character; keys.applyEase takes
+//! (not the current time) and typewriter takes `frames` per character; keyframe.applyEase takes
 //! `from`/`to` off the frame grid as prop.addKey does, snapped.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::indexing_slicing, clippy::panic)]
 
@@ -39,6 +39,6 @@ fn issue_7_apply_ease_snaps_its_range() {
     let solid = run(&mut doc, "layer.newSolid", json!({ "name": "Badge", "color": "#ff3366" }))["layer"].clone();
     run(&mut doc, "prop.addKey", json!({ "layer": solid, "path": "transform/opacity", "time": 0.333, "value": 0 }));
     run(&mut doc, "prop.addKey", json!({ "layer": solid, "path": "transform/opacity", "time": 1.666, "value": 100 }));
-    let eased = run(&mut doc, "keys.applyEase", json!({ "layer": solid, "path": "transform/opacity", "preset": "out", "from": 0.333, "to": 1.666 }));
+    let eased = run(&mut doc, "keyframe.applyEase", json!({ "layer": solid, "path": "transform/opacity", "preset": "out", "from": 0.333, "to": 1.666 }));
     assert_eq!(eased["segments"], json!(1), "{eased}");
 }

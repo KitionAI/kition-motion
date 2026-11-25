@@ -23,21 +23,21 @@
 #               scanner-false-read       the scan finds a read the command does not make (`file.rs:line`)
 
 # The scan finds a read the command does not make.
-comp.vr.createEnvironment | scan-wider: selection | scanner-false-read | every command it runs names its comp and layers (app_more.rs:480-547), in the comps it has just made, which hold no selected layer
+comp.vr.addEnvironment | scan-wider: selection | scanner-false-read | every command it runs names its comp and layers (app_more.rs:480-547), in the comps it has just made, which hold no selected layer
 comp.vr.extractCubemap | scan-wider: selection | scanner-false-read | every command it runs names its comp and layers (app_more.rs:567-572), in the cube-map comp it has just made
 comp.vr.setView | scan-wider: selection | scanner-false-read | runs prop.set with its comp, layer and path given (vr_editor.rs:147), which reads no selection then
-edit.paste | key-table-missing | scanner-false-read | runs keys.paste (edit.rs:518), which only counts the keys it has just selected (anim.rs:133); keys.paste's own table entry is the same false read, left to the audit
-edit.pasteReversedKeyframes | key-table-missing | scanner-false-read | runs keys.paste (edit.rs:631), which only counts the keys it has just selected (anim.rs:133)
+edit.paste | key-table-missing | scanner-false-read | runs keyframe.paste (edit.rs:518), which only counts the keys it has just selected (anim.rs:133); keyframe.paste's own table entry is the same false read, left to the audit
+edit.pasteReversedKeyframes | key-table-missing | scanner-false-read | runs keyframe.paste (edit.rs:631), which only counts the keys it has just selected (anim.rs:133)
 file.importTimeline | scan-wider: part | scanner-false-read | `open_comp` (timeline.rs:56, lib.rs:897) compares the active comp only to switch to the imported one; nothing it makes depends on it
-file.newCompFromSelection | scan-wider: selection | scanner-false-read | the commands it runs (layer.addItem, layer.sequence) work in the new comp it has just opened (file_more.rs:214), and opening it clears the selection (lib.rs:897)
+comp.newFromSelection | scan-wider: selection | scanner-false-read | the commands it runs (layer.addItem, layer.sequence) work in the new comp it has just opened (file_more.rs:214), and opening it clears the selection (lib.rs:897)
 layer.newModel | scan-wider: time | scanner-false-read | the layer starts at `time` or 0, never the current time (model3d.rs:143); the file.import it runs (model3d.rs:117) gets no `addToComp`, the only path that reads the time
 prop.deselect | key-table-missing | scanner-false-read | drops the property's keys from the key selection (prop.rs:727): pruning, which tests/acts.rs counts as no read (`sanitize_state`); it changes nothing but the editor state
 view.lookAtAll | scan-wider: selection | scanner-false-read | the scan reaches the selection through `layers_p` (three_d.rs:567), which only Look at Selected Layers takes; Look at All frames every active layer
 
 # Declared reads the code makes through paths the scan does not follow.
 camera.fromModel | declared-wider: time | scanner-cannot-follow | `Env::of` reads the comp's time (`s.time_of`, rig3d.rs:48); the scan does not follow calls through a type's path
-jobs.list | declared-wider: part, selection, time | scanner-cannot-follow | applies finished jobs through their stored closures (jobs.rs:205); a background import's apply runs layer.addItem, which reads the active comp, selection and time (layer.rs:288)
-jobs.wait | declared-wider: part, selection, time | scanner-cannot-follow | waits for and applies jobs through their stored closures (jobs.rs:205), as jobs.list
+job.list | declared-wider: part, selection, time | scanner-cannot-follow | applies finished jobs through their stored closures (jobs.rs:205); a background import's apply runs layer.addItem, which reads the active comp, selection and time (layer.rs:288)
+job.wait | declared-wider: part, selection, time | scanner-cannot-follow | waits for and applies jobs through their stored closures (jobs.rs:205), as job.list
 light.fromModel | declared-wider: time | scanner-cannot-follow | `Env::of` reads the comp's time (`s.time_of`, rig3d.rs:48); the scan does not follow calls through a type's path
 script.run | declared-wider: part, selection, time | scanner-cannot-follow | runs JavaScript through the `s.script` function pointer (file_more.rs:524); the object model reads the active comp, selected layers and time (script/src/model.rs:74, model.rs:132, model.rs:142)
 scriptWindow.click | declared-wider: part, selection, time | scanner-cannot-follow | fires the script's onClick through the `dispatch` function pointer (script_windows.rs:631); the callback reads the active comp, selected layers and time (script/src/model.rs:132)
@@ -78,9 +78,9 @@ renderQueue.render | declared-wider: part, selection, time | over-declared | ren
 roto.freeze | declared-wider: time | over-declared | freezes the Roto Brush propagation from its frame data (roto_cmds.rs:294); no time
 scriptWindow.get | declared-wider: part, time | over-declared | returns the window's control tree and runs no callback (script_windows.rs:651)
 templateProps.templateInfo | declared-wider: part, time | over-declared | reads a template file's manifest only (template_props.rs:973)
-templates.create | declared-wider: time | over-declared | the time is read only inside the template builders, on a scratch session (templates.rs:410); afterwards it only sets the time
-templates.list | declared-wider: time | over-declared | the time is read only inside the template builders, on a scratch session (templates.rs:410), never the caller's
-templates.thumbnail | declared-wider: time | over-declared | the time is read only inside the template builders, on a scratch session (templates.rs:410), never the caller's
+template.add | declared-wider: time | over-declared | the time is read only inside the template builders, on a scratch session (templates.rs:410); afterwards it only sets the time
+template.list | declared-wider: time | over-declared | the time is read only inside the template builders, on a scratch session (templates.rs:410), never the caller's
+template.thumbnail | declared-wider: time | over-declared | the time is read only inside the template builders, on a scratch session (templates.rs:410), never the caller's
 track.warpStabilizer | declared-wider: time | over-declared | analyses the layer's frames (warp_cmds.rs:92); the selection and comp only, no time
 view.displayColor | declared-wider: time | over-declared | reads the viewer's options and settings (viewer_cmds.rs:451); no time
 view.extendedViewer | declared-wider: part, selection, time | over-declared | toggles a setting (view.rs:94); no editor state
@@ -93,7 +93,7 @@ camera.pan | declared-wider: mode | scanner-blind-kind | reads the comp's curren
 comp.cropToRegionOfInterest | declared-wider: area | scanner-blind-kind | crops to the region of interest (`state.region_of_interest`), declared as `area`; the scan does not look for it
 contentFill.generate | declared-wider: active, mode | scanner-blind-kind | uses the Content-Aware Fill panel's settings (`state.content_fill`), declared as `mode` and `active`; the scan does not look for them
 contentFill.set | declared-wider: active, mode | scanner-blind-kind | uses the Content-Aware Fill panel's settings (`state.content_fill`), declared as `mode` and `active`; the scan does not look for them
-edit.clear | declared-wider: active, mode | scanner-blind-kind | while the Type tool edits a text layer it works on that text (`state.text_edit`: the edited layer, `active`, and the editing, `mode`); the scan does not look for them
+edit.delete | declared-wider: active, mode | scanner-blind-kind | while the Type tool edits a text layer it works on that text (`state.text_edit`: the edited layer, `active`, and the editing, `mode`); the scan does not look for them
 edit.cut | declared-wider: active, mode | scanner-blind-kind | while the Type tool edits a text layer it works on that text (`state.text_edit`: the edited layer, `active`, and the editing, `mode`); the scan does not look for them
 edit.paste | declared-wider: active, mode | scanner-blind-kind | while the Type tool edits a text layer it works on that text (`state.text_edit`: the edited layer, `active`, and the editing, `mode`); the scan does not look for them
 edit.pasteTextFormattingOnly | declared-wider: mode | scanner-blind-kind | works in the Type tool's editing state (`state.text_edit`), declared as `mode`; the scan does not look for it
@@ -152,18 +152,18 @@ track.select | declared-wider: active | scanner-blind-kind | works on the curren
 track.setPoint | declared-wider: active | scanner-blind-kind | works on the current track (`state.current_track`), declared as `active`; the scan does not look for it
 track.setTarget | declared-wider: active | scanner-blind-kind | works on the current track (`state.current_track`), declared as `active`; the scan does not look for it
 track.setType | declared-wider: active | scanner-blind-kind | works on the current track (`state.current_track`), declared as `active`; the scan does not look for it
-view.3d.activeCamera | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.back | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.bottom | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.custom1 | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.custom2 | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.custom3 | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.default | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.front | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.last | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.left | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.right | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
-view.3d.top | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.activeCamera | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.back | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.bottom | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.custom1 | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.custom2 | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.custom3 | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.default | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.front | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.last | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.left | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.right | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
+view.threeD.top | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
 view.lookAtAll | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
 view.lookAtSelected | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it
 view.reset3DView | declared-wider: mode | scanner-blind-kind | reads the comp's current and last 3D view (`state.views3d`), declared as `mode`; the scan does not look for it

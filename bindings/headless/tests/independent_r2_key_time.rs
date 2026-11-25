@@ -67,17 +67,17 @@ async fn ease_after_colleague_change(change: &str, named: bool, must_refuse: boo
     for (time, value) in [(0, 10), (1, 20)] {
         doc.execute("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":time,"value":value})).unwrap();
     }
-    doc.execute("keys.setEase", json!({"layer":layer,"path":OPACITY,"time":1,"side":"out","speed":1})).unwrap();
+    doc.execute("keyframe.setEase", json!({"layer":layer,"path":OPACITY,"time":1,"side":"out","speed":1})).unwrap();
     let property = doc.execute("prop.get", json!({"layer":layer,"path":OPACITY})).unwrap()["uid"].as_u64().unwrap();
     let bytes = doc.save(None).unwrap();
     let fixture = Fixture::from_bytes(&bytes, Default::default());
     let (_, _, basis) = fixture.inspect().await;
     match change {
         "delete" => {
-            fixture.colleague(&[("keys.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":1}]})), ("keys.delete", json!({}))]);
+            fixture.colleague(&[("keyframe.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":1}]})), ("keyframe.delete", json!({}))]);
         }
         "ease" => {
-            fixture.colleague(&[("keys.setEase", json!({"layer":layer,"path":OPACITY,"time":1,"side":"out","speed":9}))]);
+            fixture.colleague(&[("keyframe.setEase", json!({"layer":layer,"path":OPACITY,"time":1,"side":"out","speed":9}))]);
         }
         _ => {
             fixture.colleague(&[("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":3,"value":30}))]);
@@ -89,7 +89,7 @@ async fn ease_after_colleague_change(change: &str, named: bool, must_refuse: boo
     } else {
         params["prop"] = json!(property);
     }
-    let answer = fixture.call("run", json!({"basis":basis,"steps":[{"command":"keys.setEase","params":params}]})).await;
+    let answer = fixture.call("run", json!({"basis":basis,"steps":[{"command":"keyframe.setEase","params":params}]})).await;
     if must_refuse {
         let refusal = answer.unwrap_err();
         assert_eq!(refusal["error"]["code"], "conflict", "{refusal}");

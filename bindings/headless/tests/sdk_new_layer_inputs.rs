@@ -77,7 +77,7 @@ async fn a_lift_shadow_ramp_holds_the_frame_rate_but_explicit_keys_do_not() {
 async fn masks_from_text_hold_the_frame_size() {
     let (bytes, made) = with(&[("layer.newText", json!({"text":"Title"}))]);
     let text = made[0]["layer"].as_u64().unwrap();
-    refuses_and_applies(&bytes, ("height", json!(90)), red(), json!([{"command":"layer.create","params":{"op":"masksFromText","layers":[text]}}])).await;
+    refuses_and_applies(&bytes, ("height", json!(90)), red(), json!([{"command":"layer.add","params":{"op":"masksFromText","layers":[text]}}])).await;
 }
 
 #[tokio::test]
@@ -87,7 +87,7 @@ async fn path_nulls_hold_the_frame_and_duration_their_nulls_take() {
     let mut doc = MotionDocument::open(FILE, &bytes).unwrap();
     doc.execute("mask.new", json!({"layer":layer,"vertices":[[0,0],[100,0],[100,100]],"closed":true})).unwrap();
     let bytes = doc.save(None).unwrap();
-    for command in ["paths.nullsFollowPoints", "paths.pointsFollowNulls", "paths.tracePath"] {
+    for command in ["path.nullsFollowPoints", "path.pointsFollowNulls", "path.tracePath"] {
         refuses_and_applies(&bytes, ("duration", json!(254_016_000_000_i64 * 4)), red(), json!([{"command":command,"params":{"layer":layer}}])).await;
     }
 }
@@ -109,7 +109,7 @@ async fn path_nulls_hold_sibling_names_and_the_parent_chain() {
     let parent = doc.execute("layer.newNull", json!({"name":"Rig"})).unwrap()["layer"].as_u64().unwrap();
     doc.execute("layer.setParent", json!({"layers":[layer],"parent":parent})).unwrap();
     let bytes = doc.save(None).unwrap();
-    for command in ["paths.nullsFollowPoints", "paths.pointsFollowNulls", "paths.tracePath"] {
+    for command in ["path.nullsFollowPoints", "path.pointsFollowNulls", "path.tracePath"] {
         let mut scratch = MotionDocument::open(FILE, &bytes).unwrap();
         let made = scratch.execute(command, json!({"layer":layer})).unwrap();
         let null = made.get("null").or_else(|| made["nulls"].get(0)).and_then(Value::as_u64).unwrap();

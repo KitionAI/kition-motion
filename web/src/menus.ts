@@ -37,7 +37,7 @@ function rowsOf(path: readonly string[], entries: readonly Entry[]): MenuRow[] {
 export const SHORTCUT_OVERRIDES: Readonly<Record<string, string>> = {
   'comp.new': 'Cmd+Alt+N',
   'layer.addMask': 'Cmd+Alt+Shift+N',
-  'keys.toggleHold': 'Cmd+Alt+Shift+H',
+  'keyframe.toggleHold': 'Cmd+Alt+Shift+H',
   // Cmd+R reloads the page in a browser before the editor could take it.
   'view.rulers': 'Cmd+Alt+Shift+R',
   // The engine's Cmd+Alt+Shift+N is New Mask's here: New Folder has no key.
@@ -49,7 +49,7 @@ export const SHORTCUT_OVERRIDES: Readonly<Record<string, string>> = {
  * Alt+Left and Right (with Shift, ten frames) nudge the selected keyframes, Cmd+Up and Down select
  * the layer above or below, Cmd+Alt+A selects every keyframe of the selected layers.
  */
-export const EXTRA_SHORTCUTS = ['keys.nudgeForward', 'keys.nudgeBackward', 'keys.nudgeForward10', 'keys.nudgeBackward10', 'layer.selectPrevious', 'layer.selectNext', 'keys.selectAll']
+export const EXTRA_SHORTCUTS = ['keyframe.nudgeForward', 'keyframe.nudgeBackward', 'keyframe.nudgeForward10', 'keyframe.nudgeBackward10', 'layer.selectPrevious', 'layer.selectNext', 'keyframe.selectAll']
 
 /**
  * The engine commands whose shortcuts the frame runs: the menus' (bar the ones given another
@@ -65,7 +65,7 @@ export function shortcutCommands(rows: readonly MenuRow[]): ReadonlySet<string> 
  * the frame does not run it (the key stays the browser's); the editor's Alt+Shift+2 switches to it
  * (`EDITOR_KEYS.view3dCustom`).
  */
-const BROWSER_KEYS: ReadonlySet<string> = new Set(['view.3d.custom1'])
+const BROWSER_KEYS: ReadonlySet<string> = new Set(['view.threeD.custom1'])
 
 /** The kit's own rows (`kit:` commands): the editor runs them, not the engine. */
 export const KIT = {
@@ -118,20 +118,20 @@ export const RESOLUTIONS: ReadonlyArray<readonly [command: string, label: string
 
 /** View ▸ 3D View's rows (`view.3d.*`) and the view each shows (`view.get3D`'s `view`). */
 export const THREE_D_VIEWS: ReadonlyArray<readonly [command: string, label: string, view: string]> = [
-  ['view.3d.activeCamera', 'Active Camera', 'activeCamera'],
-  ['view.3d.front', 'Front', 'front'],
-  ['view.3d.left', 'Left', 'left'],
-  ['view.3d.top', 'Top', 'top'],
-  ['view.3d.back', 'Back', 'back'],
-  ['view.3d.right', 'Right', 'right'],
-  ['view.3d.bottom', 'Bottom', 'bottom'],
-  ['view.3d.custom1', 'Custom View 1', 'custom1'],
-  ['view.3d.custom2', 'Custom View 2', 'custom2'],
-  ['view.3d.custom3', 'Custom View 3', 'custom3'],
+  ['view.threeD.activeCamera', 'Active Camera', 'activeCamera'],
+  ['view.threeD.front', 'Front', 'front'],
+  ['view.threeD.left', 'Left', 'left'],
+  ['view.threeD.top', 'Top', 'top'],
+  ['view.threeD.back', 'Back', 'back'],
+  ['view.threeD.right', 'Right', 'right'],
+  ['view.threeD.bottom', 'Bottom', 'bottom'],
+  ['view.threeD.custom1', 'Custom View 1', 'custom1'],
+  ['view.threeD.custom2', 'Custom View 2', 'custom2'],
+  ['view.threeD.custom3', 'Custom View 3', 'custom3'],
 ]
 
 /** The 3D views' keys that work in every browser (the editor's own, keys.ts), shown in the menu. */
-const VIEW_KEYS: Readonly<Record<string, string>> = { 'view.3d.front': 'Alt+Shift+1', 'view.3d.custom1': 'Alt+Shift+2', 'view.3d.activeCamera': 'Alt+Shift+3' }
+const VIEW_KEYS: Readonly<Record<string, string>> = { 'view.threeD.front': 'Alt+Shift+1', 'view.threeD.custom1': 'Alt+Shift+2', 'view.threeD.activeCamera': 'Alt+Shift+3' }
 
 /** What View ▸ 3D View needs to know: whether the composition has 3D layers, the view shown, and whether it has a camera layer. */
 export type ThreeDView = { has3D: boolean; view: string; camera: boolean }
@@ -195,7 +195,7 @@ export const TRIED_ROWS: Readonly<Record<string, Record<string, unknown>>> = {
   // Remove Unused Footage: hidden while every footage item and solid is used.
   'file.removeUnusedFootage': {},
   // Exponential Scale: hidden unless two Scale keyframes are selected.
-  'keys.exponentialScale': {},
+  'keyframe.exponentialScale': {},
 }
 
 /** Layer ▸ Arrange's rows and where each moves the selected layers (`layer.arrange`'s `to`). */
@@ -297,7 +297,7 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
       ['Cut', 'edit.cut'],
       ['Copy', 'edit.copy'],
       ['Paste', 'edit.paste'],
-      ['Clear', 'edit.clear'],
+      ['Clear', 'edit.delete'],
       SEPARATOR,
       ['Duplicate', 'edit.duplicate'],
       ['Split Layer', 'edit.splitLayer'],
@@ -434,35 +434,35 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
   [
     'Animation',
     [
-      ['Keyframe Interpolation', [...INTERPOLATIONS.map((row) => [row.label, row.command] as const), SEPARATOR, ['Keyframe Interpolation…', 'keys.interpolation']]],
-      ['Keyframe Velocity…', 'keys.velocity'],
+      ['Keyframe Interpolation', [...INTERPOLATIONS.map((row) => [row.label, row.command] as const), SEPARATOR, ['Keyframe Interpolation…', 'keyframe.interpolation']]],
+      ['Keyframe Velocity…', 'keyframe.velocity'],
       SEPARATOR,
-      ['Easy Ease', 'keys.easyEase'],
-      ['Easy Ease In', 'keys.easyEaseIn'],
-      ['Easy Ease Out', 'keys.easyEaseOut'],
-      ['Toggle Hold Keyframe', 'keys.toggleHold'],
+      ['Easy Ease', 'keyframe.easyEase'],
+      ['Easy Ease In', 'keyframe.easyEaseIn'],
+      ['Easy Ease Out', 'keyframe.easyEaseOut'],
+      ['Toggle Hold Keyframe', 'keyframe.toggleHold'],
       [keys.roving ? 'Rove Across Time (On)' : keys.rovable === false ? 'Rove Across Time (Not on the First or Last Keyframe)' : 'Rove Across Time', KIT.rove],
-      ['Time-Reverse Keyframes', 'keys.timeReverse'],
+      ['Time-Reverse Keyframes', 'keyframe.timeReverse'],
       ['Sequence Layers…', 'kit:sequence'],
       [
         'Keyframe Assistant',
         [
-          ['Exponential Scale', 'keys.exponentialScale'],
+          ['Exponential Scale', 'keyframe.exponentialScale'],
           [convertible === true ? 'Convert Expression to Keyframes' : convertible === 'off' ? ASSISTANT_NEEDS.convertOff : ASSISTANT_NEEDS.convert, KIT.convertExpression],
           [(keys.count ?? 0) >= 2 ? 'Wiggler…' : ASSISTANT_NEEDS.wiggler, KIT.wiggler],
           [(keys.count ?? 0) >= 3 ? 'Smoother…' : ASSISTANT_NEEDS.smoother, KIT.smoother],
         ],
       ],
       SEPARATOR,
-      ['Select Equal Keyframes', 'keys.selectEqual'],
-      ['Select Previous Keyframes', 'keys.selectPrevious'],
-      ['Select Following Keyframes', 'keys.selectFollowing'],
+      ['Select Equal Keyframes', 'keyframe.selectEqual'],
+      ['Select Previous Keyframes', 'keyframe.selectPrevious'],
+      ['Select Following Keyframes', 'keyframe.selectFollowing'],
       SEPARATOR,
       ['Separate Dimensions', 'prop.separateDimensions'],
       ['Add Expression', 'prop.setExpression'],
       SEPARATOR,
-      ['Apply Animation Preset…', 'anim.applyPreset'],
-      ['Save Animation Preset…', 'anim.savePreset'],
+      ['Apply Animation Preset…', 'animation.applyPreset'],
+      ['Save Animation Preset…', 'animation.savePreset'],
     ],
   ],
   [
@@ -510,11 +510,11 @@ export const VIEW_MENUS = ['View']
 /** The rows each menu tab shows in Single line's row, by menu. */
 export const MOTION_PRIMARY: Record<string, readonly string[]> = {
   File: ['file.import', 'file.exportMovie', KIT.saveFrame],
-  Edit: ['edit.undo', 'edit.redo', 'edit.cut', 'edit.copy', 'edit.paste', 'edit.duplicate', 'edit.splitLayer', 'edit.clear'],
+  Edit: ['edit.undo', 'edit.redo', 'edit.cut', 'edit.copy', 'edit.paste', 'edit.duplicate', 'edit.splitLayer', 'edit.delete'],
   Composition: ['comp.new', 'comp.settings', 'playback.toggle', KIT.addMarker, 'comp.trimToWorkArea'],
   Layer: ['layer.newText', 'layer.newSolid', 'layer.newShape', 'layer.newNull', 'layer.newAdjustment', 'layer.precompose', 'layer.addMask'],
   Effect: ['kit:find-effect', 'effect.applyLast'],
-  Animation: ['keys.easyEase', 'keys.toggleHold'],
+  Animation: ['keyframe.easyEase', 'keyframe.toggleHold'],
   View: ['view.zoomIn', 'view.zoomOut', KIT.zoomFit, 'time.set', 'time.start', 'time.end', 'time.previousKey', 'time.nextKey'],
 }
 

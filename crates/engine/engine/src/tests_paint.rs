@@ -262,7 +262,7 @@ fn puppet_pins_select_and_delete_without_touching_the_layer() {
     let b = s.execute("puppet.addPin", json!({"layer": id, "position": [90, 30]})).unwrap()["pin"].clone();
     s.execute("puppet.addPin", json!({"layer": id, "position": [50, 30]})).unwrap();
     // A new pin is selected: Delete removes it, and the layer stays.
-    assert_eq!(s.execute("edit.clear", json!({})).unwrap(), json!({"removed": 1}));
+    assert_eq!(s.execute("edit.delete", json!({})).unwrap(), json!({"removed": 1}));
     assert_eq!(pin_count(&s, id), 2);
     assert!(s.active_comp().unwrap().layer(kition_motion_project::LayerId(id)).is_some());
     // Click, Shift-click (toggle) and add by name.
@@ -272,7 +272,7 @@ fn puppet_pins_select_and_delete_without_touching_the_layer() {
     assert_eq!(sel(&mut s, json!({"layer": id, "pins": ["Puppet Pin 2"], "add": true})), json!([a, b]));
     assert!(s.execute("puppet.selectPins", json!({"layer": id, "pins": ["Puppet Pin 9"]})).is_err());
     // Deleting both is one undo step.
-    assert_eq!(s.execute("edit.clear", json!({})).unwrap(), json!({"removed": 2}));
+    assert_eq!(s.execute("edit.delete", json!({})).unwrap(), json!({"removed": 2}));
     assert_eq!(pin_count(&s, id), 0);
     s.undo();
     assert_eq!(pin_count(&s, id), 2);
@@ -324,12 +324,12 @@ fn puppet_pins_rig_to_nulls_both_ways() {
     s.execute("puppet.addPin", json!({"layer": id, "position": [90, 30]})).unwrap();
     let bend = s.execute("puppet.addPin", json!({"layer": id, "kind": "bend", "position": [50, 30]})).unwrap()["pin"].clone();
     // Only a Bend pin selected: nothing to rig.
-    assert!(s.execute("paths.pointsFollowNulls", json!({})).is_err());
+    assert!(s.execute("path.pointsFollowNulls", json!({})).is_err());
     // No pin selected and no path: every Position pin of the layer gets a null on it, and the
     // pin's Position follows the null; one undo step.
     s.execute("puppet.selectPins", json!({"layer": id, "pins": []})).unwrap();
     let steps = s.history.undo.len();
-    let r = s.execute("paths.pointsFollowNulls", json!({"layer": id})).unwrap();
+    let r = s.execute("path.pointsFollowNulls", json!({"layer": id})).unwrap();
     assert_eq!(s.history.undo.len(), steps + 1);
     let nulls: Vec<u64> = r["nulls"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
     let pins: Vec<u64> = r["pins"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
@@ -342,13 +342,13 @@ fn puppet_pins_rig_to_nulls_both_ways() {
     let e = expr_of(&s, id, pins[0]);
     assert!(e.contains(&format!("thisComp.layer(\"{solid}: Puppet Pin 1\")")) && e.contains("fromComp(n.toComp(n.transform.anchorPoint))"), "{e}");
     // Nulls Follow Points: a null riding on a pin, through the pin's Position.
-    let r = s.execute("paths.nullsFollowPoints", json!({"layer": id, "pins": ["Puppet Pin 2"]})).unwrap();
+    let r = s.execute("path.nullsFollowPoints", json!({"layer": id, "pins": ["Puppet Pin 2"]})).unwrap();
     let rider = layer_of(&s, r["nulls"][0].as_u64().unwrap());
     let e = rider.props.prop("transform/position").unwrap().expr.as_ref().unwrap().text.clone();
     assert!(e.contains(&format!("thisComp.layer(\"{solid}\")")) && e.contains("(\"Puppet Pin 2\")(\"Position\")") && e.contains("toComp"), "{e}");
-    assert!(s.execute("paths.nullsFollowPoints", json!({"layer": id, "pins": [bend]})).is_err());
+    assert!(s.execute("path.nullsFollowPoints", json!({"layer": id, "pins": [bend]})).is_err());
     // Trace Path still needs a path.
-    assert!(s.execute("paths.tracePath", json!({"layer": id})).is_err());
+    assert!(s.execute("path.tracePath", json!({"layer": id})).is_err());
 }
 
 #[test]

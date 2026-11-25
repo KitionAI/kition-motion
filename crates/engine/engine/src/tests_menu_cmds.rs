@@ -572,30 +572,30 @@ fn animation_menu_keys_presets_text() {
     let a = solid(&mut s, "#ff0000");
     // Add Keyframe on selected properties.
     s.execute("prop.select", json!({"layer": a, "path": "transform/scale"})).unwrap();
-    s.execute("anim.addKeyframe", json!({})).unwrap();
+    s.execute("animation.addKeyframe", json!({})).unwrap();
     s.execute("time.set", json!({"time": 1.0})).unwrap();
     s.execute("prop.set", json!({"layer": a, "path": "transform/scale", "value": [400, 400]})).unwrap();
     assert_eq!(layer(&s, a).props.prop("transform/scale").unwrap().keys.len(), 2);
     // Exponential Scale: a key per frame, geometric in between.
     s.execute("prop.select", json!({"layer": a, "path": "transform/scale"})).unwrap();
-    s.execute("keys.exponentialScale", json!({})).unwrap();
+    s.execute("keyframe.exponentialScale", json!({})).unwrap();
     let keys = layer(&s, a).props.prop("transform/scale").unwrap().keys.clone();
     assert_eq!(keys.len(), 31);
     assert!((keys[15].value.as_vec3()[0] - 200.0).abs() < 1e-6, "{:?}", keys[15].value);
     s.execute("edit.undo", json!({})).unwrap();
     // Time-Reverse Keyframes.
     s.execute("prop.select", json!({"layer": a, "path": "transform/scale"})).unwrap();
-    s.execute("keys.timeReverse", json!({})).unwrap();
+    s.execute("keyframe.timeReverse", json!({})).unwrap();
     let keys = layer(&s, a).props.prop("transform/scale").unwrap().keys.clone();
     assert_eq!((keys[0].value.as_vec3()[0], keys[1].value.as_vec3()[0]), (400.0, 100.0));
 
     // Presets round-trip through a file onto another layer at the CTI.
     let path = tmp("scale.ecpreset");
     s.execute("prop.select", json!({"layer": a, "path": "transform/scale"})).unwrap();
-    s.execute("anim.savePreset", json!({"path": path})).unwrap();
+    s.execute("animation.savePreset", json!({"path": path})).unwrap();
     let b = solid(&mut s, "#00ff00");
     s.execute("time.set", json!({"time": 3.0})).unwrap();
-    let r = s.execute("anim.applyPreset", json!({"path": path, "layers": [b]})).unwrap();
+    let r = s.execute("animation.applyPreset", json!({"path": path, "layers": [b]})).unwrap();
     assert_eq!(r["applied"], 1);
     let keys = layer(&s, b).props.prop("transform/scale").unwrap().keys.clone();
     assert_eq!(keys.len(), 2);
@@ -626,9 +626,9 @@ fn reveal_properties() {
     s.execute("prop.set", json!({"layer": a, "path": "transform/scale", "value": [50, 50]})).unwrap();
     s.drain_events();
     let n = |v: &Value| v["props"].as_array().unwrap().len();
-    assert_eq!(n(&s.execute("anim.reveal", json!({"kind": "keyframes"})).unwrap()), 1);
-    assert_eq!(n(&s.execute("anim.reveal", json!({"kind": "animation"})).unwrap()), 2);
-    assert_eq!(n(&s.execute("anim.reveal", json!({"kind": "modified"})).unwrap()), 3);
+    assert_eq!(n(&s.execute("animation.reveal", json!({"kind": "keyframes"})).unwrap()), 1);
+    assert_eq!(n(&s.execute("animation.reveal", json!({"kind": "animation"})).unwrap()), 2);
+    assert_eq!(n(&s.execute("animation.reveal", json!({"kind": "modified"})).unwrap()), 3);
     assert!(frontend_events(&mut s).iter().all(|(c, _)| c == "timeline.revealProps"));
 }
 
@@ -656,7 +656,7 @@ fn file_menu_project_ops() {
     let p2 = s.execute("file.importPlaceholder", json!({"name": "Unused"})).unwrap()["item"].as_u64().unwrap();
     s.execute("file.importSolid", json!({"name": "Grey"})).unwrap();
     s.state.project_selection = vec![kition_motion_project::ItemId(p1)];
-    let r = s.execute("file.newCompFromSelection", json!({})).unwrap();
+    let r = s.execute("comp.newFromSelection", json!({})).unwrap();
     let nc = kition_motion_project::ItemId(r["comps"][0].as_u64().unwrap());
     assert_eq!((s.project.comp(nc).unwrap().width, s.project.comp(nc).unwrap().layers.len()), (320, 1));
     // Missing footage = the placeholders.
@@ -784,7 +784,7 @@ fn frontend_commands_emit_events_and_stubs_are_disabled() {
     let ev = frontend_events(&mut s);
     assert_eq!(ev[0].0, "view.zoomIn");
     assert_eq!(ev[1], ("window.panel".to_string(), json!({"panel": "align"})));
-    for id in ["layer.autoTrace", "layer.sceneEditDetection", "layer.create", "track.motion"] {
+    for id in ["layer.autoTrace", "layer.sceneEditDetection", "layer.add", "track.motion"] {
         assert!(!s.is_enabled(id), "{id}");
         assert!(matches!(s.execute(id, json!({})), Err(EngineError::Disabled(..))), "{id}");
     }
@@ -867,11 +867,11 @@ fn locked_layers_are_not_selected_deleted_or_moved() {
     s.execute("layer.selectPrevious", json!({})).unwrap();
     assert_eq!(s.state.selected_layers[0].0, a, "nothing above the locked layer to step to");
     // Deleting, arranging or transforming only the locked layer is refused; with others, it stays.
-    let e = s.execute("edit.clear", json!({"layers": [b]})).unwrap_err().to_string();
+    let e = s.execute("edit.delete", json!({"layers": [b]})).unwrap_err().to_string();
     assert!(e.contains("locked"), "{e}");
     assert!(s.execute("layer.arrange", json!({"layers": [b], "to": "back"})).is_err());
     assert!(s.execute("layer.transform", json!({"layers": [b], "op": "center"})).is_err());
-    s.execute("edit.clear", json!({"layers": [a, b]})).unwrap();
+    s.execute("edit.delete", json!({"layers": [a, b]})).unwrap();
     assert_eq!(order(&s), vec![b]);
 }
 
@@ -885,7 +885,7 @@ fn deleting_a_parent_keeps_its_children_in_place() {
     s.execute("prop.set", json!({"layer": child, "path": "transform/position", "value": [210, 160]})).unwrap();
     s.execute("layer.setParent", json!({"layers": [child], "parent": parent})).unwrap();
     assert_ne!(pos(&s, child)[..2], [210.0, 160.0], "expressed in the parent's space");
-    s.execute("edit.clear", json!({"layers": [parent]})).unwrap();
+    s.execute("edit.delete", json!({"layers": [parent]})).unwrap();
     let p = pos(&s, child);
     assert!((p[0] - 210.0).abs() < 1e-6 && (p[1] - 160.0).abs() < 1e-6, "{p:?}");
     assert_eq!(layer(&s, child).parent, None);
@@ -1003,7 +1003,7 @@ fn new_comp_from_selection_is_one_undo_step_with_the_dialog_options() {
     s.state.project_selection = vec![a, b];
     // Multiple compositions (the default): one per item, its size and pixel aspect; one undo step.
     let steps = s.history.undo.len();
-    let r = s.execute("file.newCompFromSelection", json!({"duration": 4})).unwrap();
+    let r = s.execute("comp.newFromSelection", json!({"duration": 4})).unwrap();
     let comps: Vec<u64> = r["comps"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
     assert_eq!(comps.len(), 2);
     let cb = s.project.comp(kition_motion_project::ItemId(comps[1])).unwrap();
@@ -1015,7 +1015,7 @@ fn new_comp_from_selection_is_one_undo_step_with_the_dialog_options() {
     s.state.project_selection = vec![a, b];
     let r = s
         .execute(
-            "file.newCompFromSelection",
+            "comp.newFromSelection",
             json!({"single": true, "dimensionsFrom": 1, "duration": 3, "sequence": true, "overlap": true, "overlapDuration": 1, "addToRenderQueue": true}),
         )
         .unwrap();
@@ -1031,7 +1031,7 @@ fn new_comp_from_selection_is_one_undo_step_with_the_dialog_options() {
     s.execute("edit.undo", json!({})).unwrap();
     assert!(s.project.render_queue.is_empty() && s.project.comps().count() == 0);
     s.state.project_selection = vec![a, b];
-    assert!(s.execute("file.newCompFromSelection", json!({"single": true, "dimensionsFrom": 2})).is_err());
+    assert!(s.execute("comp.newFromSelection", json!({"single": true, "dimensionsFrom": 2})).is_err());
 }
 
 #[test]
@@ -1125,14 +1125,13 @@ fn new_comp_from_selection_survives_hostile_sequence_numbers() {
         s.state.project_selection = vec![a, b, c];
         // A huge overlap overflowed the duration arithmetic (a panic with overflow checks, a
         // wrapped, too long comp without them).
-        let r = s
-            .execute("file.newCompFromSelection", json!({"single": true, "sequence": true, "overlap": true, "overlapDuration": overlap, "duration": 2}))
-            .unwrap();
+        let r =
+            s.execute("comp.newFromSelection", json!({"single": true, "sequence": true, "overlap": true, "overlapDuration": overlap, "duration": 2})).unwrap();
         let c = s.project.comp(kition_motion_project::ItemId(r["comps"][0].as_u64().unwrap())).unwrap();
         assert!(c.duration.seconds() <= 6.0 && c.duration > kition_motion_time::Tick::ZERO, "{overlap}: {}", c.duration.seconds());
     }
     s.state.project_selection = vec![a, b];
-    assert!(s.execute("file.newCompFromSelection", json!({"single": true, "dimensionsFrom": 99})).is_err());
+    assert!(s.execute("comp.newFromSelection", json!({"single": true, "dimensionsFrom": 99})).is_err());
 }
 
 fn key_times(s: &Session, l: u64) -> Vec<f64> {
@@ -1150,15 +1149,15 @@ fn dragging_a_key_past_another_keeps_it() {
     let mut s = comp();
     let a = solid(&mut s, "#ff0000");
     opacity_keys(&mut s, a, &[1.0, 2.0]);
-    s.execute("keys.select", json!({"keys": [{"layer": a, "path": "transform/opacity", "time": 1.0}]})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [{"layer": a, "path": "transform/opacity", "time": 1.0}]})).unwrap();
     // One drag, frame by frame, from 1 s over the 2 s key to 3 s.
     for _ in 0..60 {
-        s.execute("keys.move", json!({"delta": 1.0 / 30.0, "merge": "key-drag"})).unwrap();
+        s.execute("keyframe.move", json!({"delta": 1.0 / 30.0, "merge": "key-drag"})).unwrap();
     }
     assert_eq!(key_times(&s, a), vec![2.0, 3.0], "the 2 s key passed over is still there");
     // Dropped exactly on a key: it replaces it, as is usual.
     s.history.merge_key = None;
-    s.execute("keys.move", json!({"delta": -1.0, "merge": "key-drag-2"})).unwrap();
+    s.execute("keyframe.move", json!({"delta": -1.0, "merge": "key-drag-2"})).unwrap();
     assert_eq!(key_times(&s, a), vec![2.0]);
     // The whole drag was one undo step.
     s.execute("edit.undo", json!({})).unwrap();
@@ -1178,10 +1177,10 @@ fn keys_of_a_stretched_layer_move_with_the_pointer() {
         l.comp_time(l.props.prop("transform/opacity").unwrap().keys[i].time).seconds()
     };
     let before = comp_time(&s, 1);
-    s.execute("keys.select", json!({"keys": [{"layer": a, "path": "transform/opacity", "time": 1.0}]})).unwrap();
-    s.execute("keys.move", json!({"delta": 0.5})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [{"layer": a, "path": "transform/opacity", "time": 1.0}]})).unwrap();
+    s.execute("keyframe.move", json!({"delta": 0.5})).unwrap();
     assert!((comp_time(&s, 1) - (before + 0.5)).abs() < 1.0 / 30.0, "{} → {}", before, comp_time(&s, 1));
-    s.execute("keys.nudge", json!({"frames": 3})).unwrap();
+    s.execute("keyframe.nudge", json!({"frames": 3})).unwrap();
     assert!((comp_time(&s, 1) - (before + 0.6)).abs() < 1.0 / 60.0, "three comp frames");
 }
 
@@ -1191,22 +1190,22 @@ fn key_selection_toggles_and_skips_locked_layers_and_hold_restores_bezier() {
     let a = solid(&mut s, "#ff0000");
     opacity_keys(&mut s, a, &[0.0, 1.0]);
     let k = |t: f64| json!({"layer": a, "path": "transform/opacity", "time": t});
-    s.execute("keys.select", json!({"keys": [k(0.0)]})).unwrap();
-    s.execute("keys.select", json!({"keys": [k(1.0)], "toggle": true})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [k(0.0)]})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [k(1.0)], "toggle": true})).unwrap();
     assert_eq!(s.state.selected_keys.len(), 2);
-    s.execute("keys.select", json!({"keys": [k(0.0)], "toggle": true})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [k(0.0)], "toggle": true})).unwrap();
     assert_eq!(s.state.selected_keys.len(), 1, "toggled out");
     // Hold off returns an eased key to Bezier.
-    s.execute("keys.easyEase", json!({})).unwrap();
-    s.execute("keys.toggleHold", json!({})).unwrap();
-    s.execute("keys.toggleHold", json!({})).unwrap();
+    s.execute("keyframe.easyEase", json!({})).unwrap();
+    s.execute("keyframe.toggleHold", json!({})).unwrap();
+    s.execute("keyframe.toggleHold", json!({})).unwrap();
     let kf = layer(&s, a).props.prop("transform/opacity").unwrap().keys[1].clone();
     assert_eq!(kf.out_interp, kition_motion_keyframe::Interp::Bezier);
     // Locked: its keys can't be selected.
     s.execute("layer.setSwitch", json!({"layers": [a], "switch": "lock", "value": true})).unwrap();
-    s.execute("keys.select", json!({"keys": [k(0.0)]})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [k(0.0)]})).unwrap();
     assert!(s.state.selected_keys.is_empty());
-    s.execute("keys.selectAll", json!({"layers": [a]})).unwrap();
+    s.execute("keyframe.selectAll", json!({"layers": [a]})).unwrap();
     assert!(s.state.selected_keys.is_empty());
 }
 
@@ -1215,16 +1214,16 @@ fn transform_drags_apply_their_whole_offset_to_the_keys_they_started_with() {
     let mut s = comp();
     let a = solid(&mut s, "#ff0000");
     opacity_keys(&mut s, a, &[0.0, 1.0, 2.0]);
-    s.execute("keys.selectAll", json!({"layers": [a]})).unwrap();
+    s.execute("keyframe.selectAll", json!({"layers": [a]})).unwrap();
     // Squeezed onto one frame on the way, then back: the three keys survive.
     for k in [0.5, 0.01, 0.0001, 1.0] {
-        s.execute("keys.transform", json!({"timeScale": k, "timeAnchor": 0.0, "merge": "box", "fromStart": true})).unwrap();
+        s.execute("keyframe.transform", json!({"timeScale": k, "timeAnchor": 0.0, "merge": "box", "fromStart": true})).unwrap();
     }
     assert_eq!(key_times(&s, a), vec![0.0, 1.0, 2.0]);
     // A slow move in tiny steps still arrives (each step is the whole offset).
     s.history.merge_key = None;
     for i in 1..=30 {
-        s.execute("keys.transform", json!({"timeOffset": i as f64 * 0.1 / 30.0, "merge": "move", "fromStart": true})).unwrap();
+        s.execute("keyframe.transform", json!({"timeOffset": i as f64 * 0.1 / 30.0, "merge": "move", "fromStart": true})).unwrap();
     }
     assert_eq!(key_times(&s, a), vec![0.1, 1.1, 2.1]);
 }
@@ -1236,20 +1235,20 @@ fn select_equal_previous_and_following_keyframes() {
     for (t, v) in [(0.0, 20.0), (1.0, 50.0), (2.0, 20.0), (3.0, 70.0)] {
         s.execute("prop.addKey", json!({"layer": a, "path": "transform/opacity", "time": t, "value": v})).unwrap();
     }
-    let pick = |s: &mut Session, t: f64| s.execute("keys.select", json!({"keys": [{"layer": a, "path": "transform/opacity", "time": t}]})).unwrap();
+    let pick = |s: &mut Session, t: f64| s.execute("keyframe.select", json!({"keys": [{"layer": a, "path": "transform/opacity", "time": t}]})).unwrap();
     let times = |s: &Session| {
         let mut v: Vec<f64> = s.state.selected_keys.iter().map(|k| k.time.seconds()).collect();
         v.sort_by(f64::total_cmp);
         v
     };
     pick(&mut s, 0.0);
-    s.execute("keys.selectEqual", json!({})).unwrap();
+    s.execute("keyframe.selectEqual", json!({})).unwrap();
     assert_eq!(times(&s), vec![0.0, 2.0]);
     pick(&mut s, 2.0);
-    s.execute("keys.selectPrevious", json!({})).unwrap();
+    s.execute("keyframe.selectPrevious", json!({})).unwrap();
     assert_eq!(times(&s), vec![0.0, 1.0, 2.0]);
     pick(&mut s, 1.0);
-    s.execute("keys.selectFollowing", json!({})).unwrap();
+    s.execute("keyframe.selectFollowing", json!({})).unwrap();
     assert_eq!(times(&s), vec![1.0, 2.0, 3.0]);
 }
 
@@ -1263,18 +1262,18 @@ fn keys_from_several_layers_paste_in_order_and_paste_reversed_respects_stretch()
     let c = solid(&mut s, "#0000ff");
     let d = solid(&mut s, "#ffffff");
     // Copy A's and B's Opacity keys, paste onto C and D: A → C, B → D (in order).
-    s.execute("keys.selectAll", json!({"layers": [a, b]})).unwrap();
-    s.execute("keys.copy", json!({})).unwrap();
+    s.execute("keyframe.selectAll", json!({"layers": [a, b]})).unwrap();
+    s.execute("keyframe.copy", json!({})).unwrap();
     s.execute("time.set", json!({"time": 2.0})).unwrap();
     s.execute("layer.select", json!({"layers": [c, d]})).unwrap();
-    s.execute("keys.paste", json!({})).unwrap();
+    s.execute("keyframe.paste", json!({})).unwrap();
     assert_eq!(key_times(&s, c), vec![2.0, 3.0], "A's two keys");
     assert_eq!(key_times(&s, d), vec![2.0], "B's one key");
     // Paste Reversed onto a layer stretched to 200 %: the reversed keys land 2 s apart there too.
     let e = solid(&mut s, "#808080");
     s.execute_checked("layer.timeStretch", json!({"layers": [e], "percent": 200})).unwrap();
-    s.execute("keys.selectAll", json!({"layers": [a]})).unwrap();
-    s.execute("keys.copy", json!({})).unwrap();
+    s.execute("keyframe.selectAll", json!({"layers": [a]})).unwrap();
+    s.execute("keyframe.copy", json!({})).unwrap();
     s.execute("time.set", json!({"time": 0.0})).unwrap();
     s.execute("layer.select", json!({"layers": [e]})).unwrap();
     s.execute("edit.pasteReversedKeyframes", json!({})).unwrap();
@@ -1321,7 +1320,7 @@ fn j_k_and_select_all_use_only_the_properties_the_timeline_shows() {
     s.execute("time.nextKey", json!({})).unwrap();
     assert_eq!(s.time().seconds(), 2.0);
     // Select All Keyframes: the shown properties' keys only.
-    s.execute_checked("keys.selectAll", json!({"visible": visible})).unwrap();
+    s.execute_checked("keyframe.selectAll", json!({"visible": visible})).unwrap();
     assert_eq!(s.state.selected_keys.len(), 1);
     assert_eq!(s.state.selected_keys[0].prop, op);
 }

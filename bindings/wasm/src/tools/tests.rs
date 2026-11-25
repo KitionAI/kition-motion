@@ -484,7 +484,7 @@ fn tools_shape_path_vertices_select_move_convert_add_and_delete_in_one_undo_step
     // A box over the two bottom vertices (vertices are selected, so empty space boxes them), then Delete.
     drag_from(&mut doc, [700.0, 560.0], [1100.0, 700.0], ToolMods::default(), ToolMods::default());
     assert_eq!(doc.session.state.selected_vertices.len(), 2, "{:?}", doc.session.state.selected_vertices);
-    doc.execute("edit.clear", json!({})).unwrap();
+    doc.execute("edit.delete", json!({})).unwrap();
     assert_eq!(shape_path_of(&mut doc, layer).1.len(), 3, "the two boxed vertices are gone, the layer stays");
     doc.execute("edit.undo", json!({})).unwrap();
     assert_eq!(shape_path_of(&mut doc, layer).1.len(), 5);

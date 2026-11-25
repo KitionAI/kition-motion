@@ -162,12 +162,12 @@ fn import_solid(s: &mut Session, p: &Value) -> Result<Value> {
 fn new_comp_from_selection(s: &mut Session, p: &Value) -> Result<Value> {
     let items: Vec<ItemId> = s.state.project_selection.iter().copied().filter(|i| s.project.item(*i).is_some_and(|x| !x.is_folder())).collect();
     if items.is_empty() {
-        return Err(bad("file.newCompFromSelection", "select footage in the Project panel"));
+        return Err(bad("comp.newFromSelection", "select footage in the Project panel"));
     }
     let single = b_p(p, "single").unwrap_or(false) && items.len() > 1;
     let from = p.get("dimensionsFrom").and_then(Value::as_u64).unwrap_or(0) as usize;
     if single && from >= items.len() {
-        return Err(bad("file.newCompFromSelection", format!("`dimensionsFrom` must be below {}", items.len())));
+        return Err(bad("comp.newFromSelection", format!("`dimensionsFrom` must be below {}", items.len())));
     }
     let still = f_p(p, "duration")
         .or((s.prefs.import.still_footage == "seconds").then_some(s.prefs.import.still_seconds))
@@ -951,7 +951,7 @@ pub fn specs() -> Vec<CommandSpec> {
         ),
         cmd!("file.importSolid", "Solid...", ["File", "Import"], None, "{name?, color?, width?, height?}", always, import_solid),
         cmd!(
-            "file.newCompFromSelection",
+            "comp.newFromSelection",
             "New Comp from Selection...",
             ["File"],
             Some("Cmd+Alt+\\"),

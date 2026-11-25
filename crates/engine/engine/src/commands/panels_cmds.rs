@@ -196,7 +196,7 @@ fn scopes_analyze(s: &mut Session, p: &Value) -> Result<Value> {
     let cid = super::comp_id(s, p)?;
     let comp = s.project.comp(cid).ok_or(EngineError::NoComp)?;
     let t = super::time_p(s, p, Some(comp));
-    let (kind, o) = scope_opts(p).map_err(|e| bad("scopes.analyze", e))?;
+    let (kind, o) = scope_opts(p).map_err(|e| bad("scope.analyze", e))?;
     let img = scope_frame(s, cid, t, 512).ok_or(EngineError::NoComp)?;
     let sc = scopes::compute(&img, kind, &o);
     // Signal statistics of the frame.
@@ -229,9 +229,9 @@ fn scopes_analyze(s: &mut Session, p: &Value) -> Result<Value> {
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
-        query!("jobs.list", "Background Jobs", "{}", jobs_list),
-        cmd!("jobs.cancel", "Cancel Job", [], None, "{job?: render|track|maskTrack|warp|camera|roto|task:<n>|all}", always, jobs_cancel),
-        query!("jobs.wait", "Wait for Background Jobs", "{}", jobs_wait),
+        query!("job.list", "Background Jobs", "{}", jobs_list),
+        cmd!("job.cancel", "Cancel Job", [], None, "{job?: render|track|maskTrack|warp|camera|roto|task:<n>|all}", always, jobs_cancel),
+        query!("job.wait", "Wait for Background Jobs", "{}", jobs_wait),
         query!("mediaBrowser.list", "List Folder", "{path?, importableOnly?}", browser_list),
         cmd!("mediaBrowser.go", "Go to Folder", [], None, "{path?: folder | \"..\", importableOnly?}", browser_enabled, browser_go),
         cmd!("mediaBrowser.addFavorite", "Add to Favorites", [], None, "{path?}", browser_enabled, |s, p| browser_favorite(s, p, true)),
@@ -258,7 +258,7 @@ pub fn specs() -> Vec<CommandSpec> {
         query!("item.metadata", "Metadata", "{item?: id|name}", metadata),
         cmd!("project.setProjectComment", "Project Comment", [], None, "{comment}", always, project_comment),
         query!(
-            "scopes.analyze",
+            "scope.analyze",
             "Scopes",
             "{comp?, time?|frame?, scope?: waveformRgb|waveformLuma|waveformYc|vectorscopeYuv|vectorscopeHls|histogram|paradeRgb|paradeYuv, standard?: rec601|rec709|rec2020, float?, clamp?, size?}",
             scopes_analyze

@@ -520,13 +520,13 @@ fn motion_path_key_drag_edits_value_and_tangents() {
     let mut s = comp();
     let lid = animated_position(&mut s);
     // Dragging the middle key's dot sets that key's value (merged drag = one undo step).
-    s.execute("keys.set", json!({"layer": lid, "path": "transform/position", "time": 1.0, "value": [310, 120, 0], "merge": "mp"})).unwrap();
-    s.execute("keys.set", json!({"layer": lid, "path": "transform/position", "time": 1.0, "value": [320, 140, 0], "merge": "mp"})).unwrap();
+    s.execute("keyframe.set", json!({"layer": lid, "path": "transform/position", "time": 1.0, "value": [310, 120, 0], "merge": "mp"})).unwrap();
+    s.execute("keyframe.set", json!({"layer": lid, "path": "transform/position", "time": 1.0, "value": [320, 140, 0], "merge": "mp"})).unwrap();
     let pos = |s: &Session| layer(s, lid).props.prop("transform/position").unwrap().clone();
     assert_eq!(pos(&s).keys[1].value, KV::Vec3([320.0, 140.0, 0.0]));
     assert_eq!(pos(&s).keys[0].value, KV::Vec3([100.0, 100.0, 0.0]));
     // Tangent drag: out handle set, in mirrored, no longer auto.
-    s.execute("keys.setSpatialTangents", json!({"layer": lid, "path": "transform/position", "time": 1.0, "out": [40, 0], "merge": "tg"})).unwrap();
+    s.execute("keyframe.setSpatialTangents", json!({"layer": lid, "path": "transform/position", "time": 1.0, "out": [40, 0], "merge": "tg"})).unwrap();
     let k = pos(&s).keys[1].clone();
     assert_eq!(k.spatial_out, [40.0, 0.0, 0.0]);
     assert_eq!(k.spatial_in, [-40.0, 0.0, 0.0]);
@@ -535,7 +535,7 @@ fn motion_path_key_drag_edits_value_and_tangents() {
     let mid = pos(&s).value_at(Tick::from_seconds_f64(1.0)).as_vec3();
     assert_eq!([mid[0], mid[1]], [320.0, 140.0]);
     // Alt-drag (break): only the in handle changes.
-    s.execute("keys.setSpatialTangents", json!({"layer": lid, "path": "transform/position", "time": 1.0, "in": [0, -30], "break": true})).unwrap();
+    s.execute("keyframe.setSpatialTangents", json!({"layer": lid, "path": "transform/position", "time": 1.0, "in": [0, -30], "break": true})).unwrap();
     let k = pos(&s).keys[1].clone();
     assert_eq!((k.spatial_in, k.spatial_out), ([0.0, -30.0, 0.0], [40.0, 0.0, 0.0]));
     s.undo();
@@ -554,16 +554,16 @@ fn graph_transform_box_scales_key_times_and_values() {
     }
     let uid = layer(&s, lid).props.prop("transform/opacity").unwrap().uid;
     let keys: Vec<_> = [0.0, 1.0, 2.0].iter().map(|t| json!({"layer": lid, "prop": uid, "time": t})).collect();
-    s.execute("keys.select", json!({"keys": keys})).unwrap();
+    s.execute("keyframe.select", json!({"keys": keys})).unwrap();
     // Time: scale 2× about 0 s; value: scale 0.5 about 100.
-    s.execute("keys.transform", json!({"timeScale": 2.0, "timeAnchor": 0.0, "valueScale": 0.5, "valueAnchor": 100.0})).unwrap();
+    s.execute("keyframe.transform", json!({"timeScale": 2.0, "timeAnchor": 0.0, "valueScale": 0.5, "valueAnchor": 100.0})).unwrap();
     let p = layer(&s, lid).props.prop("transform/opacity").unwrap().clone();
     let got: Vec<(f64, f64)> = p.keys.iter().map(|k| (k.time.seconds(), k.value.as_f64())).collect();
     assert_eq!(got, vec![(0.0, 50.0), (2.0, 75.0), (4.0, 100.0)]);
     assert_eq!(s.state.selected_keys.len(), 3);
     // Alt-drag of the last key in the timeline: scale the group about the first key; times
     // land on frames.
-    s.execute("keys.transform", json!({"timeScale": 0.501, "timeAnchor": 0.0})).unwrap();
+    s.execute("keyframe.transform", json!({"timeScale": 0.501, "timeAnchor": 0.0})).unwrap();
     let p = layer(&s, lid).props.prop("transform/opacity").unwrap().clone();
     let got: Vec<f64> = p.keys.iter().map(|k| k.time.seconds()).collect();
     assert_eq!(got, vec![0.0, 1.0, 2.0]);
@@ -572,5 +572,5 @@ fn graph_transform_box_scales_key_times_and_values() {
     let p = layer(&s, lid).props.prop("transform/opacity").unwrap().clone();
     assert_eq!(p.keys.iter().map(|k| k.time.seconds()).collect::<Vec<_>>(), vec![0.0, 1.0, 2.0]);
     assert_eq!(p.keys[1].value.as_f64(), 50.0);
-    assert!(s.execute("keys.transform", json!({"timeScale": 0})).is_err());
+    assert!(s.execute("keyframe.transform", json!({"timeScale": 0})).is_err());
 }

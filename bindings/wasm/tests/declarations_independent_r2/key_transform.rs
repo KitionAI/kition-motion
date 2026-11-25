@@ -2,7 +2,7 @@ use super::Row;
 
 pub(super) const ROWS: &[Row] = &[
     Row {
-        command: "keys.transform",
+        command: "keyframe.transform",
         path: "transform current selected keys",
         resolves: &["active comp", "selected_keys layer/property/exact time", "timeAnchor default earliest selected key in comp time"],
         reads: &[
@@ -24,7 +24,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/key_transform.rs:25; keyframe/src/lib.rs:431",
     },
     Row {
-        command: "keys.transform",
+        command: "keyframe.transform",
         path: "fromStart merged gesture",
         resolves: &["active comp", "key_move.from selection against history undo base"],
         reads: &[
@@ -39,7 +39,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/key_transform.rs:28,69",
     },
     Row {
-        command: "keys.setSpatialTangents",
+        command: "keyframe.setSpatialTangents",
         path: "nearest key, both sides explicit or mirror unspecified side",
         resolves: &["prop_ref comp/layer/property uid or path", "time: layer seconds, exact match else nearest stored key"],
         reads: &[

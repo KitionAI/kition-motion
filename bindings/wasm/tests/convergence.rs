@@ -7,7 +7,7 @@
 //! What the suite's steps are in a project:
 //! - the probe is the active composition's top layer; `SetField` slots 0 and 1 are its name
 //!   (`layer.rename`, the layer's `name` field) and its label (`edit.label`, a key of its `attrs`);
-//! - `Create`, `Delete`, `Duplicate` are layers (`layer.newSolid`, `edit.clear`, `edit.duplicate`);
+//! - `Create`, `Delete`, `Duplicate` are layers (`layer.newSolid`, `edit.delete`, `edit.duplicate`);
 //!   `Reorder` is the stacking order (`layer.arrange`); `Reparent` is layer parenting: `which` 0
 //!   parents the second layer to the third, 1 the third to the second (`layer.setParent`), so the
 //!   two at once make a cycle the repair breaks;
@@ -162,7 +162,7 @@ impl KitAdapter for MotionKit {
                 let to = ["front", "forward", "backward", "back"][rng.below(4)];
                 ("arrange", attempt(doc, "layer.arrange", json!({ "layers": [id], "to": to })))
             }
-            (6, Some(id)) if all.len() > 1 => ("clear", attempt(doc, "edit.clear", json!({ "layers": [id] }))),
+            (6, Some(id)) if all.len() > 1 => ("clear", attempt(doc, "edit.delete", json!({ "layers": [id] }))),
             (7, Some(id)) => ("duplicate", attempt(doc, "edit.duplicate", json!({ "layers": [id] }))),
             (8, _) => ("folder", attempt(doc, "project.newFolder", json!({ "name": format!("F{value}") }))),
             (9, _) => {
@@ -204,7 +204,7 @@ impl KitAdapter for MotionKit {
             }
             Script::Delete => {
                 let id = probe(doc)?;
-                exec(doc, "edit.clear", json!({ "layers": [id] }))?;
+                exec(doc, "edit.delete", json!({ "layers": [id] }))?;
                 Ok(true)
             }
             Script::Duplicate => {

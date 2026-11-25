@@ -143,7 +143,7 @@ fn svg_footage_and_shapes_from_vector_layer() {
         let direct = kition_motion_svg::rasterize(&doc, w, h, 1.0);
         assert!(mean_diff(&foot, &direct) < 1.0 / 255.0, "{name}: footage = rasterised SVG");
         s.execute("layer.select", json!({"layers": [lid]})).unwrap();
-        let r = s.execute_checked("layer.create", json!({"op": "shapesFromVector"})).unwrap();
+        let r = s.execute_checked("layer.add", json!({"op": "shapesFromVector"})).unwrap();
         let sid = r["layers"][0].as_u64().unwrap();
         let c = s.active_comp().unwrap();
         assert_eq!(c.layers[0].id.0, sid);
@@ -242,7 +242,7 @@ fn pdf_and_ai_footage_layers_and_shapes_from_vector_layer() {
         s.execute("prop.set", json!({"layer": lid, "path": "transform/scale", "value": [100, 100]})).unwrap();
         // Create Shapes from Vector Layer.
         s.execute("layer.select", json!({"layers": [lid]})).unwrap();
-        let r = s.execute_checked("layer.create", json!({"op": "shapesFromVector"})).unwrap();
+        let r = s.execute_checked("layer.add", json!({"op": "shapesFromVector"})).unwrap();
         let sid = r["layers"][0].as_u64().unwrap();
         let c = s.active_comp().unwrap();
         assert_eq!(c.layers[0].id.0, sid);
@@ -382,7 +382,7 @@ fn pdf_pages_text_and_clips_to_masks() {
     // Create Shapes from Vector Layer: the page-wide clip becomes the layer's mask, the text a
     // shape group named after it.
     s.execute("layer.select", json!({"layers": [lid]})).unwrap();
-    let sid = s.execute_checked("layer.create", json!({"op": "shapesFromVector"})).unwrap()["layers"][0].as_u64().unwrap();
+    let sid = s.execute_checked("layer.add", json!({"op": "shapesFromVector"})).unwrap()["layers"][0].as_u64().unwrap();
     let c = s.active_comp().unwrap();
     let l = c.layer(kition_motion_project::LayerId(sid)).unwrap();
     assert_eq!(l.masks().map(|m| m.groups().count()), Some(1));
@@ -497,7 +497,7 @@ fn shapes_from_vector_layer_keeps_images_as_footage_layers() {
     let foot = s.render(cid, t, RenderOpts::default());
     assert!(mean_diff(&foot, &direct) < 1.0 / 255.0);
     s.execute("layer.select", json!({"layers": [lid]})).unwrap();
-    let r = s.execute_checked("layer.create", json!({"op": "shapesFromVector"})).unwrap();
+    let r = s.execute_checked("layer.add", json!({"op": "shapesFromVector"})).unwrap();
     assert_eq!(r["skipped"], json!([]), "{r}");
     let sid = r["layers"][0].as_u64().unwrap();
     let c = s.active_comp().unwrap();

@@ -42,7 +42,7 @@ features:
     dimension: [ai]
     priority: P0
     status: has
-    commands: [comp.open, time.set, layer.select, keys.select, prop.addKey]
+    commands: [comp.open, time.set, layer.select, keyframe.select, prop.addKey]
     paths: [bindings/wasm/src/lib.rs, bindings/wasm/src/acts.rs, bindings/wasm/src/reads.json, bindings/wasm/src/collab.rs, crates/engine/engine/src/context.rs, bindings/headless/src/main.rs, bindings/headless/tests/context.rs, kit.json, agent/guide.md]
     requirements: [AX13]
     cases: [motion.agent.context/explicit-call-context, motion.agent.context/reads-declared, motion.agent.context/two-comps-one-run, motion.agent.context/typed-failure, regressions/issue-inspect-editor-state, regressions/issue-c8-motion-read-r2-view-mode, regressions/issue-c8-motion-pin-reread, regressions/issue-c8-motion-pin-read-inputs, regressions/issue-c8-motion-pin-content-regions]
@@ -131,7 +131,7 @@ features:
     dimension: [function, ai]
     priority: P1
     status: has
-    commands: [keys.select]
+    commands: [keyframe.select]
     paths: [crates/engine/engine/src/commands/prop.rs]
     cases: [regressions/issue-keys-select-unknown-params]
     since: "2026-11-17"
@@ -140,7 +140,7 @@ features:
     dimension: [function, ai]
     priority: P1
     status: has
-    commands: [layer.addMarker, markers.list]
+    commands: [layer.addMarker, marker.list]
     paths: [crates/engine/engine/src/commands/layer_menu.rs]
     cases: [regressions/issue-layer-add-marker-reply]
     since: "2026-11-17"
@@ -169,7 +169,7 @@ features:
     dimension: [function, conversion, data-safety]
     priority: P0
     status: has
-    commands: [prop.get, prop.set, prop.addKey, prop.setExpression, keys.easyEase]
+    commands: [prop.get, prop.set, prop.addKey, prop.setExpression, keyframe.easyEase]
     paths: [crates/engine/engine/src/commands/prop.rs, crates/engine/engine/src/commands/anim.rs, crates/engine/keyframe, bindings/wasm/tests/round_trip.rs]
     target: "After Effects 2026 (26.5)"
     cases: [motion.keys.basics/save-reopen]
@@ -199,7 +199,7 @@ features:
     dimension: [conversion, function]
     priority: P1
     status: partial
-    commands: [file.newProject, file.openDemoProject, file.open, file.save, file.saveAs, file.incrementAndSave, file.revert, file.import, file.projectSettings, file.cycleBitDepth, file.close, file.closeProject, file.saveCopy, file.importMultiple, file.importPlaceholder, file.importSolid, file.newCompFromSelection, file.collectFiles, file.consolidateFootage, file.removeUnusedFootage, file.reduceProject, file.findMissing, file.runScript, file.interpretFootage, file.rememberInterpretation, file.applyInterpretation, file.replaceFootage, file.replaceWithPlaceholder, file.replaceWithSolid, file.reloadFootage, file.revealInFinder, file.relinkFootage, file.exportLottie, file.importLottie, file.importTimeline, file.exportTimeline, file.timelineFormats, file.watchFolder, file.watchFolder.poll, file.importVanishingPoint, file.openRecent, file.clearRecent, file.autoSave, file.recoveryInfo, file.importRecent, file.clearRecentFootage, file.saveCopyAsXml, file.replaceWithLayeredComp, file.executeFile, file.createProxy, file.setProxy, file.setProxyNone, file.useProxy, file.interpretProxy, file.installScript, file.installScriptPanel, file.uninstallScript, file.scripts.list, templates.list, templates.thumbnail, templates.create, templates.saveAs, templates.delete, file.newFromTemplate, file.exportMovie]
+    commands: [file.newProject, file.openDemoProject, file.open, file.save, file.saveAs, file.incrementAndSave, file.revert, file.import, file.projectSettings, file.cycleBitDepth, file.close, file.closeProject, file.saveCopy, file.importMultiple, file.importPlaceholder, file.importSolid, comp.newFromSelection, file.collectFiles, file.consolidateFootage, file.removeUnusedFootage, file.reduceProject, file.findMissing, file.runScript, file.interpretFootage, file.rememberInterpretation, file.applyInterpretation, file.replaceFootage, file.replaceWithPlaceholder, file.replaceWithSolid, file.reloadFootage, file.revealInFinder, file.relinkFootage, file.exportLottie, file.importLottie, file.importTimeline, file.exportTimeline, file.timelineFormats, file.watchFolder, file.watchFolder.poll, file.importVanishingPoint, file.openRecent, file.clearRecent, file.autoSave, file.recoveryInfo, file.importRecent, file.clearRecentFootage, file.saveCopyAsXml, file.replaceWithLayeredComp, file.executeFile, file.addProxy, file.setProxy, file.setProxyNone, file.useProxy, file.interpretProxy, file.installScript, file.installScriptPanel, file.uninstallScript, file.scripts.list, template.list, template.thumbnail, template.add, template.saveAs, template.delete, file.newFromTemplate, file.exportMovie]
     paths: [bindings/wasm/src/files.rs, crates/engine/engine/src/commands/file_more.rs, crates/engine/engine/src/commands/file.rs, bindings/wasm/src/lib.rs, bindings/wasm/tests/independent_r2_replace_solid.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -230,7 +230,7 @@ features:
     dimension: [function]
     priority: P1
     status: partial
-    commands: [edit.undo, edit.redo, edit.cut, edit.copy, edit.copyWithPropertyLinks, edit.copyWithRelativePropertyLinks, edit.copyExpressionOnly, edit.paste, edit.pasteReversedKeyframes, edit.clear, edit.duplicate, edit.splitLayer, edit.liftWorkArea, edit.extractWorkArea, edit.selectAll, edit.deselectAll, edit.label, edit.selectLabelGroup, edit.purgeUndo, edit.purge, edit.editOriginal, edit.history.list, edit.history.goto, edit.pasteTextMatchFormatting, edit.pasteTextFormattingOnly, edit.history]
+    commands: [edit.undo, edit.redo, edit.cut, edit.copy, edit.copyWithPropertyLinks, edit.copyWithRelativePropertyLinks, edit.copyExpressionOnly, edit.paste, edit.pasteReversedKeyframes, edit.delete, edit.duplicate, edit.splitLayer, edit.liftWorkArea, edit.extractWorkArea, edit.selectAll, edit.deselectAll, edit.label, edit.selectLabelGroup, edit.purgeUndo, edit.purge, edit.editOriginal, edit.history.list, edit.history.goto, edit.pasteTextMatchFormatting, edit.pasteTextFormattingOnly, edit.history]
     paths: [crates/engine/engine/src/commands/edit.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/commands/text_edit.rs, crates/engine/engine/src/commands/prop_groups.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -240,7 +240,7 @@ features:
     dimension: [function]
     priority: P1
     status: partial
-    commands: [comp.new, comp.setPosterTime, comp.trimToWorkArea, comp.open, comp.close, comp.workArea, comp.setSwitch, comp.renderer, comp.revealInProject, comp.cropToRegionOfInterest, comp.cropToLayerBounds, comp.saveFrameAs, comp.responsiveTime, comp.saveFrameAsPsd, comp.saveFrameAsExr, comp.vr.environments, comp.vr.setView, comp.flowchart, comp.miniFlowchart, comp.vr.createEnvironment, comp.vr.extractCubemap, comp.openInGraphicsTemplates]
+    commands: [comp.new, comp.setPosterTime, comp.trimToWorkArea, comp.open, comp.close, comp.workArea, comp.setSwitch, comp.renderer, comp.revealInProject, comp.cropToRegionOfInterest, comp.cropToLayerBounds, comp.saveFrameAs, comp.responsiveTime, comp.saveFrameAsPsd, comp.saveFrameAsExr, comp.vr.environments, comp.vr.setView, comp.flowchart, comp.miniFlowchart, comp.vr.addEnvironment, comp.vr.extractCubemap, comp.openInGraphicsTemplates]
     paths: [crates/engine/engine/src/commands/comp.rs, bindings/wasm/src/lib.rs, crates/engine/engine/src/commands/comp_more.rs, crates/engine/host/src/lib.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -271,7 +271,7 @@ features:
     dimension: [function]
     priority: P1
     status: partial
-    commands: [layer.newAdjustment, layer.settings, layer.addItem, layer.select, layer.selectNext, layer.selectPrevious, layer.setSwitch, layer.setComment, layer.setTrackMatte, layer.slip, layer.slipBack, layer.slipForward, layer.arrange, layer.precompose, layer.addMask, layer.setMask, layer.addShapeItem, layer.setText, layer.transform, layer.autoOrient, layer.newLight, layer.newCamera, layer.cameraSettings, layer.lightSettings, layer.newModel, layer.new3dPrimitive, layer.newPrimitive, layer.environment, layer.addTextAnimator, layer.addTextAnimatorProperty, layer.addTextSelector, layer.enablePerChar3D, layer.applyTextPreset, layer.timeStretch, layer.timeReverse, layer.enableTimeRemap, layer.freezeFrame, layer.freezeOnLastFrame, layer.updateMarkersFromSource, layer.channels, layer.tree, layer.quality, layer.sampling, layer.frameBlending, layer.hideOtherVideo, layer.showAllVideo, layer.unlockAll, layer.expressions, layer.setTransform, layer.centerAnchor, layer.markersLock, layer.deleteAllMarkers, layer.trackMatte, layer.openSource, layer.revealInFinder, layer.revealSource, layer.revealExpressionErrors, layer.sequence, layer.create, layer.openLayer, layer.autoTrace, layer.sceneEditDetection, layer.alignVideoToData, layer.nudge, layer.align, layer.distribute, layer.newContentAwareFill]
+    commands: [layer.newAdjustment, layer.settings, layer.addItem, layer.select, layer.selectNext, layer.selectPrevious, layer.setSwitch, layer.setComment, layer.setTrackMatte, layer.slip, layer.slipBack, layer.slipForward, layer.arrange, layer.precompose, layer.addMask, layer.setMask, layer.addShapeItem, layer.setText, layer.transform, layer.autoOrient, layer.newLight, layer.newCamera, layer.cameraSettings, layer.lightSettings, layer.newModel, layer.new3dPrimitive, layer.newPrimitive, layer.environment, layer.addTextAnimator, layer.addTextAnimatorProperty, layer.addTextSelector, layer.enablePerChar3D, layer.applyTextPreset, layer.timeStretch, layer.timeReverse, layer.enableTimeRemap, layer.freezeFrame, layer.freezeOnLastFrame, layer.updateMarkersFromSource, layer.channels, layer.tree, layer.quality, layer.sampling, layer.frameBlending, layer.hideOtherVideo, layer.showAllVideo, layer.unlockAll, layer.expressions, layer.setTransform, layer.centerAnchor, layer.markersLock, layer.deleteAllMarkers, layer.trackMatte, layer.openSource, layer.revealInFinder, layer.revealSource, layer.revealExpressionErrors, layer.sequence, layer.add, layer.openLayer, layer.autoTrace, layer.sceneEditDetection, layer.alignVideoToData, layer.nudge, layer.align, layer.distribute, layer.newContentAwareFill]
     paths: [crates/engine/engine/src/commands/layer.rs, crates/engine/engine/src/commands/layer_menu.rs, crates/engine/engine/src/learn.rs, crates/engine/script/src/runtime.rs, crates/engine/engine/src/commands/align_data.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -281,7 +281,7 @@ features:
     dimension: [function]
     priority: P1
     status: partial
-    commands: [view.set3DView, view.3d.activeCamera, view.3d.default, view.3d.front, view.3d.left, view.3d.top, view.3d.back, view.3d.right, view.3d.bottom, view.3d.custom1, view.3d.custom2, view.3d.custom3, view.3d.last, view.lookAtSelected, view.lookAtAll, view.reset3DView, view.set3DViewCamera, view.get3D, view.addGuide, view.clearGuides, view.importGuides, view.exportGuides, view.layout, view.shareViewOptions, view.extendedViewer, view.setRegionOfInterest, view.snapping, view.snappingOptions, view.displayColorManagement, view.simulateOutput, view.customRgb, view.splitLockedViewer, view.closeLockedViewer, view.displayColor, view.channel, view.exposure, view.resetExposure, view.takeSnapshot, view.showSnapshot, view.fastPreviewMode, view.moveGuide, view.removeGuide, view.zoomIn, view.zoomOut, view.res.full, view.res.half, view.res.third, view.res.quarter, view.res.custom, view.rulers, view.panelBackground, view.guides, view.snapToGuides, view.lockGuides, view.grid, view.snapToGrid, view.options, view.layerControls, view.fullScreen, view.newViewer, view.assign3dShortcut]
+    commands: [view.set3DView, view.threeD.activeCamera, view.threeD.default, view.threeD.front, view.threeD.left, view.threeD.top, view.threeD.back, view.threeD.right, view.threeD.bottom, view.threeD.custom1, view.threeD.custom2, view.threeD.custom3, view.threeD.last, view.lookAtSelected, view.lookAtAll, view.reset3DView, view.set3DViewCamera, view.get3D, view.addGuide, view.clearGuides, view.importGuides, view.exportGuides, view.layout, view.shareViewOptions, view.extendedViewer, view.setRegionOfInterest, view.snapping, view.snappingOptions, view.displayColorManagement, view.simulateOutput, view.customRgb, view.splitLockedViewer, view.closeLockedViewer, view.displayColor, view.channel, view.exposure, view.resetExposure, view.takeSnapshot, view.showSnapshot, view.fastPreviewMode, view.moveGuide, view.removeGuide, view.zoomIn, view.zoomOut, view.res.full, view.res.half, view.res.third, view.res.quarter, view.res.custom, view.rulers, view.panelBackground, view.guides, view.snapToGuides, view.lockGuides, view.grid, view.snapToGrid, view.options, view.layerControls, view.fullScreen, view.newViewer, view.assign3dShortcut]
     paths: [crates/engine/engine/src/commands/frontend.rs, crates/engine/engine/src/commands/three_d.rs, crates/engine/engine/src/commands/viewer_cmds.rs, crates/engine/engine/src/commands/app_more.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -291,7 +291,7 @@ features:
     dimension: [function]
     priority: P1
     status: partial
-    commands: [camera.fromView, camera.orbit, camera.pan, camera.dolly, material.set, material.revealSource, material.reset, material.duplicateAssign, camera.stereoRig, camera.orbitNull, camera.fromModel, light.fromModel, light.controlWithCamera, light.environmentBackground, camera.linkFocusToPoi, camera.linkFocusToLayer, camera.setFocusToLayer, camera.analyze, camera.cancel, camera.solveStatus, camera.points, camera.selectPoints, camera.createFromSolve, camera.create, camera.setGroundPlane, camera.deletePoints]
+    commands: [camera.fromView, camera.orbit, camera.pan, camera.dolly, material.set, material.revealSource, material.reset, material.duplicateAssign, camera.stereoRig, camera.orbitNull, camera.fromModel, light.fromModel, light.controlWithCamera, light.environmentBackground, camera.linkFocusToPoi, camera.linkFocusToLayer, camera.setFocusToLayer, camera.analyze, camera.cancel, camera.solveStatus, camera.points, camera.selectPoints, camera.addFromSolve, camera.add, camera.setGroundPlane, camera.deletePoints]
     paths: [crates/engine/engine/src/commands/camera_cmds.rs, crates/engine/engine/src/commands/rig3d.rs, crates/engine/engine/src/commands/model3d.rs, crates/engine/engine/src/commands/three_d.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -313,7 +313,7 @@ features:
     dimension: [function]
     priority: P1
     status: partial
-    commands: [prop.toggleAnimation, prop.toggleKey, keys.toggleTransform, prop.reset, prop.select, prop.deselect, prop.convertExpressionToKeyframes, keys.move, keys.delete, keys.easyEaseIn, keys.easyEaseOut, keys.toggleHold, keys.interpolation, keys.velocity, prop.renameGroup, prop.setGroupEnabled, prop.removeGroup, prop.duplicateGroup, prop.moveGroup, keys.copy, keys.paste, keys.selectAll, keys.nudge, keys.nudgeForward, keys.nudgeBackward, keys.nudgeForward10, keys.nudgeBackward10, keys.set, keys.selectEqual, keys.selectPrevious, keys.selectFollowing, keys.setEase, keys.timeReverse, keys.info, keys.wiggle, keys.smooth, motion.sketch, prop.separateDimensions, prop.pickWhip, anim.savePreset, anim.applyPreset, anim.addKeyframe, keys.exponentialScale, anim.reveal, keys.setLabel, keys.selectLabelGroup, keys.transform, keys.setSpatialTangents, anim.browsePresets, anim.applyRecentPreset, anim.clearRecentPresets, keys.audioToKeyframes, keys.rpfCameraImport, expr.errors, expr.languageMenu]
+    commands: [prop.toggleAnimation, prop.toggleKey, keyframe.toggleTransform, prop.reset, prop.select, prop.deselect, prop.convertExpressionToKeyframes, keyframe.move, keyframe.delete, keyframe.easyEaseIn, keyframe.easyEaseOut, keyframe.toggleHold, keyframe.interpolation, keyframe.velocity, prop.renameGroup, prop.setGroupEnabled, prop.removeGroup, prop.duplicateGroup, prop.moveGroup, keyframe.copy, keyframe.paste, keyframe.selectAll, keyframe.nudge, keyframe.nudgeForward, keyframe.nudgeBackward, keyframe.nudgeForward10, keyframe.nudgeBackward10, keyframe.set, keyframe.selectEqual, keyframe.selectPrevious, keyframe.selectFollowing, keyframe.setEase, keyframe.timeReverse, keyframe.info, keyframe.wiggle, keyframe.smooth, motion.sketch, prop.separateDimensions, prop.pickWhip, animation.savePreset, animation.applyPreset, animation.addKeyframe, keyframe.exponentialScale, animation.reveal, keyframe.setLabel, keyframe.selectLabelGroup, keyframe.transform, keyframe.setSpatialTangents, animation.browsePresets, animation.applyRecentPreset, animation.clearRecentPresets, keyframe.audioToKeyframes, keyframe.rpfCameraImport, expr.errors, expr.languageMenu]
     paths: [crates/engine/engine/src/commands/prop.rs, crates/engine/engine/src/commands/anim.rs, crates/engine/engine/src/learn.rs, crates/engine/host/src/lib.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -335,7 +335,7 @@ features:
     dimension: [function]
     priority: P1
     status: partial
-    commands: [markers.nested, markers.set, markers.delete, markers.convert]
+    commands: [marker.nested, marker.set, marker.delete, marker.convert]
     paths: [crates/engine/engine/src/commands/markers.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -345,7 +345,7 @@ features:
     dimension: [function]
     priority: P1
     status: partial
-    commands: [path.rotoBezier, path.convertToBezier, path.groupShapes, path.ungroupShapes, path.setFirstVertex, path.freeTransform, shape.newPath, shape.fillStroke, shape.dashes.add, shape.dashes.remove, shape.stroke.taper, shape.stroke.wave, shape.newShape, shape.toolOptions, paths.pointsFollowNulls, paths.nullsFollowPoints, paths.tracePath]
+    commands: [path.rotoBezier, path.convertToBezier, path.groupShapes, path.ungroupShapes, path.setFirstVertex, path.freeTransform, shape.newPath, shape.fillStroke, shape.dashes.add, shape.dashes.remove, shape.stroke.taper, shape.stroke.wave, shape.newShape, shape.toolOptions, path.pointsFollowNulls, path.nullsFollowPoints, path.tracePath]
     paths: [crates/engine/engine/src/commands/paths.rs, crates/engine/engine/src/commands/shape_stroke.rs, crates/engine/engine/src/commands/path_nulls.rs, crates/engine/engine/src/commands/shape_tool.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -417,7 +417,7 @@ features:
     dimension: [function]
     priority: P2
     status: partial
-    commands: [help.docs, help.github, help.inAppTutorials, help.reportIssue, app.capabilities, editor.state, app.about, app.settings, app.gpuInfo, app.hide, app.hideOthers, app.showAll, app.quit, app.commandPalette, app.keyboardShortcuts, app.templates, app.find, window.panel, window.workspace, window.saveWorkspace, window.saveWorkspaceAs, window.editWorkspaces, window.resetWorkspace, prefs.get, prefs.set, prefs.reset, prefs.open, prefs.pages, shortcuts.list, shortcuts.set, shortcuts.reset, shortcuts.preset, shortcuts.export, shortcuts.import, shortcuts.conflicts, window.assignWorkspaceShortcut, help.enableLogging, help.revealLogFile, help.systemReport, help.systemInfo, window.scriptPanel, window.restoreScriptPanels, jobs.list, jobs.cancel, jobs.wait, scopes.analyze, storage.info, storage.persist, storage.clear, learn.list, learn.state, learn.start, learn.step, learn.stop]
+    commands: [help.docs, help.github, help.inAppTutorials, help.reportIssue, app.capabilities, editor.state, app.about, app.settings, app.gpuInfo, app.hide, app.hideOthers, app.showAll, app.quit, app.commandPalette, app.keyboardShortcuts, app.templates, edit.find, window.panel, window.workspace, window.saveWorkspace, window.saveWorkspaceAs, window.editWorkspaces, window.resetWorkspace, prefs.get, prefs.set, prefs.reset, prefs.open, prefs.pages, shortcut.list, shortcut.set, shortcut.reset, shortcut.preset, shortcut.export, shortcut.import, shortcut.conflicts, window.assignWorkspaceShortcut, help.enableLogging, help.revealLogFile, help.systemReport, help.systemInfo, window.scriptPanel, window.restoreScriptPanels, job.list, job.cancel, job.wait, scope.analyze, storage.info, storage.persist, storage.clear, learn.list, learn.state, learn.start, learn.step, learn.stop]
     paths: [crates/engine/engine/src/commands/frontend.rs, crates/engine/engine/src/commands/settings.rs, web/src/commandIcons.ts, crates/engine/engine/src/commands/app_more.rs]
     target: "After Effects 2026 (26.5)"
     gap: "The engine has these commands; no case yet shows the area working end to end in the editor and surviving save and reopen."
@@ -509,7 +509,7 @@ features:
     priority: P1
     status: has
     paths: [web/src/timeline/Markers.tsx, web/src/timeline/Timeline.tsx, web/src/timeline/Ruler.tsx, web/src/App.tsx, web/src/menus.ts, web/src/strings.ts, web/tests/footage.mjs]
-    gap: "Marker durations, chapters, URLs and cue points are not shown or edited (markers.set keeps them for agents). Gated by web/tests/footage.mjs."
+    gap: "Marker durations, chapters, URLs and cue points are not shown or edited (marker.set keeps them for agents). Gated by web/tests/footage.mjs."
     cases: []
     since: "2026-11-23"
   - id: motion.editor.interpolation
@@ -522,7 +522,7 @@ features:
     cases: []
     since: "2026-11-23"
   - id: motion.editor.graph
-    title: "The graph editor (the timeline's 图表 button, Shift+F3) shows the selected layers' animated properties over the stretch of time the timeline shows, sampled by the engine (curveSamples), as values (one curve per dimension) or speeds (值 / 速度; Position and Anchor Point as their speed along the path), each property on its own vertical scale fitted to its values, the value labels belonging to the property marked in its list (a click on a name moves them); a key clicks to select it (Shift adds or removes), a box drawn on empty space selects the keys in it, 适合全部 and F show every key's time; a key drags in time (snapped to frames and the playhead) and, in the value graph, in value, kept in its property's range by keys.set (Opacity stops at 100); a selected eased key's handles drag its influence and speed (the slope in the value graph, the height in the speed graph, where Position and Anchor Point show theirs), each drag one undo step"
+    title: "The graph editor (the timeline's 图表 button, Shift+F3) shows the selected layers' animated properties over the stretch of time the timeline shows, sampled by the engine (curveSamples), as values (one curve per dimension) or speeds (值 / 速度; Position and Anchor Point as their speed along the path), each property on its own vertical scale fitted to its values, the value labels belonging to the property marked in its list (a click on a name moves them); a key clicks to select it (Shift adds or removes), a box drawn on empty space selects the keys in it, 适合全部 and F show every key's time; a key drags in time (snapped to frames and the playhead) and, in the value graph, in value, kept in its property's range by keyframe.set (Opacity stops at 100); a selected eased key's handles drag its influence and speed (the slope in the value graph, the height in the speed graph, where Position and Anchor Point show theirs), each drag one undo step"
     dimension: [function]
     priority: P1
     status: has
@@ -603,7 +603,7 @@ features:
     cases: []
     since: "2026-11-23"
   - id: motion.editor.presets
-    title: "Animation ▸ Save Animation Preset… writes the selected properties' and effects' animation (anim.savePreset) as <name>.ecpreset beside the project through the host, and Animation ▸ Apply Animation Preset… applies one picked in the project's folder with the host's picker (anim.applyPreset) to the selected layers at the current time, one undo step"
+    title: "Animation ▸ Save Animation Preset… writes the selected properties' and effects' animation (animation.savePreset) as <name>.ecpreset beside the project through the host, and Animation ▸ Apply Animation Preset… applies one picked in the project's folder with the host's picker (animation.applyPreset) to the selected layers at the current time, one undo step"
     dimension: [function]
     priority: P2
     status: has
@@ -783,7 +783,7 @@ features:
     cases: []
     since: "2026-11-24"
   - id: motion.editor.keyframe-assistants
-    title: "Keyframe assistants by hand: a double-click on a keyframe (or Edit Value… in its menu) types its value (each part) and time in (keys.set, one undo step); the keyframe menu and Animation have Toggle Hold, Rove Across Time (for keyframes moving through space, saying when it is on), Time-Reverse Keyframes, Select Equal, Previous and Following Keyframes; Animation ▸ Keyframe Assistant has Exponential Scale (two Scale keyframes) and Convert Expression to Keyframes (the selected properties with an expression), each shown only where it would change something; J and K go to the previous and next keyframe"
+    title: "Keyframe assistants by hand: a double-click on a keyframe (or Edit Value… in its menu) types its value (each part) and time in (keyframe.set, one undo step); the keyframe menu and Animation have Toggle Hold, Rove Across Time (for keyframes moving through space, saying when it is on), Time-Reverse Keyframes, Select Equal, Previous and Following Keyframes; Animation ▸ Keyframe Assistant has Exponential Scale (two Scale keyframes) and Convert Expression to Keyframes (the selected properties with an expression), each shown only where it would change something; J and K go to the previous and next keyframe"
     dimension: [function]
     priority: P1
     status: has
@@ -909,7 +909,7 @@ features:
     cases: []
     since: "2026-11-24"
   - id: motion.editor.graph-tools
-    title: "The graph editor's legend and keyframe assistants: each curve's eye in the legend hides it and shows it again, its solo shows it alone (the rest dimmed in the legend; drawing, selecting and Fit All take only what shows); Animation ▸ Keyframe Assistant ▸ Wiggler… (two or more selected keyframes) adds random keys between them along the path or in time, smooth or jagged, per dimension, at a frequency and magnitude (keys.wiggle), and Smoother… (three or more) takes keys off within a tolerance (keys.smooth), both also in the keyframe menu, each one undo step"
+    title: "The graph editor's legend and keyframe assistants: each curve's eye in the legend hides it and shows it again, its solo shows it alone (the rest dimmed in the legend; drawing, selecting and Fit All take only what shows); Animation ▸ Keyframe Assistant ▸ Wiggler… (two or more selected keyframes) adds random keys between them along the path or in time, smooth or jagged, per dimension, at a frequency and magnitude (keyframe.wiggle), and Smoother… (three or more) takes keys off within a tolerance (keyframe.smooth), both also in the keyframe menu, each one undo step"
     dimension: [function]
     priority: P1
     status: has

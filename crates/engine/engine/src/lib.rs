@@ -1,7 +1,7 @@
 //! The Kition Motion engine façade.
 //!
 //! Every user-visible action is a command with a stable id (`layer.newSolid`, `prop.set`,
-//! `keys.easyEase`…) and JSON parameters, dispatched through [`Session::execute`]. The egui UI,
+//! `keyframe.easyEase`…) and JSON parameters, dispatched through [`Session::execute`]. The egui UI,
 //! the CLI, the control channel and the MCP server all use this one entry point; that is what
 //! makes the UI swappable and the whole app agent-drivable.
 //!
@@ -169,7 +169,7 @@ pub struct KeyRef {
     pub time: Tick,
 }
 
-/// A keyframe drag in progress (`keys.move` steps sharing a merge key): the selection it
+/// A keyframe drag in progress (`keyframe.move` steps sharing a merge key): the selection it
 /// started from and the total offset so far, so every step is applied to the keys as they were
 /// before the drag. A key passed over on the way is never overwritten; only the drop position
 /// counts, as is usual.
@@ -458,7 +458,7 @@ pub struct Session {
     /// The last physical-memory reading (Settings ▸ Memory & CPU budgets); `None` = unknown
     /// (headless sessions don't query it, see [`Session::memory_tick`]).
     pub sys_memory: Option<sysinfo::SysMemory>,
-    /// The keyframe drag in progress (`keys.move` with a merge key).
+    /// The keyframe drag in progress (`keyframe.move` with a merge key).
     pub key_move: Option<KeyMove>,
     /// Reads the system's memory in the background for [`Session::memory_tick`].
     pub memory_watch: sysinfo::MemoryWatch,
@@ -478,7 +478,7 @@ pub struct Session {
     pub offload_log: Vec<(offload::JobKind, Option<String>)>,
     /// Generic background tasks (Content-Aware Fill, Scene Edit Detection), see [`jobs`].
     pub tasks: Vec<jobs::Task>,
-    /// Finished tasks, newest last (Progress panel, `jobs.list`).
+    /// Finished tasks, newest last (Progress panel, `job.list`).
     pub job_log: Vec<jobs::JobRecord>,
     pub next_task_id: u64,
     /// The running Learn tutorial (Home ▸ Learn), see [`learn`].

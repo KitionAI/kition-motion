@@ -157,17 +157,17 @@ menu entry with bound parameters has a binding key, a scope and default keys.
   it creates a "Custom" copy. Custom presets store only their differences from the default and
   can be duplicated, renamed, deleted, exported and imported (JSON).
 - **Scope.** Menu and engine commands are application-wide; timeline commands work in the
-  Timeline and viewer commands in the Composition panel. `shortcuts.conflicts` lists keys that
+  Timeline and viewer commands in the Composition panel. `shortcut.conflicts` lists keys that
   collide in overlapping scopes.
 
 In the kit, the presets live in the session like the settings (there is no store to save
 `shortcuts.json` in), and the command list the kit hands the host carries each command's default
 shortcut, not the active preset's.
 
-Commands: `shortcuts.list {query?, keys?, assigned?}`, `shortcuts.set {command, params?, keys}`,
-`shortcuts.reset {command?}`, `shortcuts.preset {op: select|new|duplicate|delete|rename, name?,
-from?, newName?}`, `shortcuts.export {preset?, path?}`, `shortcuts.import {path? | preset?}`,
-`shortcuts.conflicts`.
+Commands: `shortcut.list {query?, keys?, assigned?}`, `shortcut.set {command, params?, keys}`,
+`shortcut.reset {command?}`, `shortcut.preset {op: select|new|duplicate|delete|rename, name?,
+from?, newName?}`, `shortcut.export {preset?, path?}`, `shortcut.import {path? | preset?}`,
+`shortcut.conflicts`.
 
 ## Auto-save and crash recovery
 

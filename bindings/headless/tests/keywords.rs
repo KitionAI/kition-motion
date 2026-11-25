@@ -19,13 +19,13 @@ fn effect_apply_is_found_by_the_effects_names() {
     );
 }
 
-/// khp-bench r2: an agent asked for `layer.delete`, which does not exist; `edit.clear` deletes
+/// khp-bench r2: an agent asked for `layer.delete`, which does not exist; `edit.delete` deletes
 /// layers, and its keywords say so, so a search for "delete layer" and the unknown id find it.
 #[test]
 fn edit_clear_is_found_as_the_command_that_deletes_layers() {
     let doc = MotionDocument::create("title.kmotion", 64, 36).unwrap();
     let commands = doc.commands();
-    let clear = commands.iter().find(|command| command.id == "edit.clear").expect("edit.clear is listed");
+    let clear = commands.iter().find(|command| command.id == "edit.delete").expect("edit.delete is listed");
     assert!(clear.keywords.iter().any(|keyword| keyword.contains("delete") && keyword.contains("layer")), "{:?}", clear.keywords);
     assert!(clear.description.contains("deletes layers"), "{}", clear.description);
 }

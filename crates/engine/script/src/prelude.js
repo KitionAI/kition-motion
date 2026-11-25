@@ -815,7 +815,7 @@ Property.prototype.property = function () { return null; };
   };
   P.setValueAtKey = function (i, v) {
     var k = this.__key(i), info = this.__info();
-    __call("keys.set", this.__ref({ time: k.layerTime, value: this.__toEngine(v, info, k.time) }));
+    __call("keyframe.set", this.__ref({ time: k.layerTime, value: this.__toEngine(v, info, k.time) }));
   };
   P.addKey = function (t) {
     t = __num(t, "time");
@@ -842,7 +842,7 @@ Property.prototype.property = function () { return null; };
     params.__keys = [{ layer: this.__layer.__id, prop: this.__uid, index: __num(i) - 1 }];
     return __call(id, params);
   };
-  P.removeKey = function (i) { this.__keyCmd(i, "keys.delete"); };
+  P.removeKey = function (i) { this.__keyCmd(i, "keyframe.delete"); };
   P.keyInInterpolationType = function (i) { return KeyframeInterpolationType[this.__key(i).inInterp]; };
   P.keyOutInterpolationType = function (i) { return KeyframeInterpolationType[this.__key(i).outInterp]; };
   // Values that don't interpolate (checkboxes, popups, text) only hold.
@@ -850,7 +850,7 @@ Property.prototype.property = function () { return null; };
   P.setInterpolationTypeAtKey = function (i, inType, outType) {
     if (outType === undefined) outType = inType;
     if (!__interpKey[inType] || !__interpKey[outType]) throw __err("Bad KeyframeInterpolationType");
-    this.__keyCmd(i, "keys.interpolation", { "in": __interpKey[inType], out: __interpKey[outType] });
+    this.__keyCmd(i, "keyframe.interpolation", { "in": __interpKey[inType], out: __interpKey[outType] });
   };
   P.keyInTemporalEase = function (i) { return this.__key(i).inEase.map(function (e) { return new KeyframeEase(e.speed, e.influence); }); };
   P.keyOutTemporalEase = function (i) { return this.__key(i).outEase.map(function (e) { return new KeyframeEase(e.speed, e.influence); }); };
@@ -865,33 +865,33 @@ Property.prototype.property = function () { return null; };
         return x;
       });
     }
-    this.__keyCmd(i, "keys.velocity", { inSpeed: sp(inEase), inInfluence: inf(inEase), outSpeed: sp(outEase), outInfluence: inf(outEase) });
+    this.__keyCmd(i, "keyframe.velocity", { inSpeed: sp(inEase), inInfluence: inf(inEase), outSpeed: sp(outEase), outInfluence: inf(outEase) });
   };
   P.keyTemporalContinuous = function (i) { return !!this.__key(i).continuous; };
-  P.setTemporalContinuousAtKey = function (i, b) { this.__keyCmd(i, "keys.interpolation", { continuous: !!b }); };
+  P.setTemporalContinuousAtKey = function (i, b) { this.__keyCmd(i, "keyframe.interpolation", { continuous: !!b }); };
   P.keyTemporalAutoBezier = function (i) { return !!this.__key(i).autoBezier; };
-  P.setTemporalAutoBezierAtKey = function (i, b) { this.__keyCmd(i, "keys.interpolation", { autoBezier: !!b }); };
+  P.setTemporalAutoBezierAtKey = function (i, b) { this.__keyCmd(i, "keyframe.interpolation", { autoBezier: !!b }); };
   P.keyRoving = function (i) { return !!this.__key(i).roving; };
-  P.setRovingAtKey = function (i, b) { this.__keyCmd(i, "keys.interpolation", { roving: !!b }); };
+  P.setRovingAtKey = function (i, b) { this.__keyCmd(i, "keyframe.interpolation", { roving: !!b }); };
   P.keyInSpatialTangent = function (i) { return this.__key(i).spatialIn.slice(0, this.__info().dims); };
   P.keyOutSpatialTangent = function (i) { return this.__key(i).spatialOut.slice(0, this.__info().dims); };
   P.keySpatialContinuous = function (i) { return !!this.__key(i).spatialContinuous; };
   P.keySpatialAutoBezier = function (i) { return !!this.__key(i).spatialAutoBezier; };
   P.setSpatialTangentsAtKey = function (i, inT, outT) {
     var k = this.__key(i);
-    __call("keys.setSpatialTangents", this.__ref({ time: k.layerTime, "in": inT, out: outT === undefined ? inT : outT }));
+    __call("keyframe.setSpatialTangents", this.__ref({ time: k.layerTime, "in": inT, out: outT === undefined ? inT : outT }));
   };
-  P.setSpatialContinuousAtKey = function (i, b) { this.__keyCmd(i, "keys.interpolation", { spatial: b ? "continuousBezier" : "bezier" }); };
-  P.setSpatialAutoBezierAtKey = function (i, b) { this.__keyCmd(i, "keys.interpolation", { spatial: b ? "autoBezier" : "bezier" }); };
+  P.setSpatialContinuousAtKey = function (i, b) { this.__keyCmd(i, "keyframe.interpolation", { spatial: b ? "continuousBezier" : "bezier" }); };
+  P.setSpatialAutoBezierAtKey = function (i, b) { this.__keyCmd(i, "keyframe.interpolation", { spatial: b ? "autoBezier" : "bezier" }); };
   P.keySelected = function (i) { return !!this.__key(i).selected; };
   P.setSelectedAtKey = function (i, b) {
     var k = this.__key(i);
     if (b) {
-      __call("keys.select", { comp: this.__layer.__comp, add: true, keys: [{ layer: this.__layer.__id, prop: this.__uid, time: k.layerTime }] });
+      __call("keyframe.select", { comp: this.__layer.__comp, add: true, keys: [{ layer: this.__layer.__id, prop: this.__uid, time: k.layerTime }] });
     } else {
       var keep = [], all = this.__keys();
       for (var j = 0; j < all.length; j++) if (all[j].selected && j !== i - 1) keep.push({ layer: this.__layer.__id, prop: this.__uid, time: all[j].layerTime });
-      __call("keys.select", { comp: this.__layer.__comp, keys: keep });
+      __call("keyframe.select", { comp: this.__layer.__comp, keys: keep });
     }
   };
   P.keyLabel = function () { return 0; };
@@ -954,10 +954,10 @@ MarkerProperty.prototype = {
     for (var i = 0; i < l.length; i++) if (Math.abs(l[i].time - t) < 1e-6) at = i;
     if (at >= 0) p.index = at;
     else p["new"] = true;
-    __call("markers.set", p);
+    __call("marker.set", p);
   },
   setValueAtKey: function (i, mv) { this.setValueAtTime(this.keyTime(i), mv); },
-  removeKey: function (i) { this.__at(i); __call("markers.delete", this.__p({ index: i - 1 })); },
+  removeKey: function (i) { this.__at(i); __call("marker.delete", this.__p({ index: i - 1 })); },
   toString: function () { return "[object Property]"; },
 };
 
@@ -1081,7 +1081,7 @@ Layer.prototype = {
   propertyGroup: function () { return null; },
   canAddProperty: function () { return false; },
   addProperty: function (n) { throw __err("Can not add \"" + n + "\" to a layer: use a property group (Effects, Masks, Contents)"); },
-  remove: function () { __call("edit.clear", this.__p()); },
+  remove: function () { __call("edit.delete", this.__p()); },
   duplicate: function () {
     var before = this.containingComp.__info().layers;
     __call("edit.duplicate", this.__p());
@@ -1107,7 +1107,7 @@ Layer.prototype = {
     __call("layer.arrange", this.__p({ to: "index", index: me < to ? to : to + 1 }));
   },
   activeAtTime: function (t) { var i = this.__info(); return i.enabled && t >= i.inPoint && t < i.outPoint; },
-  applyPreset: function (f) { __call("anim.applyPreset", this.__p({ path: __str(f) })); },
+  applyPreset: function (f) { __call("animation.applyPreset", this.__p({ path: __str(f) })); },
 };
 
 function AVLayer(comp, id) { return this.__init(comp, id, "AVLayer"); }

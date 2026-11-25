@@ -331,7 +331,7 @@ renders the input through the inverse model. Tracks and solve are stored as JSON
 in hidden effect parameters with keys: changing the layer's frames clears both, changing Shot Type,
 Angle of View, Solve Method or deleting points only re-solves. The solve's canonical frame maps to
 comp space so the first frame's camera is the default comp camera (or so a chosen ground plane is
-the X-Z plane at the origin); `camera.createFromSolve` keys a one-node "3D Tracker Camera" on every
+the X-Z plane at the origin); `camera.addFromSolve` keys a one-node "3D Tracker Camera" on every
 frame and places text, solids, nulls or a shadow catcher and light on the target plane.
 
 **Rotoscope Brush & Edge Refine** (`kition_motion_track::roto`, `effects::roto`, `engine::roto`):
@@ -362,8 +362,8 @@ frame starting from the previous result warped along the flow; Surface carries o
 fill through the range; Edge Blend is the membrane fill alone. The frames are written as a PNG
 sequence and imported into a "Fill" layer above the source. It runs as a generic **background
 task** (`engine::jobs`: a closure with progress and cancel on a thread, inline on wasm32 or
-with `wait`, whose result is applied on the UI thread as one undo step); `jobs.list` /
-`jobs.cancel` show these tasks together with the render queue and the analyses.
+with `wait`, whose result is applied on the UI thread as one undo step); `job.list` /
+`job.cancel` show these tasks together with the render queue and the analyses.
 
 **Scene Edit Detection** (`raster::cuts`) compares consecutive frames by colour-histogram
 distance and motion-compensated (block-flow warped) luma error, takes their geometric mean and

@@ -47,7 +47,7 @@ fn selected_effects(s: &Session) -> Vec<(LayerId, PropGroup)> {
 // ---------------------------------------------------------------- presets
 
 fn save_preset(s: &mut Session, p: &Value) -> Result<Value> {
-    let path = str_p(p, "path").ok_or_else(|| bad("anim.savePreset", "missing `path`"))?.to_string();
+    let path = str_p(p, "path").ok_or_else(|| bad("animation.savePreset", "missing `path`"))?.to_string();
     let comp = s.active_comp().ok_or(EngineError::NoComp)?;
     let t = s.time();
     let effects: Vec<(LayerId, PropGroup)> = selected_effects(s);
@@ -63,7 +63,7 @@ fn save_preset(s: &mut Session, p: &Value) -> Result<Value> {
         props.push((l.layer_time(t), mp, pr.clone()));
     }
     if props.is_empty() && effects.is_empty() {
-        return Err(bad("anim.savePreset", "select properties or effects to save"));
+        return Err(bad("animation.savePreset", "select properties or effects to save"));
     }
     // Key times are stored relative to the earliest key so the preset applies at the CTI.
     let first = props.iter().flat_map(|(_, _, pr)| pr.keys.iter().map(|k| k.time)).min().unwrap_or(Tick::ZERO);
@@ -92,16 +92,16 @@ fn apply_preset(s: &mut Session, p: &Value) -> Result<Value> {
         (Some(v), _) => v.clone(),
         (None, Some(path)) => {
             let bytes = s.services.read_file(path).map_err(|e| EngineError::Other(format!("cannot read {path}: {e}")))?;
-            serde_json::from_slice(&bytes).map_err(|e| bad("anim.applyPreset", format!("not a preset: {e}")))?
+            serde_json::from_slice(&bytes).map_err(|e| bad("animation.applyPreset", format!("not a preset: {e}")))?
         }
-        _ => return Err(bad("anim.applyPreset", "missing `path` (or inline `preset`)")),
+        _ => return Err(bad("animation.applyPreset", "missing `path` (or inline `preset`)")),
     };
     if doc.get(PRESET_TAG).is_none() {
-        return Err(bad("anim.applyPreset", "not an Kition Motion animation preset"));
+        return Err(bad("animation.applyPreset", "not an Kition Motion animation preset"));
     }
     let (cid, ids) = layers_p(s, p)?;
     if ids.is_empty() {
-        return Err(bad("anim.applyPreset", "select a layer"));
+        return Err(bad("animation.applyPreset", "select a layer"));
     }
     // Animation ▸ Recent Animation Presets.
     if let Some(path) = str_p(p, "path") {
@@ -178,7 +178,7 @@ fn apply_preset(s: &mut Session, p: &Value) -> Result<Value> {
 fn add_keyframe(s: &mut Session, _: &Value) -> Result<Value> {
     let targets = selected_leaf_props(s);
     if targets.is_empty() {
-        return Err(bad("anim.addKeyframe", "select properties first"));
+        return Err(bad("animation.addKeyframe", "select properties first"));
     }
     let cid = s.active_comp_id().ok_or(EngineError::NoComp)?;
     let t = s.time();
@@ -231,7 +231,7 @@ fn exponential_scale(s: &mut Session, _: &Value) -> Result<Value> {
         }
     }
     if work.is_empty() {
-        return Err(bad("keys.exponentialScale", "select two Scale keyframes"));
+        return Err(bad("keyframe.exponentialScale", "select two Scale keyframes"));
     }
     s.edit("Exponential Scale", None, |proj, st| {
         for (lid, uid, a, b) in &work {
@@ -352,7 +352,7 @@ pub(crate) fn is_indexed(g: &PropGroup) -> bool {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
-            "anim.savePreset",
+            "animation.savePreset",
             "Save Animation Preset...",
             ["Animation"],
             None,
@@ -360,10 +360,10 @@ pub fn specs() -> Vec<CommandSpec> {
             has_selected_props,
             save_preset
         ),
-        cmd!("anim.applyPreset", "Apply Animation Preset...", ["Animation"], None, "{path | preset, layers?}", has_layers, apply_preset),
-        cmd!("anim.addKeyframe", "Add Keyframe", ["Animation"], None, "{} — keys the selected properties at the CTI", has_selected_props, add_keyframe),
+        cmd!("animation.applyPreset", "Apply Animation Preset...", ["Animation"], None, "{path | preset, layers?}", has_layers, apply_preset),
+        cmd!("animation.addKeyframe", "Add Keyframe", ["Animation"], None, "{} — keys the selected properties at the CTI", has_selected_props, add_keyframe),
         cmd!(
-            "keys.exponentialScale",
+            "keyframe.exponentialScale",
             "Exponential Scale",
             ["Animation", "Keyframe Assistant"],
             None,
@@ -373,6 +373,6 @@ pub fn specs() -> Vec<CommandSpec> {
         ),
         cmd!("text.addSelector", "Add Text Selector", [], None, "{layer?, animator?: uid|index, kind: range|wiggly|expression}", has_text_layer, add_selector),
         cmd!("text.removeAllAnimators", "Remove All Text Animators", ["Animation"], None, "{layers?}", has_text_layer, remove_all_animators),
-        cmd!("anim.reveal", "Reveal Properties", [], None, "{kind: keyframes|animation|modified}", has_comp, reveal),
+        cmd!("animation.reveal", "Reveal Properties", [], None, "{kind: keyframes|animation|modified}", has_comp, reveal),
     ]
 }

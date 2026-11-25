@@ -165,7 +165,7 @@ fn layers(project: &Project, comp_id: ItemId, comp_name: &str, comp: &Comp, foun
                     format!("Layer \"{name}\" in \"{comp_name}\" uses a project item that no longer exists."),
                 )
                 .on(on.clone())
-                .fix("edit.clear", Some(delete.clone())),
+                .fix("edit.delete", Some(delete.clone())),
             );
         }
         if layer.parent.is_some_and(|parent| !ids.contains(&parent.0)) {
@@ -198,7 +198,7 @@ fn layers(project: &Project, comp_id: ItemId, comp_name: &str, comp: &Comp, foun
                     format!("Layer \"{name}\" in \"{comp_name}\" ends where it starts, so it never shows."),
                 )
                 .on(on)
-                .fix("edit.clear", Some(delete)),
+                .fix("edit.delete", Some(delete)),
             );
         } else if layer.out_point <= Tick(0) || layer.in_point >= comp.duration {
             found.push(
@@ -265,7 +265,7 @@ mod tests {
         comp.layers[0].out_point = comp.layers[0].in_point;
         let found = check(&document.session.project, document.session.active_comp_id(), &mut |_| true);
         assert_eq!(found[0].code, "motion.zero-duration");
-        assert_eq!(found[0].fix.as_ref().map(|fix| fix.command.as_str()), Some("edit.clear"));
+        assert_eq!(found[0].fix.as_ref().map(|fix| fix.command.as_str()), Some("edit.delete"));
     }
 
     #[test]

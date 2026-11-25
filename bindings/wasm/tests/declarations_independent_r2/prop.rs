@@ -157,7 +157,7 @@ pub(super) const ROWS: &[Row] = &[
         &["active_comp", "selected_layers", "time_of(comp)", "default_spatial_linear"]
     ),
     Row {
-        command: "keys.toggleTransform",
+        command: "keyframe.toggleTransform",
         path: "target transform selected layers",
         resolves: &["layers_p", "prop names Transform type, not uid", "rotation expands 3D orientation/X/Y/Z; position expands separated axes"],
         reads: &["layer.is_3d", "transform/positionX membership", "property membership, keys at CTI, sampled curves/hold_only/sole-key value", "layer timing"],
@@ -242,7 +242,7 @@ pub(super) const ROWS: &[Row] = &[
         &["active_comp", "selected_layers default", "expr host/footage provider", "default_spatial_linear"]
     ),
     Row {
-        command: "keys.select",
+        command: "keyframe.select",
         path: "editor selection",
         resolves: &["active comp keys[].layer refs", "property numeric uid/string path or path", "timeBase comp/layer; nearest stored key"],
         reads: &["layer timing", "key times", "layer.locked"],
@@ -252,7 +252,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/prop.rs:755",
     },
     Row {
-        command: "keys.move",
+        command: "keyframe.move",
         path: "current or repeated merged-gesture keys",
         resolves: &["active comp selected_keys exact layer/property/time"],
         reads: &[
@@ -273,7 +273,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/prop.rs:911,970",
     },
     Row {
-        command: "keys.delete",
+        command: "keyframe.delete",
         path: "exact selected stored keys",
         resolves: &["active comp selected_keys layer/property/exact stored time"],
         reads: &["key membership/count", "last remaining key.value"],
@@ -282,11 +282,11 @@ pub(super) const ROWS: &[Row] = &[
         state: &["active_comp", "selected_keys"],
         source: "commands/prop.rs:975",
     },
-    selected_ease!("keys.easyEase", "key in/out interp/ease on requested sides; auto_bezier false"),
-    selected_ease!("keys.easyEaseIn", "key in_interp/in_ease; auto_bezier false"),
-    selected_ease!("keys.easyEaseOut", "key out_interp/out_ease; auto_bezier false"),
+    selected_ease!("keyframe.easyEase", "key in/out interp/ease on requested sides; auto_bezier false"),
+    selected_ease!("keyframe.easyEaseIn", "key in_interp/in_ease; auto_bezier false"),
+    selected_ease!("keyframe.easyEaseOut", "key out_interp/out_ease; auto_bezier false"),
     Row {
-        command: "keys.toggleHold",
+        command: "keyframe.toggleHold",
         path: "selected key outgoing interpolation toggle",
         resolves: &["active comp selected_keys exact stored time"],
         reads: &["key.out_interp/in_interp/auto_bezier/continuous/out_ease", "spatial and roving flags/geometry/times"],
@@ -296,7 +296,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/prop.rs:1105,850",
     },
     Row {
-        command: "keys.interpolation",
+        command: "keyframe.interpolation",
         path: "selected key temporal/spatial settings",
         resolves: &["active comp selected_keys exact stored time"],
         reads: &[
@@ -317,7 +317,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/prop.rs:1003; keyframe/src/lib.rs:341,431",
     },
     Row {
-        command: "keys.velocity",
+        command: "keyframe.velocity",
         path: "selected key temporal speed/influence",
         resolves: &["active comp selected_keys exact stored time"],
         reads: &[

@@ -151,15 +151,15 @@ Opened `ident.kmotion`: 1280 × 720
 > motion_run {"path":"ident.kmotion","basis":"hym0","steps":[
     {"command":"prop.addKey","params":{"layer":131,"path":"transform/rotation","time":1,"value":-90}},
     {"command":"prop.addKey","params":{"layer":131,"path":"transform/rotation","time":1.5,"value":0}},
-    {"command":"keys.select","params":{"keys":[{"layer":131,"prop":"transform/rotation","time":1},
+    {"command":"keyframe.select","params":{"keys":[{"layer":131,"prop":"transform/rotation","time":1},
                                                 {"layer":131,"prop":"transform/rotation","time":1.5}]}},
-    {"command":"keys.easyEase","params":{}}]}
+    {"command":"keyframe.easyEase","params":{}}]}
 Ran 4 commands on `ident.kmotion` (saved): 1280 × 720 Changes: objects 1 changed.
 {"changes":{"changed":[{"edits":[{"after":{"data":{…,"in_ease":[{"influence":0.3333333333333333,"speed":0}],"in_interp":"Bezier",…},
   "time":"254016000000","value":{"t":"Scalar","v":-90}},"before":null,…,"named":"transform/rotation.keys.0"},
   {"after":{…,"time":"381024000000","value":{"t":"Scalar","v":0}},"before":null,…,"named":"transform/rotation.keys.1"}],"id":131,"type":"Layer"}],…},
   "completed":[{"command":"prop.addKey","result":1},{"command":"prop.addKey","result":2},
-    {"changed":false,"command":"keys.select","result":2},{"command":"keys.easyEase","result":2}],
+    {"changed":false,"command":"keyframe.select","result":2},{"command":"keyframe.easyEase","result":2}],
   "diagnostics":{"new":[],"resolved":[]},"revision":"hym1","saved":true}
 
 > motion_check {"path":"ident.kmotion"}

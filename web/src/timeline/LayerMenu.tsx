@@ -31,7 +31,7 @@ export function LayerMenu({ target, onClose, onRename, onOpen, onPrecompose, onR
         testId="motion-layer-menu"
       />
       <MenuSeparator />
-      <MenuItem label={t('layerMenu.delete')} onSelect={() => void run('edit.clear', { layers })} testId="motion-layer-menu-delete" />
+      <MenuItem label={t('layerMenu.delete')} onSelect={() => void run('edit.delete', { layers })} testId="motion-layer-menu-delete" />
     </ContextMenu>
   )
 }

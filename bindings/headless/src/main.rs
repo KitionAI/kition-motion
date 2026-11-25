@@ -11,7 +11,7 @@ use kition_headless::{FileIdentity, Headless, KitInfo};
 // The commands in `SANDBOXED` name files but read them through lent files (the workspace,
 // never the process's file system), so the agent may use them.
 
-const SANDBOXED: &[&str] = &["file.import", "anim.applyRecentPreset"];
+const SANDBOXED: &[&str] = &["file.import", "animation.applyRecentPreset"];
 /// `inspect()` keys about the editing session rather than the file.
 const VOLATILE: &[&str] = kition_motion_kit::EDITOR_STATE;
 

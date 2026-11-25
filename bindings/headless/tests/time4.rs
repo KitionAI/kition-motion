@@ -79,7 +79,7 @@ async fn layer_marker_needs_its_time_not_its_stack_index() {
         if change == "above" {
             answer.unwrap_or_else(|e| panic!("{e}"));
             let mut disk = on_disk(&f.file());
-            let markers = disk.execute("markers.list", json!({"layer": layer})).unwrap();
+            let markers = disk.execute("marker.list", json!({"layer": layer})).unwrap();
             assert!(markers.to_string().contains("mine"), "{markers}");
         } else {
             assert_conflict(&answer.expect_err(change), &layer.to_string(), if change == "time" { "relocated" } else { "changed" });
@@ -90,7 +90,7 @@ async fn layer_marker_needs_its_time_not_its_stack_index() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn new_comp_marker_names_the_markers_only() {
-    for command in ["comp.addMarker", "markers.set"] {
+    for command in ["comp.addMarker", "marker.set"] {
         for change in ["layer", "marker"] {
             let f = Fixture::new(3);
             let (_, comp, basis) = f.inspect().await;
@@ -99,12 +99,12 @@ async fn new_comp_marker_names_the_markers_only() {
             } else {
                 ("comp.addMarker", json!({"time": 2, "comment": "theirs"}))
             }]);
-            let params = if command == "markers.set" { json!({"new": true, "comment": "mine"}) } else { json!({"comment": "mine"}) };
+            let params = if command == "marker.set" { json!({"new": true, "comment": "mine"}) } else { json!({"comment": "mine"}) };
             let answer = f.call("run", json!({"basis": basis, "steps": [{"command": command, "params": params, "at": {"time": 2}}]})).await;
             if change == "layer" {
                 answer.unwrap_or_else(|e| panic!("{command}: {e}"));
                 let mut disk = on_disk(&f.file());
-                let markers = disk.execute("markers.list", json!({})).unwrap();
+                let markers = disk.execute("marker.list", json!({})).unwrap();
                 assert!(markers.to_string().contains("mine"), "{markers}");
             } else {
                 assert_conflict(&answer.expect_err(change), &comp.to_string(), "changed");

@@ -1104,7 +1104,7 @@ pub fn pages() -> Vec<Page> {
                 ),
                 Section("Repair"),
                 Button { label: "Reset Settings", command: "prefs.reset", params: "{}" },
-                Button { label: "Reset Keyboard Shortcuts", command: "shortcuts.reset", params: "{}" },
+                Button { label: "Reset Keyboard Shortcuts", command: "shortcut.reset", params: "{}" },
                 Button { label: "Empty Disk Cache", command: "edit.purge", params: r#"{"what":"disk"}"# },
             ],
         },

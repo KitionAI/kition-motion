@@ -41,7 +41,7 @@ fn easing_preserves_interleaved_layer_and_property_order_with_one_undo() {
     let b = uid(&s, second, "transform/opacity");
     let position = uid(&s, first, "transform/position");
     s.execute_checked(
-        "keys.select",
+        "keyframe.select",
         json!({"keys": [
             {"layer": second, "prop": b, "time": 1},
             {"layer": first, "prop": position, "time": 1},
@@ -53,7 +53,7 @@ fn easing_preserves_interleaved_layer_and_property_order_with_one_undo() {
     let order = s.state.selected_keys.clone();
     let before = s.project.clone();
     s.history.clear();
-    s.execute_checked("keys.easyEase", json!({})).unwrap();
+    s.execute_checked("keyframe.easyEase", json!({})).unwrap();
     assert_eq!(s.state.selected_keys, order);
     assert_eq!(s.history.undo.len(), 1);
     for selected in &order {
@@ -73,7 +73,7 @@ fn roving_keeps_the_selected_key_identity_and_arbitrary_order() {
     }
     let prop = uid(&s, layer, "transform/position");
     s.execute_checked(
-        "keys.select",
+        "keyframe.select",
         json!({"keys": [
             {"layer": layer, "prop": prop, "time": 1},
             {"layer": layer, "prop": prop, "time": 2},
@@ -81,7 +81,7 @@ fn roving_keeps_the_selected_key_identity_and_arbitrary_order() {
         ]}),
     )
     .unwrap();
-    s.execute_checked("keys.interpolation", json!({"roving": true})).unwrap();
+    s.execute_checked("keyframe.interpolation", json!({"roving": true})).unwrap();
     assert_eq!(s.state.selected_keys, vec![key(layer, prop, 15), key(layer, prop, 60), key(layer, prop, 0)]);
     let position = s.active_comp().unwrap().layer(LayerId(layer)).unwrap().props.find(prop).unwrap();
     assert_eq!(position.keys[1].value.as_vec2(), [25.0, 0.0]);
@@ -101,7 +101,7 @@ fn attribute_edit_deduplicates_legacy_refs_and_drops_stale_refs_without_snapping
     let second = key(layer, prop, 30);
     s.state.selected_keys = vec![second, key(layer, prop, 10), first, second, key(layer, u64::MAX, 0), first, key(u64::MAX, prop, 0)];
     s.history.clear();
-    let result = s.execute_checked("keys.toggleHold", json!({})).unwrap();
+    let result = s.execute_checked("keyframe.toggleHold", json!({})).unwrap();
     assert_eq!(result, json!(2));
     assert_eq!(s.state.selected_keys, vec![second, first]);
     assert_eq!(s.history.undo.len(), 1);

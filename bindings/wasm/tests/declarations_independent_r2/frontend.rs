@@ -8,6 +8,6 @@ pub(super) const ROWS: &[Row] = frontend_rows!(
     "layer.style.options" => "has_layers",
     "layer.openLayer" => "has_layers",
     "effect.manage" => "always",
-    "anim.browsePresets" => "always",
+    "animation.browsePresets" => "always",
     "project.deleteWithoutConfirmation" => "always"
 );

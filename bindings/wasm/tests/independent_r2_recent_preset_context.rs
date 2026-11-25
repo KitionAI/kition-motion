@@ -6,7 +6,7 @@ use serde_json::json;
 fn recent_preset_declares_the_time_used_by_its_delegated_application() {
     let document = MotionDocument::create("Recent.kmotion", 8, 8).unwrap();
     let commands = document.commands();
-    let command = commands.iter().find(|command| command.id == "anim.applyRecentPreset").unwrap();
+    let command = commands.iter().find(|command| command.id == "animation.applyRecentPreset").unwrap();
     assert!(command.reads.contains(&EditorState::Time), "recent preset application shifts keys by CTI: {:?}", command.reads);
 }
 
@@ -18,12 +18,12 @@ fn recent_preset_key_placement_uses_the_call_time_and_restoring_preserves_the_ed
         document.execute("prop.addKey", json!({"layer":source,"path":"transform/opacity","time":time,"value":value})).unwrap();
     }
     document.execute("prop.select", json!({"layer":source,"path":"transform/opacity"})).unwrap();
-    document.execute("anim.savePreset", json!({"path":"fade.ecpreset"})).unwrap();
-    document.execute("anim.applyPreset", json!({"path":"fade.ecpreset","layers":[source]})).unwrap();
+    document.execute("animation.savePreset", json!({"path":"fade.ecpreset"})).unwrap();
+    document.execute("animation.applyPreset", json!({"path":"fade.ecpreset","layers":[source]})).unwrap();
     let target = document.execute("layer.newSolid", json!({"name":"Target"})).unwrap()["layer"].clone();
     let saved = document.editor_state();
     document.set_context(&CallContext { time: Some(3.0), ..Default::default() }).unwrap();
-    document.execute("anim.applyRecentPreset", json!({"index":0,"layers":[target]})).unwrap();
+    document.execute("animation.applyRecentPreset", json!({"index":0,"layers":[target]})).unwrap();
     document.restore_editor_state(&saved).unwrap();
     assert_eq!(document.editor_state(), saved);
     let property = document.execute("prop.get", json!({"layer":target,"path":"transform/opacity","time":0})).unwrap();

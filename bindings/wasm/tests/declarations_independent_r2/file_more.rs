@@ -72,7 +72,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "crates/engine/engine/src/commands/file_more.rs:126; crates/engine/engine/src/commands/file_more.rs:142",
     },
     Row {
-        command: "file.newCompFromSelection",
+        command: "comp.newFromSelection",
         path: "one comp each or single comp, optional sequence/queue",
         resolves: &[
             "project_selection nonfolder items ONLY; no explicit items parameter",

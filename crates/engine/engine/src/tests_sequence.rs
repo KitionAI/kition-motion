@@ -124,7 +124,7 @@ fn a_folder_imports_its_files_with_runs_as_sequences() {
     let dir = folder(&["a_01.png", "a_02.png", "b.png", "readme.txt"]);
     let mut s = session();
     let r = s.execute("file.import", json!({"paths": [dir], "background": true})).unwrap();
-    s.execute("jobs.wait", json!({})).unwrap();
+    s.execute("job.wait", json!({})).unwrap();
     assert!(r["job"].is_u64() || r["job"].is_string(), "{r}");
     let names: Vec<String> = s.project.items.values().map(|i| i.name.clone()).collect();
     assert_eq!(names, ["a_[01-02].png", "b.png"], "the text file is skipped");

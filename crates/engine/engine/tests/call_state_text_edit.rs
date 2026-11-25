@@ -56,7 +56,7 @@ fn restored_text_mode_is_sanitized_against_the_current_project() {
     session.restore_call_state(&saved);
     let edit = session.state.text_edit.as_ref().unwrap();
     assert_eq!((edit.anchor, edit.caret), (2, 2));
-    session.execute("edit.clear", json!({"layers":[layer.0]})).unwrap();
+    session.execute("edit.delete", json!({"layers":[layer.0]})).unwrap();
     session.restore_call_state(&saved);
     assert!(session.state.text_edit.is_none(), "restoring a deleted editing target must drop the session");
 }

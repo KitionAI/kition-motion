@@ -134,7 +134,7 @@ fn stored_camera_solve_invalidates_after_preceding_effect_edit() {
     let st = status(&mut s);
     assert_eq!(st["solved"], false, "preceding effects change the pixels used by the solve");
     assert_eq!(st["analyzed"], false);
-    assert!(s.execute("camera.createFromSolve", json!({"layer": clip.0, "kind": "camera"})).is_err());
+    assert!(s.execute("camera.addFromSolve", json!({"layer": clip.0, "kind": "camera"})).is_err());
 }
 
 #[test]
@@ -177,7 +177,7 @@ fn stored_camera_solve_refuses_replaced_snapshot_input() {
     let st = status(&mut s);
     assert_eq!(st["solved"], false, "replacement snapshots must not use a solve made from different input pixels");
     assert_eq!(st["analyzed"], false);
-    assert!(s.execute("camera.createFromSolve", json!({"layer": clip.0, "kind": "camera"})).is_err());
+    assert!(s.execute("camera.addFromSolve", json!({"layer": clip.0, "kind": "camera"})).is_err());
     assert!(s.execute("camera.deletePoints", json!({"layer": clip.0, "points": [1], "wait": true})).is_err());
 }
 
@@ -231,7 +231,7 @@ fn track_camera_solves_and_creates_layers_on_the_plane() {
     assert_eq!(s.state.camera_points.len(), floor.len());
 
     // Create Solid and Camera: one undo step, camera + solid.
-    let r = s.execute_checked("camera.createFromSolve", json!({"kind": "solid"})).unwrap();
+    let r = s.execute_checked("camera.addFromSolve", json!({"kind": "solid"})).unwrap();
     let cam = LayerId(r["camera"].as_u64().unwrap());
     let solid = LayerId(r["layers"][0].as_u64().unwrap());
     let comp = s.active_comp().unwrap().clone();
@@ -295,25 +295,25 @@ fn track_camera_solves_and_creates_layers_on_the_plane() {
     assert_eq!(s.active_comp().unwrap().layers.len(), before);
 
     // A second create reuses the camera: Create Multiple Nulls and Camera.
-    let r = s.execute_checked("camera.createFromSolve", json!({"kind": "null", "multiple": true})).unwrap();
+    let r = s.execute_checked("camera.addFromSolve", json!({"kind": "null", "multiple": true})).unwrap();
     assert_eq!(r["camera"].as_u64().unwrap(), cam.0);
     assert_eq!(r["layers"].as_array().unwrap().len(), floor.len());
     // Text and Shadow Catcher (+ light).
-    let r = s.execute_checked("camera.createFromSolve", json!({"kind": "text"})).unwrap();
+    let r = s.execute_checked("camera.addFromSolve", json!({"kind": "text"})).unwrap();
     assert_eq!(r["layers"].as_array().unwrap().len(), 1);
-    let r = s.execute_checked("camera.createFromSolve", json!({"kind": "shadowCatcher"})).unwrap();
+    let r = s.execute_checked("camera.addFromSolve", json!({"kind": "shadowCatcher"})).unwrap();
     let ids: Vec<LayerId> = r["layers"].as_array().unwrap().iter().map(|v| LayerId(v.as_u64().unwrap())).collect();
     let comp = s.active_comp().unwrap();
     assert!(comp.layer(ids[0]).unwrap().name.starts_with("Shadow Catcher"));
     assert_eq!(comp.layer(ids[0]).unwrap().props.prop("materialOptions/acceptsShadows").unwrap().value.as_enum(), 2);
     assert!(comp.layer(ids[1]).unwrap().is_light());
-    assert!(s.execute_checked("camera.createFromSolve", json!({"kind": "teapot"})).is_err());
+    assert!(s.execute_checked("camera.addFromSolve", json!({"kind": "teapot"})).is_err());
 
     // Set Ground Plane and Origin: the target becomes the origin; a null created there sits at
     // (0, 0, 0) lying on the X-Z plane (its front facing up, −y).
     s.execute_checked("camera.setGroundPlane", json!({})).unwrap();
     assert_eq!(status(&mut s)["groundPlane"], true);
-    let r = s.execute_checked("camera.createFromSolve", json!({"kind": "null"})).unwrap();
+    let r = s.execute_checked("camera.addFromSolve", json!({"kind": "null"})).unwrap();
     let null = LayerId(r["layers"][0].as_u64().unwrap());
     let tr = s.active_comp().unwrap().layer(null).unwrap().props.sub("transform").unwrap().clone();
     let pos = tr.get("position").unwrap().value.as_vec3();
@@ -323,7 +323,7 @@ fn track_camera_solves_and_creates_layers_on_the_plane() {
 
     // An explicit target (comp world) places the layer there, its front facing the normal.
     let r = s
-        .execute_checked("camera.createFromSolve", json!({"kind": "solid", "target": {"center": [10.0, 0.0, 20.0], "normal": [0.0, 0.0, -1.0], "size": 80.0}}))
+        .execute_checked("camera.addFromSolve", json!({"kind": "solid", "target": {"center": [10.0, 0.0, 20.0], "normal": [0.0, 0.0, -1.0], "size": 80.0}}))
         .unwrap();
     let l = s.active_comp().unwrap().layer(LayerId(r["layers"][0].as_u64().unwrap())).unwrap().clone();
     let tr = l.props.sub("transform").unwrap();

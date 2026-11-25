@@ -1,5 +1,5 @@
 {
- "anim.reveal": {
+ "animation.reveal": {
   "additionalProperties": true,
   "properties": {
    "props": {
@@ -89,7 +89,7 @@
   },
   "type": "object"
  },
- "app.find": {
+ "edit.find": {
   "additionalProperties": true,
   "properties": {
    "frontend": {
@@ -1603,7 +1603,7 @@
   },
   "type": "object"
  },
- "jobs.list": {
+ "job.list": {
   "additionalProperties": true,
   "properties": {
    "finished": {
@@ -1621,7 +1621,7 @@
   },
   "type": "object"
  },
- "jobs.wait": {
+ "job.wait": {
   "additionalProperties": true,
   "properties": {
    "finished": {
@@ -1633,7 +1633,7 @@
   },
   "type": "object"
  },
- "keys.easePresets": {
+ "keyframe.easePresets": {
   "additionalProperties": true,
   "properties": {
    "curves": {
@@ -1690,16 +1690,16 @@
   },
   "type": "object"
  },
- "keys.info": {
+ "keyframe.info": {
   "items": {
    "type": "json"
   },
   "type": "array"
  },
- "keys.select": {
+ "keyframe.select": {
   "type": "integer"
  },
- "keys.selectAll": {
+ "keyframe.selectAll": {
   "type": "integer"
  },
  "layer.channels": {
@@ -1955,13 +1955,13 @@
   "description": "The Learn panel's tutorial state: {tutorial, step, steps, done, current: {title, text, target}}, or null when no tutorial is open",
   "type": "json"
  },
- "markers.list": {
+ "marker.list": {
   "items": {
    "type": "json"
   },
   "type": "array"
  },
- "markers.nested": {
+ "marker.nested": {
   "description": "The command's answer",
   "type": "json"
  },
@@ -3808,7 +3808,7 @@
   },
   "type": "object"
  },
- "scopes.analyze": {
+ "scope.analyze": {
   "additionalProperties": true,
   "properties": {
    "height": {
@@ -3873,13 +3873,13 @@
   },
   "type": "array"
  },
- "shortcuts.conflicts": {
+ "shortcut.conflicts": {
   "items": {
    "type": "json"
   },
   "type": "array"
  },
- "shortcuts.export": {
+ "shortcut.export": {
   "additionalProperties": true,
   "properties": {
    "base": {
@@ -3902,11 +3902,11 @@
   },
   "type": "object"
  },
- "shortcuts.import": {
+ "shortcut.import": {
   "description": "The command's answer",
   "type": "json"
  },
- "shortcuts.list": {
+ "shortcut.list": {
   "additionalProperties": true,
   "properties": {
    "commands": {
@@ -3963,7 +3963,7 @@
   },
   "type": "object"
  },
- "shortcuts.preset": {
+ "shortcut.preset": {
   "additionalProperties": true,
   "properties": {
    "preset": {
@@ -3978,7 +3978,7 @@
   },
   "type": "object"
  },
- "shortcuts.reset": {
+ "shortcut.reset": {
   "additionalProperties": true,
   "properties": {
    "preset": {
@@ -3987,7 +3987,7 @@
   },
   "type": "object"
  },
- "shortcuts.set": {
+ "shortcut.set": {
   "description": "The command's answer",
   "type": "json"
  },
@@ -4000,7 +4000,7 @@
   },
   "type": "object"
  },
- "templates.list": {
+ "template.list": {
   "items": {
    "additionalProperties": true,
    "properties": {
@@ -4042,7 +4042,7 @@
   },
   "type": "array"
  },
- "templates.thumbnail": {
+ "template.thumbnail": {
   "description": "{id, width, height, rgb (hex)}",
   "type": "json"
  },
@@ -4314,7 +4314,7 @@
   },
   "type": "object"
  },
- "view.3d.activeCamera": {
+ "view.threeD.activeCamera": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4323,7 +4323,7 @@
   },
   "type": "object"
  },
- "view.3d.back": {
+ "view.threeD.back": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4332,7 +4332,7 @@
   },
   "type": "object"
  },
- "view.3d.bottom": {
+ "view.threeD.bottom": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4341,7 +4341,7 @@
   },
   "type": "object"
  },
- "view.3d.custom1": {
+ "view.threeD.custom1": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4350,7 +4350,7 @@
   },
   "type": "object"
  },
- "view.3d.custom2": {
+ "view.threeD.custom2": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4359,7 +4359,7 @@
   },
   "type": "object"
  },
- "view.3d.custom3": {
+ "view.threeD.custom3": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4368,7 +4368,7 @@
   },
   "type": "object"
  },
- "view.3d.default": {
+ "view.threeD.default": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4377,7 +4377,7 @@
   },
   "type": "object"
  },
- "view.3d.front": {
+ "view.threeD.front": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4386,7 +4386,7 @@
   },
   "type": "object"
  },
- "view.3d.last": {
+ "view.threeD.last": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4395,7 +4395,7 @@
   },
   "type": "object"
  },
- "view.3d.left": {
+ "view.threeD.left": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4404,7 +4404,7 @@
   },
   "type": "object"
  },
- "view.3d.right": {
+ "view.threeD.right": {
   "additionalProperties": true,
   "properties": {
    "view": {
@@ -4413,7 +4413,7 @@
   },
   "type": "object"
  },
- "view.3d.top": {
+ "view.threeD.top": {
   "additionalProperties": true,
   "properties": {
    "view": {

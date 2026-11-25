@@ -29,7 +29,7 @@ async fn raw_key_value_holds_its_field_and_retains_its_identity_after_outside_re
             "same" => ("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":4,"value":43})),
             "before" => ("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":0.5,"value":5})),
             "after" => ("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":9,"value":90})),
-            "ease" => ("keys.setEase", json!({"layer":layer,"path":OPACITY,"time":4,"side":"out","speed":3})),
+            "ease" => ("keyframe.setEase", json!({"layer":layer,"path":OPACITY,"time":4,"side":"out","speed":3})),
             _ => ("layer.rename", json!({"layer":layer,"name":"Colleague"})),
         }]);
         let saved = std::fs::read(fixture.file()).unwrap();
@@ -92,8 +92,8 @@ async fn raw_comp_marker_field_holds_its_field_and_preserves_other_edits() {
         let (_, _, basis) = fixture.inspect().await;
         fixture.colleague(&[match change {
             "before" => ("comp.addMarker", json!({"time":0.5,"comment":"Before"})),
-            "same" => ("markers.set", json!({"index":1,"chapter":"Colleague"})),
-            "other-field" => ("markers.set", json!({"index":1,"comment":"Colleague"})),
+            "same" => ("marker.set", json!({"index":1,"chapter":"Colleague"})),
+            "other-field" => ("marker.set", json!({"index":1,"comment":"Colleague"})),
             "after" => ("comp.addMarker", json!({"time":9,"comment":"After"})),
             _ => opacity(layer, 23.0),
         }]);
@@ -105,7 +105,7 @@ async fn raw_comp_marker_field_holds_its_field_and_preserves_other_edits() {
             assert_eq!(std::fs::read(fixture.file()).unwrap(), saved);
         } else {
             assert!(answer.is_ok(), "{change}: {answer:?}");
-            let markers = on_disk(&fixture.file()).execute("markers.list", json!({})).unwrap();
+            let markers = on_disk(&fixture.file()).execute("marker.list", json!({})).unwrap();
             let markers = markers.as_array().unwrap();
             assert!(markers.iter().any(|m| m["time"] == json!(4.0) && m["chapter"] == "Mine"), "{change}: {markers:?}");
             if change == "other-field" {
@@ -138,7 +138,7 @@ async fn raw_layer_marker_field_holds_its_field_and_its_layer() {
         let marker = loaded["objects"][0]["fields"]["markers"][1].clone();
         let (_, _, basis) = fixture.inspect().await;
         fixture.colleague(&[match change {
-            "same" => ("markers.set", json!({"layer":layer,"index":1,"chapter":"Colleague"})),
+            "same" => ("marker.set", json!({"layer":layer,"index":1,"chapter":"Colleague"})),
             "before" => ("layer.addMarker", json!({"layer":layer,"time":0.5,"comment":"Before"})),
             "after" => ("layer.addMarker", json!({"layer":layer,"time":9,"comment":"After"})),
             "precomp" => ("layer.precompose", json!({"layers":[layer],"name":"Moved","mode":"move"})),
@@ -156,7 +156,7 @@ async fn raw_layer_marker_field_holds_its_field_and_its_layer() {
             }
             _ => {
                 assert!(answer.is_ok(), "{change}: {answer:?}");
-                let markers = on_disk(&fixture.file()).execute("markers.list", json!({"layer":layer})).unwrap();
+                let markers = on_disk(&fixture.file()).execute("marker.list", json!({"layer":layer})).unwrap();
                 let markers = markers.as_array().unwrap();
                 assert!(markers.iter().any(|m| m["chapter"] == "Mine"), "{change}: {markers:?}");
                 if change == "unrelated" {

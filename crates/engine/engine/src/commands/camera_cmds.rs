@@ -33,7 +33,7 @@ pub fn specs() -> Vec<CommandSpec> {
         query!("camera.points", "3D Camera Tracker Points", "{layer?, effect?, time?: comp seconds} → visible solved points", points),
         cmd!("camera.selectPoints", "Select Track Points", [], None, "{points: [id], add?, toggle?}", has_comp, select_points),
         cmd!(
-            "camera.createFromSolve",
+            "camera.addFromSolve",
             "Create from Camera Solve",
             [],
             None,
@@ -41,7 +41,7 @@ pub fn specs() -> Vec<CommandSpec> {
             has_comp,
             create_from_solve
         ),
-        cmd!("camera.create", "Create Camera", [], None, "{layer?, effect?}", has_comp, |s, p| create_from_solve(s, &with_kind(p, "camera"))),
+        cmd!("camera.add", "Create Camera", [], None, "{layer?, effect?}", has_comp, |s, p| create_from_solve(s, &with_kind(p, "camera"))),
         cmd!("camera.setGroundPlane", "Set Ground Plane and Origin", [], None, "{points?: [id] (default: selected), layer?, effect?}", has_comp, set_ground),
         cmd!("camera.deletePoints", "Delete Selected Points", [], None, "{points?: [id] (default: selected), layer?, effect?, wait?}", has_comp, delete_points),
     ]
@@ -373,7 +373,7 @@ fn add_solid(proj: &mut Project, comp: &kition_motion_project::Comp, name: &str,
 /// Create Text / Solid / Null / Shadow Catcher (and Light) on the target, plus the 3D Tracker
 /// Camera when the tracker has none yet — one undo step.
 fn create_from_solve(s: &mut Session, p: &Value) -> Result<Value> {
-    let cmd = "camera.createFromSolve";
+    let cmd = "camera.addFromSolve";
     let (cid, lid, uid) = ct_p(s, p, cmd)?;
     let kind = CreateKind::from_name(str_p(p, "kind").unwrap_or("null")).ok_or_else(|| bad(cmd, "kind: text|solid|null|shadowCatcher|camera"))?;
     let pl = placed(&s.project, cid, lid, uid).ok_or_else(|| bad(cmd, "the camera is not solved yet (analysis still running or failed)"))?;

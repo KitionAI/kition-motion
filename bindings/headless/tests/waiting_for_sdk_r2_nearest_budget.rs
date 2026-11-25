@@ -28,13 +28,13 @@ async fn large_history_probe(same_server: bool, deletion: bool) {
     for frame in 0..50 {
         document.execute("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":frame as f64/30.0,"value":frame})).unwrap();
     }
-    document.execute("keys.setEase", json!({"layer":layer,"path":OPACITY,"time":1,"side":"out","speed":1})).unwrap();
+    document.execute("keyframe.setEase", json!({"layer":layer,"path":OPACITY,"time":1,"side":"out","speed":1})).unwrap();
     let uid = document.execute("prop.get", json!({"layer":layer,"path":OPACITY})).unwrap()["uid"].clone();
     assert!(document.derived(&[], &[]).unwrap()[0].values["keyTimes"].to_string().len() > 200);
     let fixture = Fixture::from_bytes(&document.save(None).unwrap(), Default::default());
     let (_, _, basis) = fixture.inspect().await;
     let changes = if deletion {
-        vec![("keys.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":1}]})), ("keys.delete", json!({}))]
+        vec![("keyframe.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":1}]})), ("keyframe.delete", json!({}))]
     } else {
         vec![("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":3,"value":30}))]
     };
@@ -45,7 +45,7 @@ async fn large_history_probe(same_server: bool, deletion: bool) {
         fixture.colleague(&changes);
     }
     let answer = fixture
-        .call("run", json!({"basis":basis,"steps":[{"command":"keys.setEase","params":{"layer":layer,"prop":uid,"time":1,"side":"out","speed":2}}]}))
+        .call("run", json!({"basis":basis,"steps":[{"command":"keyframe.setEase","params":{"layer":layer,"prop":uid,"time":1,"side":"out","speed":2}}]}))
         .await;
     if deletion {
         assert_conflict(&answer.unwrap_err(), &layer.to_string(), "changed");

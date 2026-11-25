@@ -2,7 +2,7 @@ use super::Row;
 
 pub(super) const ROWS: &[Row] = &[
     Row {
-        command: "markers.set",
+        command: "marker.set",
         path: "edit existing by index",
         resolves: &["comp id/name/default active", "layer omitted/null names comp markers; else layer id/index/name", "index zero-based marker slot"],
         reads: &[
@@ -17,7 +17,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/markers.rs:21,64,160,219",
     },
     Row {
-        command: "markers.set",
+        command: "marker.set",
         path: "edit existing by at",
         resolves: &["comp and owner as index branch", "at comp seconds: first marker within half comp frame"],
         reads: &[
@@ -32,7 +32,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/markers.rs:64,219",
     },
     Row {
-        command: "markers.set",
+        command: "marker.set",
         path: "new marker",
         resolves: &["comp and owner as above", "time supplied else current time snapped to frame"],
         reads: &["comp.frame_rate", "layer.start_time/stretch for layer owner", "layer.markers_locked if layer owner"],
@@ -42,9 +42,9 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/markers.rs:219",
     },
     Row {
-        command: "markers.delete",
+        command: "marker.delete",
         path: "delete by index or at",
-        resolves: &["owner as markers.set", "zero-based index or first time within half-frame"],
+        resolves: &["owner as marker.set", "zero-based index or first time within half-frame"],
         reads: &["marker membership/order", "frame_rate and layer start_time/stretch only for at", "layer.markers_locked"],
         checks: &["marker exists", "markers unlocked"],
         writes: &["owner.markers remove addressed full marker"],
@@ -52,7 +52,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/markers.rs:253",
     },
     Row {
-        command: "markers.convert",
+        command: "marker.convert",
         path: "layer marker to comp",
         resolves: &["layer owner", "index or at marker lookup"],
         reads: &["source marker full record", "source layer.start_time/stretch", "marker order and optional at frame_rate"],
@@ -62,7 +62,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/markers.rs:270",
     },
     Row {
-        command: "markers.convert",
+        command: "marker.convert",
         path: "comp marker to target layer(s)",
         resolves: &["comp marker index/at", "toLayer id/index/name else existing selected layers"],
         reads: &["source marker full record", "target layer.start_time/stretch", "source lookup marker ordering and optional frame_rate"],

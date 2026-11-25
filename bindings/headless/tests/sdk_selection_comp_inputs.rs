@@ -37,7 +37,7 @@ async fn comp_from_selection_holds_queue_allocation_and_templates() {
                 "run",
                 json!({"basis":basis,"steps":[
                     {"command":"project.select","params":{"items":[source]}},
-                    {"command":"file.newCompFromSelection","params":{"addToRenderQueue":true}}
+                    {"command":"comp.newFromSelection","params":{"addToRenderQueue":true}}
                 ]}),
             )
             .await;

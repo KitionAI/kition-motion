@@ -85,7 +85,7 @@ fn per_key_methods_keep_the_key_selection_and_report_eases_as_they_play() {
     animate(&mut s, l, "transform/opacity", &[(0.0, json!(0)), (1.0, json!(100)), (2.0, json!(0))]);
     let key = |t: f64| json!({"layer": l, "path": "transform/opacity", "time": t});
     s.execute("edit.deselectAll", json!({})).unwrap();
-    s.execute("keys.select", json!({"keys": [key(0.0), key(2.0)]})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [key(0.0), key(2.0)]})).unwrap();
     let before = s.state.selected_keys.clone();
     let r = ok(
         &mut s,

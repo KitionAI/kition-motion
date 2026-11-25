@@ -822,17 +822,17 @@ pub const TRIED_COMMANDS: &[&str] = &[
     "layer.align",
     "layer.distribute",
     "layer.sequence",
-    "keys.timeReverse",
+    "keyframe.timeReverse",
     "prop.setExpression",
     "path.convertToBezier",
     "layer.style.removeAll",
     "layer.enableTimeRemap",
     "file.removeUnusedFootage",
-    "keys.exponentialScale",
+    "keyframe.exponentialScale",
     "prop.convertExpressionToKeyframes",
     "view.reset3DView",
     // Rove Across Time on the selected keyframes (a first or last one cannot rove).
-    "keys.interpolation",
+    "keyframe.interpolation",
 ];
 
 /// The longest stretch of sound [`MotionDocument::mix_audio`] mixes per call, in seconds.
@@ -857,12 +857,12 @@ fn effect_names() -> &'static [String] {
 }
 
 /// A command's search keywords (KHP command keywords): the effect names for `effect.apply`, and
-/// "delete layers" for `edit.clear`, which deletes them (khp-bench r2: an agent asked for
+/// "delete layers" for `edit.delete`, which deletes them (khp-bench r2: an agent asked for
 /// `layer.delete`, which does not exist, and was offered `layer.select`).
 fn keywords(id: &str) -> Vec<String> {
     match id {
         "effect.apply" => effect_names().to_vec(),
-        "edit.clear" => ["delete layers", "remove layers"].map(str::to_owned).to_vec(),
+        "edit.delete" => ["delete layers", "remove layers"].map(str::to_owned).to_vec(),
         _ => Vec::new(),
     }
 }
@@ -953,8 +953,8 @@ const VIEWING_COMMANDS: [&str; 27] = [
     "layer.select",
     "layer.selectNext",
     "layer.selectPrevious",
-    "keys.select",
-    "keys.selectAll",
+    "keyframe.select",
+    "keyframe.selectAll",
     "project.select",
     "mask.selectVertices",
     "camera.selectPoints",
@@ -963,7 +963,7 @@ const VIEWING_COMMANDS: [&str; 27] = [
     "comp.flowchart",
     "comp.miniFlowchart",
     "layer.revealExpressionErrors",
-    "anim.reveal",
+    "animation.reveal",
     "text.fonts",
     "file.saveCopy",
     "file.saveCopyAsXml",
@@ -976,7 +976,7 @@ const VIEWING_COMMANDS: [&str; 27] = [
 /// journals every command but pure queries, including viewing ones, so the journal flag alone
 /// over-reports. Undo, redo, and the file commands that open, revert, or import report true.
 fn changes_document(id: &str, journal: bool) -> bool {
-    if matches!(id, "engine.batch" | "jobs.list" | "jobs.wait" | "renderQueue.list" | "camera.solveStatus" | "roto.status" | "track.status" | "warp.status") {
+    if matches!(id, "engine.batch" | "job.list" | "job.wait" | "renderQueue.list" | "camera.solveStatus" | "roto.status" | "track.status" | "warp.status") {
         return true;
     }
     if !journal || VIEWING_COMMANDS.contains(&id) || VIEWING_FAMILIES.iter().any(|family| id.starts_with(family)) {
@@ -1162,9 +1162,9 @@ impl KitDocument for MotionDocument {
                 "layer.arrange" => &["index", "above"],
                 "effect.reorder" => &["index", "effect"],
                 "effect.remove" => &["effect"],
-                "prop.set" | "prop.addKey" | "keys.set" | "keys.setEase" => &["time"],
+                "prop.set" | "prop.addKey" | "keyframe.set" | "keyframe.setEase" => &["time"],
                 id if id.starts_with("renderQueue.") => &["index"],
-                "keys.select" | "keys.info" => &["keys"],
+                "keyframe.select" | "keyframe.info" => &["keys"],
                 "prop.pickWhip" => &["target"],
                 "mask.selectVertices" | "mask.moveVertices" | "mask.deleteVertices" | "mask.convertVertex" => &["vertices"],
                 "path.convertToBezier" | "layer.mask.motionBlur" | "layer.mask.featherFalloff" => &["mask"],
@@ -1777,9 +1777,17 @@ mod tests {
         {
             assert!(mutates(id), "{id} changes the document");
         }
-        for id in
-            ["edit.selectAll", "layer.select", "view.zoomIn", "view.3d.front", "view.rulers", "time.nextFrame", "playback.toggle", "file.saveCopy", "comp.info"]
-        {
+        for id in [
+            "edit.selectAll",
+            "layer.select",
+            "view.zoomIn",
+            "view.threeD.front",
+            "view.rulers",
+            "time.nextFrame",
+            "playback.toggle",
+            "file.saveCopy",
+            "comp.info",
+        ] {
             assert!(!mutates(id), "{id} does not change the document");
         }
     }
@@ -1982,14 +1990,14 @@ mod tests {
             doc.execute("prop.addKey", json!({ "layer": layer, "path": "transform/position", "time": time, "value": [x, 10.0, 0.0] })).unwrap();
         }
         let select = |doc: &mut MotionDocument, time: f64| {
-            doc.execute("keys.select", json!({ "keys": [{ "layer": layer, "path": "transform/position", "time": time }] })).unwrap()
+            doc.execute("keyframe.select", json!({ "keys": [{ "layer": layer, "path": "transform/position", "time": time }] })).unwrap()
         };
         select(&mut doc, 0.0);
-        assert!(!doc.would_change("keys.interpolation", r#"{"roving":true}"#), "a first keyframe cannot rove");
+        assert!(!doc.would_change("keyframe.interpolation", r#"{"roving":true}"#), "a first keyframe cannot rove");
         select(&mut doc, 2.0);
-        assert!(!doc.would_change("keys.interpolation", r#"{"roving":true}"#), "a last keyframe cannot rove");
+        assert!(!doc.would_change("keyframe.interpolation", r#"{"roving":true}"#), "a last keyframe cannot rove");
         select(&mut doc, 1.0);
-        assert!(doc.would_change("keys.interpolation", r#"{"roving":true}"#), "a middle keyframe can");
+        assert!(doc.would_change("keyframe.interpolation", r#"{"roving":true}"#), "a middle keyframe can");
     }
 
     #[test]

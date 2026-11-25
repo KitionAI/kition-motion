@@ -28,7 +28,7 @@ fn keys_p(s: &Session, p: &Value) -> Vec<KeyRef> {
 }
 
 /// Edit ▸ Label on keyframes: colour the selected (or given) keyframes (label names as renamed
-/// in Settings ▸ Labels; `keys.setLabel` is the Timeline context menu's command).
+/// in Settings ▸ Labels; `keyframe.setLabel` is the Timeline context menu's command).
 pub(crate) fn label_keys(s: &mut Session, p: &Value) -> Result<Value> {
     let name = str_p(p, "label").unwrap_or("Red");
     let idx = label_index(s, name).ok_or_else(|| bad("keys.label", format!("unknown label `{name}`")))?;
@@ -92,7 +92,7 @@ fn audio_to_keys(s: &mut Session, p: &Value) -> Result<Value> {
             let mut next = proj.next_id;
             let l = layer_mut(proj, cid, lid)?;
             let start = l.start_time;
-            let fx = l.props.sub_mut("effects").ok_or_else(|| bad("keys.audioToKeyframes", "the null has no effects group"))?;
+            let fx = l.props.sub_mut("effects").ok_or_else(|| bad("keyframe.audioToKeyframes", "the null has no effects group"))?;
             for (i, name) in ["Left Channel", "Right Channel", "Both Channels"].into_iter().enumerate() {
                 let mut g = kition_motion_effects::instantiate(spec, &mut Ids(&mut next), name, [comp.width as f64, comp.height as f64]);
                 if let Some(pr) = g.get_mut("slider") {
@@ -195,20 +195,20 @@ pub fn parse_camera(text: &str, rate: kition_motion_time::FrameRate, comp_w: f64
 /// RPF/RLA files carry their camera in an undocumented block, so Kition Motion reads the same data
 /// from JSON or CSV exports (see `docs/features/preferences.md` ▸ RPF Camera Import). One undo step.
 fn rpf_camera_import(s: &mut Session, p: &Value) -> Result<Value> {
-    let path = str_p(p, "path").ok_or_else(|| bad("keys.rpfCameraImport", "missing `path` (.json or .csv camera data)"))?;
+    let path = str_p(p, "path").ok_or_else(|| bad("keyframe.rpfCameraImport", "missing `path` (.json or .csv camera data)"))?;
     let lower = path.to_ascii_lowercase();
     if lower.ends_with(".rpf") || lower.ends_with(".rla") {
         return Err(bad(
-            "keys.rpfCameraImport",
+            "keyframe.rpfCameraImport",
             "the camera block of RPF/RLA files is not publicly documented: export the camera from your 3D application as JSON or CSV (frame, px, py, pz, rx, ry, rz, zoom|fov)",
         ));
     }
     let cid = comp_id(s, p)?;
     let comp = s.project.comp(cid).ok_or(EngineError::NoComp)?.clone();
     let bytes = s.services.read_file(path).map_err(|e| EngineError::Other(format!("cannot read {path}: {e}")))?;
-    let samples = parse_camera(&String::from_utf8_lossy(&bytes), comp.frame_rate, comp.width as f64).map_err(|e| bad("keys.rpfCameraImport", e))?;
+    let samples = parse_camera(&String::from_utf8_lossy(&bytes), comp.frame_rate, comp.width as f64).map_err(|e| bad("keyframe.rpfCameraImport", e))?;
     if samples.is_empty() {
-        return Err(bad("keys.rpfCameraImport", "no camera samples"));
+        return Err(bad("keyframe.rpfCameraImport", "no camera samples"));
     }
     let name = std::path::Path::new(path).file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "RPF Camera".into());
     grouped(s, "RPF Camera Import", |s| {
@@ -237,9 +237,9 @@ fn rpf_camera_import(s: &mut Session, p: &Value) -> Result<Value> {
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
-        cmd!("keys.audioToKeyframes", "Convert Audio to Keyframes", ["Animation", "Keyframe Assistant"], None, "{comp?}", has_comp, audio_to_keys),
+        cmd!("keyframe.audioToKeyframes", "Convert Audio to Keyframes", ["Animation", "Keyframe Assistant"], None, "{comp?}", has_comp, audio_to_keys),
         cmd!(
-            "keys.rpfCameraImport",
+            "keyframe.rpfCameraImport",
             "RPF Camera Import",
             ["Animation", "Keyframe Assistant"],
             None,

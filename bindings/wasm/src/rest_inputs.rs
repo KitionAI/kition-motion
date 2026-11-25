@@ -139,9 +139,9 @@ fn project_inputs(command: &str, params: &Value, answer: &mut Option<Under>) {
             // These handlers clone and replace the template collection, including defaults.
             names.push("attrs.render_templates");
         }
-        "renderQueue.add" | "render.preRender" | "file.createProxy" | "renderQueue.applyTemplate" => names.push("attrs.render_templates"),
+        "renderQueue.add" | "render.preRender" | "file.addProxy" | "renderQueue.applyTemplate" => names.push("attrs.render_templates"),
         "comp.saveFrameAs" if params.get("queue").and_then(Value::as_bool) == Some(true) => names.push("attrs.render_templates"),
-        "file.newCompFromSelection" if params.get("addToRenderQueue").and_then(Value::as_bool) == Some(true) => names.push("attrs.render_templates"),
+        "comp.newFromSelection" if params.get("addToRenderQueue").and_then(Value::as_bool) == Some(true) => names.push("attrs.render_templates"),
         _ => {}
     }
     if !names.is_empty() {
@@ -150,9 +150,9 @@ fn project_inputs(command: &str, params: &Value, answer: &mut Option<Under>) {
 }
 
 fn queue_inputs(session: &Session, command: &str, params: &Value, answer: &mut Option<Under>) {
-    let append = matches!(command, "renderQueue.add" | "render.preRender" | "file.createProxy")
+    let append = matches!(command, "renderQueue.add" | "render.preRender" | "file.addProxy")
         || command == "comp.saveFrameAs" && params.get("queue").and_then(Value::as_bool) == Some(true)
-        || command == "file.newCompFromSelection" && params.get("addToRenderQueue").and_then(Value::as_bool) == Some(true);
+        || command == "comp.newFromSelection" && params.get("addToRenderQueue").and_then(Value::as_bool) == Some(true);
     if append {
         let answer = answer.get_or_insert_with(Under::default);
         // Allocation reads the maximum queue id, and appends to the queue's end gap.
@@ -326,7 +326,7 @@ fn twin_inputs(session: &Session, command: &str, params: &Value, answer: &mut Op
 /// (layer.rs parent_fixes). No other layer is named: a layer added since, or an unrelated
 /// reparenting, does not refuse the deletion.
 fn clear_inputs(session: &Session, command: &str, params: &Value, answer: &mut Option<Under>) {
-    if !matches!(command, "edit.clear" | "edit.cut") {
+    if !matches!(command, "edit.delete" | "edit.cut") {
         return;
     }
     let Some(values) = params.get("layers") else { return };
@@ -368,7 +368,7 @@ fn clear_inputs(session: &Session, command: &str, params: &Value, answer: &mut O
 }
 
 fn selection_comp_inputs(session: &Session, command: &str, answer: &mut Option<Under>) {
-    if command != "file.newCompFromSelection" {
+    if command != "comp.newFromSelection" {
         return;
     }
     let answer = answer.get_or_insert_with(Under::default);

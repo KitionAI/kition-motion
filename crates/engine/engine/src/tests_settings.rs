@@ -342,31 +342,31 @@ fn defaults_have_no_conflicts_and_match_the_menus() {
 fn shortcut_edits_detect_conflicts_and_create_a_custom_preset() {
     let store = Arc::new(MemoryConfig::default());
     let mut s = Session { config: Some(store.clone()), ..Default::default() };
-    let r = s.execute_checked("shortcuts.set", json!({"command": "layer.newNull", "keys": "cmd+s"})).unwrap();
+    let r = s.execute_checked("shortcut.set", json!({"command": "layer.newNull", "keys": "cmd+s"})).unwrap();
     assert_eq!(r["keys"], json!(["Cmd+S"]));
     assert_eq!(r["created"], json!("Custom"));
     assert!(r["conflicts"].as_array().unwrap().iter().any(|c| c["key"] == "file.save"), "{r}");
     assert_eq!(s.keymaps.active, "Custom");
     assert_eq!(s.shortcuts().shortcut_of("layer.newNull", &json!(null)), Some("Cmd+S"));
-    assert!(!s.execute("shortcuts.conflicts", json!({})).unwrap().as_array().unwrap().is_empty());
+    assert!(!s.execute("shortcut.conflicts", json!({})).unwrap().as_array().unwrap().is_empty());
     // The default preset is untouched.
-    s.execute("shortcuts.preset", json!({"op": "select", "name": DEFAULT_PRESET})).unwrap();
+    s.execute("shortcut.preset", json!({"op": "select", "name": DEFAULT_PRESET})).unwrap();
     assert_eq!(s.shortcuts().shortcut_of("layer.newNull", &json!(null)), Some("Cmd+Alt+Shift+Y"));
     // Remove a shortcut; reset one.
-    s.execute("shortcuts.preset", json!({"op": "select", "name": "Custom"})).unwrap();
-    s.execute("shortcuts.set", json!({"command": "file.save", "keys": null})).unwrap();
+    s.execute("shortcut.preset", json!({"op": "select", "name": "Custom"})).unwrap();
+    s.execute("shortcut.set", json!({"command": "file.save", "keys": null})).unwrap();
     assert_eq!(s.shortcuts().shortcut_of("file.save", &json!(null)), None);
-    s.execute("shortcuts.reset", json!({"command": "file.save"})).unwrap();
+    s.execute("shortcut.reset", json!({"command": "file.save"})).unwrap();
     assert_eq!(s.shortcuts().shortcut_of("file.save", &json!(null)), Some("Cmd+S"));
     // Bound-parameter entries are bindable too.
-    s.execute("shortcuts.set", json!({"command": "app.settings", "params": {"page": "labels"}, "keys": ["F9"]})).unwrap();
+    s.execute("shortcut.set", json!({"command": "app.settings", "params": {"page": "labels"}, "keys": ["F9"]})).unwrap();
     assert_eq!(s.shortcuts().shortcut_of("app.settings", &json!({"page": "labels"})), Some("F9"));
     // Persisted.
     let k = Keymaps::from_json(&store.read(crate::shortcuts::SHORTCUTS_FILE).unwrap());
     assert_eq!(k.active, "Custom");
-    assert!(s.execute("shortcuts.set", json!({"command": "no.such", "keys": "F1"})).is_err());
-    assert!(s.execute("shortcuts.set", json!({"command": "file.save", "keys": "Cmd+"})).is_err());
-    let list = s.execute("shortcuts.list", json!({"keys": "F9"})).unwrap();
+    assert!(s.execute("shortcut.set", json!({"command": "no.such", "keys": "F1"})).is_err());
+    assert!(s.execute("shortcut.set", json!({"command": "file.save", "keys": "Cmd+"})).is_err());
+    let list = s.execute("shortcut.list", json!({"keys": "F9"})).unwrap();
     assert!(list["commands"].as_array().unwrap().iter().any(|c| c["command"] == "app.settings" && c["params"]["page"] == "labels"), "{list}");
 }
 
@@ -374,21 +374,21 @@ fn shortcut_edits_detect_conflicts_and_create_a_custom_preset() {
 fn shortcut_presets_duplicate_rename_delete_export_import() {
     let d = tmp("presets");
     let mut s = Session::default();
-    s.execute("shortcuts.preset", json!({"op": "new", "name": "Mine"})).unwrap();
-    s.execute("shortcuts.set", json!({"command": "edit.undo", "keys": ["Cmd+Z", "F2"]})).unwrap();
-    s.execute("shortcuts.preset", json!({"op": "duplicate", "name": "Mine 2"})).unwrap();
+    s.execute("shortcut.preset", json!({"op": "new", "name": "Mine"})).unwrap();
+    s.execute("shortcut.set", json!({"command": "edit.undo", "keys": ["Cmd+Z", "F2"]})).unwrap();
+    s.execute("shortcut.preset", json!({"op": "duplicate", "name": "Mine 2"})).unwrap();
     assert_eq!(s.keymaps.names(), vec![DEFAULT_PRESET, "Mine", "Mine 2"]);
-    s.execute("shortcuts.preset", json!({"op": "rename", "name": "Mine 2", "newName": "Other"})).unwrap();
-    assert!(s.execute("shortcuts.preset", json!({"op": "delete", "name": DEFAULT_PRESET})).is_err());
+    s.execute("shortcut.preset", json!({"op": "rename", "name": "Mine 2", "newName": "Other"})).unwrap();
+    assert!(s.execute("shortcut.preset", json!({"op": "delete", "name": DEFAULT_PRESET})).is_err());
     let path = d.join("mine.json");
-    s.execute("shortcuts.export", json!({"preset": "Mine", "path": path.to_string_lossy()})).unwrap();
-    s.execute("shortcuts.preset", json!({"op": "delete", "name": "Mine"})).unwrap();
-    s.execute("shortcuts.preset", json!({"op": "delete", "name": "Other"})).unwrap();
+    s.execute("shortcut.export", json!({"preset": "Mine", "path": path.to_string_lossy()})).unwrap();
+    s.execute("shortcut.preset", json!({"op": "delete", "name": "Mine"})).unwrap();
+    s.execute("shortcut.preset", json!({"op": "delete", "name": "Other"})).unwrap();
     assert_eq!(s.keymaps.active, DEFAULT_PRESET);
-    let r = s.execute("shortcuts.import", json!({"path": path.to_string_lossy()})).unwrap();
+    let r = s.execute("shortcut.import", json!({"path": path.to_string_lossy()})).unwrap();
     assert_eq!(r["preset"], json!("Mine"));
     assert_eq!(s.shortcuts().keys["edit.undo"], vec!["Cmd+Z".to_string(), "F2".into()]);
-    s.execute("shortcuts.reset", json!({})).unwrap();
+    s.execute("shortcut.reset", json!({})).unwrap();
     assert_eq!(s.shortcuts().keys["edit.undo"], vec!["Cmd+Z".to_string()]);
     let _ = std::fs::remove_dir_all(d);
 }

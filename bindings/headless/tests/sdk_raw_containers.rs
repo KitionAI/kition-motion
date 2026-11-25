@@ -13,8 +13,8 @@ async fn raw_layer_moves_keep_the_recipient_and_gap_across_an_outside_reread() {
         let layers = layer_ids(&info);
         let held = fixture.ok("query", json!({"objects":[comp]})).await["objects"][0]["fields"]["comp"].clone();
         fixture.colleague(&[match change {
-            "before" => ("edit.clear", json!({"layers":[layers[0]]})),
-            "after" => ("edit.clear", json!({"layers":[layers[5]]})),
+            "before" => ("edit.delete", json!({"layers":[layers[0]]})),
+            "after" => ("edit.delete", json!({"layers":[layers[5]]})),
             _ => opacity(layers[1], 23.0),
         }]);
         let saved = std::fs::read(fixture.file()).unwrap();

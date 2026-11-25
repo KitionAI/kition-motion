@@ -75,7 +75,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "crates/engine/engine/src/commands/camera_cmds.rs:294",
     },
     Row {
-        command: "camera.createFromSolve",
+        command: "camera.addFromSolve",
         path: "placed solve and explicit target or selected points; one/multiple new objects",
         resolves: &[
             "ct_p as camera.analyze; tracker CAMERA numeric field names existing actual camera else create",
@@ -106,7 +106,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "crates/engine/engine/src/commands/camera_cmds.rs:374; crates/engine/engine/src/commands/camera_cmds.rs:322; crates/engine/engine/src/camera_track.rs:512; crates/engine/engine/src/camera_track.rs:584; crates/engine/engine/src/camera_track.rs:634",
     },
     Row {
-        command: "camera.create",
+        command: "camera.add",
         path: "forces kind=camera and delegates createFromSolve",
         resolves: &["ct_p; existing camera via tracker CAMERA reference or top insertion gap"],
         reads: &[

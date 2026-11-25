@@ -313,7 +313,7 @@ function RenameDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind
   )
 }
 
-/** Keyframe Interpolation's choices for each kind (`keys.interpolation`): '' keeps the keys' own. */
+/** Keyframe Interpolation's choices for each kind (`keyframe.interpolation`): '' keeps the keys' own. */
 const TEMPORAL = ['', 'linear', 'bezier', 'continuousBezier', 'autoBezier', 'hold'] as const
 const SPATIAL = ['', 'linear', 'bezier', 'continuousBezier', 'autoBezier'] as const
 
@@ -337,7 +337,7 @@ function InterpolationDialog({ dialog, onDone }: { dialog: Extract<MotionDialog,
       testId="motion-interp-dialog"
       onSubmit={() => {
         const params = { ...(temporal ? { interpolation: temporal } : {}), ...(spatial ? { spatial } : {}) }
-        if (Object.keys(params).length) void run('keys.interpolation', params)
+        if (Object.keys(params).length) void run('keyframe.interpolation', params)
         onDone()
       }}
       onClose={onDone}
@@ -349,7 +349,7 @@ function InterpolationDialog({ dialog, onDone }: { dialog: Extract<MotionDialog,
   )
 }
 
-/** Keyframe Velocity: the selected keyframes' incoming and outgoing speed and influence (`keys.velocity`). */
+/** Keyframe Velocity: the selected keyframes' incoming and outgoing speed and influence (`keyframe.velocity`). */
 function VelocityDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'velocity' }>; onDone: () => void }) {
   const { run, t, phrase } = useKitEditor()
   const units = phrase(dialog.units)
@@ -368,7 +368,7 @@ function VelocityDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { ki
       testId="motion-velocity-dialog"
       onSubmit={() => {
         if (!valid) return
-        void run('keys.velocity', { ...numbers, ...(continuous ? { continuous: true } : {}) })
+        void run('keyframe.velocity', { ...numbers, ...(continuous ? { continuous: true } : {}) })
         onDone()
       }}
       onClose={onDone}
@@ -681,7 +681,7 @@ function InterpretDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { k
 
 /**
  * A keyframe's value and time typed in (a double-click on the keyframe, or Edit Value… on its
- * menu): each of a number's parts (x, y, z), and the time as timecode. One undo step (`keys.set`
+ * menu): each of a number's parts (x, y, z), and the time as timecode. One undo step (`keyframe.set`
  * with the new value and time).
  */
 function KeyValueDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind: 'keyValue' }>; onDone: () => void }) {
@@ -703,7 +703,7 @@ function KeyValueDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { ki
       onSubmit={() => {
         if (!valid || seconds === null) return
         const value = numbers == null ? undefined : typeof dialog.value === 'number' ? values[0] : [...values, ...kept]
-        void run('keys.set', { layer: dialog.layer, path: dialog.path, time: dialog.time, timeBase: 'comp', ...(Math.abs(seconds - dialog.time) > 1e-6 ? { newTime: seconds } : {}), ...(value !== undefined ? { value } : {}) })
+        void run('keyframe.set', { layer: dialog.layer, path: dialog.path, time: dialog.time, timeBase: 'comp', ...(Math.abs(seconds - dialog.time) > 1e-6 ? { newTime: seconds } : {}), ...(value !== undefined ? { value } : {}) })
         onDone()
       }}
       onClose={onDone}
@@ -728,7 +728,7 @@ function KeyValueDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { ki
 
 /**
  * Animation ▸ Keyframe Assistant ▸ Wiggler: random deviations added between the selected
- * keyframes (`keys.wiggle`, one undo step): along the path or in time (a moving property only),
+ * keyframes (`keyframe.wiggle`, one undo step): along the path or in time (a moving property only),
  * smooth or jagged noise, each dimension on its own, all alike or one, how many keys a second and
  * how far.
  */
@@ -747,7 +747,7 @@ function WigglerDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kin
       testId="motion-wiggler-dialog"
       onSubmit={() => {
         if (perSecond === null || howFar === null) return
-        void run('keys.wiggle', { apply, noise, dimensions, ...(dimensions === 'one' ? { dimension: 0 } : {}), frequency: perSecond, magnitude: howFar })
+        void run('keyframe.wiggle', { apply, noise, dimensions, ...(dimensions === 'one' ? { dimension: 0 } : {}), frequency: perSecond, magnitude: howFar })
         onDone()
       }}
       onClose={onDone}
@@ -782,7 +782,7 @@ function WigglerDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kin
 
 /**
  * Animation ▸ Keyframe Assistant ▸ Smoother: the selected keyframes' curve kept with fewer keys,
- * within a tolerance (`keys.smooth`, one undo step).
+ * within a tolerance (`keyframe.smooth`, one undo step).
  */
 function SmootherDialog({ onDone }: { onDone: () => void }) {
   const { run, t } = useKitEditor()
@@ -794,7 +794,7 @@ function SmootherDialog({ onDone }: { onDone: () => void }) {
       testId="motion-smoother-dialog"
       onSubmit={() => {
         if (value === null) return
-        void run('keys.smooth', { tolerance: value })
+        void run('keyframe.smooth', { tolerance: value })
         onDone()
       }}
       onClose={onDone}

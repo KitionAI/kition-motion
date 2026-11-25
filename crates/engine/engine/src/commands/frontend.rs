@@ -34,7 +34,7 @@ pub fn specs() -> Vec<CommandSpec> {
         fe!("app.commandPalette", "Quick Apply...", ["Edit"], Some("Cmd+Shift+Space"), "{query?}", always),
         fe!("app.keyboardShortcuts", "Keyboard Shortcuts", ["Edit"], Some("Cmd+Alt+'"), "{}", always),
         fe!("app.templates", "Templates", [], None, "{kind: renderSettings|outputModule}", always),
-        fe!("app.find", "Find", ["File"], Some("Cmd+F"), "{query?}", always),
+        fe!("edit.find", "Find", ["File"], Some("Cmd+F"), "{query?}", always),
         // Preview.
         fe!(
             "playback.toggle",
@@ -105,7 +105,7 @@ pub fn specs() -> Vec<CommandSpec> {
         fe!("comp.miniFlowchart", "Composition Mini-Flowchart", ["Composition"], Some("Tab"), "{}", has_comp),
         fe!("layer.openLayer", "Open Layer", ["Layer"], None, "{layer?}", has_layers),
         fe!("effect.manage", "Manage Effects...", ["Effect"], None, "{}", always),
-        fe!("anim.browsePresets", "Browse Presets...", ["Animation"], None, "{}", always),
+        fe!("animation.browsePresets", "Browse Presets...", ["Animation"], None, "{}", always),
         // Project panel: delete the selected items without the prompt that Delete shows when
         // compositions use them. The UI runs `project.delete` (agents can run it directly).
         fe!(

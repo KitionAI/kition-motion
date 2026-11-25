@@ -21,14 +21,14 @@ async fn consumed_key_deletion_refuses_while_a_distant_insertion_applies() {
         json!({"command":"prop.addKey","params":{"layer":layer,"path":OPACITY,"time":4.5}}),
         json!({"command":"prop.set","params":{"layer":layer,"path":OPACITY,"time":4.5,"value":77}}),
         json!({"command":"prop.set","at":{"time":4.5},"params":{"layer":layer,"path":OPACITY,"value":77}}),
-        json!({"command":"keys.set","params":{"layer":layer,"path":OPACITY,"time":4.4,"value":77}}),
+        json!({"command":"keyframe.set","params":{"layer":layer,"path":OPACITY,"time":4.4,"value":77}}),
     ];
     for step in steps {
         for deletion in [true, false] {
             let fixture = Fixture::from_bytes(&bytes, Default::default());
             let (_, _, basis) = fixture.inspect().await;
             if deletion {
-                fixture.colleague(&[("keys.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":4}]})), ("keys.delete", json!({}))]);
+                fixture.colleague(&[("keyframe.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":4}]})), ("keyframe.delete", json!({}))]);
             } else {
                 fixture.colleague(&[("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":9,"value":90}))]);
             }

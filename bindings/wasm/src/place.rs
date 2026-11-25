@@ -15,8 +15,8 @@
 //! - A comp marker command (`markers.*` without `layer`) naming its marker by `at` or `index`: no
 //!   object, no window, and the comp's markers as premise (`comp.markers` of the comp's item,
 //!   C8-time-3): markers have no ids, and the comp's own fields hold them. A new one at the current
-//!   time (`comp.addMarker`, `markers.set` with `new`) has the same marker premise. An existing
-//!   marker set by `markers.set` holds that marker alone (C8-time-policy): `comp.markers.<i>`
+//!   time (`comp.addMarker`, `marker.set` with `new`) has the same marker premise. An existing
+//!   marker set by `marker.set` holds that marker alone (C8-time-policy): `comp.markers.<i>`
 //!   by `index`, `comp.markers[time=<ticks>]` by `at`.
 //! - A command that acts on layers (declares `layer`/`layers` as its target) given none: the
 //!   layers it acts on, the selection, each with its window `[i, i+1)`.
@@ -206,10 +206,10 @@ fn index_number(session: &Session, comp: &Comp, value: &Value) -> Option<usize> 
 /// |---|---|---|
 /// | `layer.rename` | `name` | none |
 /// | `layer.timing` | none | `startTime`, `inPoint`, `outPoint` (not its stack place) |
-/// | layer `markers.set` by `index` | that marker (`markers.<i>`), `attrs.markers_locked` | none |
-/// | layer `markers.set` by `at` (or setting `time`) | that marker (`markers[time=<layer ticks>]`), `attrs.markers_locked`, `attrs.stretch` | `startTime` |
+/// | layer `marker.set` by `index` | that marker (`markers.<i>`), `attrs.markers_locked` | none |
+/// | layer `marker.set` by `at` (or setting `time`) | that marker (`markers[time=<layer ticks>]`), `attrs.markers_locked`, `attrs.stretch` | `startTime` |
 /// | `prop.set` of a property with no keys | the property (its named path, `transform/rotation`) | none |
-/// | `prop.set` of a property with keys, `prop.addKey`, `keys.set` | the key it writes, by its layer time (`transform/opacity.keys[time=<ticks>]`; the property where the time cannot be computed), `attrs.stretch` | `startTime` |
+/// | `prop.set` of a property with keys, `prop.addKey`, `keyframe.set` | the key it writes, by its layer time (`transform/opacity.keys[time=<ticks>]`; the property where the time cannot be computed), `attrs.stretch` | `startTime` |
 ///
 /// Nothing is stated (every field and position) for any other command, and for a property named by
 /// its uid (`prop`), by a path with a stack position in it (`effects/#1/…`), with `selected: true`
@@ -297,7 +297,7 @@ fn premise_of(session: &Session, layer: &Layer, command: &str, params: &Value) -
         let path = format!("effects/#{}", index.saturating_add(1));
         return Some(Premise::on(id).fields([format!("{path}.uid"), format!("{path}.meta")]).positions(Vec::<String>::new()));
     }
-    if command == "markers.set"
+    if command == "marker.set"
         && params.get("new").and_then(Value::as_bool) != Some(true)
         && let Some((Some(owner), index, time)) = kition_motion_engine::commands::markers::addressed_marker(session, params)
         && owner == layer.id
@@ -322,7 +322,7 @@ fn premise_of(session: &Session, layer: &Layer, command: &str, params: &Value) -
     if command == "layer.rename" {
         return Some(Premise::on(id).fields(["name"]).positions(Vec::<String>::new()));
     }
-    if !matches!(command, "prop.set" | "prop.addKey" | "keys.set") {
+    if !matches!(command, "prop.set" | "prop.addKey" | "keyframe.set") {
         return crate::field_holds::premise(session, layer, command, params);
     }
     if params.get("prop").is_some_and(|prop| !prop.is_null()) || params.get("selected").and_then(Value::as_bool) == Some(true) {
@@ -351,7 +351,7 @@ fn premise_of(session: &Session, layer: &Layer, command: &str, params: &Value) -
     let mut fields = vec!["attrs.stretch".to_owned()];
     if let Some(time) = kition_motion_engine::commands::written_key_time(session, &by_layer, command) {
         fields.push(format!("{named}.keys[time={}]", time.0));
-        if command == "keys.set" {
+        if command == "keyframe.set" {
             if let Some(key) = property.keys.iter().min_by_key(|key| key.time.0.abs_diff(time.0)) {
                 fields.push(format!("{named}.keys[time={}]", key.time.0));
             }
@@ -385,7 +385,7 @@ fn by_name(premise: Premise) -> Premise {
 }
 
 /// The comp markers a call reads or writes when it names a comp marker by `at` or `index`
-/// (`markers.set`, `markers.delete`, `markers.convert` without `layer`): the comp item's
+/// (`marker.set`, `marker.delete`, `marker.convert` without `layer`): the comp item's
 /// `comp.markers`.
 fn comp_markers(comp_id: ItemId) -> Premise {
     Premise::on(json!(comp_id.0)).fields(["comp.markers"]).positions(Vec::<String>::new())
@@ -458,7 +458,7 @@ pub fn under(session: &Session, command: &str, params: &Value) -> Result<Option<
         );
     }
     crate::rest_effect::extend(session, command, params, &mut under);
-    if command == "keys.set"
+    if command == "keyframe.set"
         && let Some(destination) = params.get("newTime")
         && let Some(layer) = params.get("layer").and_then(|value| layer_named(comp, value))
         && let Some(property) = params.get("path").and_then(Value::as_str).and_then(|path| layer.props.prop(path))
@@ -523,7 +523,7 @@ pub fn under(session: &Session, command: &str, params: &Value) -> Result<Option<
     }
     let mut extra = Vec::new();
     let mut references: Vec<&Value> = match command {
-        "keys.info" => params.get("keys").and_then(Value::as_array).into_iter().flatten().filter_map(|key| key.get("layer")).collect(),
+        "keyframe.info" => params.get("keys").and_then(Value::as_array).into_iter().flatten().filter_map(|key| key.get("layer")).collect(),
         "prop.pickWhip" => params.get("target").and_then(|target| target.get("layer")).into_iter().collect(),
         "mask.selectVertices" | "mask.moveVertices" | "mask.deleteVertices" | "mask.convertVertex" => {
             params.get("vertices").and_then(Value::as_array).into_iter().flatten().filter_map(|vertex| vertex.get("layer")).collect()
@@ -548,12 +548,12 @@ pub fn under(session: &Session, command: &str, params: &Value) -> Result<Option<
             }
         }
     }
-    if command == "keys.select" {
+    if command == "keyframe.select" {
         for key in params.get("keys").and_then(Value::as_array).into_iter().flatten() {
             if let Some(value) = key.get("layer")
                 && let Some(layer) = layer_named(comp, value).or_else(|| layer_elsewhere(session, value))
             {
-                if let Some(premise) = premise_of(session, layer, "keys.set", key) {
+                if let Some(premise) = premise_of(session, layer, "keyframe.set", key) {
                     if comp.layer(layer.id).is_none() {
                         under.get_or_insert_with(Under::default).within.push(Within {
                             parent: json!(comp_id.0),
@@ -702,7 +702,7 @@ pub fn under(session: &Session, command: &str, params: &Value) -> Result<Option<
         }
     }
     // A Layer Control value is an object reference only for that property's value type.
-    if matches!(command, "prop.set" | "prop.addKey" | "keys.set")
+    if matches!(command, "prop.set" | "prop.addKey" | "keyframe.set")
         && let Some(layer) = params.get("layer").and_then(|value| layer_named(comp, value))
         && let Some(property) = params
             .get("prop")
@@ -759,13 +759,13 @@ pub(crate) fn merge_premises(answer: &mut Under) {
 }
 
 fn under_targets(session: &Session, command: &str, params: &Value) -> Result<Option<Under>, String> {
-    if (matches!(command, "keys.select" | "keys.info") && params.get("keys").is_some_and(Value::is_array))
+    if (matches!(command, "keyframe.select" | "keyframe.info") && params.get("keys").is_some_and(Value::is_array))
         || (matches!(command, "mask.selectVertices" | "mask.moveVertices" | "mask.deleteVertices" | "mask.convertVertex")
             && params.get("vertices").is_some_and(Value::is_array))
     {
         return Ok(Some(Under::default()));
     }
-    if matches!(command, "keys.delete" | "keys.move" | "keys.transform") {
+    if matches!(command, "keyframe.delete" | "keyframe.move" | "keyframe.transform") {
         let premises = session
             .state
             .selected_keys
@@ -839,7 +839,7 @@ fn under_targets(session: &Session, command: &str, params: &Value) -> Result<Opt
     if comp_marker(command, params) {
         // An existing comp marker set by its index or its time: that marker only (C8-time-policy;
         // `commands/markers.rs` `set` reads and writes it alone, then re-sorts by time).
-        if command == "markers.set"
+        if command == "marker.set"
             && params.get("new").and_then(Value::as_bool) != Some(true)
             && let Some((None, index, time)) = kition_motion_engine::commands::markers::addressed_marker(session, params)
         {

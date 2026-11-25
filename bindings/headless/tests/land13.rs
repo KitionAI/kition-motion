@@ -11,7 +11,7 @@ async fn layer_arrange_holds_its_destination_gap() {
         let f = Fixture::new(5);
         let (info, _, basis) = f.inspect().await;
         let layers = layer_ids(&info);
-        f.colleague(&[("edit.clear", json!({"layers": [layers[if before {1} else {4}]]}))]);
+        f.colleague(&[("edit.delete", json!({"layers": [layers[if before {1} else {4}]]}))]);
         let answer = f.call("run", json!({"basis": basis, "steps": [{"command": "layer.arrange", "params": {"layers": [layers[0]], "index": 3}}]})).await;
         if before {
             let error = answer.expect_err("deleting before the destination changes the gap");
@@ -79,7 +79,8 @@ async fn a_key_move_holds_the_interval_that_can_clamp_its_destination() {
         }
         let (_, _, basis) = f.inspect().await;
         f.colleague(&[("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":if dependent {2.5} else {3.5},"value":30}))]);
-        let answer = f.call("run", json!({"basis":basis,"steps":[{"command":"keys.set","params":{"layer":layer,"path":OPACITY,"time":2,"newTime":3}}]})).await;
+        let answer =
+            f.call("run", json!({"basis":basis,"steps":[{"command":"keyframe.set","params":{"layer":layer,"path":OPACITY,"time":2,"newTime":3}}]})).await;
         if dependent {
             let error = answer.expect_err("a new neighbour would clamp the requested move");
             assert_eq!(error["error"]["code"], "conflict", "{error}");

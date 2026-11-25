@@ -562,7 +562,7 @@ fn add_marker(s: &mut Session, p: &Value) -> Result<Value> {
             l.markers.retain(|m| m.time != lt);
             l.markers.push(Marker { time: lt, comment: comment.clone(), ..Default::default() });
             l.markers.sort_by_key(|m| m.time);
-            // The marker's index as `markers.list {layer}` and `markers.delete {layer, index}` see it.
+            // The marker's index as `marker.list {layer}` and `marker.delete {layer, index}` see it.
             if let Some(index) = l.markers.iter().position(|m| m.time == lt) {
                 added.push(json!({"layer": lid.0, "index": index, "time": t.seconds()}));
             }
@@ -869,8 +869,8 @@ mod add_marker_reply_tests {
         let r = s.execute("layer.addMarker", json!({"layers": [l], "time": 3, "comment": "beat"})).unwrap();
         assert_eq!(r["time"], json!(3.0));
         assert_eq!(r["markers"], json!([{"layer": l, "index": 1, "time": 3.0}]));
-        // The reply names the marker markers.list shows.
-        let listed = s.execute("markers.list", json!({"layer": l})).unwrap();
+        // The reply names the marker marker.list shows.
+        let listed = s.execute("marker.list", json!({"layer": l})).unwrap();
         assert_eq!(listed[1]["time"], json!(3.0));
         assert_eq!(listed[1]["comment"], "beat");
     }

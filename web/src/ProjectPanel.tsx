@@ -310,7 +310,7 @@ export function ProjectPanel({
     if (!ids.length || readOnly) return
     if ((await run('project.select', { items: ids })) === null) return
     sent.current = ids.join()
-    await run('file.newCompFromSelection', { single: ids.length > 1 })
+    await run('comp.newFromSelection', { single: ids.length > 1 })
   }
   const removeUnused = async () => {
     const answer = parseAnswer<{ removed?: number }>(await run('file.removeUnusedFootage', {}))

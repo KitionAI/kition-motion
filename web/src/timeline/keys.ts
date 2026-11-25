@@ -36,5 +36,5 @@ export function keysOf(element: Element): KeyRef[] {
   }
 }
 
-/** What `keys.info` answers per selected keyframe (the fields the timeline reads). */
+/** What `keyframe.info` answers per selected keyframe (the fields the timeline reads). */
 export type SelectedKey = { layer: number; path: string; compTime: number }

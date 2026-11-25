@@ -151,7 +151,7 @@ try {
   await undo()
   // Keyframe Velocity… from the keyframe menu: influence typed in, one undo step.
   const uid = (await query('prop.get', { layer: SHAPE, path: POSITION })).uid
-  const ease = async () => (await query('keys.info', { keys: [{ layer: SHAPE, prop: uid, time: 0 }] }))[0]?.outEase?.[0]
+  const ease = async () => (await query('keyframe.info', { keys: [{ layer: SHAPE, prop: uid, time: 0 }] }))[0]?.outEase?.[0]
   await selectBoth()
   await kit.getByTestId(`motion-key-${SHAPE}-transform.position-0`).click({ button: 'right' })
   await kit.getByTestId('motion-key-menu-velocity').click()
@@ -201,7 +201,7 @@ try {
   await handle.waitFor({ timeout: 4000 }).catch(() => null)
   step('a selected eased key shows its Bezier handle', (await handle.count()) === 1)
   const opacityUid = (await query('prop.get', { layer: SHAPE, path: OPACITY })).uid
-  const opacityEase = async () => (await query('keys.info', { keys: [{ layer: SHAPE, prop: opacityUid, time: 0 }] }))[0]?.outEase?.[0]
+  const opacityEase = async () => (await query('keyframe.info', { keys: [{ layer: SHAPE, prop: opacityUid, time: 0 }] }))[0]?.outEase?.[0]
   const before = await opacityEase()
   if (await handle.count()) {
     const at = await centre(handle)
@@ -317,7 +317,7 @@ try {
   const positionHandle = kit.getByTestId(`motion-graph-handle-${SHAPE}-transform.position-0-2500-in`)
   await positionHandle.waitFor({ timeout: 4000 }).catch(() => null)
   step('an eased Position key shows its handle in the speed graph', (await positionHandle.count()) === 1)
-  const positionEase = async () => (await query('keys.info', { keys: [{ layer: SHAPE, prop: uid, time: 2.5 }] }))[0]?.inEase?.[0]
+  const positionEase = async () => (await query('keyframe.info', { keys: [{ layer: SHAPE, prop: uid, time: 2.5 }] }))[0]?.inEase?.[0]
   const easeBefore = await positionEase()
   if (await positionHandle.count()) {
     const at = await centre(positionHandle)

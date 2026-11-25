@@ -214,7 +214,7 @@ fn shape_tools(session: &Session, command: &str, params: &Value, under: &mut Opt
 /// (its expressions find layers by name), at a point mapped to comp space through the target's
 /// parent chain.
 fn path_nulls(session: &Session, command: &str, params: &Value, under: &mut Option<Under>) {
-    if !matches!(command, "paths.nullsFollowPoints" | "paths.pointsFollowNulls" | "paths.tracePath") {
+    if !matches!(command, "path.nullsFollowPoints" | "path.pointsFollowNulls" | "path.tracePath") {
         return;
     }
     let cid = match params.get("comp").filter(|value| !value.is_null()) {

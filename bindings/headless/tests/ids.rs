@@ -160,7 +160,7 @@ async fn receipt_sizes_of_edits_in_time() {
             let one = receipt(
                 &f,
                 "one keyframe's value",
-                json!([{ "command": "keys.set", "params": { "layer": layer, "path": OPACITY, "time": 2.0 / 30.0, "value": 77 } }]),
+                json!([{ "command": "keyframe.set", "params": { "layer": layer, "path": OPACITY, "time": 2.0 / 30.0, "value": 77 } }]),
             )
             .await;
             assert_eq!(ids(&one["changed"]), std::slice::from_ref(&id));
@@ -174,8 +174,8 @@ async fn receipt_sizes_of_edits_in_time() {
             let trimmed = receipt(&f, "in-point moved", json!([{ "command": "layer.timing", "params": { "layers": [layer], "in": 1.0 } }])).await;
             assert_eq!(ids(&trimmed["changed"]), std::slice::from_ref(&id));
             let (_, comp, _) = f.inspect().await;
-            f.ok("run", json!({ "steps": [{ "command": "markers.set", "params": { "comp": comp, "new": true, "time": 2.0, "comment": "A" } }] })).await;
-            let marker = receipt(&f, "a comp marker moved", json!([{ "command": "markers.set", "params": { "comp": comp, "at": 2.0, "time": 3.0 } }])).await;
+            f.ok("run", json!({ "steps": [{ "command": "marker.set", "params": { "comp": comp, "new": true, "time": 2.0, "comment": "A" } }] })).await;
+            let marker = receipt(&f, "a comp marker moved", json!([{ "command": "marker.set", "params": { "comp": comp, "at": 2.0, "time": 3.0 } }])).await;
             assert_eq!(ids(&marker["changed"]), [comp.to_string()], "the comp's item holds its markers: {marker}");
         }
         let shifted =
@@ -191,7 +191,7 @@ async fn receipt_sizes_of_edits_in_time() {
         let moved = receipt(
             &f,
             &format!("every keyframe moved 0.5 s, {n} keys"),
-            json!([{ "command": "keys.selectAll", "on": [layer] }, { "command": "keys.move", "on": [layer], "params": { "delta": 0.5 } }]),
+            json!([{ "command": "keyframe.selectAll", "on": [layer] }, { "command": "keyframe.move", "on": [layer], "params": { "delta": 0.5 } }]),
         )
         .await;
         assert_eq!(ids(&moved["changed"]), std::slice::from_ref(&id));
@@ -318,8 +318,8 @@ const ALLOWED_IDS: &[(&str, &str)] = &[
     // A built-in tutorial: the app's, not in the file.
     ("learn.start", "id"),
     // A saved project template: the app's, not in the file.
-    ("templates.thumbnail", "id"),
-    ("templates.create", "id"),
+    ("template.thumbnail", "id"),
+    ("template.add", "id"),
     // A render queue entry: an item of the project's `renderQueue` with no tool id, no object to hold.
     ("renderQueue.remove", "item"),
 ];

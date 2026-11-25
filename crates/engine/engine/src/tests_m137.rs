@@ -89,7 +89,7 @@ fn masked() -> (Session, u64) {
 fn nulls_follow_points_and_points_follow_nulls() {
     let (mut s, l) = masked();
     s.execute("layer.select", json!({"layers": [l]})).unwrap();
-    let r = s.execute("paths.nullsFollowPoints", json!({})).unwrap();
+    let r = s.execute("path.nullsFollowPoints", json!({})).unwrap();
     let nulls: Vec<u64> = r["nulls"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
     assert_eq!(nulls.len(), 4);
     let comp = s.active_comp().unwrap().clone();
@@ -104,20 +104,20 @@ fn nulls_follow_points_and_points_follow_nulls() {
     assert!(s.undo());
     assert_eq!(s.active_comp().unwrap().layers.len(), 1);
 
-    let r = s.execute("paths.pointsFollowNulls", json!({"layer": l, "path": "masks/#1/path"})).unwrap();
+    let r = s.execute("path.pointsFollowNulls", json!({"layer": l, "path": "masks/#1/path"})).unwrap();
     assert_eq!(r["nulls"].as_array().unwrap().len(), 4);
     let comp = s.active_comp().unwrap().clone();
     let plate = comp.layer(kition_motion_project::LayerId(l)).unwrap();
     let e = plate.props.prop("masks/#1/path").unwrap().expr.as_ref().unwrap().text.clone();
     assert!(e.contains("createPath(pts") && e.contains("\"Plate: Mask 1 [1]\"") && e.contains("fromComp"), "{e}");
     // Not a path → error.
-    assert!(s.execute("paths.nullsFollowPoints", json!({"layer": l, "path": "transform/opacity"})).is_err());
+    assert!(s.execute("path.nullsFollowPoints", json!({"layer": l, "path": "transform/opacity"})).is_err());
 }
 
 #[test]
 fn trace_path_adds_a_progress_null() {
     let (mut s, l) = masked();
-    let r = s.execute("paths.tracePath", json!({"layer": l, "loop": true})).unwrap();
+    let r = s.execute("path.tracePath", json!({"layer": l, "loop": true})).unwrap();
     let n = r["null"].as_u64().unwrap();
     let comp = s.active_comp().unwrap().clone();
     let null = comp.layer(kition_motion_project::LayerId(n)).unwrap();
@@ -134,7 +134,7 @@ fn vr_comp_editor_turns_the_face_cameras_together() {
     let mut s = Session::default();
     s.execute("comp.new", json!({"name": "Scene", "width": 64, "height": 64, "frameRate": 10, "duration": 1})).unwrap();
     s.execute("layer.newSolid", json!({"name": "Wall", "color": "#ff0000"})).unwrap();
-    s.execute("comp.vr.createEnvironment", json!({"size": 64})).unwrap();
+    s.execute("comp.vr.addEnvironment", json!({"size": 64})).unwrap();
     let envs = s.execute("comp.vr.environments", json!({})).unwrap();
     assert_eq!(envs.as_array().unwrap().len(), 1, "{envs}");
     let env = &envs[0];

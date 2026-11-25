@@ -34,7 +34,7 @@ const SELECT = { timeBase: 'comp', selectProperties: true } as const
 /**
  * The keyframe gestures over the timeline's rows: a click on a keyframe selects it (Shift or Cmd
  * adds or removes it), a drag moves the selected keyframes together (snapped to frames and the
- * playhead; one `keys.move`, one undo step, on release), a drag on empty track draws a marquee
+ * playhead; one `keyframe.move`, one undo step, on release), a drag on empty track draws a marquee
  * that selects the keyframes in it, and a click on empty timeline deselects everything.
  */
 export function useKeyGestures(rows: RefObject<HTMLDivElement | null>, frame: TimelineFrame, selected: ReadonlySet<string>) {
@@ -61,16 +61,16 @@ export function useKeyGestures(rows: RefObject<HTMLDivElement | null>, frame: Ti
       let moving: Set<string>
       let selecting: Promise<unknown> = Promise.resolve()
       if (add) {
-        selecting = run('keys.select', { ...SELECT, keys, toggle: true })
+        selecting = run('keyframe.select', { ...SELECT, keys, toggle: true })
         moving = all ? new Set([...selected].filter((id) => !ids.includes(id))) : new Set([...selected, ...ids])
       } else if (!all) {
-        selecting = run('keys.select', { ...SELECT, keys })
+        selecting = run('keyframe.select', { ...SELECT, keys })
         moving = new Set(ids)
       } else {
         // It looks selected, but the editor's copy may be behind the engine (a click elsewhere
         // just before, not answered yet): it is selected again, the others kept, so the drag
         // moves it and Delete removes it.
-        selecting = run('keys.select', { ...SELECT, keys, add: true })
+        selecting = run('keyframe.select', { ...SELECT, keys, add: true })
         moving = new Set(selected)
       }
       const track = mark.closest('.motion-row-track')
@@ -124,8 +124,8 @@ export function useKeyGestures(rows: RefObject<HTMLDivElement | null>, frame: Ti
       if (cancelled) return
       if (current.moved && Math.abs(current.delta) > 1e-9) {
         const delta = current.delta
-        void current.selecting.then(() => run('keys.move', { delta }))
-      } else if (!current.moved && current.alone) void run('keys.select', { ...SELECT, keys: current.alone })
+        void current.selecting.then(() => run('keyframe.move', { delta }))
+      } else if (!current.moved && current.alone) void run('keyframe.select', { ...SELECT, keys: current.alone })
       return
     }
     setMarquee(null)
@@ -146,7 +146,7 @@ export function useKeyGestures(rows: RefObject<HTMLDivElement | null>, frame: Ti
         return x >= left && x <= right && y >= top && y <= bottom
       })
       .flatMap(keysOf)
-    if (keys.length) void run('keys.select', { ...SELECT, keys, add: current.add })
+    if (keys.length) void run('keyframe.select', { ...SELECT, keys, add: current.add })
     else if (!current.add) void run('edit.deselectAll', {})
   }
 

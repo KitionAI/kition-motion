@@ -67,9 +67,9 @@ export const EDITOR_KEYS = {
   end: { command: 'time.end', keys: ['End'], zh: '转到结尾', en: 'Go to the end', match: (event: KeyLike) => event.key === 'End' && plain(event) },
   // Alt+Shift with 1, 2 or 3 work in every browser; F10 and F12 too (F11 is the browser's full
   // screen almost everywhere, so it is not offered).
-  view3dFront: { command: 'view.3d.front', keys: ['Alt+Shift+1', 'F10'], zh: '3D 视图：正面', en: '3D view: Front', match: (event: KeyLike) => altShiftDigit(event, 1) || (plain(event) && event.key === 'F10') },
-  view3dCustom: { command: 'view.3d.custom1', keys: ['Alt+Shift+2'], zh: '3D 视图：自定义视图 1', en: '3D view: Custom View 1', match: (event: KeyLike) => altShiftDigit(event, 2) },
-  view3dCamera: { command: 'view.3d.activeCamera', keys: ['Alt+Shift+3', 'F12'], zh: '3D 视图：活动摄像机', en: '3D view: Active Camera', match: (event: KeyLike) => altShiftDigit(event, 3) || (plain(event) && event.key === 'F12') },
+  view3dFront: { command: 'view.threeD.front', keys: ['Alt+Shift+1', 'F10'], zh: '3D 视图：正面', en: '3D view: Front', match: (event: KeyLike) => altShiftDigit(event, 1) || (plain(event) && event.key === 'F10') },
+  view3dCustom: { command: 'view.threeD.custom1', keys: ['Alt+Shift+2'], zh: '3D 视图：自定义视图 1', en: '3D view: Custom View 1', match: (event: KeyLike) => altShiftDigit(event, 2) },
+  view3dCamera: { command: 'view.threeD.activeCamera', keys: ['Alt+Shift+3', 'F12'], zh: '3D 视图：活动摄像机', en: '3D view: Active Camera', match: (event: KeyLike) => altShiftDigit(event, 3) || (plain(event) && event.key === 'F12') },
 } satisfies Record<string, Binding>
 
 /** Mouse gestures with keys in the Properties panel and on the timeline's property rows (KeyDiamond.tsx). */

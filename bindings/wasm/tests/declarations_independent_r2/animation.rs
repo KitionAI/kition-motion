@@ -2,7 +2,7 @@ use super::Row;
 
 pub(super) const ROWS: &[Row] = &[
     Row {
-        command: "anim.savePreset",
+        command: "animation.savePreset",
         path: "write lent preset file",
         resolves: &["selected leaf properties and effect groups in active comp"],
         reads: &["selected property match path/full value/keys/expr", "selected complete effect groups", "earliest selected property key time"],
@@ -12,7 +12,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/animation.rs:47",
     },
     Row {
-        command: "anim.applyPreset",
+        command: "animation.applyPreset",
         path: "append effects and assign compatible properties",
         resolves: &["comp/layers via layers_p", "preset inline or lent JSON file", "preset property paths in each target layer"],
         reads: &["target layer.start_time/stretch", "property existence/value kind", "effects group existence", "project.next_id"],
@@ -27,7 +27,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/animation.rs:91; project/src/props.rs:573",
     },
     Row {
-        command: "anim.addKeyframe",
+        command: "animation.addKeyframe",
         path: "selected property static or animated",
         resolves: &["selected leaf properties in active comp", "current time converted to layer time"],
         reads: &[
@@ -42,7 +42,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/animation.rs:180; project/src/props.rs:126,133",
     },
     Row {
-        command: "keys.exponentialScale",
+        command: "keyframe.exponentialScale",
         path: "replace scale keys between selected extremes",
         resolves: &["active comp selected_keys exact layer/property/time", "property must be transform scale uid"],
         reads: &[
@@ -77,7 +77,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/animation.rs:271",
     },
     Row {
-        command: "anim.reveal",
+        command: "animation.reveal",
         path: "frontend event only",
         resolves: &["comp id/name", "selected layers else all"],
         reads: &["property animation/expression flags and values for modified", "source size", "comp size", "effects/masks/text animators membership"],

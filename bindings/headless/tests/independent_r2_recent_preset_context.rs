@@ -13,7 +13,7 @@ fn fixture() -> (Fixture, u64, u64) {
         document.execute("prop.addKey", json!({"layer":source,"path":OPACITY,"time":time,"value":value})).unwrap();
     }
     document.execute("prop.select", json!({"layer":source,"path":OPACITY})).unwrap();
-    document.execute("anim.savePreset", json!({"path":"fade.ecpreset"})).unwrap();
+    document.execute("animation.savePreset", json!({"path":"fade.ecpreset"})).unwrap();
     let preset = document.take_file("fade.ecpreset").unwrap();
     let target = document.execute("layer.newSolid", json!({"name":"Target"})).unwrap()["layer"].as_u64().unwrap();
     let unrelated = document.execute("layer.newSolid", json!({"name":"Unrelated"})).unwrap()["layer"].as_u64().unwrap();
@@ -36,7 +36,7 @@ async fn recent_preset_at_a_call_time_refuses_a_changed_destination_and_accepts_
             .call(
                 "run",
                 json!({"basis":basis,"target":{"comp":comp},"steps":[
-                {"command":"anim.applyRecentPreset","at":{"time":3},"params":{"path":"fade.ecpreset","layers":[target]}}
+                {"command":"animation.applyRecentPreset","at":{"time":3},"params":{"path":"fade.ecpreset","layers":[target]}}
                 ]}),
             )
             .await;

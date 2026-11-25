@@ -15,7 +15,7 @@ fn resolver_declarations() {
         }
     }
     let command = |id: &str| commands.iter().find(|c| c.id == id).unwrap();
-    assert!(command("keys.select").objects.contains(&"keys[].layer"));
+    assert!(command("keyframe.select").objects.contains(&"keys[].layer"));
     assert!(command("paint.options").objects.contains(&"cloneSource"));
     assert!(!command("file.replaceWithLayeredComp").name_params.contains(&("item", "name")));
     assert!(command("prop.pickWhip").name_params.contains(&("target.layer", "name")));
@@ -96,7 +96,7 @@ async fn nested_key_references_hold_the_layer() {
     f.ok("run", json!({"steps": [{"command": "prop.addKey", "params": {"layer": layer, "path": OPACITY, "time": 1, "value": 20}}]})).await;
     let (_, _, basis) = f.inspect().await;
     f.colleague(&[("prop.set", json!({"layer": layer, "path": OPACITY, "time": 1, "value": 30}))]);
-    let error = f.refused("run", json!({"basis": basis, "steps": [{"command": "keys.select", "params": {"keys": [{"layer": layer, "path": OPACITY, "time": 1}]}}, {"command": "keys.delete"}]})).await;
+    let error = f.refused("run", json!({"basis": basis, "steps": [{"command": "keyframe.select", "params": {"keys": [{"layer": layer, "path": OPACITY, "time": 1}]}}, {"command": "keyframe.delete"}]})).await;
     assert_conflict(&error, &layer.to_string(), "changed");
     f.shutdown().await;
 }
@@ -110,7 +110,7 @@ async fn nested_stack_references_hold_what_the_index_names() {
         f.ok("run", json!({"steps": [{"command": "prop.addKey", "params": {"layer": layer, "path": OPACITY, "time": 1, "value": 20}}]})).await;
         let (_, _, basis) = f.inspect().await;
         f.colleague(&[("prop.set", json!({"layer": if changed {layer} else {layer_ids(&info)[1]}, "path": OPACITY, "time": 1, "value": 30}))]);
-        let answer = f.call("run", json!({"basis": basis, "steps": [{"command": "keys.select", "params": {"keys": [{"layer": 1, "path": OPACITY, "time": 1}]}}, {"command": "keys.delete"}]})).await;
+        let answer = f.call("run", json!({"basis": basis, "steps": [{"command": "keyframe.select", "params": {"keys": [{"layer": 1, "path": OPACITY, "time": 1}]}}, {"command": "keyframe.delete"}]})).await;
         if changed {
             assert_conflict(&answer.expect_err("indexed layer changed"), &layer.to_string(), "changed");
         } else {

@@ -181,7 +181,7 @@ pub fn specs() -> Vec<CommandSpec> {
         "Relink Missing Footage...",
         ["File", "Dependencies"],
         None,
-        "{folder: string (recursive desktop search, no symlinks; max 100000 entries), dryRun?: bool (report only), wait?: bool (return results inline; otherwise jobs.list/jobs.wait)} — relinks only unique exact filenames with compatible metadata; preserves interpretation and sequence ranges. Reports high/low confidence and ambiguous, incompatible, unsupported or notFound items.",
+        "{folder: string (recursive desktop search, no symlinks; max 100000 entries), dryRun?: bool (report only), wait?: bool (return results inline; otherwise job.list/jobs.wait)} — relinks only unique exact filenames with compatible metadata; preserves interpretation and sequence ranges. Reports high/low confidence and ambiguous, incompatible, unsupported or notFound items.",
         enabled,
         run
     )]
@@ -357,7 +357,7 @@ mod tests {
         started_rx.recv_timeout(std::time::Duration::from_secs(10)).unwrap();
         assert!(s.cancel_job(r["job"].as_str().unwrap()));
         release_tx.send(()).unwrap();
-        s.execute("jobs.wait", json!({})).unwrap();
+        s.execute("job.wait", json!({})).unwrap();
         assert_eq!(calls.load(std::sync::atomic::Ordering::Relaxed), 1);
         assert_eq!(get(&s, id), old);
         assert_eq!(s.job_log.last().unwrap().status, "cancelled");
@@ -375,7 +375,7 @@ mod tests {
         started_rx.recv_timeout(std::time::Duration::from_secs(10)).unwrap();
         s.execute("file.interpretFootage", json!({"items": [id.0], "invertAlpha": false})).unwrap();
         release_tx.send(()).unwrap();
-        s.execute("jobs.wait", json!({})).unwrap();
+        s.execute("job.wait", json!({})).unwrap();
         assert_eq!(get(&s, id).path, old.path);
         assert!(!get(&s, id).invert_alpha);
         assert_eq!(s.job_log.last().unwrap().status, "failed");

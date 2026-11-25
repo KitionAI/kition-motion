@@ -134,7 +134,7 @@ fn write_registry_inventory() {
 fn polling_and_batch_commands_advertise_the_writes_their_handlers_can_apply() {
     let document = MotionDocument::create("pending", 64, 64).unwrap();
     let commands = document.commands();
-    for id in ["engine.batch", "jobs.list", "jobs.wait", "renderQueue.list", "camera.solveStatus", "roto.status", "track.status", "warp.status"] {
+    for id in ["engine.batch", "job.list", "job.wait", "renderQueue.list", "camera.solveStatus", "roto.status", "track.status", "warp.status"] {
         assert!(commands.iter().find(|c| c.id == id).unwrap().mutates, "{id} can apply project edits");
     }
 }

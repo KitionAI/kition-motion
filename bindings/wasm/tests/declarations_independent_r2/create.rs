@@ -2,7 +2,7 @@ use super::Row;
 
 pub(super) const ROWS: &[Row] = &[
     Row {
-        command: "layer.create",
+        command: "layer.add",
         path: "shapesFromVector",
         resolves: &[
             "layers_p",
@@ -38,7 +38,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "crates/engine/engine/src/commands/create.rs:14; crates/engine/engine/src/commands/create.rs:164; crates/engine/engine/src/vector.rs:254; crates/engine/engine/src/vector.rs:324; crates/engine/engine/src/vector.rs:442; crates/engine/engine/src/vector.rs:472",
     },
     Row {
-        command: "layer.create",
+        command: "layer.add",
         path: "shapesFromText",
         resolves: &["layers_p", "source layer insertion gap", "text pathOptions may select layer mask by index"],
         reads: &[
@@ -55,7 +55,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "crates/engine/engine/src/commands/create.rs:95; crates/engine/engine/src/vector.rs:499; crates/engine/engine/src/vector.rs:324; crates/render/render/src/text.rs:756",
     },
     Row {
-        command: "layer.create",
+        command: "layer.add",
         path: "masksFromText",
         resolves: &["layers_p", "source layer insertion gap", "source parent chain and active camera for projected 3D outlines", "Solids folder by name"],
         reads: &[
@@ -79,7 +79,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "crates/engine/engine/src/commands/create.rs:113; crates/engine/engine/src/vector.rs:538; crates/engine/engine/src/vector.rs:552; crates/render/render/src/eval.rs:220",
     },
     Row {
-        command: "layer.create",
+        command: "layer.add",
         path: "editableText",
         resolves: &["layers_p", "source footage item and footage.layer.index", "footage.path lent PSD bytes", "source layer slot replaced by new layer ID"],
         reads: &[

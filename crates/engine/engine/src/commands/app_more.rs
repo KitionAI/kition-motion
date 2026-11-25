@@ -102,14 +102,16 @@ fn clear_recent_footage(s: &mut Session, _: &Value) -> Result<Value> {
 fn apply_recent_preset(s: &mut Session, p: &Value) -> Result<Value> {
     let path = match (str_p(p, "path"), p.get("index").and_then(Value::as_u64)) {
         (Some(x), _) => x.to_string(),
-        (None, Some(i)) => s.prefs.recent_presets.get(i as usize).cloned().ok_or_else(|| bad("anim.applyRecentPreset", format!("no recent preset #{i}")))?,
-        _ => s.prefs.recent_presets.first().cloned().ok_or_else(|| bad("anim.applyRecentPreset", "no recent animation presets"))?,
+        (None, Some(i)) => {
+            s.prefs.recent_presets.get(i as usize).cloned().ok_or_else(|| bad("animation.applyRecentPreset", format!("no recent preset #{i}")))?
+        }
+        _ => s.prefs.recent_presets.first().cloned().ok_or_else(|| bad("animation.applyRecentPreset", "no recent animation presets"))?,
     };
     let mut q = json!({"path": path});
     if let Some(l) = p.get("layers") {
         q["layers"] = l.clone();
     }
-    s.execute("anim.applyPreset", q)
+    s.execute("animation.applyPreset", q)
 }
 
 fn clear_recent_presets(s: &mut Session, _: &Value) -> Result<Value> {
@@ -237,17 +239,17 @@ fn reassign(s: &mut Session, key: &str, slot: &str, cmd: &str) -> Result<Value> 
 pub(crate) fn view_command(v: kition_motion_render::three_d::View3D) -> &'static str {
     use kition_motion_render::three_d::View3D::*;
     match v {
-        ActiveCamera => "view.3d.activeCamera",
-        Default => "view.3d.default",
-        Front => "view.3d.front",
-        Left => "view.3d.left",
-        Top => "view.3d.top",
-        Back => "view.3d.back",
-        Right => "view.3d.right",
-        Bottom => "view.3d.bottom",
-        Custom1 => "view.3d.custom1",
-        Custom2 => "view.3d.custom2",
-        Custom3 => "view.3d.custom3",
+        ActiveCamera => "view.threeD.activeCamera",
+        Default => "view.threeD.default",
+        Front => "view.threeD.front",
+        Left => "view.threeD.left",
+        Top => "view.threeD.top",
+        Back => "view.threeD.back",
+        Right => "view.threeD.right",
+        Bottom => "view.threeD.bottom",
+        Custom1 => "view.threeD.custom1",
+        Custom2 => "view.threeD.custom2",
+        Custom3 => "view.threeD.custom3",
     }
 }
 
@@ -581,9 +583,9 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!("edit.history", "History", [], None, "{steps?: n (undo n steps), redo?: n}", has_history, history),
         cmd!("file.importRecent", "Import Recent Footage", [], None, "{index? | path?}", has_recent_footage, import_recent),
         cmd!("file.clearRecentFootage", "Clear Recent Footage", ["File", "Import Recent Footage"], None, "{}", has_recent_footage, clear_recent_footage),
-        cmd!("anim.applyRecentPreset", "Recent Animation Presets", [], None, "{index? | path?, layers?}", has_layers, apply_recent_preset),
+        cmd!("animation.applyRecentPreset", "Recent Animation Presets", [], None, "{index? | path?, layers?}", has_layers, apply_recent_preset),
         cmd!(
-            "anim.clearRecentPresets",
+            "animation.clearRecentPresets",
             "Clear Recent Presets",
             ["Animation", "Recent Animation Presets"],
             None,
@@ -608,7 +610,7 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!("help.revealLogFile", "Reveal Logging File", ["Help"], None, "{}", always, reveal_log),
         cmd!("help.systemReport", "System Compatibility Report...", ["Help"], None, "{quiet?}", always, report),
         cmd!(
-            "comp.vr.createEnvironment",
+            "comp.vr.addEnvironment",
             "Create VR Environment...",
             ["Composition", "VR"],
             None,

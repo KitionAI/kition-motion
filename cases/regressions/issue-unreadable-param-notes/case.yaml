@@ -7,7 +7,7 @@ intent: >-
   Conversion::unreadable). Ten commands wrote entries the parser could not read (`hScale? %`,
   `in?|out?: …`, `red?/green?/blue?/white?: …`, `yaw|dx deg`, `color? #hex|[r,g,b]`, a description
   with commas after `path?:`), so layer.setText refused hScale, vScale and tsume, camera.orbit
-  yaw and pitch, keys.interpolation in and out, keys.setEase influence, view.customRgb its
+  yaw and pitch, keyframe.interpolation in and out, keyframe.setEase influence, view.customRgb its
   primaries and white point, and shape.toolOptions fillOpacity, though each handler reads them.
   check_commands did not see it: the kit types and completes each schema after converting it.
 layer: gate

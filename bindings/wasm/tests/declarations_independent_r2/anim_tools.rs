@@ -2,7 +2,7 @@ use super::Row;
 
 pub(super) const ROWS: &[Row] = &[
     Row {
-        command: "keys.wiggle",
+        command: "keyframe.wiggle",
         path: "replace sampled selected run",
         resolves: &["selected_keys grouped layer/property/exact first-last times in active comp"],
         reads: &[
@@ -24,7 +24,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/anim_tools.rs:255,311; commands/anim_tools.rs:97; keyframe evaluate",
     },
     Row {
-        command: "keys.smooth",
+        command: "keyframe.smooth",
         path: "replace sampled selected run",
         resolves: &["selected_keys grouped layer/property/exact endpoint times in active comp"],
         reads: &[

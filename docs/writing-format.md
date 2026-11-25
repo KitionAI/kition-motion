@@ -31,7 +31,7 @@ Themes, layouts and every other parameter that takes one of a fixed list of valu
 | `action` | `next`, `back`, `showMe`, `goto` | `learn.step` |
 | `action` | `continue`, `stop`, `extrapolate`, `adapt` | `track.options` |
 | `alpha` | `straight`, `premultiplied`, `ignore`, `guess` | `file.interpretFootage` |
-| `apply` | `spatial`, `temporal` | `keys.wiggle` |
+| `apply` | `spatial`, `temporal` | `keyframe.wiggle` |
 | `audio` | `auto`, `on`, `off` | `renderQueue.add`, `renderQueue.setOutputModule` |
 | `audioChannels` | `mono`, `stereo` | `renderQueue.setOutputModule` |
 | `audioFormat` | `16`, `24`, `32` | `renderQueue.setOutputModule` |
@@ -52,7 +52,7 @@ Themes, layouts and every other parameter that takes one of a fixed list of valu
 | `composer` | `everyLine`, `singleLine` | `layer.setText` |
 | `configuration` | `stereoPair`, `centerRight`, `centerLeft` | `camera.stereoRig` |
 | `convergenceOf` | `poi`, `zoom` | `camera.stereoRig` |
-| `dimensions` | `one`, `same`, `independent` | `keys.wiggle` |
+| `dimensions` | `one`, `same`, `independent` | `keyframe.wiggle` |
 | `direction` | `ltr`, `rtl` | `layer.setText` |
 | `direction` | `forward`, `backward`, `both` | `roto.propagate` |
 | `direction` | `backward`, `forward` | `text.delete` |
@@ -77,10 +77,10 @@ Themes, layouts and every other parameter that takes one of a fixed list of valu
 | `id` | `classical`, `mediapipe-face` | `face.model.select` |
 | `id` | `classical`, `mobilesam` | `roto.model.select` |
 | `importAs` | `footage`, `composition`, `compositionLayerSizes` | `file.import` |
-| `interpolation` | `linear`, `bezier`, `continuousBezier`, `autoBezier`, `hold` | `keys.interpolation` |
+| `interpolation` | `linear`, `bezier`, `continuousBezier`, `autoBezier`, `hold` | `keyframe.interpolation` |
 | `justify` | `left`, `center`, `right`, `justifyLeft`, `justifyCenter`, `justifyRight`, `justifyAll` | `layer.setText` |
-| `kind` | `keyframes`, `animation`, `modified` | `anim.reveal` |
-| `kind` | `still`, `movie` | `file.createProxy` |
+| `kind` | `keyframes`, `animation`, `modified` | `animation.reveal` |
+| `kind` | `still`, `movie` | `file.addProxy` |
 | `kind` | `range`, `wiggly`, `expression` | `layer.addTextSelector`, `text.addSelector` |
 | `kind` | `cube`, `sphere`, `plane`, `torus`, `cone`, `cylinder` | `layer.new3dPrimitive`, `layer.newPrimitive` |
 | `kind` | `Parallel`, `Spot`, `Point`, `Ambient`, `Environment` | `layer.newLight`, `layer.lightSettings` |
@@ -105,13 +105,13 @@ Themes, layouts and every other parameter that takes one of a fixed list of valu
 | `mode` | `move`, `leave` | `layer.precompose` |
 | `mode` | `markers`, `split`, `splitPrecompose` | `layer.sceneEditDetection` |
 | `mode` | `off`, `adaptive`, `draft`, `fastDraft`, `wireframe` | `view.fastPreviewMode` |
-| `noise` | `smooth`, `jagged` | `keys.wiggle` |
+| `noise` | `smooth`, `jagged` | `keyframe.wiggle` |
 | `op` | `intro`, `outro`, `workArea` | `comp.responsiveTime` |
-| `op` | `editableText`, `shapesFromText`, `masksFromText`, `shapesFromVector` | `layer.create` |
+| `op` | `editableText`, `shapesFromText`, `masksFromText`, `shapesFromVector` | `layer.add` |
 | `op` | `moveInToTime`, `moveOutToTime`, `trimInToTime`, `trimOutToTime` | `layer.timing` |
 | `op` | `none`, `alpha`, `alphaInverted`, `luma`, `lumaInverted`, `above`, `below` | `layer.trackMatte` |
 | `op` | `reset`, `center`, `fit`, `fitWidth`, `fitHeight`, `flipH`, `flipV` | `layer.transform` |
-| `op` | `select`, `new`, `duplicate`, `delete`, `rename` | `shortcuts.preset` |
+| `op` | `select`, `new`, `duplicate`, `delete`, `rename` | `shortcut.preset` |
 | `opusApplication` | `audio`, `voice` | `renderQueue.setOutputModule` |
 | `orientation` | `vertical`, `horizontal` | `view.addGuide` |
 | `outputSpace` | `srgb`, `rec709`, `rec2020`, `p3`, `rec2100pq`, `rec2100hlg` | `file.projectSettings` |
@@ -122,7 +122,7 @@ Themes, layouts and every other parameter that takes one of a fixed list of valu
 | `precomps` | `nest`, `prerender` | `file.exportTimeline` |
 | `prerender` | `none`, `unsupported`, `all` | `file.exportTimeline` |
 | `preset` | `pushHover`, `craneRise`, `orbit`, `parallax` | `camera.move` |
-| `preset` | `snappy`, `out`, `smooth`, `swift`, `settle`, `pop`, `reseat`, `fly`, `linear`, `crisp`, `lively`, `noBounce`, `cardFlip`, `spring` | `keys.applyEase` |
+| `preset` | `snappy`, `out`, `smooth`, `swift`, `settle`, `pop`, `reseat`, `fly`, `linear`, `crisp`, `lively`, `noBounce`, `cardFlip`, `spring` | `keyframe.applyEase` |
 | `preset` | `typewriter`, `fadeUpCharacters`, `bounceInWords`, `trackingIn`, `scramble`, `blurIn`, `jitter`, `dropInLines`, `blurSlide`, `letterpress`, `leadWordZoom`, `typewriterFast`, `digitRoll`, `countUp` | `layer.applyTextPreset` |
 | `preset` | `15mm`, `20mm`, `24mm`, `28mm`, `35mm`, `50mm`, `80mm`, `135mm`, `200mm` | `layer.newCamera` |
 | `profile` | `main`, `main10` | `renderQueue.setOutputModule` |
@@ -140,26 +140,26 @@ Themes, layouts and every other parameter that takes one of a fixed list of valu
 | `resolution` | `auto`, `full`, `half`, `third`, `quarter`, `custom` | `playback.settings.set` |
 | `sampling` | `bilinear`, `bicubic` | `layer.sampling` |
 | `scope` | `person`, `agent` | `edit.undo`, `edit.redo` |
-| `scope` | `selected`, `all`, `visibleSelected`, `visibleAll` | `keys.selectLabelGroup` |
-| `scope` | `waveformRgb`, `waveformLuma`, `waveformYc`, `vectorscopeYuv`, `vectorscopeHls`, `histogram`, `paradeRgb`, `paradeYuv` | `scopes.analyze` |
+| `scope` | `selected`, `all`, `visibleSelected`, `visibleAll` | `keyframe.selectLabelGroup` |
+| `scope` | `waveformRgb`, `waveformLuma`, `waveformYc`, `vectorscopeYuv`, `vectorscopeHls`, `histogram`, `paradeRgb`, `paradeYuv` | `scope.analyze` |
 | `set` | `begin`, `end` | `comp.workArea` |
 | `shape` | `rect`, `ellipse`, `rounded`, `polygon`, `star` | `layer.addMask` |
 | `shape` | `rect`, `ellipse` | `layer.mask.shape` |
 | `shortcut` | `spacebar`, `shiftSpacebar`, `numpad0`, `shiftNumpad0`, `altNumpad0` | `playback.toggle`, `playback.settings.get` |
 | `shotType` | `fixed`, `variable`, `specify` | `track.camera` |
-| `side` | `in`, `out` | `keys.setEase` |
+| `side` | `in`, `out` | `keyframe.setEase` |
 | `slot` | `movie`, `still`, `preRender`, `movieProxy`, `stillProxy` | `renderQueue.setTemplateDefault` |
 | `slot` | `F10`, `F11`, `F12` | `view.assign3dShortcut` |
 | `solo` | `current`, `allOff` | `renderQueue.setRenderSettings` |
 | `solveMethod` | `auto`, `typical`, `flat`, `tripod` | `track.camera` |
 | `space` | `comp`, `layer` | `shape.newPath`, `shape.newShape` |
-| `spatial` | `linear`, `bezier`, `continuousBezier`, `autoBezier` | `keys.interpolation` |
-| `standard` | `rec601`, `rec709`, `rec2020` | `scopes.analyze` |
+| `spatial` | `linear`, `bezier`, `continuousBezier`, `autoBezier` | `keyframe.interpolation` |
+| `standard` | `rec601`, `rec709`, `rec2020` | `scope.analyze` |
 | `strokeType` | `none`, `solid`, `linear`, `radial` | `layer.newShape`, `shape.newPath`, `shape.newShape`, `shape.toolOptions` |
 | `style` | `dropShadow`, `innerShadow`, `outerGlow`, `innerGlow`, `bevelEmboss`, `satin`, `colorOverlay`, `gradientOverlay`, `stroke` | `layer.style.add` |
 | `switch` | `hideShy`, `motionBlur`, `frameBlending`, `draft3d` | `comp.setSwitch` |
 | `switch` | `video`, `audio`, `solo`, `lock`, `shy`, `collapse`, `quality`, `fx`, `frameBlend`, `motionBlur`, `adjustment`, `threeD`, `guide`, `preserveTransparency` | `layer.setSwitch` |
-| `timeBase` | `layer`, `comp` | `prop.set`, `prop.addKey`, `keys.select`, `keys.set` |
+| `timeBase` | `layer`, `comp` | `prop.set`, `prop.addKey`, `keyframe.select`, `keyframe.set` |
 | `timeSpan` | `currentFrame`, `workArea` | `layer.autoTrace` |
 | `timeSpan` | `workArea`, `comp`, `custom` | `renderQueue.add`, `renderQueue.setRenderSettings` |
 | `to` | `composition`, `selection` | `layer.align` |
@@ -167,7 +167,7 @@ Themes, layouts and every other parameter that takes one of a fixed list of valu
 | `to` | `left`, `right`, `wordLeft`, `wordRight`, `lineStart`, `lineEnd`, `up`, `down`, `paraStart`, `paraEnd`, `start`, `end` | `text.moveCaret` |
 | `to` | `start`, `end`, `workStart`, `workEnd`, `layerIn`, `layerOut`, `nextKey`, `prevKey` | `time.go` |
 | `tool` | `warp`, `turbulence`, `twirlClockwise`, `twirlCounterclockwise`, `pucker`, `bloat`, `shiftPixels`, `reflection`, `clone`, `reconstruction`, `freeze`, `thaw` | `liquify.stroke` |
-| `transition` | `off`, `dissolveFront`, `crossDissolve` | `layer.sequence`, `file.newCompFromSelection` |
+| `transition` | `off`, `dissolveFront`, `crossDissolve` | `layer.sequence`, `comp.newFromSelection` |
 | `type` | `oneNode`, `twoNode` | `layer.newCamera` |
 | `units` | `pixels`, `percent` | `shape.stroke.taper` |
 | `units` | `pixels`, `cycles` | `shape.stroke.wave` |
@@ -178,7 +178,7 @@ Themes, layouts and every other parameter that takes one of a fixed list of valu
 | `webmCodec` | `vp9`, `av1` | `renderQueue.setOutputModule` |
 | `what` | `footage`, `effects`, `fonts` | `file.findMissing` |
 | `what` | `diskCache`, `media`, `projects`, `autoSaves`, `all` | `storage.clear` |
-| `which` | `both`, `in`, `out` | `keys.easyEase` |
+| `which` | `both`, `in`, `out` | `keyframe.easyEase` |
 | `workingSpace` | `none`, `srgb`, `rec709`, `rec2020`, `p3`, `acescg`, `aces2065` | `file.projectSettings` |
 
 ## Defaults
@@ -188,7 +188,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
 | Command | Parameter | Default |
 |---|---|---|
 | `file.projectSettings` | `workingGamma` | `2.2` |
-| `markers.set` | `new` | `true` |
+| `marker.set` | `new` | `true` |
 | `view.panelBackground` | `pick` | `true` |
 
 ## Commands
@@ -244,7 +244,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
 - `file.close` (writes): File ▸ Close: closes the active composition's tab (or `comp`). The comp stays in the project.
   - `comp` integer or string
 - `file.closeProject` (writes): Closes the project and starts an empty one in its place, discarding unsaved changes; save first with the host's save. Not undoable. No parameters.
-- `file.newCompFromSelection` (writes): File ▸ New Comp from Selection.
+- `comp.newFromSelection` (writes): File ▸ New Comp from Selection.
   - `addToRenderQueue` boolean
   - `dimensionsFrom` integer, a position counted from 0 (the first is 0)
   - `duration` number, s, for stills
@@ -263,9 +263,9 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `folder` file
   - `path` file, read by the command beside its listed parameters
   - `stop` boolean
-- `app.find` (reads): Editor window only: focuses the project panel search (`query`). Headless sessions accept it and change nothing; use project queries instead.
+- `edit.find` (reads): Editor window only: focuses the project panel search (`query`). Headless sessions accept it and change nothing; use project queries instead.
   - `query` string
-- `templates.saveAs` (writes): Saves the current project as a user project template `name` (with `description`, `category`); the active comp becomes its main comp. Footage is embedded up to `embedLimitMB` (256), larger files stay linked.
+- `template.saveAs` (writes): Saves the current project as a user project template `name` (with `description`, `category`); the active comp becomes its main comp. Footage is embedded up to `embedLimitMB` (256), larger files stay linked.
   - `category` string
   - `comp` integer, read by the command beside its listed parameters
   - `description` string
@@ -288,7 +288,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
 - `file.import` (writes): File ▸ Import; with `addToComp` (files dropped on the Timeline or the Composition viewer) they also become layers of the active comp ([`add_to_comp`]).
   - `addToComp` boolean, also add them to the active comp, at time?, index?, position? as in layer.addItem
   - `alphabetical` boolean, Force Alphabetical Order: every image of that type in the folder, by name
-  - `background` boolean, probe the files in a background job, jobs.list / jobs.wait; returns {job}
+  - `background` boolean, probe the files in a background job, job.list / job.wait; returns {job}
   - `drag` boolean, dropped files: Settings ▸ Import ▸ Default Drag Import As; files import as stills unless sequence
   - `frameRate` number, fps (image sequences; default Settings ▸ Import ▸ Sequence Footage)
   - `importAs` string, one of `footage` | `composition` | `compositionLayerSizes`, Photoshop, PDF, Illustrator and EPS files
@@ -801,7 +801,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `path` string, one of several alternative parameters
   - `prop` json, one of several alternative parameters
   - `selected` boolean
-- `keys.toggleTransform` (writes): Alt+Shift+A / P / S / R / T: add or remove a keyframe at the current time on that Transform property of every selected layer, in one undo step. Position covers separated X / Y / Z; Rotation on a 3D layer covers Orientation and X / Y / Z Rotation.
+- `keyframe.toggleTransform` (writes): Alt+Shift+A / P / S / R / T: add or remove a keyframe at the current time on that Transform property of every selected layer, in one undo step. Position covers separated X / Y / Z; Rotation on a 3D layer covers Orientation and X / Y / Z Rotation.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer, read by the command beside its listed parameters
   - `layers` integer[]
@@ -826,16 +826,16 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `layer` integer
   - `path` string, one of several alternative parameters
   - `prop` json, one of several alternative parameters
-- `keys.select` (reads): Selects keyframes: `keys` [{layer, prop uid or path such as transform/position, time}], times in layer seconds unless `timeBase: comp`; `add`/`toggle` extend the selection. Fails on keys that don't exist. Most keys.* commands act on this selection.
+- `keyframe.select` (reads): Selects keyframes: `keys` [{layer, prop uid or path such as transform/position, time}], times in layer seconds unless `timeBase: comp`; `add`/`toggle` extend the selection. Fails on keys that don't exist. Most keys.* commands act on this selection.
   - `add` boolean
   - `keys` object[], [{layer, prop: uid | path (or `path`), time (layer s by default)}]; or `path`; layer s by default
   - `selectProperties` boolean, their properties and layers too, as a Timeline click does
   - `timeBase` string, one of `layer` | `comp`
   - `toggle` boolean, Shift+click: in or out of the selection
-- `keys.move` (writes): Shifts the selected keyframes in time by `delta` seconds (negative = earlier), keeping their spacing; `merge` makes repeated calls one undo step. Use keys.nudgeForward/Backward to move by frames.
+- `keyframe.move` (writes): Shifts the selected keyframes in time by `delta` seconds (negative = earlier), keeping their spacing; `merge` makes repeated calls one undo step. Use keyframe.nudgeForward/Backward to move by frames.
   - `delta` number, s
   - `merge` string
-- `keys.delete` (writes): Deletes the selected keyframes; a property left with no keys keeps the deleted key's value as its static value. Select keys with keys.select first. Returns how many were deleted. No parameters.
+- `keyframe.delete` (writes): Deletes the selected keyframes; a property left with no keys keeps the deleted key's value as its static value. Select keys with keyframe.select first. Returns how many were deleted. No parameters.
 - `prop.renameGroup` (writes): Renames a property group (`prop` uid: an effect, mask, shape group or text animator) on `layer` to `name`. Expressions referring to the old name aren't updated.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer
@@ -884,8 +884,8 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `items` json[], [id|name] (default: selected); default: selected
 - `project.duplicate` (writes): Duplicate project items (Edit ▸ Duplicate in the Project panel): comps get fresh layer ids and a numbered name; the copies are selected.
   - `items` json[], [id|name] (default: selected); default: selected
-- `keys.copy` (writes): Copy the selected keyframes (Edit ▸ Copy with keys selected). No parameters.
-- `keys.paste` (writes): Paste copied keyframes at the current time into the target layers' properties.
+- `keyframe.copy` (writes): Copy the selected keyframes (Edit ▸ Copy with keys selected). No parameters.
+- `keyframe.paste` (writes): Paste copied keyframes at the current time into the target layers' properties.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer, read by the command beside its listed parameters
   - `layers` integer[]
@@ -893,24 +893,24 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `path` string, one of several alternative parameters
   - `prop` json, one of several alternative parameters
   - `time` number
-- `keys.selectAll` (reads): Select every keyframe of the selected properties, or of the given / selected layers.
+- `keyframe.selectAll` (reads): Select every keyframe of the selected properties, or of the given / selected layers.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer, read by the command beside its listed parameters
   - `layers` integer[]
   - `prop` string, read by the command beside its listed parameters
   - `visible` object[], [{layer, prop}] (every key of these properties); every key of these properties
-- `keys.nudge` (writes): Move the selected keys by whole frames (Alt+→ / Alt+←, Shift for 10 frames).
+- `keyframe.nudge` (writes): Move the selected keys by whole frames (Alt+→ / Alt+←, Shift for 10 frames).
   - `frames` integer
   - `merge` string
-- `keys.nudgeForward` (writes): Moves the selected keyframes one frame later. keys.move shifts by any number of seconds.
+- `keyframe.nudgeForward` (writes): Moves the selected keyframes one frame later. keyframe.move shifts by any number of seconds.
   - `frames` number, read by the command beside its listed parameters
-- `keys.nudgeBackward` (writes): Moves the selected keyframes one frame earlier. keys.move shifts by any number of seconds.
+- `keyframe.nudgeBackward` (writes): Moves the selected keyframes one frame earlier. keyframe.move shifts by any number of seconds.
   - `frames` number, read by the command beside its listed parameters
-- `keys.nudgeForward10` (writes): Moves the selected keyframes ten frames later.
+- `keyframe.nudgeForward10` (writes): Moves the selected keyframes ten frames later.
   - `frames` number, read by the command beside its listed parameters
-- `keys.nudgeBackward10` (writes): Moves the selected keyframes ten frames earlier.
+- `keyframe.nudgeBackward10` (writes): Moves the selected keyframes ten frames earlier.
   - `frames` number, read by the command beside its listed parameters
-- `keys.set` (writes): Edit one key directly: move it in time and/or set its value (Graph Editor drags).
+- `keyframe.set` (writes): Edit one key directly: move it in time and/or set its value (Graph Editor drags).
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer
   - `merge` string
@@ -920,10 +920,10 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `time` number, layer s by default
   - `timeBase` string, one of `layer` | `comp`
   - `value` number or array or string or object or boolean, the property's value: a number (opacity 0..100, rotation in degrees), a vector [x, y] or [x, y, z], a colour #rrggbb or [r, g, b, a], true or false for a checkbox, text, or an object for shapes and paths
-- `keys.selectEqual` (writes): Adds to the selection every keyframe, on the same properties, whose value equals a selected keyframe's value. No parameters.
-- `keys.selectPrevious` (writes): Adds to the selection every keyframe before the first selected one on the same properties. No parameters.
-- `keys.selectFollowing` (writes): Adds to the selection every keyframe after the last selected one on the same properties. No parameters.
-- `keys.setEase` (writes): Set one side's temporal ease of a key (Graph Editor handle drags, scripting).
+- `keyframe.selectEqual` (writes): Adds to the selection every keyframe, on the same properties, whose value equals a selected keyframe's value. No parameters.
+- `keyframe.selectPrevious` (writes): Adds to the selection every keyframe before the first selected one on the same properties. No parameters.
+- `keyframe.selectFollowing` (writes): Adds to the selection every keyframe after the last selected one on the same properties. No parameters.
+- `keyframe.setEase` (writes): Set one side's temporal ease of a key (Graph Editor handle drags, scripting).
   - `comp` integer, read by the command beside its listed parameters
   - `dim` integer
   - `layer` integer
@@ -933,9 +933,9 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `side` string, one of `in` | `out`
   - `speed` number
   - `time` number, layer s
-- `keys.info` (reads): Returns details of the selected keyframes, or `keys` [{layer, prop, time}]: value, interpolation in and out, ease speed and influence per side and dimension, spatial tangents and roving, with units.
+- `keyframe.info` (reads): Returns details of the selected keyframes, or `keys` [{layer, prop, time}]: value, interpolation in and out, ease speed and influence per side and dimension, spatial tangents and roving, with units.
   - `keys` object[], [{layer, prop, time}]
-- `keys.wiggle` (writes): Wiggler: adds random keyframes between two selected keys on a property: `frequency` keys per second (5), `magnitude` in property units, `noise` smooth or jagged, `dimensions` one/same/independent, `seed` for repeatability.
+- `keyframe.wiggle` (writes): Wiggler: adds random keyframes between two selected keys on a property: `frequency` keys per second (5), `magnitude` in property units, `noise` smooth or jagged, `dimensions` one/same/independent, `seed` for repeatability.
   - `apply` string, one of `spatial` | `temporal`
   - `dimension` integer, index for `one`
   - `dimensions` string, one of `one` | `same` | `independent`
@@ -945,7 +945,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `quality` string, read by the command beside its listed parameters
   - `seed` integer
   - `tolerance` number, read by the command beside its listed parameters
-- `keys.smooth` (writes): Smoother: removes keyframes from the selected run (three or more keys on a property) where the curve stays within `tolerance` of the original (property units, default 1), simplifying hand-drawn or tracked motion.
+- `keyframe.smooth` (writes): Smoother: removes keyframes from the selected run (three or more keys on a property) where the curve stays within `tolerance` of the original (property units, default 1), simplifying hand-drawn or tracked motion.
   - `tolerance` number, property units, 1
 - `motion.sketch` (writes): Motion Sketch: `points` are `[t, x, y]` (t = capture seconds from the start) or `[x, y]` (one per frame); recorded from `start` (default the current time).
   - `captureSpeed` number, %, 100
@@ -961,13 +961,13 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `prop` json, one of several alternative parameters
   - `range` number[], [start, end]
   - `target` object, {layer, path|prop, dimension?}
-- `markers.list` (reads): Lists markers: the comp's markers, or `layer`'s (layer markers): index, time, duration, comment, chapter, URL, cue point and label, with times in comp seconds.
+- `marker.list` (reads): Lists markers: the comp's markers, or `layer`'s (layer markers): index, time, duration, comment, chapter, URL, cue point and label, with times in comp seconds.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer, omit for composition markers
-- `markers.nested` (reads): Lists the markers of a precomp `layer`'s nested composition at the times they fall in this comp, as the layer bar shows them: time, nested time, duration, comment and label.
+- `marker.nested` (reads): Lists the markers of a precomp `layer`'s nested composition at the times they fall in this comp, as the layer bar shows them: time, nested time, duration, comment and label.
   - `comp` integer
   - `layer` integer, a precomp layer
-- `markers.set` (writes): Edit (or with `new: true`, add) a marker. Returns its new index.
+- `marker.set` (writes): Edit (or with `new: true`, add) a marker. Returns its new index.
   - `at` json, comp s; one of several alternative parameters
   - `chapter` string
   - `comment` string
@@ -985,12 +985,12 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `protected` boolean
   - `time` number, comp s
   - `url` string
-- `markers.delete` (writes): Deletes a marker: by `index` (from 0) or the one at `at` (comp seconds), of `layer`, or of the comp when no `layer` is given.
+- `marker.delete` (writes): Deletes a marker: by `index` (from 0) or the one at `at` (comp seconds), of `layer`, or of the comp when no `layer` is given.
   - `at` number, comp s; one of several alternative parameters
   - `comp` integer, read by the command beside its listed parameters
   - `index` integer, a position counted from 0 (the first is 0); comp s; one of several alternative parameters
   - `layer` integer
-- `markers.convert` (writes): Layer marker → comp marker (when `layer` is given), or comp marker → layer marker on `toLayer` (default: the selected layers).
+- `marker.convert` (writes): Layer marker → comp marker (when `layer` is given), or comp marker → layer marker on `toLayer` (default: the selected layers).
   - `at` json, one of several alternative parameters
   - `comp` integer, read by the command beside its listed parameters
   - `index` integer, a position counted from 0 (the first is 0); one of several alternative parameters
@@ -1393,7 +1393,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `layer` integer, read by the command beside its listed parameters
   - `layers` integer[]
   - `op` string, one of `none` | `alpha` | `alphaInverted` | `luma` | `lumaInverted` | `above` | `below`
-- `layer.create` (writes): Converts the selected layer by `op`: editableText (Photoshop type layer to a text layer), shapesFromText (a shape layer of the glyph outlines), masksFromText (masks on a solid) or shapesFromVector (SVG/vector footage to a shape layer).
+- `layer.add` (writes): Converts the selected layer by `op`: editableText (Photoshop type layer to a text layer), shapesFromText (a shape layer of the glyph outlines), masksFromText (masks on a solid) or shapesFromVector (SVG/vector footage to a shape layer).
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer, read by the command beside its listed parameters
   - `layers` integer[]
@@ -1402,7 +1402,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `animator` integer, uid|index
   - `kind` string, one of `range` | `wiggly` | `expression`
   - `layer` integer
-- `anim.reveal` (reads): Reveals (twirls open) properties on the selected layers, or all layers: `kind` keyframes (animated), animation (keys or expressions) or modified (changed from defaults). Returns the revealed property ids; changes no values.
+- `animation.reveal` (reads): Reveals (twirls open) properties on the selected layers, or all layers: `kind` keyframes (animated), animation (keys or expressions) or modified (changed from defaults). Returns the revealed property ids; changes no values.
   - `comp` integer, read by the command beside its listed parameters
   - `kind` string, one of `keyframes` | `animation` | `modified`
 - `view.layout` (reads): Sets how many viewer panes are shown: `views` 1, 2 or 4. Viewer state only. Returns {views}.
@@ -1550,12 +1550,12 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `strokeOpacity` number, percent, 0 to 100
   - `strokeType` string, one of `none` | `solid` | `linear` | `radial`
   - `strokeWidth` number, read by the command beside its listed parameters
-- `keys.setLabel` (writes): Sets the label colour of the selected keyframes: `label` a colour name, 0–16, or none. Returns the label and how many keys changed; it only marks keys, motion is unchanged.
+- `keyframe.setLabel` (writes): Sets the label colour of the selected keyframes: `label` a colour name, 0–16, or none. Returns the label and how many keys changed; it only marks keys, motion is unchanged.
   - `label` string, name|none|0–16
-- `keys.selectLabelGroup` (writes): Select every keyframe that shares a label with a selected keyframe, on the selected or all layers. `visible` (property uids revealed in the Timeline) limits the "Visible Keyframes" scopes; without it every property counts as visible.
+- `keyframe.selectLabelGroup` (writes): Select every keyframe that shares a label with a selected keyframe, on the selected or all layers. `visible` (property uids revealed in the Timeline) limits the "Visible Keyframes" scopes; without it every property counts as visible.
   - `scope` string, one of `selected` | `all` | `visibleSelected` | `visibleAll`
   - `visible` json[], [prop uid]
-- `keys.transform` (writes): Transform the selected keys: times scale about `timeAnchor` (comp seconds, default the first selected key) by `timeScale` and move by `timeOffset`; values scale about `valueAnchor` by `valueScale` and move by `valueOffset` (every dimension, or only `dim`). Times land on frames.
+- `keyframe.transform` (writes): Transform the selected keys: times scale about `timeAnchor` (comp seconds, default the first selected key) by `timeScale` and move by `timeOffset`; values scale about `valueAnchor` by `valueScale` and move by `valueOffset` (every dimension, or only `dim`). Times land on frames.
   - `dim` array, one of several alternative parameters
   - `dims` array, one of several alternative parameters
   - `fromStart` boolean, with merge: values are the whole transform since the drag started
@@ -1566,7 +1566,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `valueAnchor` number
   - `valueOffset` number
   - `valueScale` number
-- `keys.setSpatialTangents` (writes): Spatial tangents of one key of a spatial property (motion path handles), relative to the key value. Setting one side only mirrors it to the other unless `break` is true; the key stops being auto Bezier.
+- `keyframe.setSpatialTangents` (writes): Spatial tangents of one key of a spatial property (motion path handles), relative to the key value. Setting one side only mirrors it to the other unless `break` is true; the key stops being auto Bezier.
   - `break` boolean
   - `comp` integer, read by the command beside its listed parameters
   - `in` number[], [dx, dy, dz]
@@ -1596,21 +1596,21 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `op` string, one of `intro` | `outro` | `workArea`
 - `file.watchFolder.poll` (writes): Checks the watched folder (or `folder`) now and renders newly arrived projects; returns each project's state (done or failed) and its render items' status and outputs.
   - `folder` file, default: the watched one
-- `paths.pointsFollowNulls` (writes): Creates a null for every vertex of a path (or Position/Advanced puppet `pins`) and adds expressions so the path follows the nulls; move the nulls to animate the shape. Returns the nulls.
+- `path.pointsFollowNulls` (writes): Creates a null for every vertex of a path (or Position/Advanced puppet `pins`) and adds expressions so the path follows the nulls; move the nulls to animate the shape. Returns the nulls.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer
   - `path` string, one of several alternative parameters
   - `pin` integer, read by the command beside its listed parameters
   - `pins` array
   - `prop` json, one of several alternative parameters
-- `paths.nullsFollowPoints` (writes): Creates a null for every vertex of a path (`layer` plus `path`/`prop`), or for `pins` of a puppet, with expressions so each null follows its point. Use to attach layers to path points. Returns the nulls.
+- `path.nullsFollowPoints` (writes): Creates a null for every vertex of a path (`layer` plus `path`/`prop`), or for `pins` of a puppet, with expressions so each null follows its point. Use to attach layers to path points. Returns the nulls.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer
   - `path` string, one of several alternative parameters
   - `pin` integer, read by the command beside its listed parameters
   - `pins` array
   - `prop` json, one of several alternative parameters
-- `paths.tracePath` (writes): Creates a null that moves along a path (`layer` plus `path`/`prop`) driven by a Progress slider keyed 0→100% over the path's span; `loop` repeats it. Returns the null; parent layers to it to follow the path.
+- `path.tracePath` (writes): Creates a null that moves along a path (`layer` plus `path`/`prop`) driven by a Progress slider keyed 0→100% over the path's span; `loop` repeats it. Returns the null; parent layers to it to follow the path.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer
   - `loop` boolean
@@ -1790,7 +1790,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `effect` integer or string
   - `layer` integer
   - `time` number, comp seconds
-- `camera.selectPoints` (reads): Selects 3D Camera Tracker points by id (`points`); `add` adds to the selection, `toggle` flips each. Use before camera.setGroundPlane or camera.createFromSolve.
+- `camera.selectPoints` (reads): Selects 3D Camera Tracker points by id (`points`); `add` adds to the selection, `toggle` flips each. Use before camera.setGroundPlane or camera.addFromSolve.
   - `add` boolean
   - `comp` integer, read by the command beside its listed parameters
   - `effect` string, read by the command beside its listed parameters
@@ -1798,7 +1798,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `points` integer[]
   - `time` number, read by the command beside its listed parameters
   - `toggle` boolean
-- `camera.createFromSolve` (writes): Create Text / Solid / Null / Shadow Catcher (and Light) on the target, plus the 3D Tracker Camera when the tracker has none yet — one undo step.
+- `camera.addFromSolve` (writes): Create Text / Solid / Null / Shadow Catcher (and Light) on the target, plus the 3D Tracker Camera when the tracker has none yet — one undo step.
   - `comp` integer, read by the command beside its listed parameters
   - `effect` integer or string
   - `kind` string, text|solid|null|shadowCatcher|camera
@@ -1807,7 +1807,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `points` integer[], default: selected
   - `target` object, {center, normal, size?} (comp world); comp world
   - `time` number, read by the command beside its listed parameters
-- `camera.create` (writes): Creates the 3D Tracker Camera layer from a solved 3D Camera Tracker on `layer` (`effect` picks the tracker), as camera.createFromSolve does for the camera alone. Needs a finished solve.
+- `camera.add` (writes): Creates the 3D Tracker Camera layer from a solved 3D Camera Tracker on `layer` (`effect` picks the tracker), as camera.addFromSolve does for the camera alone. Needs a finished solve.
   - `effect` integer or string
   - `layer` integer
 - `camera.setGroundPlane` (writes): Sets the solved 3D Camera Tracker's ground plane and origin from three or more track points (`points`, default the selected ones) at the current frame; created layers then sit on that plane. Fails if the points don't define a plane.
@@ -2061,30 +2061,30 @@ Defaults the engine states in its schemas (other defaults are named in the param
 - `prefs.open` (reads): Editor window only: opens Settings at `page`. Headless sessions accept it and change nothing; use prefs.get and prefs.set.
   - `page` string, general|startup|project|composition|previews|appearance|grids|labels|type|import|export|audio|disk|memory|video|3d|scripting
 - `prefs.pages` (reads): Lists the settings pages and the setting keys on each, for prefs.get and prefs.set. No parameters.
-- `shortcuts.list` (reads): Lists commands with their keyboard shortcuts; `query` filters by words in label, command or keys, `keys` finds what a key combination does, `assigned: true` only bound commands.
+- `shortcut.list` (reads): Lists commands with their keyboard shortcuts; `query` filters by words in label, command or keys, `keys` finds what a key combination does, `assigned: true` only bound commands.
   - `assigned` boolean
   - `keys` string
   - `query` string
-- `shortcuts.set` (reads): Binds keys to a `command` (with `params` when the binding passes some): `keys` "Cmd+Shift+K", a list, or null to unbind. Editing the default preset creates a custom copy. Returns keys and conflicts.
+- `shortcut.set` (reads): Binds keys to a `command` (with `params` when the binding passes some): `keys` "Cmd+Shift+K", a list, or null to unbind. Editing the default preset creates a custom copy. Returns keys and conflicts.
   - `command` string
   - `keys` string, "Cmd+Shift+K" | [keys] | null
   - `params` json
-- `shortcuts.reset` (reads): Resets one `command`'s shortcut to its default, or the whole active preset when no command is given.
+- `shortcut.reset` (reads): Resets one `command`'s shortcut to its default, or the whole active preset when no command is given.
   - `command` string
   - `params` json
-- `shortcuts.preset` (reads): Manages keyboard shortcut presets: `op` select (`name`), new, duplicate (`from`), delete or rename (`newName`).
+- `shortcut.preset` (reads): Manages keyboard shortcut presets: `op` select (`name`), new, duplicate (`from`), delete or rename (`newName`).
   - `from` string
   - `name` string
   - `newName` string
   - `op` string, one of `select` | `new` | `duplicate` | `delete` | `rename`
-- `shortcuts.export` (reads): Exports a keyboard shortcut preset (`preset`, default the active one) as JSON, written to `path` when given, else returned.
+- `shortcut.export` (reads): Exports a keyboard shortcut preset (`preset`, default the active one) as JSON, written to `path` when given, else returned.
   - `path` file
   - `preset` string
-- `shortcuts.import` (reads): Imports a keyboard shortcut preset from `path` or an exported document in `preset`, under `name`. Returns the preset name.
+- `shortcut.import` (reads): Imports a keyboard shortcut preset from `path` or an exported document in `preset`, under `name`. Returns the preset name.
   - `name` string
   - `path` file, exported document; one of several alternative parameters
   - `preset` number or string, exported document; one of several alternative parameters
-- `shortcuts.conflicts` (reads): Lists keyboard shortcut conflicts in the active preset: each command, its keys, and the command and scope it collides with. No parameters.
+- `shortcut.conflicts` (reads): Lists keyboard shortcut conflicts in the active preset: each command, its keys, and the command and scope it collides with. No parameters.
 - `file.openRecent` (writes): Opens a recent project, replacing the current one: `path`, or `index` into the recent list (default the newest). A project that no longer exists is dropped from the list and the call fails.
   - `index` integer, a position counted from 0 (the first is 0); one of several alternative parameters
   - `path` file, one of several alternative parameters
@@ -2096,7 +2096,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
 - `file.importRecent` (writes): Imports a recently imported footage file again: `path`, or `index` into the recent list (default the newest), as file.import.
   - `index` integer, a position counted from 0 (the first is 0); one of several alternative parameters
   - `path` file, one of several alternative parameters
-- `anim.applyRecentPreset` (writes): Re-applies a recently used animation preset: `path`, or `index` into the recent list (default the newest), to `layers` or the selection, exactly as anim.applyPreset with that path.
+- `animation.applyRecentPreset` (writes): Re-applies a recently used animation preset: `path`, or `index` into the recent list (default the newest), to `layers` or the selection, exactly as animation.applyPreset with that path.
   - `comp` integer, read by the command beside its listed parameters
   - `index` integer, a position counted from 0 (the first is 0); one of several alternative parameters
   - `layers` integer[]
@@ -2111,7 +2111,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `slot` string, Shift+F10|Shift+F11|Shift+F12
   - `workspace` string
 - `help.systemInfo` (reads): Returns the system report: app name, version and build, OS, CPU architecture and core count, GPU, whether expressions, media import and the disk cache are available, and the plug-in count. Changes nothing. No parameters.
-- `keys.applyEase` (writes): Eases every segment between consecutive keyframes of one property (`path` or `prop`; `from`/`to` in layer seconds limit the keys) with a named curve: snappy, out, smooth, swift, linear, or the overshoot landings settle, pop, reseat, fly (`bezier: [x1,y1,x2,y2]` for any CSS cubic-bezier). Curves become exact AE temporal ease (speed and influence); on a motion path an overshoot inserts a key at each turning point. Spring presets (crisp, lively, noBounce, cardFlip, or spring with damping/stiffness/mass) attach an expression that springs the motion into the last key. One undo step.
+- `keyframe.applyEase` (writes): Eases every segment between consecutive keyframes of one property (`path` or `prop`; `from`/`to` in layer seconds limit the keys) with a named curve: snappy, out, smooth, swift, linear, or the overshoot landings settle, pop, reseat, fly (`bezier: [x1,y1,x2,y2]` for any CSS cubic-bezier). Curves become exact AE temporal ease (speed and influence); on a motion path an overshoot inserts a key at each turning point. Spring presets (crisp, lively, noBounce, cardFlip, or spring with damping/stiffness/mass) attach an expression that springs the motion into the last key. One undo step.
   - `bezier` number[], [x1, y1, x2, y2]
   - `comp` integer, read by the command beside its listed parameters
   - `damping` number
@@ -2124,7 +2124,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `prop` integer
   - `stiffness` number
   - `to` number, seconds; layer time
-- `keys.easePresets` (reads): Lists the ease presets keys.applyEase takes: curves (id, CSS bezier, when to use) and springs (id, damping, stiffness, mass, when to use). Read-only. No parameters.
+- `keyframe.easePresets` (reads): Lists the ease presets keyframe.applyEase takes: curves (id, CSS bezier, when to use) and springs (id, damping, stiffness, mass, when to use). Read-only. No parameters.
 - `camera.move` (writes): Adds a promo camera move from `start`: pushHover (the view pushes from 0.8x to 2.6x onto `target` in 18 frames while the rig turns 34 degrees Y and 8 X, hovers, then returns), craneRise (3x to 1x over 102 frames after a 1.5% anticipation push, rising), orbit (the rig turns `degrees` with continuous, monotone velocity through its keys) on a new camera parented to a 3D null at the target (target layers made 3D); or parallax: `layers` far to near pan at `speeds` 0.35/0.7/1.4 with blur 5 + 70% desaturation on the far one and blur 7 on the near one. One undo step; answers the camera and rig.
   - `comp` integer or string
   - `degrees` number, degrees; orbit sweep, 30
@@ -2360,7 +2360,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `comp` integer
   - `time` number, s
 - `expr.languageMenu` (reads): Returns the expression language menu: categories with each entry's label and the snippet it inserts. Use it to look up expression functions; changes nothing. No parameters.
-- `file.createProxy` (writes): File ▸ Create Proxy ▸ Still / Movie: queue a half-resolution render of the composition whose post-render action sets the result as its proxy.
+- `file.addProxy` (writes): File ▸ Create Proxy ▸ Still / Movie: queue a half-resolution render of the composition whose post-render action sets the result as its proxy.
   - `comp` json, one of several alternative parameters
   - `item` integer, one of several alternative parameters
   - `kind` string, one of `still` | `movie`
@@ -2404,10 +2404,10 @@ Defaults the engine states in its schemas (other defaults are named in the param
 - `scriptWindow.close` (writes): close a window (a dialog's `show()` returns `result`, default 2 = Cancel).
   - `result` json, a dialog's show() returns it; default 2 = Cancel
   - `window` integer
-- `jobs.list` (reads): Returns the background jobs (renders, tracking, warp stabilizing, camera solves, roto) that are running with their progress, and the log of finished ones. Use with jobs.wait. No parameters.
-- `jobs.cancel` (writes): Cancels running background work: `job` render, track, maskTrack, warp, camera, roto, task:<n> or all (default). Returns what was cancelled; finished results stay.
+- `job.list` (reads): Returns the background jobs (renders, tracking, warp stabilizing, camera solves, roto) that are running with their progress, and the log of finished ones. Use with job.wait. No parameters.
+- `job.cancel` (writes): Cancels running background work: `job` render, track, maskTrack, warp, camera, roto, task:<n> or all (default). Returns what was cancelled; finished results stay.
   - `job` string, render|track|maskTrack|warp|camera|roto|task:<n>|all
-- `jobs.wait` (reads): Blocks until every background job (renders, tracking, solves) has finished, then returns the finished jobs log. Call after starting work you need the result of. No parameters.
+- `job.wait` (reads): Blocks until every background job (renders, tracking, solves) has finished, then returns the finished jobs log. Call after starting work you need the result of. No parameters.
 - `mediaBrowser.list` (reads): Lists a folder (`path`, default the browser's current one): entries with name, kind and size, the parent folder, favorites, places and available actions; `importableOnly` hides other files.
   - `importableOnly` boolean
   - `path` file
@@ -2434,7 +2434,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
 - `project.setProjectComment` (writes): Sets the project's own comment (Project panel). A note stored in the project file.
   - `comment` string
   - `merge` string, read by the command beside its listed parameters
-- `scopes.analyze` (reads): Analyses the comp's frame at `time`: `scope` waveform (RGB, luma, YC), vectorscope, histogram or parade, with `standard` rec601/709/2020; returns the scope data plus mean RGB and min, max and mean luma. Use to check exposure and colour.
+- `scope.analyze` (reads): Analyses the comp's frame at `time`: `scope` waveform (RGB, luma, YC), vectorscope, histogram or parade, with `standard` rec601/709/2020; returns the scope data plus mean RGB and min, max and mean luma. Use to check exposure and colour.
   - `clamp` boolean
   - `comp` integer
   - `float` boolean
@@ -2525,16 +2525,16 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `comp` integer, read by the command beside its listed parameters
   - `index` integer, a position counted from 0 (the first is 0)
 - `learn.stop` (writes): Closes the running tutorial. Changes no project content. No parameters.
-- `templates.list` (reads): Lists the project templates: id, name, description, category, built-in or user, size, frame rate, duration and controls; `thumbnails: true` adds a 256×144 thumbnail.
+- `template.list` (reads): Lists the project templates: id, name, description, category, built-in or user, size, frame rate, duration and controls; `thumbnails: true` adds a 256×144 thumbnail.
   - `thumbnails` boolean
-- `templates.thumbnail` (reads): Returns a template's thumbnail (`id`): width, height and RGB pixels as hex.
+- `template.thumbnail` (reads): Returns a template's thumbnail (`id`): width, height and RGB pixels as hex.
   - `id` integer or string, an id
-- `templates.create` (writes): Replaces the open project with an untitled copy of a project template (`id` from templates.list, or `path` to an .ectemplate) and opens its main comp; embedded footage is extracted beside `projectPath` or into `footageDir`.
+- `template.add` (writes): Replaces the open project with an untitled copy of a project template (`id` from template.list, or `path` to an .ectemplate) and opens its main comp; embedded footage is extracted beside `projectPath` or into `footageDir`.
   - `footageDir` string
-  - `id` integer or string, an id; templates.list; one of several alternative parameters
+  - `id` integer or string, an id; template.list; one of several alternative parameters
   - `path` file, .ectemplate; one of several alternative parameters
   - `projectPath` string, save the new project there; embedded footage goes to `<stem> Footage/` next to it
-- `templates.delete` (writes): Deletes a saved user template (`id`, `user/<file>`). Built-in templates cannot be deleted.
+- `template.delete` (writes): Deletes a saved user template (`id`, `user/<file>`). Built-in templates cannot be deleted.
   - `id` string, user/<file>
 - `playback.settings.get` (reads): Returns the preview settings for a preview `shortcut` (spacebar by default): frame rate, skip, resolution, range, loop, audio, and the planned start, end and step for the active comp.
   - `shortcut` string, one of `spacebar` | `shiftSpacebar` | `numpad0` | `shiftNumpad0` | `altNumpad0`, default: the one shown in the Preview panel
@@ -2593,13 +2593,13 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `enabled` boolean, read by the command beside its listed parameters
   - `layer` integer, read by the command beside its listed parameters
   - `layers` array, read by the command beside its listed parameters
-- `edit.pasteReversedKeyframes` (writes): Edit ▸ Paste Reversed Keyframes: the copied keys mirrored in time over their whole span (the last key first, incoming and outgoing eases swapped), pasted like Edit ▸ Paste (`keys.paste`: at the current time, into the selected or the same properties).
+- `edit.pasteReversedKeyframes` (writes): Edit ▸ Paste Reversed Keyframes: the copied keys mirrored in time over their whole span (the last key first, incoming and outgoing eases swapped), pasted like Edit ▸ Paste (`keyframe.paste`: at the current time, into the selected or the same properties).
   - `comp` integer, read by the command beside its listed parameters
   - `layers` integer[]
   - `path` string, one of several alternative parameters
   - `prop` json, one of several alternative parameters
   - `time` number
-- `edit.clear` (writes): Deletes `layers`: the command that deletes layers. Without `layers` it deletes the selection (keyframes, effects, masks or shape items when selected, else the selected layers), or, while text is being edited, the character before the caret.
+- `edit.delete` (writes): Deletes `layers`: the command that deletes layers. Without `layers` it deletes the selection (keyframes, effects, masks or shape items when selected, else the selected layers), or, while text is being edited, the character before the caret.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer, read by the command beside its listed parameters
   - `layers` integer[]
@@ -3103,32 +3103,32 @@ Defaults the engine states in its schemas (other defaults are named in the param
 
 ### View > Switch 3D View
 
-- `view.3d.activeCamera` (reads): Switches the comp viewer's 3D view to the Active Camera (what renders). View state only; the project is unchanged.
+- `view.threeD.activeCamera` (reads): Switches the comp viewer's 3D view to the Active Camera (what renders). View state only; the project is unchanged.
   - `comp` integer
-- `view.3d.default` (reads): Switches the comp viewer's 3D view to the Default camera view. View state only.
+- `view.threeD.default` (reads): Switches the comp viewer's 3D view to the Default camera view. View state only.
   - `comp` integer
-- `view.3d.front` (reads): Switches the comp viewer's 3D view to Front (orthographic). View state only.
+- `view.threeD.front` (reads): Switches the comp viewer's 3D view to Front (orthographic). View state only.
   - `comp` integer
-- `view.3d.left` (reads): Switches the comp viewer's 3D view to Left (orthographic). View state only.
+- `view.threeD.left` (reads): Switches the comp viewer's 3D view to Left (orthographic). View state only.
   - `comp` integer
-- `view.3d.top` (reads): Switches the comp viewer's 3D view to Top (orthographic). View state only.
+- `view.threeD.top` (reads): Switches the comp viewer's 3D view to Top (orthographic). View state only.
   - `comp` integer
-- `view.3d.back` (reads): Switches the comp viewer's 3D view to Back (orthographic). View state only.
+- `view.threeD.back` (reads): Switches the comp viewer's 3D view to Back (orthographic). View state only.
   - `comp` integer
-- `view.3d.right` (reads): Switches the comp viewer's 3D view to Right (orthographic). View state only.
+- `view.threeD.right` (reads): Switches the comp viewer's 3D view to Right (orthographic). View state only.
   - `comp` integer
-- `view.3d.bottom` (reads): Switches the comp viewer's 3D view to Bottom (orthographic). View state only.
+- `view.threeD.bottom` (reads): Switches the comp viewer's 3D view to Bottom (orthographic). View state only.
   - `comp` integer
-- `view.3d.custom1` (reads): Switches the comp viewer's 3D view to Custom View 1 (a perspective working view). View state only.
+- `view.threeD.custom1` (reads): Switches the comp viewer's 3D view to Custom View 1 (a perspective working view). View state only.
   - `comp` integer
-- `view.3d.custom2` (reads): Switches the comp viewer's 3D view to Custom View 2. View state only.
+- `view.threeD.custom2` (reads): Switches the comp viewer's 3D view to Custom View 2. View state only.
   - `comp` integer
-- `view.3d.custom3` (reads): Switches the comp viewer's 3D view to Custom View 3. View state only.
+- `view.threeD.custom3` (reads): Switches the comp viewer's 3D view to Custom View 3. View state only.
   - `comp` integer
 
 ### View
 
-- `view.3d.last` (reads): Switches the comp viewer back to the previously used 3D view. View state only.
+- `view.threeD.last` (reads): Switches the comp viewer back to the previously used 3D view. View state only.
   - `comp` integer or string
 - `view.lookAtSelected` (writes): Frames the current 3D view on the given `layers` (or the selection); with the Active Camera view this moves the camera layer (undoable). Use view.lookAtAll to fit everything.
   - `comp` integer
@@ -3268,14 +3268,14 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `path` string, one of several alternative parameters
   - `prop` json, one of several alternative parameters
   - `time` number, read by the command beside its listed parameters
-- `keys.toggleHold` (writes): Toggles Hold interpolation on the selected keyframes' outgoing side: the value jumps at the next key instead of moving; toggling off restores Bezier (eased keys) or Linear. No parameters.
-- `keys.interpolation` (writes): Sets the selected keyframes' interpolation: `interpolation` (linear, bezier, continuousBezier, autoBezier, hold) or `in`/`out` per side, `spatial` for paths, and roving. Changes how values move between keys, not the key values.
+- `keyframe.toggleHold` (writes): Toggles Hold interpolation on the selected keyframes' outgoing side: the value jumps at the next key instead of moving; toggling off restores Bezier (eased keys) or Linear. No parameters.
+- `keyframe.interpolation` (writes): Sets the selected keyframes' interpolation: `interpolation` (linear, bezier, continuousBezier, autoBezier, hold) or `in`/`out` per side, `spatial` for paths, and roving. Changes how values move between keys, not the key values.
   - `autoBezier` boolean
   - `continuous` boolean
   - `interpolation` string, one of `linear` | `bezier` | `continuousBezier` | `autoBezier` | `hold`
   - `roving` boolean
   - `spatial` string, one of `linear` | `bezier` | `continuousBezier` | `autoBezier`
-- `keys.velocity` (writes): Sets the speed and influence of the selected keyframes: `inSpeed`, `inInfluence` %, `outSpeed`, `outInfluence` % (numbers, or arrays per dimension), `continuous` to tie both sides. Use for custom eases; keys.easyEase for the standard one.
+- `keyframe.velocity` (writes): Sets the speed and influence of the selected keyframes: `inSpeed`, `inInfluence` %, `outSpeed`, `outInfluence` % (numbers, or arrays per dimension), `continuous` to tie both sides. Use for custom eases; keyframe.easyEase for the standard one.
   - `continuous` boolean
   - `inInfluence` number, read by the command beside its listed parameters
   - `inSpeed` number or array, a number, or one per dimension
@@ -3286,19 +3286,19 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer
   - `value` boolean
-- `anim.savePreset` (writes): Saves the selected properties (with their keyframes, relative to the earliest key) and selected effects as an .ecpreset file at `path` (`name` optional). Needs a selection; the comp is unchanged.
+- `animation.savePreset` (writes): Saves the selected properties (with their keyframes, relative to the earliest key) and selected effects as an .ecpreset file at `path` (`name` optional). Needs a selection; the comp is unchanged.
   - `name` string
   - `path` file, .ecpreset
-- `anim.applyPreset` (writes): Applies an animation preset saved by anim.savePreset (`path` to an .ecpreset, or the preset JSON inline as `preset`) to `layers` (default selected): adds its effects and keyed properties from the current time, and records it as recent.
+- `animation.applyPreset` (writes): Applies an animation preset saved by animation.savePreset (`path` to an .ecpreset, or the preset JSON inline as `preset`) to `layers` (default selected): adds its effects and keyed properties from the current time, and records it as recent.
   - `layers` integer[]
   - `path` file, one of several alternative parameters
   - `preset` string, one of several alternative parameters
-- `anim.addKeyframe` (writes): Keys every selected property at the current time (CTI): turns on animation for an unkeyed property, else adds a key holding its current value. Needs selected properties; use prop.addKey to key one property by path. No parameters.
+- `animation.addKeyframe` (writes): Keys every selected property at the current time (CTI): turns on animation for an unkeyed property, else adds a key holding its current value. Needs selected properties; use prop.addKey to key one property by path. No parameters.
 - `text.removeAllAnimators` (writes): Deletes every text animator from text `layers` (default selected), returning the text to its unanimated look.
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer, read by the command beside its listed parameters
   - `layers` integer[]
-- `anim.browsePresets` (writes): Editor window only: opens the animation preset browser. Headless sessions (agents) accept it and change nothing; use anim.applyPreset instead. No parameters.
+- `animation.browsePresets` (writes): Editor window only: opens the animation preset browser. Headless sessions (agents) accept it and change nothing; use animation.applyPreset instead. No parameters.
 - `track.motion` (writes): Adds a transform motion tracker (one track point) to the footage `layer` (default selected) and makes it current; place its point with track.setPoint, then track.analyze and track.apply to a target layer.
   - `layer` integer
 - `track.stabilize` (writes): Adds a stabilize tracker to the footage `layer` (default selected): after analysis, applying it moves the layer itself to cancel camera shake.
@@ -3351,13 +3351,13 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `layer` integer
   - `path` string, one of several alternative parameters
   - `prop` json, one of several alternative parameters
-- `keys.easyEase` (writes): Applies Easy Ease to the selected keyframes: Bezier interpolation with 33% influence and zero speed on both sides (`which` in or out for one side), so motion slows into and out of each key.
+- `keyframe.easyEase` (writes): Applies Easy Ease to the selected keyframes: Bezier interpolation with 33% influence and zero speed on both sides (`which` in or out for one side), so motion slows into and out of each key.
   - `which` string, one of `both` | `in` | `out`
-- `keys.easyEaseIn` (writes): Eases only the incoming side of the selected keyframes (Bezier, zero speed, 33% influence), so motion slows into each key; the outgoing side is unchanged.
+- `keyframe.easyEaseIn` (writes): Eases only the incoming side of the selected keyframes (Bezier, zero speed, 33% influence), so motion slows into each key; the outgoing side is unchanged.
   - `which` string, read by the command beside its listed parameters
-- `keys.easyEaseOut` (writes): Eases only the outgoing side of the selected keyframes (Bezier, zero speed, 33% influence), so motion starts slowly from each key; the incoming side is unchanged.
+- `keyframe.easyEaseOut` (writes): Eases only the outgoing side of the selected keyframes (Bezier, zero speed, 33% influence), so motion starts slowly from each key; the incoming side is unchanged.
   - `which` string, read by the command beside its listed parameters
-- `keys.timeReverse` (writes): Keyframe Assistant ▸ Time-Reverse Keyframes: mirror the selected keys of each property. No parameters.
+- `keyframe.timeReverse` (writes): Keyframe Assistant ▸ Time-Reverse Keyframes: mirror the selected keys of each property. No parameters.
 - `layer.sequence` (writes): Places two or more `layers` (in selection order) one after another in time; `overlap` with `duration` seconds overlaps them, `transition` dissolveFront or crossDissolve adds opacity fades.
   - `comp` integer, read by the command beside its listed parameters
   - `duration` number, s
@@ -3365,10 +3365,10 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `layers` integer[], in order
   - `overlap` boolean
   - `transition` string, one of `off` | `dissolveFront` | `crossDissolve`
-- `keys.exponentialScale` (writes): Replaces the motion between two selected Scale keyframes with exponential scaling (keys every frame), so a zoom looks constant-speed. Needs two Scale keys selected on one layer. No parameters.
-- `keys.audioToKeyframes` (writes): Animation ▸ Keyframe Assistant ▸ Convert Audio to Keyframes: an "Audio Amplitude" null with Left Channel, Right Channel and Both Channels sliders keyed on every frame of the work area with the amplitude of the comp's audible layers. One undo step.
+- `keyframe.exponentialScale` (writes): Replaces the motion between two selected Scale keyframes with exponential scaling (keys every frame), so a zoom looks constant-speed. Needs two Scale keys selected on one layer. No parameters.
+- `keyframe.audioToKeyframes` (writes): Animation ▸ Keyframe Assistant ▸ Convert Audio to Keyframes: an "Audio Amplitude" null with Left Channel, Right Channel and Both Channels sliders keyed on every frame of the work area with the amplitude of the comp's audible layers. One undo step.
   - `comp` integer or string
-- `keys.rpfCameraImport` (writes): Animation ▸ Keyframe Assistant ▸ RPF Camera Import: a camera layer keyed from camera data. RPF/RLA files carry their camera in an undocumented block, so Kition Motion reads the same data from JSON or CSV exports (see `docs/preferences.md` ▸ RPF Camera Import). One undo step.
+- `keyframe.rpfCameraImport` (writes): Animation ▸ Keyframe Assistant ▸ RPF Camera Import: a camera layer keyed from camera data. RPF/RLA files carry their camera in an undocumented block, so Kition Motion reads the same data from JSON or CSV exports (see `docs/preferences.md` ▸ RPF Camera Import). One undo step.
   - `comp` integer or string
   - `path` file, .json|.csv camera data
 
@@ -3378,7 +3378,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer, read by the command beside its listed parameters
   - `layers` integer[]
-- `layer.addMarker` (writes): Adds a marker with `comment` at `time` (comp seconds, default now) to `layers` (default selected), replacing a marker at that time; layers with locked markers are skipped. Returns `time` and `markers`: each added marker's `layer`, `index` (as markers.list shows it) and `time`.
+- `layer.addMarker` (writes): Adds a marker with `comment` at `time` (comp seconds, default now) to `layers` (default selected), replacing a marker at that time; layers with locked markers are skipped. Returns `time` and `markers`: each added marker's `layer`, `index` (as marker.list shows it) and `time`.
   - `comment` string
   - `comp` integer, read by the command beside its listed parameters
   - `layer` integer, read by the command beside its listed parameters
@@ -3475,7 +3475,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
 - `file.relinkFootage` (writes): Run the recorded jobs in a worker session (sharing `footage`).
   - `dryRun` boolean, report only
   - `folder` file, recursive desktop search, no symlinks; max 100000 entries
-  - `wait` boolean, return results inline; otherwise jobs.list/jobs.wait
+  - `wait` boolean, return results inline; otherwise job.list/jobs.wait
 
 ### File > Scripts
 
@@ -3628,11 +3628,11 @@ Defaults the engine states in its schemas (other defaults are named in the param
 
 ### Animation > Recent Animation Presets
 
-- `anim.clearRecentPresets` (writes): Empties the Recent Animation Presets list in the preferences. Changes no composition. No parameters.
+- `animation.clearRecentPresets` (writes): Empties the Recent Animation Presets list in the preferences. Changes no composition. No parameters.
 
 ### Composition > VR
 
-- `comp.vr.createEnvironment` (writes): Composition ▸ VR ▸ Create VR Environment: renders the active comp's 3D scene in every direction.
+- `comp.vr.addEnvironment` (writes): Composition ▸ VR ▸ Create VR Environment: renders the active comp's 3D scene in every direction.
   - `comp` integer or string
   - `position` array, [x,y,z]
   - `size` integer, face pixels (1024); 1024
@@ -3706,8 +3706,8 @@ A layer that never shows:
 ```json
 motion_check {"path": "Outro.kmotion"}
 → {"diagnostics": [{"code": "motion.zero-duration", "severity": "warning", "target": {"path": "comp:1/layer:4"},
-    "fix": {"command": "edit.clear", "params": {"comp": 1, "layers": [4]}}}]}
-motion_run {"path": "Outro.kmotion", "steps": [{"command": "edit.clear", "params": {"comp": 1, "layers": [4]}}]}
+    "fix": {"command": "edit.delete", "params": {"comp": 1, "layers": [4]}}}]}
+motion_run {"path": "Outro.kmotion", "steps": [{"command": "edit.delete", "params": {"comp": 1, "layers": [4]}}]}
 motion_check {"path": "Outro.kmotion"}
 → {"diagnostics": []}
 ```

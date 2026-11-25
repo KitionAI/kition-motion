@@ -2,7 +2,7 @@ use super::Row;
 
 pub(super) const ROWS: &[Row] = &[
     Row {
-        command: "keys.audioToKeyframes",
+        command: "keyframe.audioToKeyframes",
         path: "sample work-area audible mix and create amplitude null",
         resolves: &["comp id/name/default active", "all recursively audible layers and source item references"],
         reads: &[
@@ -27,7 +27,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/keys_more.rs:71; render/src/audio.rs:26,229; commands/layer.rs:244",
     },
     Row {
-        command: "keys.rpfCameraImport",
+        command: "keyframe.rpfCameraImport",
         path: "parse lent JSON/CSV and create keyed camera",
         resolves: &["comp id/name/default active", "path lent file"],
         reads: &[

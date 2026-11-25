@@ -54,7 +54,7 @@ fn a_time_names_what_the_command_acts_on_there() {
     // A comp marker holds only the comp markers, through the owning ref.
     let markers = Some(Under { premises: vec![Premise::on(json!(main)).fields(["comp.markers"]).positions(Vec::<String>::new())], ..Default::default() });
     assert_eq!(under(&mut doc, main, 2.0, &[], "comp.addMarker", json!({ "comment": "m" })), markers);
-    assert_eq!(under(&mut doc, main, 2.0, &[], "markers.set", json!({ "new": true })), markers);
+    assert_eq!(under(&mut doc, main, 2.0, &[], "marker.set", json!({ "new": true })), markers);
     // A layer command given no layer: the selected layers it acts on.
     let got = under(&mut doc, main, 2.0, &[json!(red)], "edit.splitLayer", json!({})).unwrap();
     assert_eq!(got, Under { objects: vec![json!(red)], within: vec![window(main, 1, 2)], ..Default::default() });

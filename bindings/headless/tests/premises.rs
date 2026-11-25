@@ -54,7 +54,7 @@ async fn a_key_at_a_time_is_held_by_its_time() {
         let mine = layer_ids(&info)[2];
         f.ok("run", json!({ "steps": keys(mine) })).await;
         let (_, _, basis) = f.inspect().await;
-        let value = ("keys.set", json!({ "layer": mine, "path": OPACITY, "time": 2.0, "value": 25 }));
+        let value = ("keyframe.set", json!({ "layer": mine, "path": OPACITY, "time": 2.0, "value": 25 }));
         let before = ("prop.addKey", json!({ "layer": mine, "path": OPACITY, "time": 1.5, "value": 15 }));
         match change {
             "its value, then a key before" => {
@@ -292,15 +292,15 @@ async fn a_comp_marker_edit_needs_the_comp_markers() {
         for change in ["comment", "another item"] {
             let f = Fixture::new(LAYERS);
             let (_, comp, _) = f.inspect().await;
-            f.colleague(&[("markers.set", json!({ "new": true, "time": 1.0, "comment": "first" }))]);
+            f.colleague(&[("marker.set", json!({ "new": true, "time": 1.0, "comment": "first" }))]);
             let (_, _, basis) = f.inspect().await;
             f.colleague(&[match change {
-                "comment" => ("markers.set", json!({ "at": 1.0, "comment": "theirs" })),
+                "comment" => ("marker.set", json!({ "at": 1.0, "comment": "theirs" })),
                 _ => ("project.rename", json!({ "item": "L0", "name": "Elsewhere" })),
             }]);
             let step = match by {
-                "at" => json!({ "command": "markers.set", "params": { "at": 1.0, "comment": "mine" } }),
-                _ => json!({ "command": "markers.set", "params": { "index": 0, "comment": "mine" } }),
+                "at" => json!({ "command": "marker.set", "params": { "at": 1.0, "comment": "mine" } }),
+                _ => json!({ "command": "marker.set", "params": { "index": 0, "comment": "mine" } }),
             };
             let answer = f.call("run", json!({ "basis": basis, "steps": [step] })).await;
             match change {
@@ -342,7 +342,7 @@ async fn a_layer_given_in_the_single_form_is_held() {
     let f = Fixture::new(LAYERS);
     let (info, _, basis) = f.inspect().await;
     let mine = layer_ids(&info)[2];
-    f.colleague(&[("edit.clear", json!({ "layers": [mine] }))]);
+    f.colleague(&[("edit.delete", json!({ "layers": [mine] }))]);
     let step = json!({ "command": "layer.addMarker", "params": { "layer": mine, "comment": "mine" }, "at": { "time": 2.0 } });
     let refused = f.refused("run", json!({ "basis": basis, "steps": [step] })).await;
     assert_conflict(&refused, &mine.to_string(), "deleted");

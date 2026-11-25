@@ -183,7 +183,7 @@ async fn a_named_layer_is_held_by_the_fields_a_step_reads_and_assigns() {
     }
     // paint.setCloneSource needs only that the layer is there.
     let clone = step("paint.setCloneSource", json!({"layer":top,"point":[50,50]}));
-    failures.extend(check(&base, "paint.setCloneSource", top, clone, vec![("edit.clear", json!({"layers":[top]}))], "deleted").await);
+    failures.extend(check(&base, "paint.setCloneSource", top, clone, vec![("edit.delete", json!({"layers":[top]}))], "deleted").await);
     assert!(failures.is_empty(), "{failures:#?}");
 }
 

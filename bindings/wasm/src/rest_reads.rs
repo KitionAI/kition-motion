@@ -370,7 +370,7 @@ fn item_inputs(session: &Session, command: &str, params: &Value, comp: &Comp, an
     match command {
         "comp.new" => item_names(session, answer),
         "layer.newSolid" | "layer.newAdjustment" | "file.importSolid" | "light.spotlight" => folder_lookup(session, "Solids", answer),
-        "layer.create" if params.get("op").and_then(Value::as_str) == Some("masksFromText") => folder_lookup(session, "Solids", answer),
+        "layer.add" if params.get("op").and_then(Value::as_str) == Some("masksFromText") => folder_lookup(session, "Solids", answer),
         "layer.openSource" | "layer.revealSource" => {
             if let Some(item) = layer_of(session, comp, params).and_then(|id| comp.layer(id)).and_then(|layer| layer.source.item()) {
                 answer.premises.push(field(json!(item.0), ["kind"]));
@@ -538,7 +538,7 @@ fn spans(cid: ItemId, comp: &Comp, answer: &mut Under) {
 }
 
 /// Commands that name a new layer uniquely among its siblings, or that rewrite every layer:
-/// - layer.create (create.rs:95-118, vector.rs), footage.overlayEdit (build.rs:834),
+/// - layer.add (create.rs:95-118, vector.rs), footage.overlayEdit (build.rs:834),
 ///   layer.applyTextPreset's digit layers (promo_text.rs:544), camera.orbitNull's null
 ///   (rig3d.rs:326-328, with the frame and duration it is built in), a light whose kind changes
 ///   and keeps its name (three_d.rs:239-298 through build::layer).
@@ -549,7 +549,7 @@ fn spans(cid: ItemId, comp: &Comp, answer: &mut Under) {
 /// - file.replaceFootage retargets every layer using the item (file_more.rs:843-863).
 fn naming_inputs(session: &Session, command: &str, params: &Value, cid: ItemId, comp: &Comp, answer: &mut Under) {
     match command {
-        "layer.create" => sibling_names(cid, comp, answer),
+        "layer.add" => sibling_names(cid, comp, answer),
         "layer.applyTextPreset" if params.get("preset").and_then(Value::as_str) == Some("digitRoll") => sibling_names(cid, comp, answer),
         "footage.overlayEdit" => {
             // A new layer of the shown item, built in the frame and duration at the frame rate.
@@ -986,7 +986,7 @@ fn footage_targets(session: &Session, comp: &Comp, params: &Value) -> Vec<ItemId
 /// - file.removeUnusedFootage / consolidateFootage / reduceProject decide from every item's
 ///   kind, metadata and folder and every layer's source (file_more.rs:241-316).
 /// - file.findMissing reads footage, effects and text fonts on every layer (file_more.rs:329).
-/// - keys.audioToKeyframes reads every audible layer's source audio (keys_more.rs).
+/// - keyframe.audioToKeyframes reads every audible layer's source audio (keys_more.rs).
 fn footage_inputs(session: &Session, command: &str, params: &Value, comp: &Comp, answer: &mut Under) {
     let footage = || session.project.items.values().filter(|item| matches!(item.kind, ItemKind::Footage(_))).map(|item| item.id).collect::<Vec<_>>();
     match command {
@@ -1064,7 +1064,7 @@ fn footage_inputs(session: &Session, command: &str, params: &Value, comp: &Comp,
                 }
             }
         }
-        "keys.audioToKeyframes" => {
+        "keyframe.audioToKeyframes" => {
             for layer in &comp.layers {
                 if let Some(item) = layer.source.item() {
                     let _ = crate::rest_geometry::pixels(session, item, answer);
@@ -1150,10 +1150,10 @@ fn source_inputs(session: &Session, command: &str, params: &Value, cid: ItemId, 
     }
 }
 
-/// anim.reveal with nothing selected reveals every layer's animated properties, sizing each by
+/// animation.reveal with nothing selected reveals every layer's animated properties, sizing each by
 /// its source and the frame (animation.rs:311-343).
 fn reveal_inputs(session: &Session, command: &str, cid: ItemId, comp: &Comp, answer: &mut Under) {
-    if command != "anim.reveal" {
+    if command != "animation.reveal" {
         return;
     }
     let targets: Vec<LayerId> =
@@ -1414,7 +1414,7 @@ pub(crate) fn narrow(command: &str, answer: &mut Option<Under>) {
                         _ => None,
                     }
                 }
-                "markers.set" => {
+                "marker.set" => {
                     let rest = field.strip_prefix("comp.markers").or_else(|| field.strip_prefix("markers"));
                     match rest {
                         Some(rest) if rest.starts_with('.') => rest[1..].parse::<u64>().ok().map(|index| ("~markerList", json!({"index":index}))),

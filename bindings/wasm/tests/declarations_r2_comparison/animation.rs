@@ -38,7 +38,7 @@ impl Fixture {
     }
 
     fn selected_key(&mut self) {
-        self.session.execute("keys.select", json!({"keys":[{"layer":self.layer,"prop":self.property().uid,"time":1}]})).unwrap();
+        self.session.execute("keyframe.select", json!({"keys":[{"layer":self.layer,"prop":self.property().uid,"time":1}]})).unwrap();
     }
 
     fn document(&self) -> MotionDocument {
@@ -46,7 +46,7 @@ impl Fixture {
         document.set_context(&CallContext { part: Some(json!({"comp":self.comp})), time: Some(1.0), on: Vec::new() }).unwrap();
         document.execute("layer.select", json!({"layers":[self.layer]})).unwrap();
         if !self.session.state.selected_keys.is_empty() {
-            document.execute("keys.select", json!({"keys":[{"layer":self.layer,"prop":self.property().uid,"time":1}]})).unwrap();
+            document.execute("keyframe.select", json!({"keys":[{"layer":self.layer,"prop":self.property().uid,"time":1}]})).unwrap();
         }
         document
     }
@@ -229,8 +229,8 @@ fn selected_probe(row: &Row) -> (MotionDocument, Probe, &'static str) {
     let mut fixture = Fixture::new(true);
     fixture.selected_key();
     let params = match row.command {
-        "keys.setLabel" => json!({"label":2}),
-        "keys.interpolation" => json!({"interpolation":"linear"}),
+        "keyframe.setLabel" => json!({"label":2}),
+        "keyframe.interpolation" => json!({"interpolation":"linear"}),
         _ => json!({}),
     };
     let mut required = fixture.required(&["transform/opacity.keys[time=254016000000].time"]);
@@ -239,12 +239,12 @@ fn selected_probe(row: &Row) -> (MotionDocument, Probe, &'static str) {
         field(&mut required, fixture.layer, format!("transform/opacity.keys[time={time}].data.roving"));
     }
     let fields: &[&str] = match row.command {
-        "keys.setLabel" => &["data.label"],
-        "keys.easyEase" => &["value", "data.in_interp", "data.in_ease", "data.out_interp", "data.out_ease", "data.auto_bezier"],
-        "keys.easyEaseIn" => &["value", "data.in_interp", "data.in_ease", "data.auto_bezier"],
-        "keys.easyEaseOut" => &["value", "data.out_interp", "data.out_ease", "data.auto_bezier"],
-        "keys.toggleHold" => &["data.out_interp", "data.in_interp", "data.auto_bezier", "data.continuous", "data.out_ease"],
-        "keys.interpolation" => &["value", "data.in_interp", "data.out_interp", "data.auto_bezier", "data.continuous"],
+        "keyframe.setLabel" => &["data.label"],
+        "keyframe.easyEase" => &["value", "data.in_interp", "data.in_ease", "data.out_interp", "data.out_ease", "data.auto_bezier"],
+        "keyframe.easyEaseIn" => &["value", "data.in_interp", "data.in_ease", "data.auto_bezier"],
+        "keyframe.easyEaseOut" => &["value", "data.out_interp", "data.out_ease", "data.auto_bezier"],
+        "keyframe.toggleHold" => &["data.out_interp", "data.in_interp", "data.auto_bezier", "data.continuous", "data.out_ease"],
+        "keyframe.interpolation" => &["value", "data.in_interp", "data.out_interp", "data.auto_bezier", "data.continuous"],
         _ => unreachable!(),
     };
     for name in fields {
@@ -256,8 +256,10 @@ fn selected_probe(row: &Row) -> (MotionDocument, Probe, &'static str) {
 pub(super) fn probes(row: &Row) -> Vec<(MotionDocument, Probe, &'static str)> {
     match row.command {
         "prop.setExpression" => expression_probes(row),
-        "keys.set" => vec![key_probe(row, "uid-key-edit"), key_probe(row, "named-key-edit"), key_probe(row, "index-key-edit")],
-        "keys.easyEase" | "keys.easyEaseIn" | "keys.easyEaseOut" | "keys.toggleHold" | "keys.interpolation" | "keys.setLabel" => vec![selected_probe(row)],
+        "keyframe.set" => vec![key_probe(row, "uid-key-edit"), key_probe(row, "named-key-edit"), key_probe(row, "index-key-edit")],
+        "keyframe.easyEase" | "keyframe.easyEaseIn" | "keyframe.easyEaseOut" | "keyframe.toggleHold" | "keyframe.interpolation" | "keyframe.setLabel" => {
+            vec![selected_probe(row)]
+        }
         _ => Vec::new(),
     }
 }

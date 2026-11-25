@@ -142,7 +142,7 @@ fn delete_removes_selected_groups_not_their_layer() {
     let (mask, shape) = (groups(&s, sh, "masks")[0], groups(&s, sh, "contents")[0]);
     let delete = |s: &mut Session| {
         let undo = s.history.undo.len();
-        s.execute("edit.clear", json!({})).unwrap();
+        s.execute("edit.delete", json!({})).unwrap();
         assert_eq!(s.history.undo.len(), undo + 1, "one undo step");
     };
 

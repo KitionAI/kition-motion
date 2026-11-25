@@ -123,8 +123,8 @@ fn the_agent_sets_checkboxes_and_one_number_speeds() {
         ("prop.set", json!({ "layer": layer, "path": "materialOptions/acceptsLights", "value": false })),
         ("prop.addKey", json!({ "layer": layer, "path": "transform/opacity", "time": 0, "value": 0 })),
         ("prop.addKey", json!({ "layer": layer, "path": "transform/opacity", "time": 1, "value": 100 })),
-        ("keys.select", json!({ "keys": [{ "layer": layer, "path": "transform/opacity", "time": 1 }] })),
-        ("keys.velocity", json!({ "outSpeed": 0, "inSpeed": 0 })),
+        ("keyframe.select", json!({ "keys": [{ "layer": layer, "path": "transform/opacity", "time": 1 }] })),
+        ("keyframe.velocity", json!({ "outSpeed": 0, "inSpeed": 0 })),
     ];
     for (command, given) in calls {
         if let Err(error) = kit.execute(&id, command, params(given.clone()), Origin::Agent) {

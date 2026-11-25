@@ -24,10 +24,10 @@ fn reads(command: &str, params: &Value) -> Option<&'static [&'static str]> {
     let has = |key: &str| params.get(key).is_some_and(|value| !value.is_null());
     let fields: &'static [&'static str] = match command {
         // anim.rs nudge: the key delta is whole frames of the comp (anim/3-7).
-        "keys.nudge" | "keys.nudgeForward" | "keys.nudgeBackward" | "keys.nudgeForward10" | "keys.nudgeBackward10" => RATE,
+        "keyframe.nudge" | "keyframe.nudgeForward" | "keyframe.nudgeBackward" | "keyframe.nudgeForward10" | "keyframe.nudgeBackward10" => RATE,
         // anim_tools/0-1, layer_time/0-2, puppet/1-2/4, prop/18, roto_cmds/3, promo_moves/2, promo_ease/0-1.
-        "keys.wiggle"
-        | "keys.smooth"
+        "keyframe.wiggle"
+        | "keyframe.smooth"
         | "layer.timeStretch"
         | "layer.timeReverse"
         | "puppet.movePin"
@@ -36,7 +36,7 @@ fn reads(command: &str, params: &Value) -> Option<&'static [&'static str]> {
         | "prop.convertExpressionToKeyframes"
         | "roto.freeze"
         | "layer.hop"
-        | "keys.applyEase" => RATE,
+        | "keyframe.applyEase" => RATE,
         // anim_tools/2, layer_time/6, puppet/6, roto_cmds/0-2, track/9, warp_cmds/1.
         "motion.sketch"
         | "layer.freezeOnLastFrame"
@@ -65,13 +65,13 @@ fn reads(command: &str, params: &Value) -> Option<&'static [&'static str]> {
         // promo_light.rs:279-285: `to` is reached `frames` after `start`, unless `keys` are given.
         "layer.liftShadow" if has("to") && !has("keys") => RATE,
         // create.rs:90-130: outlines become a new shape layer (build::layer) or a frame-sized solid.
-        "layer.create" if params.get("op").and_then(Value::as_str) == Some("shapesFromText") => SIZE_DURATION,
-        "layer.create" if params.get("op").and_then(Value::as_str) == Some("masksFromText") => {
+        "layer.add" if params.get("op").and_then(Value::as_str) == Some("shapesFromText") => SIZE_DURATION,
+        "layer.add" if params.get("op").and_then(Value::as_str) == Some("masksFromText") => {
             &["comp.attrs.width", "comp.attrs.height", "comp.attrs.pixel_aspect"]
         }
         // path_nulls.rs:173-185: each null is a layer.newNull; tracing keys its progress in time.
-        "paths.nullsFollowPoints" | "paths.pointsFollowNulls" => SIZE_DURATION,
-        "paths.tracePath" => &["comp.attrs.width", "comp.attrs.height", "comp.attrs.duration", "comp.attrs.frame_rate"],
+        "path.nullsFollowPoints" | "path.pointsFollowNulls" => SIZE_DURATION,
+        "path.tracePath" => &["comp.attrs.width", "comp.attrs.height", "comp.attrs.duration", "comp.attrs.frame_rate"],
         // layer.rs:335: the next or previous layer skips shy layers while they are hidden.
         "layer.selectNext" | "layer.selectPrevious" => &["comp.attrs.hide_shy"],
         // three_d/1, three_d/4: a `frame` argument is converted with the comp's rate.

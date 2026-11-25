@@ -14,8 +14,8 @@ async fn waiting_for_sdk_another_agents_edit_of_the_indexed_marker_refuses_as_ch
         [(1, "C1"), (4, "C4")].iter().map(|(time, comment)| json!({"command":"comp.addMarker","params":{"time":time,"comment":comment}})).collect();
     f.ok("run", json!({"steps":steps})).await;
     let (_, comp, basis) = f.inspect().await;
-    f.call_by("agent-other", "run", json!({"steps":[{"command":"markers.set","params":{"comp":comp,"index":1,"comment":"Theirs"}}]})).await;
-    let refused = f.refused("run", json!({"basis":basis,"steps":[{"command":"markers.set","params":{"index":1,"comment":"Mine"}}]})).await;
+    f.call_by("agent-other", "run", json!({"steps":[{"command":"marker.set","params":{"comp":comp,"index":1,"comment":"Theirs"}}]})).await;
+    let refused = f.refused("run", json!({"basis":basis,"steps":[{"command":"marker.set","params":{"index":1,"comment":"Mine"}}]})).await;
     assert_conflict(&refused, &comp.to_string(), "changed");
     f.shutdown().await;
 }

@@ -83,7 +83,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
   const [toggled, setToggled] = useState<ReadonlyMap<number, ReadonlySet<string>>>(new Map())
   const noPaths = useMemo(() => new Set<string>(), [])
   // The person's selected keyframes, asked again after every change.
-  const selection = useEngineQuery<SelectedKey[]>('keys.info', {})
+  const selection = useEngineQuery<SelectedKey[]>('keyframe.info', {})
   const selectedKeys = useMemo(() => new Set((Array.isArray(selection) ? selection : []).map((key) => keyId({ layer: key.layer, path: key.path, time: key.compTime }))), [selection])
   const gestures = useKeyGestures(rows, frame, selectedKeys)
   /** Whether Cmd+V pastes keyframes: the last Cmd+C copied some. */
@@ -164,22 +164,22 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
     // Delete, or Backspace (the Mac's delete key): the marker clicked last, the selected keyframes, else the selected layers.
     if (pressed(K.delete, event)) {
       if (marker && !readOnly) {
-        void run('markers.delete', markerParams(marker))
+        void run('marker.delete', markerParams(marker))
         setMarker(null)
         return true
       }
       if (readOnly || (!selected.length && !selectedKeys.size)) return false
-      void run('edit.clear', {})
+      void run('edit.delete', {})
       return true
     }
     if (pressed(K.copyKeys, event)) {
       copiedKeys.current = selectedKeys.size > 0
       if (!selectedKeys.size) return false
-      void run('keys.copy', {})
+      void run('keyframe.copy', {})
       return true
     }
     if (pressed(K.pasteKeys, event) && copiedKeys.current && !readOnly) {
-      void run('keys.paste', { time: info.time })
+      void run('keyframe.paste', { time: info.time })
       return true
     }
     // J and K: the previous and next keyframe (F9, Easy Ease, is the engine's shortcut, run by the frame).
@@ -285,14 +285,14 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
             if (!mark || keysOf(mark).length !== 1) return
             event.stopPropagation()
             const marked = keysOf(mark)
-            void run('keys.select', { keys: marked, timeBase: 'comp', selectProperties: true }).then((done) => done !== null && onCommand('kit:edit-key'))
+            void run('keyframe.select', { keys: marked, timeBase: 'comp', selectProperties: true }).then((done) => done !== null && onCommand('kit:edit-key'))
           }}
           onContextMenu={(event) => {
             const mark = event.target instanceof Element ? event.target.closest<HTMLElement>('.motion-key') : null
             if (!mark) return
             event.preventDefault()
             const marked = keysOf(mark)
-            if (!marked.every((key) => selectedKeys.has(keyId(key)))) void run('keys.select', { keys: marked, timeBase: 'comp', selectProperties: true })
+            if (!marked.every((key) => selectedKeys.has(keyId(key)))) void run('keyframe.select', { keys: marked, timeBase: 'comp', selectProperties: true })
             setKeyMenu({ x: event.clientX, y: event.clientY })
           }}
           data-testid="motion-timeline-rows"
@@ -460,7 +460,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
                 <Button
                   variant="primary"
                   onClick={() => {
-                    void run('markers.set', { ...markerParams(naming.marker), comment: naming.comment.trim() })
+                    void run('marker.set', { ...markerParams(naming.marker), comment: naming.comment.trim() })
                     setNaming(null)
                   }}
                   data-testid="motion-marker-dialog-ok"
@@ -474,7 +474,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
               className="motion-form"
               onSubmit={(event) => {
                 event.preventDefault()
-                void run('markers.set', { ...markerParams(naming.marker), comment: naming.comment.trim() })
+                void run('marker.set', { ...markerParams(naming.marker), comment: naming.comment.trim() })
                 setNaming(null)
               }}
             >

@@ -18,7 +18,7 @@ export type PropRead = { uid?: number; type?: string; keys?: PropKey[] }
 
 /**
  * The Animation menu's Keyframe Interpolation rows and the key menu's: each sets the selected
- * keyframes' interpolation (`keys.interpolation`), both sides.
+ * keyframes' interpolation (`keyframe.interpolation`), both sides.
  */
 export const INTERPOLATIONS = [
   { command: 'kit:interp-linear', label: 'Linear', interpolation: 'linear' },
@@ -27,5 +27,5 @@ export const INTERPOLATIONS = [
   { command: 'kit:interp-hold', label: 'Hold', interpolation: 'hold' },
 ] as const
 
-/** The `keys.interpolation` value a Keyframe Interpolation row sets, by its command. */
+/** The `keyframe.interpolation` value a Keyframe Interpolation row sets, by its command. */
 export const INTERPOLATION_OF: Record<string, string> = Object.fromEntries(INTERPOLATIONS.map((row) => [row.command, row.interpolation]))

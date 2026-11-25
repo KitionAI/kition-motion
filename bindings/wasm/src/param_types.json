@@ -4,7 +4,7 @@
    "type": "string"
   }
  },
- "app.find": {
+ "edit.find": {
   "query": {
    "type": "string"
   }
@@ -32,7 +32,7 @@
    "type": "boolean"
   }
  },
- "camera.create": {
+ "camera.add": {
   "effect": {
    "oneOf": [
     {
@@ -46,7 +46,7 @@
    ]
   }
  },
- "camera.createFromSolve": {
+ "camera.addFromSolve": {
   "effect": {
    "oneOf": [
     {
@@ -557,7 +557,7 @@
    ]
   }
  },
- "comp.vr.createEnvironment": {
+ "comp.vr.addEnvironment": {
   "comp": {
    "oneOf": [
     {
@@ -1093,7 +1093,7 @@
    ]
   }
  },
- "file.createProxy": {
+ "file.addProxy": {
   "output": {
    "description": "template; one of several alternative parameters",
    "type": "string"
@@ -1199,7 +1199,7 @@
    "type": "number"
   }
  },
- "file.newCompFromSelection": {
+ "comp.newFromSelection": {
   "overlapDuration": {
    "description": "s",
    "type": "number"
@@ -1294,13 +1294,13 @@
    "type": "integer"
   }
  },
- "jobs.cancel": {
+ "job.cancel": {
   "job": {
    "description": "render|track|maskTrack|warp|camera|roto|task:<n>|all",
    "type": "string"
   }
  },
- "keys.applyEase": {
+ "keyframe.applyEase": {
   "comp": {
    "oneOf": [
     {
@@ -1327,7 +1327,7 @@
    ]
   }
  },
- "keys.audioToKeyframes": {
+ "keyframe.audioToKeyframes": {
   "comp": {
    "oneOf": [
     {
@@ -1341,7 +1341,7 @@
    ]
   }
  },
- "keys.interpolation": {
+ "keyframe.interpolation": {
   "autoBezier": {
    "type": "boolean"
   },
@@ -1352,7 +1352,7 @@
    "type": "boolean"
   }
  },
- "keys.move": {
+ "keyframe.move": {
   "delta": {
    "description": "s",
    "type": "number"
@@ -1361,7 +1361,7 @@
    "type": "string"
   }
  },
- "keys.nudge": {
+ "keyframe.nudge": {
   "frames": {
    "type": "integer"
   },
@@ -1369,7 +1369,7 @@
    "type": "string"
   }
  },
- "keys.rpfCameraImport": {
+ "keyframe.rpfCameraImport": {
   "comp": {
    "oneOf": [
     {
@@ -1383,12 +1383,12 @@
    ]
   }
  },
- "keys.select": {
+ "keyframe.select": {
   "add": {
    "type": "boolean"
   }
  },
- "keys.set": {
+ "keyframe.set": {
   "merge": {
    "type": "string"
   },
@@ -1417,7 +1417,7 @@
    ]
   }
  },
- "keys.setEase": {
+ "keyframe.setEase": {
   "dim": {
    "type": "integer"
   },
@@ -1428,13 +1428,13 @@
    "type": "number"
   }
  },
- "keys.setLabel": {
+ "keyframe.setLabel": {
   "label": {
    "description": "name|none|0–16",
    "type": "string"
   }
  },
- "keys.setSpatialTangents": {
+ "keyframe.setSpatialTangents": {
   "break": {
    "type": "boolean"
   },
@@ -1445,19 +1445,19 @@
    "type": "number"
   }
  },
- "keys.smooth": {
+ "keyframe.smooth": {
   "tolerance": {
    "description": "property units, 1",
    "type": "number"
   }
  },
- "keys.toggleTransform": {
+ "keyframe.toggleTransform": {
   "prop": {
    "description": "anchor|position|scale|rotation|opacity",
    "type": "string"
   }
  },
- "keys.transform": {
+ "keyframe.transform": {
   "merge": {
    "type": "string"
   },
@@ -1482,7 +1482,7 @@
    "type": "number"
   }
  },
- "keys.velocity": {
+ "keyframe.velocity": {
   "continuous": {
    "type": "boolean"
   },
@@ -1543,7 +1543,7 @@
    "description": "a number, or one per dimension"
   }
  },
- "keys.wiggle": {
+ "keyframe.wiggle": {
   "dimension": {
    "description": "index for `one`",
    "type": "integer"
@@ -3300,13 +3300,13 @@
    "type": "number"
   }
  },
- "markers.delete": {
+ "marker.delete": {
   "at": {
    "description": "comp s; one of several alternative parameters",
    "type": "number"
   }
  },
- "markers.nested": {
+ "marker.nested": {
   "comp": {
    "type": "integer"
   },
@@ -3315,7 +3315,7 @@
    "type": "integer"
   }
  },
- "markers.set": {
+ "marker.set": {
   "chapter": {
    "type": "string"
   },
@@ -4602,7 +4602,7 @@
    ]
   }
  },
- "scopes.analyze": {
+ "scope.analyze": {
   "clamp": {
    "type": "boolean"
   },
@@ -5012,7 +5012,7 @@
    "type": "string"
   }
  },
- "shortcuts.import": {
+ "shortcut.import": {
   "preset": {
    "description": "exported document; one of several alternative parameters",
    "oneOf": [
@@ -5025,7 +5025,7 @@
    ]
   }
  },
- "shortcuts.list": {
+ "shortcut.list": {
   "keys": {
    "type": "string"
   },
@@ -5033,17 +5033,17 @@
    "type": "string"
   }
  },
- "shortcuts.preset": {
+ "shortcut.preset": {
   "from": {
    "type": "string"
   }
  },
- "shortcuts.reset": {
+ "shortcut.reset": {
   "command": {
    "type": "string"
   }
  },
- "shortcuts.set": {
+ "shortcut.set": {
   "command": {
    "type": "string"
   },
@@ -5052,12 +5052,12 @@
    "type": "string"
   }
  },
- "templates.create": {
+ "template.add": {
   "footageDir": {
    "type": "string"
   },
   "id": {
-   "description": "(templates.list) | path (.ectemplate)",
+   "description": "(template.list) | path (.ectemplate)",
    "type": "string"
   },
   "projectPath": {
@@ -5065,13 +5065,13 @@
    "type": "string"
   }
  },
- "templates.delete": {
+ "template.delete": {
   "id": {
    "description": "user/<file>",
    "type": "string"
   }
  },
- "templates.saveAs": {
+ "template.saveAs": {
   "category": {
    "type": "string"
   },
@@ -5635,47 +5635,47 @@
    ]
   }
  },
- "view.3d.activeCamera": {
+ "view.threeD.activeCamera": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.back": {
+ "view.threeD.back": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.bottom": {
+ "view.threeD.bottom": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.custom1": {
+ "view.threeD.custom1": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.custom2": {
+ "view.threeD.custom2": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.custom3": {
+ "view.threeD.custom3": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.default": {
+ "view.threeD.default": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.front": {
+ "view.threeD.front": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.last": {
+ "view.threeD.last": {
   "comp": {
    "oneOf": [
     {
@@ -5689,17 +5689,17 @@
    ]
   }
  },
- "view.3d.left": {
+ "view.threeD.left": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.right": {
+ "view.threeD.right": {
   "comp": {
    "type": "integer"
   }
  },
- "view.3d.top": {
+ "view.threeD.top": {
   "comp": {
    "type": "integer"
   }

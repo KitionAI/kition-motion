@@ -3,42 +3,279 @@ use super::Row;
 const LAYERS: &[&str] = &["comp id/numeric-string/name or active", "layers[] or layer id/numeric-string/#1-based-index/name else selected_layers"];
 const SELECT: &[&str] = &["active_comp fallback", "selected_layers/selected_props/selected_keys/selected_vertices", "text_edit and clipboards choose dispatch"];
 macro_rules! route {
-    ($id:literal,$path:literal,$reads:expr,$writes:expr,$src:literal) => { Row { command: $id, path: $path, resolves: LAYERS, reads: $reads, checks: &["nested handler eligibility", "Session::execute enablement or explicit-target bypass"], writes: $writes, state: SELECT, source: $src } };
+    ($id:literal,$path:literal,$reads:expr,$writes:expr,$src:literal) => {
+        Row {
+            command: $id,
+            path: $path,
+            resolves: LAYERS,
+            reads: $reads,
+            checks: &["nested handler eligibility", "Session::execute enablement or explicit-target bypass"],
+            writes: $writes,
+            state: SELECT,
+            source: $src,
+        }
+    };
 }
 
 pub(super) const ROWS: &[Row] = &[
-    route!("edit.undo", "scope default/person/agent", &["chosen scope history.undo snapshot and KDM step count", "current project and next_id floor", "stored fields inverted by replica undo"], &["undo restores history state/replica scoped inverse", "history redo entry and sanitized selection"], "crates/engine/engine/src/commands/edit.rs:60; crates/engine/engine/src/lib.rs:738"),
-    route!("edit.redo", "scope default/person/agent", &["scope history.redo snapshot and KDM step count", "current project and next_id floor", "stored fields assigned by redo"], &["redo history/replica scoped replay", "history undo entry and selection sanitation"], "crates/engine/engine/src/commands/edit.rs:68; crates/engine/engine/src/lib.rs:758"),
-    route!("edit.duplicate", "effects selected and layers absent", &["selected effect group identity and full content", "effect.duplicate closure"], &["nested effect.duplicate per selected group"], "crates/engine/engine/src/commands/edit.rs:118"),
-    route!("edit.duplicate", "selected shape contents and layers absent", &["selected contents full subtree and sibling position", "prop_groups duplicate_contents closure"], &["copies of selected shape contents with new uids"], "crates/engine/engine/src/commands/edit.rs:129"),
-    route!("edit.duplicate", "layers", &["each target whole layer cloned", "target insertion position", "all layer names for unique copy name", "parent/matte referenced-layer membership", "next_id"], &["copies before originals with fresh ids/uids/names", "parent/matte remapped to copies if copied else retained when present", "selected_layers copies", "next_id"], "crates/engine/engine/src/commands/edit.rs:137; crates/engine/engine/src/commands/edit.rs:101"),
-    route!("edit.clear", "text edit, layers absent", &["text.delete closure"], &["nested text.delete"], "crates/engine/engine/src/commands/edit.rs:159"),
-    route!("edit.clear", "selected timeRemap group, layers absent", &["selected remap property/value/keys/timing", "layer_time disable_time_remap closure"], &["remove selected layer time remapping"], "crates/engine/engine/src/commands/edit.rs:165"),
-    route!("edit.clear", "selected keys, layers absent", &["keys.delete closure"], &["nested keys.delete"], "crates/engine/engine/src/commands/edit.rs:172"),
-    route!("edit.clear", "loose mask vertices, layers absent", &["selected_vertices and selected_props membership", "target mask group existence", "mask.deleteVertices closure"], &["nested mask.deleteVertices"], "crates/engine/engine/src/commands/edit.rs:177"),
-    route!("edit.clear", "selected puppet pins, layers absent", &["puppet.removePin closure"], &["nested puppet.removePin"], "crates/engine/engine/src/commands/edit.rs:184"),
-    route!("edit.clear", "selected effects, layers absent", &["effect.remove closure"], &["nested effect.remove"], "crates/engine/engine/src/commands/edit.rs:189"),
-    route!("edit.clear", "selected mask/shape/text animator/tracker group, layers absent", &["prop_groups.remove_selected closure"], &["remove selected groups"], "crates/engine/engine/src/commands/edit.rs:193"),
-    route!("edit.clear", "layers", &["target locked eligibility and complete removed layer", "every remaining layer.parent and track_matte for reference cleanup", "orphan child and old parent ancestry transforms at CTI with expressions/footage", "parent_fixes 2D/3D compensation including separated position keys, spatial tangents/ease scaling and source pixel aspects"], &["remove unlocked targets", "orphan.parent=None and compensated transforms/keys", "track_matte=None for references to deleted layer", "selected_layers/props/keys clear"], "crates/engine/engine/src/commands/edit.rs:199; crates/engine/engine/src/commands/layer.rs:555; crates/engine/engine/src/commands/layer.rs:711"),
-    route!("edit.cut", "text edit, layers absent", &["text_edit cut closure"], &["text clipboard and deletion"], "crates/engine/engine/src/commands/edit.rs:487"),
-    route!("edit.cut", "selected keys, layers absent", &["keys.copy and keys.delete closures"], &["key clipboard and key deletion"], "crates/engine/engine/src/commands/edit.rs:491"),
-    route!("edit.cut", "selected shape contents with no selected effects, layers absent", &["copy_contents and cut_contents closures", "selected_props branch decisions"], &["contents clipboard and removed groups"], "crates/engine/engine/src/commands/edit.rs:497"),
-    route!("edit.cut", "copy then clear dispatch", &["all result-dependent facts of matching copy and edit.clear branches", "copy properties traverses selected leaf/tree paths and keyframes/static values", "copy layer branch clones full selected layers"], &["chosen clipboard updated then selected object deleted via clear dispatch"], "crates/engine/engine/src/commands/edit.rs:503; crates/engine/engine/src/commands/edit.rs:236; crates/engine/engine/src/commands/edit.rs:278"),
+    route!(
+        "edit.undo",
+        "scope default/person/agent",
+        &["chosen scope history.undo snapshot and KDM step count", "current project and next_id floor", "stored fields inverted by replica undo"],
+        &["undo restores history state/replica scoped inverse", "history redo entry and sanitized selection"],
+        "crates/engine/engine/src/commands/edit.rs:60; crates/engine/engine/src/lib.rs:738"
+    ),
+    route!(
+        "edit.redo",
+        "scope default/person/agent",
+        &["scope history.redo snapshot and KDM step count", "current project and next_id floor", "stored fields assigned by redo"],
+        &["redo history/replica scoped replay", "history undo entry and selection sanitation"],
+        "crates/engine/engine/src/commands/edit.rs:68; crates/engine/engine/src/lib.rs:758"
+    ),
+    route!(
+        "edit.duplicate",
+        "effects selected and layers absent",
+        &["selected effect group identity and full content", "effect.duplicate closure"],
+        &["nested effect.duplicate per selected group"],
+        "crates/engine/engine/src/commands/edit.rs:118"
+    ),
+    route!(
+        "edit.duplicate",
+        "selected shape contents and layers absent",
+        &["selected contents full subtree and sibling position", "prop_groups duplicate_contents closure"],
+        &["copies of selected shape contents with new uids"],
+        "crates/engine/engine/src/commands/edit.rs:129"
+    ),
+    route!(
+        "edit.duplicate",
+        "layers",
+        &[
+            "each target whole layer cloned",
+            "target insertion position",
+            "all layer names for unique copy name",
+            "parent/matte referenced-layer membership",
+            "next_id"
+        ],
+        &[
+            "copies before originals with fresh ids/uids/names",
+            "parent/matte remapped to copies if copied else retained when present",
+            "selected_layers copies",
+            "next_id"
+        ],
+        "crates/engine/engine/src/commands/edit.rs:137; crates/engine/engine/src/commands/edit.rs:101"
+    ),
+    route!("edit.delete", "text edit, layers absent", &["text.delete closure"], &["nested text.delete"], "crates/engine/engine/src/commands/edit.rs:159"),
+    route!(
+        "edit.delete",
+        "selected timeRemap group, layers absent",
+        &["selected remap property/value/keys/timing", "layer_time disable_time_remap closure"],
+        &["remove selected layer time remapping"],
+        "crates/engine/engine/src/commands/edit.rs:165"
+    ),
+    route!(
+        "edit.delete",
+        "selected keys, layers absent",
+        &["keyframe.delete closure"],
+        &["nested keyframe.delete"],
+        "crates/engine/engine/src/commands/edit.rs:172"
+    ),
+    route!(
+        "edit.delete",
+        "loose mask vertices, layers absent",
+        &["selected_vertices and selected_props membership", "target mask group existence", "mask.deleteVertices closure"],
+        &["nested mask.deleteVertices"],
+        "crates/engine/engine/src/commands/edit.rs:177"
+    ),
+    route!(
+        "edit.delete",
+        "selected puppet pins, layers absent",
+        &["puppet.removePin closure"],
+        &["nested puppet.removePin"],
+        "crates/engine/engine/src/commands/edit.rs:184"
+    ),
+    route!(
+        "edit.delete",
+        "selected effects, layers absent",
+        &["effect.remove closure"],
+        &["nested effect.remove"],
+        "crates/engine/engine/src/commands/edit.rs:189"
+    ),
+    route!(
+        "edit.delete",
+        "selected mask/shape/text animator/tracker group, layers absent",
+        &["prop_groups.remove_selected closure"],
+        &["remove selected groups"],
+        "crates/engine/engine/src/commands/edit.rs:193"
+    ),
+    route!(
+        "edit.delete",
+        "layers",
+        &[
+            "target locked eligibility and complete removed layer",
+            "every remaining layer.parent and track_matte for reference cleanup",
+            "orphan child and old parent ancestry transforms at CTI with expressions/footage",
+            "parent_fixes 2D/3D compensation including separated position keys, spatial tangents/ease scaling and source pixel aspects"
+        ],
+        &[
+            "remove unlocked targets",
+            "orphan.parent=None and compensated transforms/keys",
+            "track_matte=None for references to deleted layer",
+            "selected_layers/props/keys clear"
+        ],
+        "crates/engine/engine/src/commands/edit.rs:199; crates/engine/engine/src/commands/layer.rs:555; crates/engine/engine/src/commands/layer.rs:711"
+    ),
+    route!(
+        "edit.cut",
+        "text edit, layers absent",
+        &["text_edit cut closure"],
+        &["text clipboard and deletion"],
+        "crates/engine/engine/src/commands/edit.rs:487"
+    ),
+    route!(
+        "edit.cut",
+        "selected keys, layers absent",
+        &["keyframe.copy and keyframe.delete closures"],
+        &["key clipboard and key deletion"],
+        "crates/engine/engine/src/commands/edit.rs:491"
+    ),
+    route!(
+        "edit.cut",
+        "selected shape contents with no selected effects, layers absent",
+        &["copy_contents and cut_contents closures", "selected_props branch decisions"],
+        &["contents clipboard and removed groups"],
+        "crates/engine/engine/src/commands/edit.rs:497"
+    ),
+    route!(
+        "edit.cut",
+        "copy then clear dispatch",
+        &[
+            "all result-dependent facts of matching copy and edit.delete branches",
+            "copy properties traverses selected leaf/tree paths and keyframes/static values",
+            "copy layer branch clones full selected layers"
+        ],
+        &["chosen clipboard updated then selected object deleted via clear dispatch"],
+        "crates/engine/engine/src/commands/edit.rs:503; crates/engine/engine/src/commands/edit.rs:236; crates/engine/engine/src/commands/edit.rs:278"
+    ),
     route!("edit.paste", "text edit", &["text_edit paste closure and text clipboard"], &["text paste"], "crates/engine/engine/src/commands/edit.rs:507"),
-    route!("edit.paste", "link/expression clipboard", &["clipboard path/expression pairs", "selected layer.props path existence", "destination expr assigned field"], &["property.expr pairs; does not check locked"], "crates/engine/engine/src/commands/edit.rs:461"),
-    route!("edit.paste", "static value clipboard, optionally keys", &["value clipboard", "selected layer.locked/start_time/stretch", "destination property path/value type for coerce_json", "destination animation membership/hold_only and same-field value/key", "keys.paste closure if clip_is_keys"], &["set_value_at CTI on matching unlocked props", "optional keys.paste merged into same undo"], "crates/engine/engine/src/commands/edit.rs:325; crates/engine/project/src/props.rs:133"),
-    route!("edit.paste", "key clipboard", &["keys.paste closure"], &["nested keys.paste"], "crates/engine/engine/src/commands/edit.rs:517"),
+    route!(
+        "edit.paste",
+        "link/expression clipboard",
+        &["clipboard path/expression pairs", "selected layer.props path existence", "destination expr assigned field"],
+        &["property.expr pairs; does not check locked"],
+        "crates/engine/engine/src/commands/edit.rs:461"
+    ),
+    route!(
+        "edit.paste",
+        "static value clipboard, optionally keys",
+        &[
+            "value clipboard",
+            "selected layer.locked/start_time/stretch",
+            "destination property path/value type for coerce_json",
+            "destination animation membership/hold_only and same-field value/key",
+            "keyframe.paste closure if clip_is_keys"
+        ],
+        &["set_value_at CTI on matching unlocked props", "optional keyframe.paste merged into same undo"],
+        "crates/engine/engine/src/commands/edit.rs:325; crates/engine/project/src/props.rs:133"
+    ),
+    route!("edit.paste", "key clipboard", &["keyframe.paste closure"], &["nested keyframe.paste"], "crates/engine/engine/src/commands/edit.rs:517"),
     route!("edit.paste", "effect clipboard", &["effect.paste closure"], &["nested effect.paste"], "crates/engine/engine/src/commands/edit.rs:520"),
-    route!("edit.paste", "contents clipboard", &["prop_groups.paste_contents closure"], &["nested pasted contents"], "crates/engine/engine/src/commands/edit.rs:523"),
-    route!("edit.paste", "layer clipboard", &["clipboard complete layers", "selected first layer position or top insertion gap", "all comp layer names for unique names", "membership of parent/matte refs", "next_id"], &["new layers at selected position/top", "fresh layer/prop ids and remapped parent/matte", "selected_layers copies and next_id"], "crates/engine/engine/src/commands/edit.rs:526; crates/engine/engine/src/commands/edit.rs:101"),
-    route!("edit.pasteReversedKeyframes", "mirror clipboard times/eases then keys.paste", &["key clipboard all times, maximum span, ease/interp/tangent pairs", "keys.paste closure"], &["nested keys.paste; original clipboard restored even on returned error"], "crates/engine/engine/src/commands/edit.rs:609"),
-    Row { command: "edit.splitLayer", path: "split each target if CTI strictly inside in/out", resolves: LAYERS, reads: &["layer.in_point/out_point eligibility", "whole split layer cloned", "layer insertion position", "next_id", "prefs.general.create_split_layers_above"], checks: &["t > in and t < out; no layer locked test"], writes: &["original.out_point=CTI", "copy.in_point=CTI, new ids/uids", "copy inserted above/below", "next_id/selected_layers"], state: &["time() of ACTIVE comp even with explicit target comp", "selection fallback", "split-above preference"], source: "crates/engine/engine/src/commands/edit.rs:550" },
-    route!("edit.liftWorkArea", "before/after unchanged; inside remove; overlap trim; spanning split", &["comp.work_area", "selected targets or all when empty", "layer.locked and in/out classify", "spanning layer entire content copied", "stack positions/next_id"], &["inside layers removed", "head.out_point=a or tail.in_point=b", "spanning tail clone inserted before original", "selected_layers retain survivors"], "crates/engine/engine/src/commands/edit.rs:638"),
-    route!("edit.extractWorkArea", "lift branches plus move later/tail portions left by gap", &["all lift inputs", "work_area width b-a", "shifted layer.start_time/in_point/out_point"], &["lift removals/trims/splits", "later/tail start_time/in_point/out_point -= gap"], "crates/engine/engine/src/commands/edit.rs:638"),
-    route!("edit.label", "keys explicit or selected and target != layers", &["keys_more.label_keys closure", "selected keys decide branch"], &["selected key label"], "crates/engine/engine/src/commands/edit.rs:581"),
-    route!("edit.label", "layers or project selection when target layer list empty", &["prefs.label_from_name", "target layer.label assigned", "selected project item.label assigned when no layers"], &["layer.label or project item.label; no layer lock test"], "crates/engine/engine/src/commands/edit.rs:585"),
+    route!(
+        "edit.paste",
+        "contents clipboard",
+        &["prop_groups.paste_contents closure"],
+        &["nested pasted contents"],
+        "crates/engine/engine/src/commands/edit.rs:523"
+    ),
+    route!(
+        "edit.paste",
+        "layer clipboard",
+        &[
+            "clipboard complete layers",
+            "selected first layer position or top insertion gap",
+            "all comp layer names for unique names",
+            "membership of parent/matte refs",
+            "next_id"
+        ],
+        &["new layers at selected position/top", "fresh layer/prop ids and remapped parent/matte", "selected_layers copies and next_id"],
+        "crates/engine/engine/src/commands/edit.rs:526; crates/engine/engine/src/commands/edit.rs:101"
+    ),
+    route!(
+        "edit.pasteReversedKeyframes",
+        "mirror clipboard times/eases then keyframe.paste",
+        &["key clipboard all times, maximum span, ease/interp/tangent pairs", "keyframe.paste closure"],
+        &["nested keyframe.paste; original clipboard restored even on returned error"],
+        "crates/engine/engine/src/commands/edit.rs:609"
+    ),
+    Row {
+        command: "edit.splitLayer",
+        path: "split each target if CTI strictly inside in/out",
+        resolves: LAYERS,
+        reads: &[
+            "layer.in_point/out_point eligibility",
+            "whole split layer cloned",
+            "layer insertion position",
+            "next_id",
+            "prefs.general.create_split_layers_above",
+        ],
+        checks: &["t > in and t < out; no layer locked test"],
+        writes: &["original.out_point=CTI", "copy.in_point=CTI, new ids/uids", "copy inserted above/below", "next_id/selected_layers"],
+        state: &["time() of ACTIVE comp even with explicit target comp", "selection fallback", "split-above preference"],
+        source: "crates/engine/engine/src/commands/edit.rs:550",
+    },
+    route!(
+        "edit.liftWorkArea",
+        "before/after unchanged; inside remove; overlap trim; spanning split",
+        &[
+            "comp.work_area",
+            "selected targets or all when empty",
+            "layer.locked and in/out classify",
+            "spanning layer entire content copied",
+            "stack positions/next_id"
+        ],
+        &["inside layers removed", "head.out_point=a or tail.in_point=b", "spanning tail clone inserted before original", "selected_layers retain survivors"],
+        "crates/engine/engine/src/commands/edit.rs:638"
+    ),
+    route!(
+        "edit.extractWorkArea",
+        "lift branches plus move later/tail portions left by gap",
+        &["all lift inputs", "work_area width b-a", "shifted layer.start_time/in_point/out_point"],
+        &["lift removals/trims/splits", "later/tail start_time/in_point/out_point -= gap"],
+        "crates/engine/engine/src/commands/edit.rs:638"
+    ),
+    route!(
+        "edit.label",
+        "keys explicit or selected and target != layers",
+        &["keys_more.label_keys closure", "selected keys decide branch"],
+        &["selected key label"],
+        "crates/engine/engine/src/commands/edit.rs:581"
+    ),
+    route!(
+        "edit.label",
+        "layers or project selection when target layer list empty",
+        &["prefs.label_from_name", "target layer.label assigned", "selected project item.label assigned when no layers"],
+        &["layer.label or project item.label; no layer lock test"],
+        "crates/engine/engine/src/commands/edit.rs:585"
+    ),
     route!("edit.purgeUndo", "clear undo/redo/branches", &["session history"], &["history.clear"], "crates/engine/engine/src/commands/edit.rs:797"),
-    route!("edit.purge", "snapshot/memory/disk/3d caches", &["cache/storage availability and current entry count only for response"], &["session caches and optional external disk cache clear", "viewer.show_snapshot=false for snapshot/all"], "crates/engine/engine/src/commands/edit.rs:721"),
-    route!("edit.editOriginal", "first selected layer footage else first project item", &["selected layer.source", "source item.kind/path nonempty"], &["OpenUrl event file://path"], "crates/engine/engine/src/commands/edit.rs:777"),
-    route!("edit.history.goto", "steps undo/redo, id or depth-first tree index", &["history working line/branches and snapshot identities", "whole target/current project", "index positional history node"], &["project replaced by snapshot", "history tree rerooted and replica jump", "state sanitized"], "crates/engine/engine/src/commands/edit.rs:881; crates/engine/engine/src/history.rs:392"),
+    route!(
+        "edit.purge",
+        "snapshot/memory/disk/3d caches",
+        &["cache/storage availability and current entry count only for response"],
+        &["session caches and optional external disk cache clear", "viewer.show_snapshot=false for snapshot/all"],
+        "crates/engine/engine/src/commands/edit.rs:721"
+    ),
+    route!(
+        "edit.editOriginal",
+        "first selected layer footage else first project item",
+        &["selected layer.source", "source item.kind/path nonempty"],
+        &["OpenUrl event file://path"],
+        "crates/engine/engine/src/commands/edit.rs:777"
+    ),
+    route!(
+        "edit.history.goto",
+        "steps undo/redo, id or depth-first tree index",
+        &["history working line/branches and snapshot identities", "whole target/current project", "index positional history node"],
+        &["project replaced by snapshot", "history tree rerooted and replica jump", "state sanitized"],
+        "crates/engine/engine/src/commands/edit.rs:881; crates/engine/engine/src/history.rs:392"
+    ),
 ];

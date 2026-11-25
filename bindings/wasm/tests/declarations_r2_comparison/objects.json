@@ -91,12 +91,12 @@
  },
  {
   "id": "anim/0",
-  "command": "keys.copy",
+  "command": "keyframe.copy",
   "path": "clipboard only",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -130,7 +130,7 @@
  },
  {
   "id": "anim/1",
-  "command": "keys.paste",
+  "command": "keyframe.paste",
   "path": "resolve compatible target and paste clipboard",
   "params": {
    "layers": [
@@ -141,7 +141,7 @@
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -163,7 +163,7 @@
     }
    ],
    [
-    "keys.copy",
+    "keyframe.copy",
     {}
    ]
   ],
@@ -179,7 +179,7 @@
  },
  {
   "id": "anim/2",
-  "command": "keys.selectAll",
+  "command": "keyframe.selectAll",
   "path": "selection only",
   "params": {
    "layers": [
@@ -198,14 +198,14 @@
  },
  {
   "id": "anim/3",
-  "command": "keys.nudge",
+  "command": "keyframe.nudge",
   "path": "selected keys, current or merged base",
   "params": {
    "frames": 1
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -229,12 +229,12 @@
  },
  {
   "id": "anim/4",
-  "command": "keys.nudgeForward",
+  "command": "keyframe.nudgeForward",
   "path": "selected keys, current or merged base",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -258,12 +258,12 @@
  },
  {
   "id": "anim/5",
-  "command": "keys.nudgeBackward",
+  "command": "keyframe.nudgeBackward",
   "path": "selected keys, current or merged base",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -287,12 +287,12 @@
  },
  {
   "id": "anim/6",
-  "command": "keys.nudgeForward10",
+  "command": "keyframe.nudgeForward10",
   "path": "selected keys, current or merged base",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -316,12 +316,12 @@
  },
  {
   "id": "anim/7",
-  "command": "keys.nudgeBackward10",
+  "command": "keyframe.nudgeBackward10",
   "path": "selected keys, current or merged base",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -345,7 +345,7 @@
  },
  {
   "id": "anim/8",
-  "command": "keys.set",
+  "command": "keyframe.set",
   "path": "nearest stored key value only",
   "params": {
    "layer": "{A}",
@@ -365,7 +365,7 @@
  },
  {
   "id": "anim/9",
-  "command": "keys.set",
+  "command": "keyframe.set",
   "path": "newTime supplied",
   "params": {
    "layer": "{A}",
@@ -385,7 +385,7 @@
  },
  {
   "id": "anim/10",
-  "command": "keys.setEase",
+  "command": "keyframe.setEase",
   "path": "nearest key one side, continuous may update both",
   "params": {
    "layer": "{A}",
@@ -407,12 +407,12 @@
  },
  {
   "id": "anim/11",
-  "command": "keys.timeReverse",
+  "command": "keyframe.timeReverse",
   "path": "reverse selected keys within each property",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -446,12 +446,12 @@
  },
  {
   "id": "anim/12",
-  "command": "keys.selectEqual",
+  "command": "keyframe.selectEqual",
   "path": "selection only",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -475,12 +475,12 @@
  },
  {
   "id": "anim/13",
-  "command": "keys.selectPrevious",
+  "command": "keyframe.selectPrevious",
   "path": "selection only",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -504,12 +504,12 @@
  },
  {
   "id": "anim/14",
-  "command": "keys.selectFollowing",
+  "command": "keyframe.selectFollowing",
   "path": "selection only",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -741,7 +741,7 @@
  },
  {
   "id": "keys_more/0",
-  "command": "keys.audioToKeyframes",
+  "command": "keyframe.audioToKeyframes",
   "path": "sample work-area audible mix and create amplitude null",
   "params": {
    "comp": "{comp}"
@@ -761,7 +761,7 @@
  },
  {
   "id": "keys_more/1",
-  "command": "keys.rpfCameraImport",
+  "command": "keyframe.rpfCameraImport",
   "path": "parse lent JSON/CSV and create keyed camera",
   "params": {
    "path": "/tmp/m2b/camera.json",
@@ -2686,7 +2686,7 @@
  },
  {
   "id": "anim_tools/0",
-  "command": "keys.wiggle",
+  "command": "keyframe.wiggle",
   "path": "replace sampled selected run",
   "params": {
    "frequency": 5,
@@ -2695,7 +2695,7 @@
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -2729,14 +2729,14 @@
  },
  {
   "id": "anim_tools/1",
-  "command": "keys.smooth",
+  "command": "keyframe.smooth",
   "path": "replace sampled selected run",
   "params": {
    "tolerance": 1
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -3241,7 +3241,7 @@
  },
  {
   "id": "edit/5",
-  "command": "edit.clear",
+  "command": "edit.delete",
   "path": "text edit, layers absent",
   "params": {},
   "setup": [
@@ -3276,7 +3276,7 @@
  },
  {
   "id": "edit/6",
-  "command": "edit.clear",
+  "command": "edit.delete",
   "path": "selected timeRemap group, layers absent",
   "params": {},
   "setup": [
@@ -3310,12 +3310,12 @@
  },
  {
   "id": "edit/7",
-  "command": "edit.clear",
+  "command": "edit.delete",
   "path": "selected keys, layers absent",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -3334,12 +3334,12 @@
   "project": false,
   "queue": false,
   "host": false,
-  "evidence": "nested keys.delete on selected keys of {A} opacity; edit.rs:172",
+  "evidence": "nested keyframe.delete on selected keys of {A} opacity; edit.rs:172",
   "note": ""
  },
  {
   "id": "edit/8",
-  "command": "edit.clear",
+  "command": "edit.delete",
   "path": "loose mask vertices, layers absent",
   "params": {},
   "setup": [
@@ -3368,7 +3368,7 @@
  },
  {
   "id": "edit/9",
-  "command": "edit.clear",
+  "command": "edit.delete",
   "path": "selected puppet pins, layers absent",
   "params": {},
   "setup": [
@@ -3395,7 +3395,7 @@
  },
  {
   "id": "edit/10",
-  "command": "edit.clear",
+  "command": "edit.delete",
   "path": "selected effects, layers absent",
   "params": {},
   "setup": [
@@ -3419,7 +3419,7 @@
  },
  {
   "id": "edit/11",
-  "command": "edit.clear",
+  "command": "edit.delete",
   "path": "selected mask/shape/text animator/tracker group, layers absent",
   "params": {},
   "setup": [
@@ -3443,7 +3443,7 @@
  },
  {
   "id": "edit/12",
-  "command": "edit.clear",
+  "command": "edit.delete",
   "path": "layers",
   "params": {
    "layers": [
@@ -3502,7 +3502,7 @@
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -3521,7 +3521,7 @@
   "project": false,
   "queue": false,
   "host": false,
-  "evidence": "keys.copy then keys.delete; edit.rs:491",
+  "evidence": "keyframe.copy then keyframe.delete; edit.rs:491",
   "note": "clipboard written only; host=false"
  },
  {
@@ -3570,7 +3570,7 @@
   "project": false,
   "queue": false,
   "host": false,
-  "evidence": "copy layer branch clones full layers; edit.clear layer branch reads remaining layers' parent/matte and compensates orphans; edit.rs:503,236,278",
+  "evidence": "copy layer branch clones full layers; edit.delete layer branch reads remaining layers' parent/matte and compensates orphans; edit.rs:503,236,278",
   "note": "clipboard written only; host=false"
  },
  {
@@ -3718,7 +3718,7 @@
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -3757,7 +3757,7 @@
   "project": false,
   "queue": false,
   "host": true,
-  "evidence": "nested keys.paste of the key clipboard; edit.rs:517",
+  "evidence": "nested keyframe.paste of the key clipboard; edit.rs:517",
   "note": "Clipboard (session, outside the document) read by paste counts as host. Pasted at 3 s onto {A} opacity."
  },
  {
@@ -3870,11 +3870,11 @@
  {
   "id": "edit/24",
   "command": "edit.pasteReversedKeyframes",
-  "path": "mirror clipboard times/eases then keys.paste",
+  "path": "mirror clipboard times/eases then keyframe.paste",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -3913,7 +3913,7 @@
   "project": false,
   "queue": false,
   "host": true,
-  "evidence": "key clipboard times/eases mirrored; nested keys.paste; edit.rs:609",
+  "evidence": "key clipboard times/eases mirrored; nested keyframe.paste; edit.rs:609",
   "note": "Clipboard (session, outside the document) read by paste counts as host."
  },
  {
@@ -4012,7 +4012,7 @@
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -4398,7 +4398,7 @@
  },
  {
   "id": "path_nulls/0",
-  "command": "paths.nullsFollowPoints",
+  "command": "path.nullsFollowPoints",
   "path": "path vertex branch",
   "params": {
    "layer": "{A}"
@@ -4415,7 +4415,7 @@
  },
  {
   "id": "path_nulls/1",
-  "command": "paths.nullsFollowPoints",
+  "command": "path.nullsFollowPoints",
   "path": "Puppet pin branch",
   "params": {
    "layer": "{B}"
@@ -4444,7 +4444,7 @@
  },
  {
   "id": "path_nulls/2",
-  "command": "paths.pointsFollowNulls",
+  "command": "path.pointsFollowNulls",
   "path": "path vertex branch",
   "params": {
    "layer": "{A}"
@@ -4461,7 +4461,7 @@
  },
  {
   "id": "path_nulls/3",
-  "command": "paths.pointsFollowNulls",
+  "command": "path.pointsFollowNulls",
   "path": "Puppet pin branch",
   "params": {
    "layer": "{B}"
@@ -4490,7 +4490,7 @@
  },
  {
   "id": "path_nulls/4",
-  "command": "paths.tracePath",
+  "command": "path.tracePath",
   "path": "path only, optional loop",
   "params": {
    "layer": "{A}",
@@ -5494,7 +5494,7 @@
  },
  {
   "id": "animation/0",
-  "command": "anim.savePreset",
+  "command": "animation.savePreset",
   "path": "write lent preset file",
   "params": {
    "path": "/tmp/m2b-probe-3.ecpreset"
@@ -5520,7 +5520,7 @@
  },
  {
   "id": "animation/1",
-  "command": "anim.applyPreset",
+  "command": "animation.applyPreset",
   "path": "append effects and assign compatible properties",
   "params": {
    "preset": {
@@ -5555,7 +5555,7 @@
  },
  {
   "id": "animation/2",
-  "command": "anim.addKeyframe",
+  "command": "animation.addKeyframe",
   "path": "selected property static or animated",
   "params": {},
   "setup": [
@@ -5579,7 +5579,7 @@
  },
  {
   "id": "animation/3",
-  "command": "keys.exponentialScale",
+  "command": "keyframe.exponentialScale",
   "path": "replace scale keys between selected extremes",
   "params": {},
   "setup": [
@@ -5610,7 +5610,7 @@
     }
    ],
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -5709,7 +5709,7 @@
  },
  {
   "id": "animation/6",
-  "command": "anim.reveal",
+  "command": "animation.reveal",
   "path": "frontend event only",
   "params": {
    "kind": "modified"
@@ -6012,7 +6012,7 @@
  },
  {
   "id": "frontend/3",
-  "command": "anim.browsePresets",
+  "command": "animation.browsePresets",
   "path": "frontend event only in engine; headless ignores event",
   "params": {},
   "target": "none",
@@ -6042,14 +6042,14 @@
  },
  {
   "id": "key_transform/0",
-  "command": "keys.transform",
+  "command": "keyframe.transform",
   "path": "transform current selected keys",
   "params": {
    "timeOffset": 0.5
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -6073,7 +6073,7 @@
  },
  {
   "id": "key_transform/1",
-  "command": "keys.transform",
+  "command": "keyframe.transform",
   "path": "fromStart merged gesture",
   "params": {
    "timeOffset": 0.5,
@@ -6082,7 +6082,7 @@
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -6094,7 +6094,7 @@
     }
    ],
    [
-    "keys.transform",
+    "keyframe.transform",
     {
      "timeOffset": 0.2,
      "merge": "m2b-3"
@@ -6114,7 +6114,7 @@
  },
  {
   "id": "key_transform/2",
-  "command": "keys.setSpatialTangents",
+  "command": "keyframe.setSpatialTangents",
   "path": "nearest key, both sides explicit or mirror unspecified side",
   "params": {
    "layer": "{A}",
@@ -7081,7 +7081,7 @@
  },
  {
   "id": "promo_ease/0",
-  "command": "keys.applyEase",
+  "command": "keyframe.applyEase",
   "path": "curve; segments whose both endpoints lie in snapped range",
   "params": {
    "layer": "{A}",
@@ -7102,7 +7102,7 @@
  },
  {
   "id": "promo_ease/1",
-  "command": "keys.applyEase",
+  "command": "keyframe.applyEase",
   "path": "spring expression",
   "params": {
    "layer": "{A}",
@@ -7975,7 +7975,7 @@
   },
   "setup": [
    [
-    "comp.vr.createEnvironment",
+    "comp.vr.addEnvironment",
     {
      "comp": "{comp}"
     }
@@ -8058,7 +8058,7 @@
  },
  {
   "id": "app_more/3",
-  "command": "anim.applyRecentPreset",
+  "command": "animation.applyRecentPreset",
   "path": "path or zero-based recent preset default0; forward only layers",
   "params": {
    "index": 0,
@@ -8073,12 +8073,12 @@
   "project": false,
   "queue": false,
   "host": true,
-  "evidence": "forwards layers to anim.applyPreset (app_more.rs:112); preset file read from host; writes properties of the target layers",
+  "evidence": "forwards layers to animation.applyPreset (app_more.rs:112); preset file read from host; writes properties of the target layers",
   "note": "Fixture prefs.recent_presets probably empty (has_recent_presets fails) unless a preset was applied first by path. Exact applyPreset closure not expanded by the row. Preferences (prefs.*) are app state, not counted as a class; project.next_id allocation is not counted as project settings."
  },
  {
   "id": "app_more/4",
-  "command": "anim.clearRecentPresets",
+  "command": "animation.clearRecentPresets",
   "path": "clear recent list",
   "params": {},
   "target": "none",
@@ -8126,7 +8126,7 @@
  },
  {
   "id": "app_more/7",
-  "command": "comp.vr.createEnvironment",
+  "command": "comp.vr.addEnvironment",
   "path": "six faces and cube/output comps",
   "params": {
    "comp": "{comp}"
@@ -8166,7 +8166,7 @@
  },
  {
   "id": "create/0",
-  "command": "layer.create",
+  "command": "layer.add",
   "path": "shapesFromVector",
   "params": null,
   "target": "fields",
@@ -8181,7 +8181,7 @@
  },
  {
   "id": "create/1",
-  "command": "layer.create",
+  "command": "layer.add",
   "path": "shapesFromText",
   "params": {
    "op": "shapesFromText",
@@ -8201,7 +8201,7 @@
  },
  {
   "id": "create/2",
-  "command": "layer.create",
+  "command": "layer.add",
   "path": "masksFromText",
   "params": {
    "op": "masksFromText",
@@ -8221,7 +8221,7 @@
  },
  {
   "id": "create/3",
-  "command": "layer.create",
+  "command": "layer.add",
   "path": "editableText",
   "params": null,
   "target": "whole",
@@ -8885,7 +8885,7 @@
  },
  {
   "id": "panels/0",
-  "command": "jobs.list",
+  "command": "job.list",
   "path": "polls and applies completed background jobs before reporting",
   "params": {},
   "target": "none",
@@ -8901,7 +8901,7 @@
  },
  {
   "id": "panels/1",
-  "command": "jobs.wait",
+  "command": "job.wait",
   "path": "waits and applies all completed background jobs before reporting",
   "params": {},
   "target": "none",
@@ -8912,12 +8912,12 @@
   "queue": true,
   "host": true,
   "evidence": "writes 'union of completed task project writes' (panels_cmds.rs:26)",
-  "note": "uncertain: same union as jobs.list; nothing on the bare fixture.",
+  "note": "uncertain: same union as job.list; nothing on the bare fixture.",
   "dynamic": true
  },
  {
   "id": "panels/2",
-  "command": "jobs.cancel",
+  "command": "job.cancel",
   "path": "named worker or all",
   "params": {
    "job": "all"
@@ -9563,7 +9563,7 @@
  },
  {
   "id": "three_d/16",
-  "command": "view.3d.activeCamera",
+  "command": "view.threeD.activeCamera",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9578,7 +9578,7 @@
  },
  {
   "id": "three_d/17",
-  "command": "view.3d.default",
+  "command": "view.threeD.default",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9593,7 +9593,7 @@
  },
  {
   "id": "three_d/18",
-  "command": "view.3d.front",
+  "command": "view.threeD.front",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9608,7 +9608,7 @@
  },
  {
   "id": "three_d/19",
-  "command": "view.3d.left",
+  "command": "view.threeD.left",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9623,7 +9623,7 @@
  },
  {
   "id": "three_d/20",
-  "command": "view.3d.top",
+  "command": "view.threeD.top",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9638,7 +9638,7 @@
  },
  {
   "id": "three_d/21",
-  "command": "view.3d.back",
+  "command": "view.threeD.back",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9653,7 +9653,7 @@
  },
  {
   "id": "three_d/22",
-  "command": "view.3d.right",
+  "command": "view.threeD.right",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9668,7 +9668,7 @@
  },
  {
   "id": "three_d/23",
-  "command": "view.3d.bottom",
+  "command": "view.threeD.bottom",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9683,7 +9683,7 @@
  },
  {
   "id": "three_d/24",
-  "command": "view.3d.custom1",
+  "command": "view.threeD.custom1",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9698,7 +9698,7 @@
  },
  {
   "id": "three_d/25",
-  "command": "view.3d.custom2",
+  "command": "view.threeD.custom2",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9713,7 +9713,7 @@
  },
  {
   "id": "three_d/26",
-  "command": "view.3d.custom3",
+  "command": "view.threeD.custom3",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -9728,7 +9728,7 @@
  },
  {
   "id": "three_d/27",
-  "command": "view.3d.last",
+  "command": "view.threeD.last",
   "path": "view state only",
   "params": {},
   "target": "none",
@@ -10508,7 +10508,7 @@
  },
  {
   "id": "camera_cmds/5",
-  "command": "camera.createFromSolve",
+  "command": "camera.addFromSolve",
   "path": "placed solve and explicit target or selected points; one/multiple new objects",
   "params": null,
   "target": "fields",
@@ -10523,7 +10523,7 @@
  },
  {
   "id": "camera_cmds/6",
-  "command": "camera.create",
+  "command": "camera.add",
   "path": "forces kind=camera and delegates createFromSolve",
   "params": null,
   "target": "fields",
@@ -10989,7 +10989,7 @@
  },
  {
   "id": "markers/0",
-  "command": "markers.set",
+  "command": "marker.set",
   "path": "edit existing by index",
   "params": {
    "comp": "{comp}",
@@ -11008,7 +11008,7 @@
  },
  {
   "id": "markers/1",
-  "command": "markers.set",
+  "command": "marker.set",
   "path": "edit existing by at",
   "params": {
    "comp": "{comp}",
@@ -11027,7 +11027,7 @@
  },
  {
   "id": "markers/2",
-  "command": "markers.set",
+  "command": "marker.set",
   "path": "new marker",
   "params": {
    "comp": "{comp}",
@@ -11048,7 +11048,7 @@
  },
  {
   "id": "markers/3",
-  "command": "markers.delete",
+  "command": "marker.delete",
   "path": "delete by index or at",
   "params": {
    "comp": "{comp}",
@@ -11066,7 +11066,7 @@
  },
  {
   "id": "markers/4",
-  "command": "markers.convert",
+  "command": "marker.convert",
   "path": "layer marker to comp",
   "params": {
    "comp": "{comp}",
@@ -11075,7 +11075,7 @@
   },
   "setup": [
    [
-    "markers.set",
+    "marker.set",
     {
      "comp": "{comp}",
      "layer": "{A}",
@@ -11096,7 +11096,7 @@
  },
  {
   "id": "markers/5",
-  "command": "markers.convert",
+  "command": "marker.convert",
   "path": "comp marker to target layer(s)",
   "params": {
    "comp": "{comp}",
@@ -11125,7 +11125,7 @@
   },
   "setup": [
    [
-    "markers.set",
+    "marker.set",
     {
      "comp": "{comp2}",
      "new": true,
@@ -11759,7 +11759,7 @@
  },
  {
   "id": "prop/11",
-  "command": "keys.toggleTransform",
+  "command": "keyframe.toggleTransform",
   "path": "target transform selected layers",
   "params": {
    "layers": [
@@ -11939,7 +11939,7 @@
  },
  {
   "id": "prop/19",
-  "command": "keys.select",
+  "command": "keyframe.select",
   "path": "editor selection",
   "params": {
    "keys": [
@@ -11962,14 +11962,14 @@
  },
  {
   "id": "prop/20",
-  "command": "keys.move",
+  "command": "keyframe.move",
   "path": "current or repeated merged-gesture keys",
   "params": {
    "delta": 0.5
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -11993,12 +11993,12 @@
  },
  {
   "id": "prop/21",
-  "command": "keys.delete",
+  "command": "keyframe.delete",
   "path": "exact selected stored keys",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -12022,12 +12022,12 @@
  },
  {
   "id": "prop/22",
-  "command": "keys.easyEase",
+  "command": "keyframe.easyEase",
   "path": "selected exact stored keys",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -12051,12 +12051,12 @@
  },
  {
   "id": "prop/23",
-  "command": "keys.easyEaseIn",
+  "command": "keyframe.easyEaseIn",
   "path": "selected exact stored keys",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -12080,12 +12080,12 @@
  },
  {
   "id": "prop/24",
-  "command": "keys.easyEaseOut",
+  "command": "keyframe.easyEaseOut",
   "path": "selected exact stored keys",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -12109,12 +12109,12 @@
  },
  {
   "id": "prop/25",
-  "command": "keys.toggleHold",
+  "command": "keyframe.toggleHold",
   "path": "selected key outgoing interpolation toggle",
   "params": {},
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -12138,14 +12138,14 @@
  },
  {
   "id": "prop/26",
-  "command": "keys.interpolation",
+  "command": "keyframe.interpolation",
   "path": "selected key temporal/spatial settings",
   "params": {
    "interpolation": "linear"
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -12169,7 +12169,7 @@
  },
  {
   "id": "prop/27",
-  "command": "keys.velocity",
+  "command": "keyframe.velocity",
   "path": "selected key temporal speed/influence",
   "params": {
    "inSpeed": 0,
@@ -12177,7 +12177,7 @@
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -12621,7 +12621,7 @@
  },
  {
   "id": "templates/0",
-  "command": "templates.create",
+  "command": "template.add",
   "path": "builtin id, user/id, or host path; optional extraction/save",
   "params": {
    "id": "title-card"
@@ -12638,7 +12638,7 @@
  },
  {
   "id": "templates/1",
-  "command": "templates.saveAs",
+  "command": "template.saveAs",
   "path": "archive project, optional footage, poster and thumbnail",
   "params": {
    "name": "Probe Template"
@@ -12655,14 +12655,14 @@
  },
  {
   "id": "templates/2",
-  "command": "templates.delete",
+  "command": "template.delete",
   "path": "remove user config entry",
   "params": {
    "id": "user/Probe Template.ectemplate"
   },
   "setup": [
    [
-    "templates.saveAs",
+    "template.saveAs",
     {
      "name": "Probe Template",
      "embedFootage": false
@@ -13921,7 +13921,7 @@
  },
  {
   "id": "file_more/7",
-  "command": "file.newCompFromSelection",
+  "command": "comp.newFromSelection",
   "path": "one comp each or single comp, optional sequence/queue",
   "params": {
    "addToRenderQueue": true
@@ -14356,14 +14356,14 @@
  },
  {
   "id": "key_labels/0",
-  "command": "keys.setLabel",
+  "command": "keyframe.setLabel",
   "path": "selected stored keys",
   "params": {
    "label": "red"
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -14387,14 +14387,14 @@
  },
  {
   "id": "key_labels/1",
-  "command": "keys.selectLabelGroup",
+  "command": "keyframe.selectLabelGroup",
   "path": "selection only",
   "params": {
    "scope": "all"
   },
   "setup": [
    [
-    "keys.select",
+    "keyframe.select",
     {
      "keys": [
       {
@@ -14866,7 +14866,7 @@
  },
  {
   "id": "proxy/6",
-  "command": "file.createProxy",
+  "command": "file.addProxy",
   "path": "movie",
   "params": {
    "kind": "movie",
@@ -14884,7 +14884,7 @@
  },
  {
   "id": "proxy/7",
-  "command": "file.createProxy",
+  "command": "file.addProxy",
   "path": "still",
   "params": {
    "kind": "still",

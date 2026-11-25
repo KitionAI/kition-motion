@@ -67,7 +67,7 @@ pub const ROWS: &[(&str, &str)] = &[
         "path=assign; resolves=none; reads=none; holds=project.settings.comment; checks=comment string; writes=project.settings.comment; source=commands/panels_cmds.rs:156",
     ),
     (
-        "jobs.cancel",
+        "job.cancel",
         "path=cancel; resolves=job string or all; reads=running jobs; holds=none persisted; checks=none; writes=job cancellation flags; source=commands/panels_cmds.rs:21",
     ),
     (
@@ -123,7 +123,7 @@ pub const ROWS: &[(&str, &str)] = &[
         "path=environment; resolves=comp u64 else active else unique environment; reads=part; holds=environment discovery source/effects/cube width/face positions/camera kinds,front orientation,all six destination orientation tracks and timing; checks=environment exists and unique fallback,orientation numbers; writes=six cameras orientation via prop.set at each face current time; source=commands/vr_editor.rs:30,97,109,123",
     ),
     (
-        "comp.vr.createEnvironment",
+        "comp.vr.addEnvironment",
         "path=create; resolves=comp resolver; reads=part; holds=source comp name,width,height,frameRate,duration,light source eligibility and complete copied lights; checks=comp exists; writes=eight comps and cameras/precomp layers,light copies,opens output; source=commands/app_more.rs:462",
     ),
     (
@@ -143,11 +143,11 @@ pub const ROWS: &[(&str, &str)] = &[
         "path=clear; resolves=none; reads=recent footage preferences; holds=none persisted; checks=recent not empty; writes=preferences only; source=commands/app_more.rs:95",
     ),
     (
-        "anim.applyRecentPreset",
-        "path=apply; resolves=path or recent_presets index/default first,layers; reads=part,selection,recent preset preferences; holds=anim.applyPreset dependencies including target assigned properties; checks=selected layers,recent exists,index valid; writes=preset properties at current time; source=commands/app_more.rs:102",
+        "animation.applyRecentPreset",
+        "path=apply; resolves=path or recent_presets index/default first,layers; reads=part,selection,recent preset preferences; holds=animation.applyPreset dependencies including target assigned properties; checks=selected layers,recent exists,index valid; writes=preset properties at current time; source=commands/app_more.rs:102",
     ),
     (
-        "anim.clearRecentPresets",
+        "animation.clearRecentPresets",
         "path=clear; resolves=none; reads=recent preset preferences; holds=none persisted; checks=recent not empty; writes=preferences only; source=commands/app_more.rs:120",
     ),
     (
@@ -186,7 +186,10 @@ pub const ROWS: &[(&str, &str)] = &[
         "script.settings.save",
         "path=settings; resolves=section/key literal; reads=settings store; holds=none project; checks=bounded section/key/value,value provided; writes=script_settings section/key and settings file; source=commands/scripts.rs:83",
     ),
-    ("anim.browsePresets", "path=frontend; resolves=none; reads=none; holds=none; checks=always; writes=frontend event only; source=commands/frontend.rs:99"),
+    (
+        "animation.browsePresets",
+        "path=frontend; resolves=none; reads=none; holds=none; checks=always; writes=frontend event only; source=commands/frontend.rs:99",
+    ),
     ("effect.manage", "path=frontend; resolves=none; reads=none; holds=none; checks=always; writes=frontend event only; source=commands/frontend.rs:98"),
     (
         "layer.style.options",
@@ -218,15 +221,15 @@ pub const ROWS: &[(&str, &str)] = &[
     ),
     ("file.newFromTemplate", "path=frontend; resolves=none; reads=none; holds=none; checks=always; writes=frontend event only; source=templates.rs:935"),
     (
-        "templates.create",
+        "template.add",
         "path=replace; resolves=template id builtin/user or lent path; reads=template bytes,settings store,footage/project destination defaults; holds=entire current project assigned replacement; checks=template valid,footage extraction host writes succeed; writes=replaces project,optional saveAs,opens main comp poster time; source=templates.rs:629,788",
     ),
     (
-        "templates.saveAs",
+        "template.saveAs",
         "path=export; resolves=name settings-store file; reads=part,time,entire project,footage bytes,user template names; holds=project snapshot and rendered frame dependency closure; checks=nonblank name,composition exists,overwrite eligibility; writes=template package file only; source=templates.rs:813",
     ),
     (
-        "templates.delete",
+        "template.delete",
         "path=remove; resolves=user template id only; reads=settings store; holds=none project; checks=user prefix,safe file,settings store exists; writes=template file removed; source=templates.rs:896",
     ),
     (

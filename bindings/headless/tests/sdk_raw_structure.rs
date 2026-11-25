@@ -32,12 +32,12 @@ async fn structural(form: &str) -> Vec<Value> {
             f.colleague(&[match change {
                 "same" => ("prop.addKey", json!({"layer":layers[0],"path":OPACITY,"time":4,"value":43})),
                 "before" => ("prop.addKey", json!({"layer":layers[0],"path":OPACITY,"time":0.5,"value":5})),
-                "deleted" => ("keys.select", json!({"keys":[{"layer":layers[0],"path":OPACITY,"time":4}]})),
+                "deleted" => ("keyframe.select", json!({"keys":[{"layer":layers[0],"path":OPACITY,"time":4}]})),
                 "precomp" => ("layer.precompose", json!({"layers":[layers[0]],"name":"Moved","mode":"move"})),
                 _ => opacity(layers[1], 23.0),
             }]);
             if change == "deleted" {
-                f.colleague(&[("keys.select", json!({"keys":[{"layer":layers[0],"path":OPACITY,"time":4}]})), ("keys.delete", json!({}))]);
+                f.colleague(&[("keyframe.select", json!({"keys":[{"layer":layers[0],"path":OPACITY,"time":4}]})), ("keyframe.delete", json!({}))]);
             }
         }
         let ops = match form {

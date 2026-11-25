@@ -219,7 +219,7 @@ fn classify(row: &Row, phrase: &str) -> Mapping {
 
         "selected_layers and active_comp only where has_layers enablement required" => match row.command {
             "layer.style.options" | "layer.openLayer" => context(PART_SELECTION),
-            "effect.manage" | "anim.browsePresets" | "project.deleteWithoutConfirmation" => non_context(
+            "effect.manage" | "animation.browsePresets" | "project.deleteWithoutConfirmation" => non_context(
                 "frontend.rs:19,106-119: these three variants are always enabled and forward an event; the shared phrase's has_layers condition is false.",
             ),
             _ => unresolved(&[], "The conditional enablement variant has not been classified."),
@@ -319,7 +319,7 @@ fn classify(row: &Row, phrase: &str) -> Mapping {
             unresolved(MODE, "The text-editing mode is an input; caret/range/style state within it has not been mapped to an exact context bit.")
         }
         "text_edit and clipboards choose dispatch" => match row.command {
-            "edit.clear" | "edit.cut" | "edit.paste" | "edit.pasteTextFormattingOnly" | "edit.pasteTextMatchFormatting" => unresolved(
+            "edit.delete" | "edit.cut" | "edit.paste" | "edit.pasteTextFormattingOnly" | "edit.pasteTextMatchFormatting" => unresolved(
                 MODE,
                 "edit.rs:159,488,508; text_edit.rs:389,421: these handlers branch on text-edit mode; caret/range/style and clipboard closure remain unresolved.",
             ),
@@ -744,7 +744,7 @@ pub(super) fn audit(document: &MotionDocument) -> Value {
 
 // Initial unresolved pairs are named, not counted as matches. Reductions remove entries;
 // a different unknown cannot replace a resolved one without failing this gate.
-const UNRESOLVED_FLOOR: &str = r#"camera.createFromSolve|active_comp/selected_props/selected_layers for ct_p; CTI always selects solve frame; camera_points when points omitted
+const UNRESOLVED_FLOOR: &str = r#"camera.addFromSolve|active_comp/selected_props/selected_layers for ct_p; CTI always selects solve frame; camera_points when points omitted
 camera.deletePoints|ct_p defaults; camera_points when points omitted; removes deleted IDs from camera_points; running jobs
 camera.dolly|non-active-camera branch reads/writes views3d.cams only
 camera.fromView|views3d.current/cams
@@ -755,11 +755,11 @@ camera.setGroundPlane|ct_p defaults; camera_points when omitted; CTI always
 camera.solveStatus|running/pending camera jobs; status uses CTI and selected camera points
 comp.close|open_comps
 comp.open|project_selection when omitted
-comp.vr.createEnvironment|selection/open comp
+comp.vr.addEnvironment|selection/open comp
 comp.workArea|active_comp only when comp omitted; time fetched but not used unless set=begin/end
 contentFill.generate|content_fill settings
 contentFill.set|content_fill settings retain unspecified fields
-edit.clear|text_edit and clipboards choose dispatch
+edit.delete|text_edit and clipboards choose dispatch
 edit.cut|text_edit and clipboards choose dispatch
 edit.duplicate|text_edit and clipboards choose dispatch
 edit.editOriginal|text_edit and clipboards choose dispatch
@@ -804,13 +804,13 @@ templateProps.unlinkProperty|template_props_primary/active_comp defaults; select
 file.applyInterpretation|items_p fallback selection
 file.close|active_comp/open_comps; removes open comp; may change active_comp and clear selected_layers/props/keys
 file.consolidateFootage|sanitize_state filters removed editor references
-file.createProxy|project_selection and active_comp only if no comp/item
-file.createProxy|project_selection if no comp/item
+file.addProxy|project_selection and active_comp only if no comp/item
+file.addProxy|project_selection if no comp/item
 file.importMultiple|delegated import selection/default comp state
 file.interpretFootage|items_p fallback state
 file.interpretFootage|project_selection; else active_comp/selected_layers if no numeric targets
 file.interpretProxy|project_selection if omitted
-file.newCompFromSelection|project_selection
+comp.newFromSelection|project_selection
 file.reduceProject|project_selection
 file.reduceProject|sanitize_state after removal
 file.reloadFootage|items_p fallback selection
@@ -835,8 +835,8 @@ footage.rippleInsertEdit|same panel/selection/part/time fallbacks as overlay
 footage.setIn|footage_panel
 footage.setOut|footage_panel
 footage.setTime|footage_panel
-jobs.list|each Apply closure editor state
-jobs.wait|Apply closure editor state
+job.list|each Apply closure editor state
+job.wait|Apply closure editor state
 layer.addItem|project_selection if item omitted
 layer.mask.featherFalloff|selected_vertices
 layer.mask.hideLocked|hide_locked_masks
@@ -918,7 +918,7 @@ view.set3DViewCamera|views3d.cams existing/default"#;
 
 const MISSING_FLOOR: &str = "";
 
-const SURPLUS_CANDIDATE_FLOOR: &str = r#"anim.savePreset|time
+const SURPLUS_CANDIDATE_FLOOR: &str = r#"animation.savePreset|time
 camera.analyze|time
 camera.move|selection
 comp.new|part
@@ -958,9 +958,9 @@ footage.check|time
 footage.reloadChanged|part
 footage.reloadChanged|selection
 footage.reloadChanged|time
-keys.audioToKeyframes|selection
-keys.rpfCameraImport|selection
-keys.rpfCameraImport|time
+keyframe.audioToKeyframes|selection
+keyframe.rpfCameraImport|selection
+keyframe.rpfCameraImport|time
 layer.freezeOnLastFrame|time
 layer.mask.invert|time
 layer.mask.lock|time
@@ -983,8 +983,8 @@ roto.propagate|time
 roto.status|part
 roto.status|selection
 roto.status|time
-templates.create|part
-templates.create|time
+template.add|part
+template.add|time
 track.camera|time
 track.status|part
 track.status|selection

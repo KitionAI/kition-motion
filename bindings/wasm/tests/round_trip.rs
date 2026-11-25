@@ -32,7 +32,7 @@ fn described(doc: &mut MotionDocument) -> Value {
         }
         layers.push(json!({ "layer": entry, "properties": groups }));
     }
-    let markers = run(doc, "markers.list", json!({}));
+    let markers = run(doc, "marker.list", json!({}));
     json!({ "comp": comp, "markers": markers, "layers": layers })
 }
 
@@ -80,7 +80,7 @@ fn layers_and_their_settings_survive_save_and_reopen() {
     assert!(names.contains(&"Sky") && names.contains(&"Rig"), "{names:?}");
     let text = run(&mut reopened, "prop.get", json!({ "layer": title, "path": "text/sourceText" }));
     assert_eq!(text["value"], "Spring fair \u{6625}\u{5b63} \u{1f338}");
-    assert!(run(&mut reopened, "markers.list", json!({})).to_string().contains("Logo in"));
+    assert!(run(&mut reopened, "marker.list", json!({})).to_string().contains("Logo in"));
 }
 
 #[test]
@@ -93,10 +93,10 @@ fn keyframes_eases_and_expressions_survive_save_and_reopen() {
     run(&mut doc, "prop.addKey", json!({ "layer": title, "path": "transform/position", "time": 1.5, "value": [320, 180] }));
     run(
         &mut doc,
-        "keys.select",
+        "keyframe.select",
         json!({ "keys": [{ "layer": title, "path": "transform/opacity", "time": 0 }, { "layer": title, "path": "transform/opacity", "time": 1 }] }),
     );
-    run(&mut doc, "keys.easyEase", json!({}));
+    run(&mut doc, "keyframe.easyEase", json!({}));
     run(&mut doc, "prop.set", json!({ "layer": title, "path": "transform/rotation", "value": -8 }));
     run(&mut doc, "prop.setExpression", json!({ "layer": title, "path": "transform/scale", "expression": "[100 + time * 10, 100 + time * 10]" }));
 

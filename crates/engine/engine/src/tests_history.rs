@@ -248,7 +248,7 @@ fn undoing_a_delete_selects_the_layers_it_brings_back() {
     solid(&mut s, "B");
     let ids: Vec<_> = s.active_comp().unwrap().layers.iter().map(|l| l.id).collect();
     s.execute("layer.select", json!({"layers": [ids[0].0]})).unwrap();
-    s.execute("edit.clear", json!({})).unwrap();
+    s.execute("edit.delete", json!({})).unwrap();
     assert!(s.state.selected_layers.is_empty(), "the deleted layer is no longer selected");
     s.execute("edit.undo", json!({})).unwrap();
     assert_eq!(s.state.selected_layers, vec![ids[0]], "the layer brought back is selected");

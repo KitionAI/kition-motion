@@ -5,23 +5,23 @@
 /// The command `id`'s description.
 pub fn description(id: &str) -> &'static str {
     match id {
-        "anim.addKeyframe" => {
+        "animation.addKeyframe" => {
             "Keys every selected property at the current time (CTI): turns on animation for an unkeyed property, else adds a key holding its current value. Needs selected properties; use prop.addKey to key one property by path."
         }
-        "anim.applyPreset" => {
-            "Applies an animation preset saved by anim.savePreset (`path` to an .ecpreset, or the preset JSON inline as `preset`) to `layers` (default selected): adds its effects and keyed properties from the current time, and records it as recent."
+        "animation.applyPreset" => {
+            "Applies an animation preset saved by animation.savePreset (`path` to an .ecpreset, or the preset JSON inline as `preset`) to `layers` (default selected): adds its effects and keyed properties from the current time, and records it as recent."
         }
-        "anim.applyRecentPreset" => {
-            "Re-applies a recently used animation preset: `path`, or `index` into the recent list (default the newest), to `layers` or the selection, exactly as anim.applyPreset with that path."
+        "animation.applyRecentPreset" => {
+            "Re-applies a recently used animation preset: `path`, or `index` into the recent list (default the newest), to `layers` or the selection, exactly as animation.applyPreset with that path."
         }
-        "anim.browsePresets" => {
-            "Editor window only: opens the animation preset browser. Headless sessions (agents) accept it and change nothing; use anim.applyPreset instead."
+        "animation.browsePresets" => {
+            "Editor window only: opens the animation preset browser. Headless sessions (agents) accept it and change nothing; use animation.applyPreset instead."
         }
-        "anim.clearRecentPresets" => "Empties the Recent Animation Presets list in the preferences. Changes no composition.",
-        "anim.reveal" => {
+        "animation.clearRecentPresets" => "Empties the Recent Animation Presets list in the preferences. Changes no composition.",
+        "animation.reveal" => {
             "Reveals (twirls open) properties on the selected layers, or all layers: `kind` keyframes (animated), animation (keys or expressions) or modified (changed from defaults). Returns the revealed property ids; changes no values."
         }
-        "anim.savePreset" => {
+        "animation.savePreset" => {
             "Saves the selected properties (with their keyframes, relative to the earliest key) and selected effects as an .ecpreset file at `path` (`name` optional). Needs a selection; the comp is unchanged."
         }
         "app.about" => "Editor window only: shows the About box. Headless sessions accept it and change nothing.",
@@ -31,7 +31,7 @@ pub fn description(id: &str) -> &'static str {
         "app.commandPalette" => {
             "Editor window only: opens Quick Apply to search commands and effects by name. Headless sessions accept it and change nothing; agents use <prefix>_commands."
         }
-        "app.find" => {
+        "edit.find" => {
             "Editor window only: focuses the project panel search (`query`). Headless sessions accept it and change nothing; use project queries instead."
         }
         "app.gpuInfo" => {
@@ -53,10 +53,10 @@ pub fn description(id: &str) -> &'static str {
             "Runs (or continues) analysis of a 3D Camera Tracker effect on `layer` (`effect` by uid, name or index); `wait: true` blocks until done. Check progress with camera.solveStatus."
         }
         "camera.cancel" => "Stops the 3D Camera Tracker analysis or solve that is running; returns {stopped}. Enabled only while one runs.",
-        "camera.create" => {
-            "Creates the 3D Tracker Camera layer from a solved 3D Camera Tracker on `layer` (`effect` picks the tracker), as camera.createFromSolve does for the camera alone. Needs a finished solve."
+        "camera.add" => {
+            "Creates the 3D Tracker Camera layer from a solved 3D Camera Tracker on `layer` (`effect` picks the tracker), as camera.addFromSolve does for the camera alone. Needs a finished solve."
         }
-        "camera.createFromSolve" => {
+        "camera.addFromSolve" => {
             "Create Text / Solid / Null / Shadow Catcher (and Light) on the target, plus the 3D Tracker Camera when the tracker has none yet — one undo step."
         }
         "camera.deletePoints" => "Delete points (and, with Auto-delete Points Across Time, the points of other tracks on the same 3D feature), then re-solve.",
@@ -110,7 +110,7 @@ pub fn description(id: &str) -> &'static str {
             "Returns the solved 3D Camera Tracker points visible at `time` (comp seconds, default now): id, comp and layer position, depth, world position, error, colour, selected. Fails before a solve."
         }
         "camera.selectPoints" => {
-            "Selects 3D Camera Tracker points by id (`points`); `add` adds to the selection, `toggle` flips each. Use before camera.setGroundPlane or camera.createFromSolve."
+            "Selects 3D Camera Tracker points by id (`points`); `add` adds to the selection, `toggle` flips each. Use before camera.setGroundPlane or camera.addFromSolve."
         }
         "camera.setFocusToLayer" => {
             "Sets the camera's Focus Distance, keyed at the current time, to `layer`'s current distance from it. Fails if the layer is behind the camera; camera.linkFocusToLayer keeps following it."
@@ -176,7 +176,7 @@ pub fn description(id: &str) -> &'static str {
         "comp.trimToWorkArea" => {
             "Shortens the composition to its work area: time before the work area start is cut, layers shift earlier so their content keeps its place, and the duration becomes the work area length."
         }
-        "comp.vr.createEnvironment" => "Composition ▸ VR ▸ Create VR Environment: renders the active comp's 3D scene in every direction.",
+        "comp.vr.addEnvironment" => "Composition ▸ VR ▸ Create VR Environment: renders the active comp's 3D scene in every direction.",
         "comp.vr.environments" => {
             "Lists the VR environments in the project: output comp, name, cube map, each face's comp and camera, and the current view orientation [x, y, z] degrees."
         }
@@ -195,7 +195,7 @@ pub fn description(id: &str) -> &'static str {
         "contentFill.set" => {
             "Sets the Content-Aware Fill options used by layer.newContentAwareFill: `method` (object, surface, edgeBlend), `range` (workArea, entire), `alphaExpansion` (px), `lightingCorrection` (none, subtle, moderate, strong), `referenceLayer`, `referenceTime` (s)."
         }
-        "edit.clear" => {
+        "edit.delete" => {
             "Deletes `layers`: the command that deletes layers. Without `layers` it deletes the selection (keyframes, effects, masks or shape items when selected, else the selected layers), or, while text is being edited, the character before the caret."
         }
         "edit.copy" => "Edit ▸ Copy: selected properties copy their keyframes and values, selected keyframes go to the keyframe clipboard, else layers.",
@@ -234,7 +234,7 @@ pub fn description(id: &str) -> &'static str {
             "Edit ▸ Paste while editing text: the copied text with its formatting, or `text` (from the system clipboard) in the caret's style when it's something else."
         }
         "edit.pasteReversedKeyframes" => {
-            "Edit ▸ Paste Reversed Keyframes: the copied keys mirrored in time over their whole span (the last key first, incoming and outgoing eases swapped), pasted like Edit ▸ Paste (`keys.paste`: at the current time, into the selected or the same properties)."
+            "Edit ▸ Paste Reversed Keyframes: the copied keys mirrored in time over their whole span (the last key first, incoming and outgoing eases swapped), pasted like Edit ▸ Paste (`keyframe.paste`: at the current time, into the selected or the same properties)."
         }
         "edit.pasteTextFormattingOnly" => {
             "Edit ▸ Paste Text Formatting Only: the copied text's character style (its first character) and paragraph settings on the selected text, or on the whole of the selected text layers."
@@ -397,7 +397,7 @@ pub fn description(id: &str) -> &'static str {
         "file.consolidateFootage" => {
             "Merges footage items that use the same file with the same interpretation into one item and points every layer at it; returns how many duplicates were removed."
         }
-        "file.createProxy" => {
+        "file.addProxy" => {
             "File ▸ Create Proxy ▸ Still / Movie: queue a half-resolution render of the composition whose post-render action sets the result as its proxy."
         }
         "file.cycleBitDepth" => {
@@ -451,7 +451,7 @@ pub fn description(id: &str) -> &'static str {
             "Sets how footage `items` (default selected) is read: `frameRate`, `alpha` (straight, premultiplied, ignore, guess), `invertAlpha`, `loop`, `pixelAspect`, `fields`, `colorProfile`, `linearLight`, start timecode. Layers using it change accordingly."
         }
         "file.interpretProxy" => "File ▸ Interpret Footage ▸ Proxy: Interpret Footage settings for the proxy file.",
-        "file.newCompFromSelection" => "File ▸ New Comp from Selection.",
+        "comp.newFromSelection" => "File ▸ New Comp from Selection.",
         "file.newFromTemplate" => {
             "Editor window only: opens the Home screen's Templates tab to start a project from a template. Headless sessions accept it and change nothing."
         }
@@ -570,100 +570,100 @@ pub fn description(id: &str) -> &'static str {
         "item.metadata" => {
             "Returns metadata for the project (name, path, item and comp counts, bit depth, working space, time display) and, when `item` (id or name) is given, for that item (type, size, label, comment and its own fields)."
         }
-        "jobs.cancel" => {
+        "job.cancel" => {
             "Cancels running background work: `job` render, track, maskTrack, warp, camera, roto, task:<n> or all (default). Returns what was cancelled; finished results stay."
         }
-        "jobs.list" => {
-            "Returns the background jobs (renders, tracking, warp stabilizing, camera solves, roto) that are running with their progress, and the log of finished ones. Use with jobs.wait."
+        "job.list" => {
+            "Returns the background jobs (renders, tracking, warp stabilizing, camera solves, roto) that are running with their progress, and the log of finished ones. Use with job.wait."
         }
-        "jobs.wait" => {
+        "job.wait" => {
             "Blocks until every background job (renders, tracking, solves) has finished, then returns the finished jobs log. Call after starting work you need the result of."
         }
-        "keys.audioToKeyframes" => {
+        "keyframe.audioToKeyframes" => {
             "Animation ▸ Keyframe Assistant ▸ Convert Audio to Keyframes: an \"Audio Amplitude\" null with Left Channel, Right Channel and Both Channels sliders keyed on every frame of the work area with the amplitude of the comp's audible layers. One undo step."
         }
-        "keys.copy" => "Copy the selected keyframes (Edit ▸ Copy with keys selected).",
-        "keys.delete" => {
-            "Deletes the selected keyframes; a property left with no keys keeps the deleted key's value as its static value. Select keys with keys.select first. Returns how many were deleted."
+        "keyframe.copy" => "Copy the selected keyframes (Edit ▸ Copy with keys selected).",
+        "keyframe.delete" => {
+            "Deletes the selected keyframes; a property left with no keys keeps the deleted key's value as its static value. Select keys with keyframe.select first. Returns how many were deleted."
         }
-        "keys.easyEase" => {
+        "keyframe.easyEase" => {
             "Applies Easy Ease to the selected keyframes: Bezier interpolation with 33% influence and zero speed on both sides (`which` in or out for one side), so motion slows into and out of each key."
         }
-        "keys.easyEaseIn" => {
+        "keyframe.easyEaseIn" => {
             "Eases only the incoming side of the selected keyframes (Bezier, zero speed, 33% influence), so motion slows into each key; the outgoing side is unchanged."
         }
-        "keys.easyEaseOut" => {
+        "keyframe.easyEaseOut" => {
             "Eases only the outgoing side of the selected keyframes (Bezier, zero speed, 33% influence), so motion starts slowly from each key; the incoming side is unchanged."
         }
-        "keys.exponentialScale" => {
+        "keyframe.exponentialScale" => {
             "Replaces the motion between two selected Scale keyframes with exponential scaling (keys every frame), so a zoom looks constant-speed. Needs two Scale keys selected on one layer."
         }
-        "keys.info" => {
+        "keyframe.info" => {
             "Returns details of the selected keyframes, or `keys` [{layer, prop, time}]: value, interpolation in and out, ease speed and influence per side and dimension, spatial tangents and roving, with units."
         }
-        "keys.interpolation" => {
+        "keyframe.interpolation" => {
             "Sets the selected keyframes' interpolation: `interpolation` (linear, bezier, continuousBezier, autoBezier, hold) or `in`/`out` per side, `spatial` for paths, and roving. Changes how values move between keys, not the key values."
         }
-        "keys.move" => {
-            "Shifts the selected keyframes in time by `delta` seconds (negative = earlier), keeping their spacing; `merge` makes repeated calls one undo step. Use keys.nudgeForward/Backward to move by frames."
+        "keyframe.move" => {
+            "Shifts the selected keyframes in time by `delta` seconds (negative = earlier), keeping their spacing; `merge` makes repeated calls one undo step. Use keyframe.nudgeForward/Backward to move by frames."
         }
-        "keys.nudge" => "Move the selected keys by whole frames (Alt+→ / Alt+←, Shift for 10 frames).",
-        "keys.nudgeBackward" => "Moves the selected keyframes one frame earlier. keys.move shifts by any number of seconds.",
-        "keys.nudgeBackward10" => "Moves the selected keyframes ten frames earlier.",
-        "keys.nudgeForward" => "Moves the selected keyframes one frame later. keys.move shifts by any number of seconds.",
-        "keys.nudgeForward10" => "Moves the selected keyframes ten frames later.",
-        "keys.paste" => "Paste copied keyframes at the current time into the target layers' properties.",
-        "keys.rpfCameraImport" => {
+        "keyframe.nudge" => "Move the selected keys by whole frames (Alt+→ / Alt+←, Shift for 10 frames).",
+        "keyframe.nudgeBackward" => "Moves the selected keyframes one frame earlier. keyframe.move shifts by any number of seconds.",
+        "keyframe.nudgeBackward10" => "Moves the selected keyframes ten frames earlier.",
+        "keyframe.nudgeForward" => "Moves the selected keyframes one frame later. keyframe.move shifts by any number of seconds.",
+        "keyframe.nudgeForward10" => "Moves the selected keyframes ten frames later.",
+        "keyframe.paste" => "Paste copied keyframes at the current time into the target layers' properties.",
+        "keyframe.rpfCameraImport" => {
             "Animation ▸ Keyframe Assistant ▸ RPF Camera Import: a camera layer keyed from camera data. RPF/RLA files carry their camera in an undocumented block, so Kition Motion reads the same data from JSON or CSV exports (see `docs/features/preferences.md` ▸ RPF Camera Import). One undo step."
         }
-        "keys.select" => {
+        "keyframe.select" => {
             "Selects keyframes: `keys` [{layer, prop uid or path such as transform/position, time}], times in layer seconds unless `timeBase: comp`; `add`/`toggle` extend the selection. Fails on keys that don't exist. Most keys.* commands act on this selection."
         }
-        "keys.selectAll" => "Select every keyframe of the selected properties, or of the given / selected layers.",
-        "keys.selectEqual" => "Adds to the selection every keyframe, on the same properties, whose value equals a selected keyframe's value.",
-        "keys.selectFollowing" => "Adds to the selection every keyframe after the last selected one on the same properties.",
-        "keys.selectLabelGroup" => {
+        "keyframe.selectAll" => "Select every keyframe of the selected properties, or of the given / selected layers.",
+        "keyframe.selectEqual" => "Adds to the selection every keyframe, on the same properties, whose value equals a selected keyframe's value.",
+        "keyframe.selectFollowing" => "Adds to the selection every keyframe after the last selected one on the same properties.",
+        "keyframe.selectLabelGroup" => {
             "Select every keyframe that shares a label with a selected keyframe, on the selected or all layers. `visible` (property uids revealed in the Timeline) limits the \"Visible Keyframes\" scopes; without it every property counts as visible."
         }
-        "keys.selectPrevious" => "Adds to the selection every keyframe before the first selected one on the same properties.",
-        "keys.set" => "Edit one key directly: move it in time and/or set its value (Graph Editor drags).",
-        "keys.applyEase" => {
+        "keyframe.selectPrevious" => "Adds to the selection every keyframe before the first selected one on the same properties.",
+        "keyframe.set" => "Edit one key directly: move it in time and/or set its value (Graph Editor drags).",
+        "keyframe.applyEase" => {
             "Eases every segment between consecutive keyframes of one property (`path` or `prop`; `from`/`to` in layer seconds limit the keys) with a named curve: snappy, out, smooth, swift, linear, or the overshoot landings settle, pop, reseat, fly (`bezier: [x1,y1,x2,y2]` for any CSS cubic-bezier). Curves become exact temporal ease (speed and influence); on a motion path an overshoot inserts a key at each turning point. Spring presets (crisp, lively, noBounce, cardFlip, or spring with damping/stiffness/mass) attach an expression that springs the motion into the last key. One undo step."
         }
-        "keys.easePresets" => {
-            "Lists the ease presets keys.applyEase takes: curves (id, CSS bezier, when to use) and springs (id, damping, stiffness, mass, when to use). Read-only."
+        "keyframe.easePresets" => {
+            "Lists the ease presets keyframe.applyEase takes: curves (id, CSS bezier, when to use) and springs (id, damping, stiffness, mass, when to use). Read-only."
         }
-        "keys.setEase" => "Set one side's temporal ease of a key (Graph Editor handle drags, scripting).",
-        "keys.setLabel" => {
+        "keyframe.setEase" => "Set one side's temporal ease of a key (Graph Editor handle drags, scripting).",
+        "keyframe.setLabel" => {
             "Sets the label colour of the selected keyframes: `label` a colour name, 0–16, or none. Returns the label and how many keys changed; it only marks keys, motion is unchanged."
         }
-        "keys.setSpatialTangents" => {
+        "keyframe.setSpatialTangents" => {
             "Spatial tangents of one key of a spatial property (motion path handles), relative to the key value. Setting one side only mirrors it to the other unless `break` is true; the key stops being auto Bezier."
         }
-        "keys.smooth" => {
+        "keyframe.smooth" => {
             "Smoother: removes keyframes from the selected run (three or more keys on a property) where the curve stays within `tolerance` of the original (property units, default 1), simplifying hand-drawn or tracked motion."
         }
-        "keys.timeReverse" => "Keyframe Assistant ▸ Time-Reverse Keyframes: mirror the selected keys of each property.",
-        "keys.toggleHold" => {
+        "keyframe.timeReverse" => "Keyframe Assistant ▸ Time-Reverse Keyframes: mirror the selected keys of each property.",
+        "keyframe.toggleHold" => {
             "Toggles Hold interpolation on the selected keyframes' outgoing side: the value jumps at the next key instead of moving; toggling off restores Bezier (eased keys) or Linear."
         }
-        "keys.toggleTransform" => {
+        "keyframe.toggleTransform" => {
             "Alt+Shift+A / P / S / R / T: add or remove a keyframe at the current time on that Transform property of every selected layer, in one undo step. Position covers separated X / Y / Z; Rotation on a 3D layer covers Orientation and X / Y / Z Rotation."
         }
-        "keys.transform" => {
+        "keyframe.transform" => {
             "Transform the selected keys: times scale about `timeAnchor` (comp seconds, default the first selected key) by `timeScale` and move by `timeOffset`; values scale about `valueAnchor` by `valueScale` and move by `valueOffset` (every dimension, or only `dim`). Times land on frames."
         }
-        "keys.velocity" => {
-            "Sets the speed and influence of the selected keyframes: `inSpeed`, `inInfluence` %, `outSpeed`, `outInfluence` % (numbers, or arrays per dimension), `continuous` to tie both sides. Use for custom eases; keys.easyEase for the standard one."
+        "keyframe.velocity" => {
+            "Sets the speed and influence of the selected keyframes: `inSpeed`, `inInfluence` %, `outSpeed`, `outInfluence` % (numbers, or arrays per dimension), `continuous` to tie both sides. Use for custom eases; keyframe.easyEase for the standard one."
         }
-        "keys.wiggle" => {
+        "keyframe.wiggle" => {
             "Wiggler: adds random keyframes between two selected keys on a property: `frequency` keys per second (5), `magnitude` in property units, `noise` smooth or jagged, `dimensions` one/same/independent, `seed` for repeatability."
         }
         "layer.addItem" => {
             "Places a project item (`item` id or name: footage, comp or solid) in the active comp as a new layer: starting at `time` (seconds), at stack `index` (1-based, default above the selected layer), at `position` [x, y]; `duration` for stills."
         }
         "layer.addMarker" => {
-            "Adds a marker with `comment` at `time` (comp seconds, default now) to `layers` (default selected), replacing a marker at that time; layers with locked markers are skipped. Returns `time` and `markers`: each added marker's `layer`, `index` (as markers.list shows it) and `time`."
+            "Adds a marker with `comment` at `time` (comp seconds, default now) to `layers` (default selected), replacing a marker at that time; layers with locked markers are skipped. Returns `time` and `markers`: each added marker's `layer`, `index` (as marker.list shows it) and `time`."
         }
         "layer.addMask" => {
             "Adds a mask to `layer`: `shape` rect, ellipse, rounded, polygon or star; `rect` [x, y, w, h] in layer pixels (default the whole layer); `mode` add, subtract and so on. Use mask commands to edit its path, feather and opacity."
@@ -708,7 +708,7 @@ pub fn description(id: &str) -> &'static str {
         "layer.channels" => {
             "Returns the layers and channels of a multi-layer OpenEXR footage `layer` and what each EXR layer maps to red, green, blue and alpha; these are the names EXtractoR's channel parameters take. Empty for other layers."
         }
-        "layer.create" => {
+        "layer.add" => {
             "Converts the selected layer by `op`: editableText (PSD type layer to a text layer), shapesFromText (a shape layer of the glyph outlines), masksFromText (masks on a solid) or shapesFromVector (SVG/vector footage to a shape layer)."
         }
         "layer.deleteAllMarkers" => "Deletes every marker on `layers` (default selected); layers whose markers are locked are skipped.",
@@ -957,15 +957,15 @@ pub fn description(id: &str) -> &'static str {
         "liquify.stroke" => {
             "Paints one Liquify stroke on a layer's Liquify effect: `tool` warp, twirl, pucker, bloat, turbulence, reconstruction and others, `points` [[x, y]] in effect space, `size`, `pressure`, `jitter`, at `time`. Add the Liquify effect first."
         }
-        "markers.convert" => "Layer marker → comp marker (when `layer` is given), or comp marker → layer marker on `toLayer` (default: the selected layers).",
-        "markers.delete" => "Deletes a marker: by `index` (from 0) or the one at `at` (comp seconds), of `layer`, or of the comp when no `layer` is given.",
-        "markers.list" => {
+        "marker.convert" => "Layer marker → comp marker (when `layer` is given), or comp marker → layer marker on `toLayer` (default: the selected layers).",
+        "marker.delete" => "Deletes a marker: by `index` (from 0) or the one at `at` (comp seconds), of `layer`, or of the comp when no `layer` is given.",
+        "marker.list" => {
             "Lists markers: the comp's markers, or `layer`'s (layer markers): index, time, duration, comment, chapter, URL, cue point and label, with times in comp seconds."
         }
-        "markers.nested" => {
+        "marker.nested" => {
             "Lists the markers of a precomp `layer`'s nested composition at the times they fall in this comp, as the layer bar shows them: time, nested time, duration, comment and label."
         }
-        "markers.set" => "Edit (or with `new: true`, add) a marker. Returns its new index.",
+        "marker.set" => "Edit (or with `new: true`, add) a marker. Returns its new index.",
         "mask.addVertex" => {
             "Adds a vertex at `point` [x, y] (layer pixels) to `mask` on `layer`, at `index` (default the end), with optional tangents `in`/`out`. Returns the new vertex index and selects it."
         }
@@ -1069,13 +1069,13 @@ pub fn description(id: &str) -> &'static str {
         "path.ungroupShapes" => {
             "Dissolves the selected shape groups, moving their items into the parent group; a static group transform is baked into the items."
         }
-        "paths.nullsFollowPoints" => {
+        "path.nullsFollowPoints" => {
             "Creates a null for every vertex of a path (`layer` plus `path`/`prop`), or for `pins` of a puppet, with expressions so each null follows its point. Use to attach layers to path points. Returns the nulls."
         }
-        "paths.pointsFollowNulls" => {
+        "path.pointsFollowNulls" => {
             "Creates a null for every vertex of a path (or Position/Advanced puppet `pins`) and adds expressions so the path follows the nulls; move the nulls to animate the shape. Returns the nulls."
         }
-        "paths.tracePath" => {
+        "path.tracePath" => {
             "Creates a null that moves along a path (`layer` plus `path`/`prop`) driven by a Progress slider keyed 0→100% over the path's span; `loop` repeats it. Returns the null; parent layers to it to follow the path."
         }
         "playback.audio" => "Editor window only: turns preview audio on or off. Headless sessions accept it and change nothing.",
@@ -1284,7 +1284,7 @@ pub fn description(id: &str) -> &'static str {
         "roto.unfreeze" => {
             "Unfreezes a layer's Rotoscope Brush so its strokes and span can be edited again (frozen mattes are cached and not recomputed). Returns {frozen: false}."
         }
-        "scopes.analyze" => {
+        "scope.analyze" => {
             "Analyses the comp's frame at `time`: `scope` waveform (RGB, luma, YC), vectorscope, histogram or parade, with `standard` rec601/709/2020; returns the scope data plus mean RGB and min, max and mean luma. Use to check exposure and colour."
         }
         "script.run" => {
@@ -1327,15 +1327,15 @@ pub fn description(id: &str) -> &'static str {
         "shape.toolOptions" => {
             "The Tools bar's options for the shape tools and the Pen: Tool Creates Shape / Tool Creates Mask (`createsMask`) and the Fill and Stroke new shapes get (the keys of [`paint_p`]); `reset` restores the defaults first. Reports the options."
         }
-        "shortcuts.conflicts" => "Lists keyboard shortcut conflicts in the active preset: each command, its keys, and the command and scope it collides with.",
-        "shortcuts.export" => "Exports a keyboard shortcut preset (`preset`, default the active one) as JSON, written to `path` when given, else returned.",
-        "shortcuts.import" => "Imports a keyboard shortcut preset from `path` or an exported document in `preset`, under `name`. Returns the preset name.",
-        "shortcuts.list" => {
+        "shortcut.conflicts" => "Lists keyboard shortcut conflicts in the active preset: each command, its keys, and the command and scope it collides with.",
+        "shortcut.export" => "Exports a keyboard shortcut preset (`preset`, default the active one) as JSON, written to `path` when given, else returned.",
+        "shortcut.import" => "Imports a keyboard shortcut preset from `path` or an exported document in `preset`, under `name`. Returns the preset name.",
+        "shortcut.list" => {
             "Lists commands with their keyboard shortcuts; `query` filters by words in label, command or keys, `keys` finds what a key combination does, `assigned: true` only bound commands."
         }
-        "shortcuts.preset" => "Manages keyboard shortcut presets: `op` select (`name`), new, duplicate (`from`), delete or rename (`newName`).",
-        "shortcuts.reset" => "Resets one `command`'s shortcut to its default, or the whole active preset when no command is given.",
-        "shortcuts.set" => {
+        "shortcut.preset" => "Manages keyboard shortcut presets: `op` select (`name`), new, duplicate (`from`), delete or rename (`newName`).",
+        "shortcut.reset" => "Resets one `command`'s shortcut to its default, or the whole active preset when no command is given.",
+        "shortcut.set" => {
             "Binds keys to a `command` (with `params` when the binding passes some): `keys` \"Cmd+Shift+K\", a list, or null to unbind. Editing the default preset creates a custom copy. Returns keys and conflicts."
         }
         "storage.clear" => {
@@ -1345,17 +1345,17 @@ pub fn description(id: &str) -> &'static str {
             "Returns the browser storage the web app uses: availability, backend, usage and quota, whether storage is persistent, stored files by kind and the disk cache statistics. {available: false} on desktop."
         }
         "storage.persist" => "Asks the browser to make the web app's storage persistent so it isn't evicted. Returns {requested, persisted}.",
-        "templates.create" => {
-            "Replaces the open project with an untitled copy of a project template (`id` from templates.list, or `path` to an .ectemplate) and opens its main comp; embedded footage is extracted beside `projectPath` or into `footageDir`."
+        "template.add" => {
+            "Replaces the open project with an untitled copy of a project template (`id` from template.list, or `path` to an .ectemplate) and opens its main comp; embedded footage is extracted beside `projectPath` or into `footageDir`."
         }
-        "templates.delete" => "Deletes a saved user template (`id`, `user/<file>`). Built-in templates cannot be deleted.",
-        "templates.list" => {
+        "template.delete" => "Deletes a saved user template (`id`, `user/<file>`). Built-in templates cannot be deleted.",
+        "template.list" => {
             "Lists the project templates: id, name, description, category, built-in or user, size, frame rate, duration and controls; `thumbnails: true` adds a 256×144 thumbnail."
         }
-        "templates.saveAs" => {
+        "template.saveAs" => {
             "Saves the current project as a user project template `name` (with `description`, `category`); the active comp becomes its main comp. Footage is embedded up to `embedLimitMB` (256), larger files stay linked."
         }
-        "templates.thumbnail" => "Returns a template's thumbnail (`id`): width, height and RGB pixels as hex.",
+        "template.thumbnail" => "Returns a template's thumbnail (`id`): width, height and RGB pixels as hex.",
         "text.addSelector" => "Animation ▸ Add Text Selector ▸ Range / Wiggly / Expression (see `layer.addTextSelector`).",
         "text.animatorFontAxes" => {
             "Animation ▸ Animate Text ▸ Variable Font Axes: the axes of the layer's font, or (with `axis`) a new animator — or a property on `animator` — that offsets that axis (user units, weighted by the selectors, added to the axis default)."
@@ -1454,18 +1454,18 @@ pub fn description(id: &str) -> &'static str {
         }
         "track.stop" => "Stops the motion tracking, mask tracking or warp stabilizer analysis that is running; results so far are kept. Returns {stopped}.",
         "track.warpStabilizer" => "Animation ▸ Warp Stabilizer VFX / the Tracker panel button: apply the effect to the selected layer and start analysing it.",
-        "view.3d.activeCamera" => "Switches the comp viewer's 3D view to the Active Camera (what renders). View state only; the project is unchanged.",
-        "view.3d.back" => "Switches the comp viewer's 3D view to Back (orthographic). View state only.",
-        "view.3d.bottom" => "Switches the comp viewer's 3D view to Bottom (orthographic). View state only.",
-        "view.3d.custom1" => "Switches the comp viewer's 3D view to Custom View 1 (a perspective working view). View state only.",
-        "view.3d.custom2" => "Switches the comp viewer's 3D view to Custom View 2. View state only.",
-        "view.3d.custom3" => "Switches the comp viewer's 3D view to Custom View 3. View state only.",
-        "view.3d.default" => "Switches the comp viewer's 3D view to the Default camera view. View state only.",
-        "view.3d.front" => "Switches the comp viewer's 3D view to Front (orthographic). View state only.",
-        "view.3d.last" => "Switches the comp viewer back to the previously used 3D view. View state only.",
-        "view.3d.left" => "Switches the comp viewer's 3D view to Left (orthographic). View state only.",
-        "view.3d.right" => "Switches the comp viewer's 3D view to Right (orthographic). View state only.",
-        "view.3d.top" => "Switches the comp viewer's 3D view to Top (orthographic). View state only.",
+        "view.threeD.activeCamera" => "Switches the comp viewer's 3D view to the Active Camera (what renders). View state only; the project is unchanged.",
+        "view.threeD.back" => "Switches the comp viewer's 3D view to Back (orthographic). View state only.",
+        "view.threeD.bottom" => "Switches the comp viewer's 3D view to Bottom (orthographic). View state only.",
+        "view.threeD.custom1" => "Switches the comp viewer's 3D view to Custom View 1 (a perspective working view). View state only.",
+        "view.threeD.custom2" => "Switches the comp viewer's 3D view to Custom View 2. View state only.",
+        "view.threeD.custom3" => "Switches the comp viewer's 3D view to Custom View 3. View state only.",
+        "view.threeD.default" => "Switches the comp viewer's 3D view to the Default camera view. View state only.",
+        "view.threeD.front" => "Switches the comp viewer's 3D view to Front (orthographic). View state only.",
+        "view.threeD.last" => "Switches the comp viewer back to the previously used 3D view. View state only.",
+        "view.threeD.left" => "Switches the comp viewer's 3D view to Left (orthographic). View state only.",
+        "view.threeD.right" => "Switches the comp viewer's 3D view to Right (orthographic). View state only.",
+        "view.threeD.top" => "Switches the comp viewer's 3D view to Top (orthographic). View state only.",
         "view.addGuide" => {
             "Adds a guide to `comp`: `orientation` vertical (default) or horizontal at `position` in comp pixels (default the centre). Guides are saved with the comp but don't render."
         }

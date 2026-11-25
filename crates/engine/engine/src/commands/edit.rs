@@ -169,7 +169,7 @@ fn delete(s: &mut Session, p: &Value) -> Result<Value> {
     }
     // Keyframes selected → delete keys; mask vertices → delete them; else layers.
     if !s.state.selected_keys.is_empty() && p.get("layers").is_none() {
-        return s.execute("keys.delete", json!({}));
+        return s.execute("keyframe.delete", json!({}));
     }
     // (Points selected with their mask, which selecting a mask does: the mask goes, below.)
     let comp = s.active_comp();
@@ -194,7 +194,7 @@ fn delete(s: &mut Session, p: &Value) -> Result<Value> {
         return Ok(n);
     }
     let (cid, ids) = layers_p(s, p)?;
-    let ids = super::unlocked(s, cid, ids, "edit.clear")?;
+    let ids = super::unlocked(s, cid, ids, "edit.delete")?;
     // Children of deleted layers are unparented where they are (as is usual).
     let comp = s.project.comp(cid).ok_or(crate::EngineError::NoComp)?;
     let orphans: Vec<LayerId> = comp.layers.iter().filter(|l| !ids.contains(&l.id) && l.parent.is_some_and(|p| ids.contains(&p))).map(|l| l.id).collect();
@@ -247,7 +247,7 @@ fn copy(s: &mut Session, p: &Value) -> Result<Value> {
         s.state.link_clipboard = None;
         s.state.effect_clipboard.clear();
         s.state.contents_clipboard.clear();
-        return s.execute("keys.copy", json!({}));
+        return s.execute("keyframe.copy", json!({}));
     }
     // Effects selected (Effect Controls / timeline) → copy the effects.
     if p.get("layers").is_none() && !super::effect::selected_effects(s).is_empty() {
@@ -310,13 +310,13 @@ fn copy_properties(s: &mut Session) -> Result<Option<Value>> {
     let mut n = 0;
     if !keys.is_empty() {
         let selected = std::mem::replace(&mut s.state.selected_keys, keys);
-        let r = s.execute("keys.copy", json!({}));
+        let r = s.execute("keyframe.copy", json!({}));
         s.state.selected_keys = selected;
         n = r?.as_u64().unwrap_or(0);
     }
     let v = values.len();
     s.state.value_clipboard = values;
-    // Keys alone answer as `keys.copy` does (their count).
+    // Keys alone answer as `keyframe.copy` does (their count).
     Ok(Some(if v == 0 { json!(n) } else { json!({"keys": n, "values": v}) }))
 }
 
@@ -359,7 +359,7 @@ fn paste_properties(s: &mut Session, p: &Value) -> Result<Value> {
         if let Some(o) = kp.as_object_mut() {
             o.insert("merge".into(), json!(merge));
         }
-        let pasted = s.execute("keys.paste", kp);
+        let pasted = s.execute("keyframe.paste", kp);
         s.history.merge_key = None;
         r["keys"] = pasted?;
     }
@@ -489,8 +489,8 @@ fn cut(s: &mut Session, p: &Value) -> Result<Value> {
         return super::text_edit::cut(s);
     }
     if !s.state.selected_keys.is_empty() && p.get("layers").is_none() {
-        s.execute("keys.copy", json!({}))?;
-        return s.execute("keys.delete", json!({}));
+        s.execute("keyframe.copy", json!({}))?;
+        return s.execute("keyframe.delete", json!({}));
     }
     // Shape items selected → copied, then removed from their layers (Paste moves them).
     if p.get("layers").is_none() && super::effect::selected_effects(s).is_empty() {
@@ -515,7 +515,7 @@ fn paste(s: &mut Session, p: &Value) -> Result<Value> {
         return paste_properties(s, p);
     }
     if s.state.clip_is_keys && !s.state.key_clipboard.is_empty() {
-        return s.execute("keys.paste", p.clone());
+        return s.execute("keyframe.paste", p.clone());
     }
     if !s.state.effect_clipboard.is_empty() {
         return s.execute("effect.paste", p.clone());
@@ -605,7 +605,7 @@ fn label(s: &mut Session, p: &Value) -> Result<Value> {
 
 /// Edit ▸ Paste Reversed Keyframes: the copied keys mirrored in time over their whole span (the
 /// last key first, incoming and outgoing eases swapped), pasted like Edit ▸ Paste
-/// (`keys.paste`: at the current time, into the selected or the same properties).
+/// (`keyframe.paste`: at the current time, into the selected or the same properties).
 fn paste_reversed(s: &mut Session, p: &Value) -> Result<Value> {
     let original = s.state.key_clipboard.clone();
     let span = original.iter().flat_map(|c| c.keys.iter().map(|k| k.time)).max().unwrap_or(Tick::ZERO);
@@ -628,7 +628,7 @@ fn paste_reversed(s: &mut Session, p: &Value) -> Result<Value> {
             ..c.clone()
         })
         .collect();
-    let r = s.execute("keys.paste", p.clone());
+    let r = s.execute("keyframe.paste", p.clone());
     s.state.key_clipboard = original;
     r
 }
@@ -836,7 +836,7 @@ pub fn specs() -> Vec<CommandSpec> {
             paste
         ),
         cmd!("edit.pasteReversedKeyframes", "Paste Reversed Keyframes", ["Edit"], None, "{layers?, prop?|path?, time?}", has_key_clip, paste_reversed),
-        cmd!("edit.clear", "Clear", ["Edit"], Some("Delete"), "{layers?}", layers_or_keys, delete),
+        cmd!("edit.delete", "Clear", ["Edit"], Some("Delete"), "{layers?}", layers_or_keys, delete),
         cmd!("edit.duplicate", "Duplicate", ["Edit"], Some("Cmd+D"), "{layers?} (effects or shape items when they are selected)", has_layers, duplicate),
         cmd!("edit.splitLayer", "Split Layer", ["Edit"], Some("Cmd+Shift+D"), "{layers?}", has_layers, split),
         cmd!("edit.liftWorkArea", "Lift Work Area", ["Edit"], None, "{layers?}", has_comp, lift),

@@ -77,7 +77,7 @@ fn duplicate_reorder_and_delete_selected_effect() {
     s.execute("effect.reorder", json!({"layer": a, "effect": "Invert", "index": 1})).unwrap();
     assert_eq!(fx_names(&s, a), vec!["Invert", "Gaussian Blur", "Gaussian Blur 2"]);
     // Delete with the duplicate selected removes just that effect (not the layer).
-    s.execute("edit.clear", json!({})).unwrap();
+    s.execute("edit.delete", json!({})).unwrap();
     assert_eq!(fx_names(&s, a), vec!["Invert", "Gaussian Blur"]);
     assert!(s.active_comp().unwrap().layer(LayerId(a)).is_some());
     s.undo();

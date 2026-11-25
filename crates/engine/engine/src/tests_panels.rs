@@ -86,14 +86,14 @@ fn progress_lists_and_cancels_jobs() {
         })
         .unwrap();
     let id = r["job"].as_str().unwrap().to_string();
-    let listed = s.execute("jobs.list", json!({})).unwrap();
+    let listed = s.execute("job.list", json!({})).unwrap();
     let running = listed["running"].as_array().unwrap();
     assert_eq!(running.len(), 1);
     assert_eq!(running[0]["id"], json!(id));
     assert_eq!(running[0]["label"], json!("Endless job"));
     assert_eq!(running[0]["cancellable"], json!(true));
-    assert_eq!(s.execute("jobs.cancel", json!({"job": id})).unwrap()["cancelled"], json!(true));
-    s.execute("jobs.wait", json!({})).unwrap();
+    assert_eq!(s.execute("job.cancel", json!({"job": id})).unwrap()["cancelled"], json!(true));
+    s.execute("job.wait", json!({})).unwrap();
     assert!(s.jobs().is_empty());
     assert_eq!(s.job_log.last().unwrap().status, "cancelled");
     // A finished job applies its edit (one undo step) and reports its result.
@@ -171,16 +171,16 @@ fn scopes_read_the_comp_frame() {
     let mut s = Session::default();
     s.execute("comp.new", json!({"width": 64, "height": 48, "frameRate": 25, "duration": 1})).unwrap();
     s.execute("layer.newSolid", json!({"color": "#ff0000"})).unwrap();
-    let v = s.execute("scopes.analyze", json!({"scope": "vectorscopeYuv", "size": 101})).unwrap();
+    let v = s.execute("scope.analyze", json!({"scope": "vectorscopeYuv", "size": 101})).unwrap();
     let st = kition_motion_raster::scopes::ColorStandard::Rec709;
     let [_, cb, cr] = st.ycbcr([1.0, 0.0, 0.0]);
     assert_eq!(v["peaks"][0], json!([((cb + 0.5) * 100.0).round() as u32, ((0.5 - cr) * 100.0).round() as u32]));
-    let h = s.execute("scopes.analyze", json!({"scope": "histogram", "standard": "rec601"})).unwrap();
+    let h = s.execute("scope.analyze", json!({"scope": "histogram", "standard": "rec601"})).unwrap();
     let bars = &h["histogram"];
     assert_eq!(bars[0][255], json!(64 * 48));
     assert_eq!(bars[1][0], json!(64 * 48));
     assert!((h["luma"]["mean"].as_f64().unwrap() - 0.299).abs() < 1e-3);
-    assert!(s.execute("scopes.analyze", json!({"scope": "bogus"})).is_err());
+    assert!(s.execute("scope.analyze", json!({"scope": "bogus"})).is_err());
 }
 
 // ---------------------------------------------------------------- Footage panel

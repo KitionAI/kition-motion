@@ -52,10 +52,10 @@ fn default_layer_times_are_preserved_and_outside_keys_warn() {
     assert_seconds(&read["keys"][1]["time"], 15.3);
     assert_seconds(&read["keys"][1]["compTime"], 25.8);
     assert!(read["keys"][1].get("warning").is_some());
-    let selected = s.execute("keys.select", json!({"keys": [{"layer": layer, "path": "transform/opacity", "time": 25.8}], "timeBase": "comp"})).unwrap();
+    let selected = s.execute("keyframe.select", json!({"keys": [{"layer": layer, "path": "transform/opacity", "time": 25.8}], "timeBase": "comp"})).unwrap();
     assert_seconds(&selected["keys"][0]["compTime"], 25.8);
     assert!(selected.get("warning").is_some());
-    let moved = s.execute("keys.set", json!({"layer": layer, "path": "transform/opacity", "time": 15.3, "newTime": 9.5, "timeBase": "layer"})).unwrap();
+    let moved = s.execute("keyframe.set", json!({"layer": layer, "path": "transform/opacity", "time": 15.3, "newTime": 9.5, "timeBase": "layer"})).unwrap();
     assert_seconds(&moved["compTime"], 20.0);
     assert!(moved.get("warning").is_some(), "out point is exclusive");
 }
@@ -73,15 +73,16 @@ fn stretched_and_reversed_keys_use_the_comp_frame_grid_for_both_bases() {
                 s.execute("prop.addKey", json!({"layer": layer, "path": "transform/rotation", "time": layer_time, "timeBase": "layer", "value": 20})).unwrap();
             assert_seconds(&layer_reply["compTime"], time);
         }
-        let selected = s.execute("keys.select", json!({"keys": [{"layer": layer, "path": "transform/opacity", "time": 15.3}], "timeBase": "comp"})).unwrap();
+        let selected =
+            s.execute("keyframe.select", json!({"keys": [{"layer": layer, "path": "transform/opacity", "time": 15.3}], "timeBase": "comp"})).unwrap();
         assert_seconds(&selected["keys"][0]["compTime"], 15.3);
         let moved = s
-            .execute("keys.set", json!({"layer": layer, "path": "transform/opacity", "time": 15.3, "newTime": 15.41, "timeBase": "comp", "value": 60}))
+            .execute("keyframe.set", json!({"layer": layer, "path": "transform/opacity", "time": 15.3, "newTime": 15.41, "timeBase": "comp", "value": 60}))
             .unwrap();
         assert_seconds(&moved["compTime"], 15.4);
         let ly = s.active_comp().unwrap().layer(LayerId(layer)).unwrap();
         assert_eq!(ly.comp_time(s.state.selected_keys[0].time), Tick::from_seconds_f64(15.4));
-        let layer_reply = s.execute("keys.set", json!({"layer": layer, "path": "transform/rotation", "time": (15.3 - start) * 100.0 / stretch, "newTime": (15.41 - start) * 100.0 / stretch, "timeBase": "layer"})).unwrap();
+        let layer_reply = s.execute("keyframe.set", json!({"layer": layer, "path": "transform/rotation", "time": (15.3 - start) * 100.0 / stretch, "newTime": (15.41 - start) * 100.0 / stretch, "timeBase": "layer"})).unwrap();
         assert_seconds(&layer_reply["compTime"], 15.4);
         s.execute("edit.undo", json!({})).unwrap();
         s.execute("edit.undo", json!({})).unwrap();
@@ -96,7 +97,7 @@ fn invalid_key_time_arguments_leave_properties_and_history_unchanged() {
     let (mut s, layer) = offset_layer(10.5, 100.0);
     let before = prop(&s, layer, "transform/opacity");
     let history_len = s.history.undo.len();
-    for cmd in ["prop.addKey", "prop.set", "keys.set"] {
+    for cmd in ["prop.addKey", "prop.set", "keyframe.set"] {
         for extra in [json!({"time": "oops"}), json!({"time": 1e300}), json!({"timeBase": "seconds", "time": 0})] {
             let mut p = json!({"layer": layer, "path": "transform/opacity", "value": 10});
             p.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
@@ -105,7 +106,7 @@ fn invalid_key_time_arguments_leave_properties_and_history_unchanged() {
             assert_eq!(s.history.undo.len(), history_len);
         }
     }
-    assert!(s.execute("keys.select", json!({"keys": [], "timeBase": null})).is_err());
+    assert!(s.execute("keyframe.select", json!({"keys": [], "timeBase": null})).is_err());
 }
 
 #[test]

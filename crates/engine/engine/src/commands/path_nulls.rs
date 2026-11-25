@@ -1,13 +1,13 @@
 //! Window ▸ Create Nulls From Paths: our own panel (and these commands) linking a mask or shape
 //! path to null layers with expressions, in three ways:
 //!
-//! - **Points Follow Nulls** (`paths.pointsFollowNulls`): one null per vertex, placed on it; the
+//! - **Points Follow Nulls** (`path.pointsFollowNulls`): one null per vertex, placed on it; the
 //!   path's expression rebuilds it from the nulls (`createPath` of each null's position brought
 //!   into the path's layer with `fromComp`), so moving a null moves its vertex.
-//! - **Nulls Follow Points** (`paths.nullsFollowPoints`): one null per vertex whose Position
+//! - **Nulls Follow Points** (`path.nullsFollowPoints`): one null per vertex whose Position
 //!   expression follows the vertex (`toComp(path.points()[i])`), for attaching things to an
 //!   animated path.
-//! - **Trace Path** (`paths.tracePath`): one null with a Progress slider (keyframed 0 → 100 % over
+//! - **Trace Path** (`path.tracePath`): one null with a Progress slider (keyframed 0 → 100 % over
 //!   the layer's span, optionally looping) whose Position follows `pointOnPath(progress)`.
 //!
 //! The path is `path`/`prop` of `layer`, else the selected path property, else the layer's first
@@ -186,7 +186,7 @@ fn new_null(s: &mut Session, cid: ItemId, name: &str, at: [f64; 2]) -> Result<(u
 }
 
 fn nulls_follow_points(s: &mut Session, p: &Value) -> Result<Value> {
-    const C: &str = "paths.nullsFollowPoints";
+    const C: &str = "path.nullsFollowPoints";
     if let Some((cid, pins)) = pin_targets(s, p, C)? {
         let nulls = super::app_more::grouped(s, "Nulls Follow Points", |s| {
             let mut out = vec![];
@@ -216,7 +216,7 @@ fn nulls_follow_points(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn points_follow_nulls(s: &mut Session, p: &Value) -> Result<Value> {
-    const C: &str = "paths.pointsFollowNulls";
+    const C: &str = "path.pointsFollowNulls";
     if let Some((cid, pins)) = pin_targets(s, p, C)? {
         let nulls = super::app_more::grouped(s, "Points Follow Nulls", |s| {
             let mut out = vec![];
@@ -256,7 +256,7 @@ fn points_follow_nulls(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn trace_path(s: &mut Session, p: &Value) -> Result<Value> {
-    const C: &str = "paths.tracePath";
+    const C: &str = "path.tracePath";
     let (cid, lid, uid) = target(s, p, C)?;
     let pi = info(s, cid, lid, uid, C)?;
     let looping = b_p(p, "loop").unwrap_or(false);
@@ -287,7 +287,7 @@ fn trace_path(s: &mut Session, p: &Value) -> Result<Value> {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
-            "paths.pointsFollowNulls",
+            "path.pointsFollowNulls",
             "Points Follow Nulls",
             [],
             None,
@@ -296,7 +296,7 @@ pub fn specs() -> Vec<CommandSpec> {
             points_follow_nulls
         ),
         cmd!(
-            "paths.nullsFollowPoints",
+            "path.nullsFollowPoints",
             "Nulls Follow Points",
             [],
             None,
@@ -305,7 +305,7 @@ pub fn specs() -> Vec<CommandSpec> {
             nulls_follow_points
         ),
         cmd!(
-            "paths.tracePath",
+            "path.tracePath",
             "Trace Path",
             [],
             None,

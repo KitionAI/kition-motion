@@ -172,7 +172,7 @@ fn mask_interpolation_creates_matching_keys() {
     })
     .unwrap();
     let prop = mask_path(&s, clip, uid).uid;
-    s.execute("keys.select", json!({"keys": [{"layer": clip.0, "prop": prop, "time": 0.0}, {"layer": clip.0, "prop": prop, "time": 0.8}]})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [{"layer": clip.0, "prop": prop, "time": 0.0}, {"layer": clip.0, "prop": prop, "time": 0.8}]})).unwrap();
     assert_eq!(s.state.selected_keys.len(), 2);
     let r = s
         .execute_checked(
@@ -272,7 +272,7 @@ fn set_param(s: &mut Session, layer: LayerId, path: &str, v: serde_json::Value) 
 fn deferred_native_warp_refuses_changed_input() {
     for change_input in [true, false] {
         let (mut s, clip, solid) = setup(shaky);
-        s.execute("edit.clear", json!({"layers": [solid.0]})).unwrap();
+        s.execute("edit.delete", json!({"layers": [solid.0]})).unwrap();
         let effect = s.execute("effect.apply", json!({"layer": clip.0, "effect": "Warp Stabilizer"})).unwrap()["effects"][0].as_u64().unwrap();
         s.execute("warp.analyze", json!({"layer": clip.0, "wait": false})).unwrap();
         assert!(s.warp_job.is_some());
@@ -301,7 +301,7 @@ fn deferred_native_warp_refuses_changed_input() {
 #[test]
 fn warp_stabilizer_analyzes_and_stabilizes() {
     let (mut s, clip, solid) = setup(shaky);
-    s.execute("edit.clear", json!({"layers": [solid.0]})).unwrap();
+    s.execute("edit.delete", json!({"layers": [solid.0]})).unwrap();
     s.execute("layer.select", json!({"layers": [clip.0]})).unwrap();
     // Effect ▸ Distort ▸ Warp Stabilizer, then analyse (blocking).
     let r = s.execute("effect.apply", json!({"effect": "Warp Stabilizer"})).unwrap();
@@ -393,7 +393,7 @@ fn warp_stabilizer_analyzes_and_stabilizes() {
 #[test]
 fn warp_analysis_invalidates_and_cancels() {
     let (mut s, clip, solid) = setup(shaky);
-    s.execute("edit.clear", json!({"layers": [solid.0]})).unwrap();
+    s.execute("edit.delete", json!({"layers": [solid.0]})).unwrap();
     s.execute("layer.select", json!({"layers": [clip.0]})).unwrap();
     // Animation ▸ Warp Stabilizer VFX applies and analyses.
     assert!(s.is_enabled("track.warpStabilizer"));
@@ -478,7 +478,7 @@ impl Deferred {
 #[test]
 fn warp_plan_is_solved_in_the_job_not_on_the_page() {
     let (mut s, clip, solid) = setup(shaky);
-    s.execute("edit.clear", json!({"layers": [solid.0]})).unwrap();
+    s.execute("edit.delete", json!({"layers": [solid.0]})).unwrap();
     s.execute("layer.select", json!({"layers": [clip.0]})).unwrap();
     s.execute("effect.apply", json!({"effect": "Warp Stabilizer"})).unwrap();
     // Settings no other test uses: the plans of this test are solved nowhere else.

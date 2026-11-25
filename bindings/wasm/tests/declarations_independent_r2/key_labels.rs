@@ -2,7 +2,7 @@ use super::Row;
 
 pub(super) const ROWS: &[Row] = &[
     Row {
-        command: "keys.setLabel",
+        command: "keyframe.setLabel",
         path: "selected stored keys",
         resolves: &["active comp", "selected_keys: layer id, property uid, exact stored time"],
         reads: &[
@@ -20,7 +20,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/key_labels.rs:24; commands/prop.rs:850; keyframe/src/lib.rs:431",
     },
     Row {
-        command: "keys.selectLabelGroup",
+        command: "keyframe.selectLabelGroup",
         path: "selection only",
         resolves: &["active comp", "selected_keys exact layer/property/time", "scope selected|all|visibleSelected|visibleAll; visible property uids"],
         reads: &["selected keys labels", "layer/property/key membership", "candidate key labels and times"],

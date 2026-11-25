@@ -79,7 +79,7 @@ fn bindable(s: &Session, p: &Value, cmd: &str) -> Result<crate::shortcuts::Binda
     let params = p.get("params").cloned().unwrap_or(Value::Null);
     let t = s.shortcuts();
     let key = binding_key(c, &params);
-    t.find(&key).or_else(|| t.find(c)).cloned().ok_or_else(|| bad(cmd, format!("`{key}` can't have a shortcut (see shortcuts.list)")))
+    t.find(&key).or_else(|| t.find(c)).cloned().ok_or_else(|| bad(cmd, format!("`{key}` can't have a shortcut (see shortcut.list)")))
 }
 
 fn keys_param(p: &Value, cmd: &str) -> Result<Vec<String>> {
@@ -123,10 +123,10 @@ fn sc_list(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn sc_set(s: &mut Session, p: &Value) -> Result<Value> {
-    let b = bindable(s, p, "shortcuts.set")?;
-    let keys = keys_param(p, "shortcuts.set")?;
+    let b = bindable(s, p, "shortcut.set")?;
+    let keys = keys_param(p, "shortcut.set")?;
     let conflicts: Vec<_> = keys.iter().flat_map(|k| s.shortcuts().conflicts(&b, k)).collect();
-    let created = s.keymaps.set(&b, &keys).map_err(|e| bad("shortcuts.set", e))?;
+    let created = s.keymaps.set(&b, &keys).map_err(|e| bad("shortcut.set", e))?;
     s.shortcuts_changed();
     let now = s.shortcuts().keys.get(&b.key).cloned().unwrap_or_default();
     if let Some(n) = &created {
@@ -141,9 +141,9 @@ fn sc_set(s: &mut Session, p: &Value) -> Result<Value> {
 
 fn sc_reset(s: &mut Session, p: &Value) -> Result<Value> {
     if let Some(c) = str_p(p, "command") {
-        let b = bindable(s, p, "shortcuts.reset")?;
+        let b = bindable(s, p, "shortcut.reset")?;
         let defaults = b.defaults.clone();
-        s.keymaps.set(&b, &defaults).map_err(|e| bad("shortcuts.reset", e))?;
+        s.keymaps.set(&b, &defaults).map_err(|e| bad("shortcut.reset", e))?;
         s.shortcuts_changed();
         return Ok(json!({"command": c, "keys": defaults}));
     }
@@ -155,7 +155,7 @@ fn sc_reset(s: &mut Session, p: &Value) -> Result<Value> {
 fn sc_preset(s: &mut Session, p: &Value) -> Result<Value> {
     let op = str_p(p, "op").unwrap_or("select");
     let name = str_p(p, "name");
-    let e = |m: String| bad("shortcuts.preset", m);
+    let e = |m: String| bad("shortcut.preset", m);
     let k = &mut s.keymaps;
     match op {
         "select" => k.select(name.unwrap_or(DEFAULT_PRESET)).map_err(e)?,
@@ -171,18 +171,18 @@ fn sc_preset(s: &mut Session, p: &Value) -> Result<Value> {
             k.delete(&n).map_err(e)?;
         }
         "rename" => {
-            let to = str_p(p, "newName").ok_or_else(|| bad("shortcuts.preset", "missing `newName`"))?;
+            let to = str_p(p, "newName").ok_or_else(|| bad("shortcut.preset", "missing `newName`"))?;
             let from = name.map(str::to_string).unwrap_or_else(|| k.active.clone());
             k.rename(&from, to).map_err(e)?;
         }
-        _ => return Err(bad("shortcuts.preset", "op must be select, new, duplicate, delete or rename")),
+        _ => return Err(bad("shortcut.preset", "op must be select, new, duplicate, delete or rename")),
     }
     s.shortcuts_changed();
     Ok(json!({"preset": s.keymaps.active, "presets": s.keymaps.names()}))
 }
 
 fn sc_export(s: &mut Session, p: &Value) -> Result<Value> {
-    let doc = s.keymaps.export(str_p(p, "preset")).map_err(|e| bad("shortcuts.export", e))?;
+    let doc = s.keymaps.export(str_p(p, "preset")).map_err(|e| bad("shortcut.export", e))?;
     if let Some(path) = str_p(p, "path") {
         let text = serde_json::to_string_pretty(&doc).unwrap_or_default();
         s.services.write_file(path, text.as_bytes()).map_err(|e| EngineError::Other(format!("cannot write {path}: {e}")))?;
@@ -195,12 +195,12 @@ fn sc_import(s: &mut Session, p: &Value) -> Result<Value> {
     let doc = match (str_p(p, "path"), p.get("preset")) {
         (Some(path), _) => {
             let bytes = s.services.read_file(path).map_err(|e| EngineError::Other(format!("cannot read {path}: {e}")))?;
-            serde_json::from_slice(&bytes).map_err(|e| bad("shortcuts.import", format!("{path}: {e}")))?
+            serde_json::from_slice(&bytes).map_err(|e| bad("shortcut.import", format!("{path}: {e}")))?
         }
         (None, Some(v)) if v.is_object() => v.clone(),
-        _ => return Err(bad("shortcuts.import", "give `path` or `preset` (an exported document)")),
+        _ => return Err(bad("shortcut.import", "give `path` or `preset` (an exported document)")),
     };
-    let name = s.keymaps.import(&doc, str_p(p, "name")).map_err(|e| bad("shortcuts.import", e))?;
+    let name = s.keymaps.import(&doc, str_p(p, "name")).map_err(|e| bad("shortcut.import", e))?;
     s.shortcuts_changed();
     Ok(json!({"preset": name}))
 }
@@ -280,13 +280,13 @@ pub fn specs() -> Vec<CommandSpec> {
             prefs_open
         ),
         query!("prefs.pages", "Settings Pages", "{}", prefs_pages),
-        query!("shortcuts.list", "List Keyboard Shortcuts", "{query?, keys?, assigned?: bool}", sc_list),
-        cmd!("shortcuts.set", "Set Keyboard Shortcut", [], None, "{command, params?, keys: \"Cmd+Shift+K\" | [keys] | null}", always, sc_set),
-        cmd!("shortcuts.reset", "Reset Keyboard Shortcuts", [], None, "{command?, params?}", always, sc_reset),
-        cmd!("shortcuts.preset", "Keyboard Shortcut Preset", [], None, "{op: select|new|duplicate|delete|rename, name?, from?, newName?}", always, sc_preset),
-        cmd!("shortcuts.export", "Export Keyboard Shortcuts", [], None, "{preset?, path?}", always, sc_export),
-        cmd!("shortcuts.import", "Import Keyboard Shortcuts", [], None, "{path? | preset?: exported document, name?}", always, sc_import),
-        query!("shortcuts.conflicts", "Keyboard Shortcut Conflicts", "{}", sc_conflicts),
+        query!("shortcut.list", "List Keyboard Shortcuts", "{query?, keys?, assigned?: bool}", sc_list),
+        cmd!("shortcut.set", "Set Keyboard Shortcut", [], None, "{command, params?, keys: \"Cmd+Shift+K\" | [keys] | null}", always, sc_set),
+        cmd!("shortcut.reset", "Reset Keyboard Shortcuts", [], None, "{command?, params?}", always, sc_reset),
+        cmd!("shortcut.preset", "Keyboard Shortcut Preset", [], None, "{op: select|new|duplicate|delete|rename, name?, from?, newName?}", always, sc_preset),
+        cmd!("shortcut.export", "Export Keyboard Shortcuts", [], None, "{preset?, path?}", always, sc_export),
+        cmd!("shortcut.import", "Import Keyboard Shortcuts", [], None, "{path? | preset?: exported document, name?}", always, sc_import),
+        query!("shortcut.conflicts", "Keyboard Shortcut Conflicts", "{}", sc_conflicts),
         cmd!("file.openRecent", "Open Recent", [], None, "{index? | path?}", has_recent, open_recent),
         cmd!("file.clearRecent", "Clear Recent Projects", ["File", "Open Recent"], None, "{}", has_recent, clear_recent),
         cmd!("file.autoSave", "Auto-Save Now", [], None, "{}", always, auto_save),

@@ -1,4 +1,4 @@
-//! Background jobs: one list (Window ▸ Progress, `jobs.list`, `jobs.cancel`) over the render
+//! Background jobs: one list (Window ▸ Progress, `job.list`, `job.cancel`) over the render
 //! queue, the analyses (tracker, mask tracker, Warp Stabilizer, 3D Camera Tracker, Rotoscope Brush) and
 //! the generic background tasks started here (Content-Aware Fill, Scene Edit Detection, footage
 //! checks and imports).

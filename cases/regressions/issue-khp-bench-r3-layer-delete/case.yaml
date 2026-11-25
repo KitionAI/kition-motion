@@ -2,9 +2,9 @@ format: 1
 id: regressions/issue-khp-bench-r3-layer-delete
 feature: motion.agent.act
 intent: >-
-  An agent that asks for `layer.delete`, which does not exist, is pointed at `edit.clear`, the
+  An agent that asks for `layer.delete`, which does not exist, is pointed at `edit.delete`, the
   command that deletes layers: its keywords say "delete layers" and its description says so
-  (khp-bench r2, V01: the answer offered layer.select, keys.delete and layer.create instead).
+  (khp-bench r2, V01: the answer offered layer.select, keyframe.delete and layer.add instead).
 layer: gate
 source:
   kind: probe

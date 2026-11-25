@@ -191,8 +191,8 @@ fn create_nulls_from_paths_expressions_evaluate() {
     s.execute("comp.new", json!({"name": "Paths", "width": 100, "height": 80, "frameRate": 10, "duration": 1})).unwrap();
     let l = s.execute("layer.newSolid", json!({"name": "Plate", "color": "#808080", "width": 40, "height": 40})).unwrap()["layer"].as_u64().unwrap();
     s.execute("mask.new", json!({"layer": l, "vertices": [[0, 0], [40, 0], [40, 40], [0, 40]], "closed": true})).unwrap();
-    s.execute("paths.nullsFollowPoints", json!({"layer": l})).unwrap();
-    s.execute("paths.tracePath", json!({"layer": l})).unwrap();
+    s.execute("path.nullsFollowPoints", json!({"layer": l})).unwrap();
+    s.execute("path.tracePath", json!({"layer": l})).unwrap();
     // Layer 1: the trace null; layers 2..5: the vertex nulls (top = last vertex).
     let pos = |i: u32, t: f64| format!("app.project.activeItem.layer({i}).property('ADBE Transform Group').property('ADBE Position').valueAtTime({t}, false)");
     let o = run_code(&mut s, &format!("[{}, {}, {}].join('|')", pos(2, 0.0), pos(1, 0.0), pos(1, 0.5)), "x.jsx");
@@ -203,7 +203,7 @@ fn create_nulls_from_paths_expressions_evaluate() {
     // Halfway in time along the closed square: the opposite corner.
     assert!((parts[2][0] - 70.0).abs() < 0.5 && (parts[2][1] - 60.0).abs() < 0.5, "{:?}", parts[2]);
     // Points Follow Nulls: moving the last vertex's null moves the vertex.
-    let r = s.execute("paths.pointsFollowNulls", json!({"layer": l})).unwrap();
+    let r = s.execute("path.pointsFollowNulls", json!({"layer": l})).unwrap();
     let last = r["nulls"][3].as_u64().unwrap();
     s.execute("prop.set", json!({"layer": last, "path": "transform/position", "value": [10, 10]})).unwrap();
     let code = "var c = app.project.activeItem; var m = c.layer(c.numLayers).property('ADBE Mask Parade').property(1).property('ADBE Mask Shape').valueAtTime(0, false); [m.vertices[3][0], m.vertices[3][1], m.vertices[0][0], m.vertices.length].join(',')";
@@ -239,7 +239,7 @@ fn puppet_pin_rigs_follow_and_lead_with_live_expressions() {
     s.execute("puppet.addPin", json!({"layer": id, "position": [10, 30]})).unwrap();
     s.execute("puppet.addPin", json!({"layer": id, "position": [90, 30]})).unwrap();
     s.execute("puppet.selectPins", json!({"layer": id, "pins": []})).unwrap();
-    let r = s.execute("paths.pointsFollowNulls", json!({"layer": id})).unwrap();
+    let r = s.execute("path.pointsFollowNulls", json!({"layer": id})).unwrap();
     let nulls: Vec<u64> = r["nulls"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
     // Rigged at rest: the pins haven't moved. Layer (10, 30) is comp (60, 50).
     assert!(near(pin_at(&mut s, id, 0), [10.0, 30.0]), "{:?}", pin_at(&mut s, id, 0));
@@ -251,7 +251,7 @@ fn puppet_pin_rigs_follow_and_lead_with_live_expressions() {
     s.execute("prop.set", json!({"layer": nulls[0], "path": "transform/position", "value": [60, 90]})).unwrap();
     assert!(near(pin_at(&mut s, id, 1), [90.0, 40.0]), "{:?}", pin_at(&mut s, id, 1));
     // Nulls Follow Points: a null riding on pin 1, now at comp (60, 90).
-    let r = s.execute("paths.nullsFollowPoints", json!({"layer": id, "pins": ["Puppet Pin 1"]})).unwrap();
+    let r = s.execute("path.nullsFollowPoints", json!({"layer": id, "pins": ["Puppet Pin 1"]})).unwrap();
     let rider = r["nulls"][0].as_u64().unwrap();
     assert!(near(position_now(&s, rider), [60.0, 90.0]), "{:?}", position_now(&s, rider));
 }

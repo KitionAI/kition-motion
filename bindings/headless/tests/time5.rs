@@ -97,7 +97,7 @@ fn expected(row: &str, change: &str) -> char {
         return 'R';
     }
     if row.starts_with("layer-marker") {
-        // By index, `markers.set {comment}` reads neither the layer's start nor its stretch (the
+        // By index, `marker.set {comment}` reads neither the layer's start nor its stretch (the
         // marker is stored in layer time and only its comment is written); by comp time it
         // converts that time to layer time through both.
         let by_time = row.ends_with("time");
@@ -361,13 +361,13 @@ fn steps(row: &str, layer: u64, effects: &[u64]) -> Vec<Value> {
     let command = |id: &str, params: Value| json!({"command":id,"params":params});
     let key = |id: &str, t: f64| command(id, json!({"layer":layer,"path":OPACITY,"time":t,"value":77}));
     match row {
-        "key-time" => vec![key("keys.set", 4.0)],
-        "key-nearest" => vec![key("keys.set", 4.4)],
+        "key-time" => vec![key("keyframe.set", 4.0)],
+        "key-nearest" => vec![key("keyframe.set", 4.4)],
         "point-add" => vec![key("prop.addKey", 4.5)],
         "point-add-sampled" => vec![command("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":4.5}))],
         "point-set" => vec![key("prop.set", 4.5)],
         "current-time" => vec![json!({"command":"prop.set","at":{"time":4.5},"params":{"layer":layer,"path":OPACITY,"value":77}})],
-        "key-move" => vec![command("keys.set", json!({"layer":layer,"path":OPACITY,"time":4,"newTime":5}))],
+        "key-move" => vec![command("keyframe.set", json!({"layer":layer,"path":OPACITY,"time":4,"newTime":5}))],
         "layer-id" | "layer-index" | "layer-name" => vec![command(
             "layer.rename",
             json!({"layer":if row=="layer-id" {json!(layer)} else if row=="layer-index" {json!("#3")} else {json!("L2")},"name":"Mine"}),
@@ -380,20 +380,20 @@ fn steps(row: &str, layer: u64, effects: &[u64]) -> Vec<Value> {
                 p["layer"] = json!(layer);
             }
             p[if row.ends_with("index") { "index" } else { "at" }] = if row.ends_with("index") { json!(1) } else { json!(4) };
-            vec![command("markers.set", p)]
+            vec![command("marker.set", p)]
         }
         "effect-id" | "effect-index" | "effect-name" => vec![command(
             "effect.remove",
             json!({"layer":layer,"effect":if row=="effect-id" {json!(effects[1])} else if row=="effect-index" {json!(2)} else {json!("Fill")}}),
         )],
         "range-delete" | "range-shift" | "range-scale" => vec![
-            command("keys.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":4},{"layer":layer,"path":OPACITY,"time":6}]})),
+            command("keyframe.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":4},{"layer":layer,"path":OPACITY,"time":6}]})),
             if row == "range-delete" {
-                command("keys.delete", json!({}))
+                command("keyframe.delete", json!({}))
             } else if row == "range-shift" {
-                command("keys.move", json!({"delta":0.25}))
+                command("keyframe.move", json!({"delta":0.25}))
             } else {
-                command("keys.transform", json!({"timeScale":1.1,"timeAnchor":4}))
+                command("keyframe.transform", json!({"timeScale":1.1,"timeAnchor":4}))
             },
         ],
         _ => panic!("missing action {row}"),
@@ -741,7 +741,7 @@ fn declarations_hold_both_selected_keys_and_a_layer_moved_to_another_comp() {
     assert!(named.within.iter().all(|window| window.field != "comp.layers"), "{named:?}");
     assert!(named.premises.iter().all(|premise| premise.positions.as_ref().is_some_and(Vec::is_empty)));
     let selected =
-        doc.under("keys.select", &json!({"keys":[{"layer":layer,"path":OPACITY,"time":4},{"layer":layer,"path":OPACITY,"time":6}]})).unwrap().unwrap();
+        doc.under("keyframe.select", &json!({"keys":[{"layer":layer,"path":OPACITY,"time":4},{"layer":layer,"path":OPACITY,"time":6}]})).unwrap().unwrap();
     assert_eq!(selected.premises.len(), 1);
     let fields = selected.premises[0].fields.as_ref().unwrap();
     assert!(fields.contains(&format!("transform/opacity.keys[time={}]", 4 * SECOND)));

@@ -38,46 +38,46 @@ pub fn reads(id: &str) -> &'static [EditorState] {
 
 /// The commands that read the keyframe selection. They declare `selection`, but a call's `on`
 /// carries layer ids, and keyframes have no ids: they are named by layer, property and time
-/// (`keys.select {keys: [{layer, prop, time}]}`), so a run selects them with `keys.select` in an
+/// (`keyframe.select {keys: [{layer, prop, time}]}`), so a run selects them with `keyframe.select` in an
 /// earlier step. `on` keeps the keyframes selected on the layers it names and drops the others.
 /// An explicit form would need keyframe ids (or `{layer, path, time}` triples) that `inspect`
 /// lists and `on` may carry.
 const KEY_SELECTION: &[&str] = &[
-    "edit.clear",
+    "edit.delete",
     "edit.copy",
     "edit.cut",
     "edit.label",
     "engine.batch",
     "file.runScript",
-    "keys.copy",
-    "keys.delete",
-    "keys.easyEase",
-    "keys.easyEaseIn",
-    "keys.easyEaseOut",
-    "keys.exponentialScale",
-    "keys.info",
-    "keys.interpolation",
-    "keys.move",
-    "keys.nudge",
-    "keys.nudgeBackward",
-    "keys.nudgeBackward10",
-    "keys.nudgeForward",
-    "keys.nudgeForward10",
-    "keys.paste",
-    "keys.select",
-    "keys.selectAll",
-    "keys.selectEqual",
-    "keys.selectFollowing",
-    "keys.selectLabelGroup",
-    "keys.selectPrevious",
-    "keys.set",
-    "keys.setLabel",
-    "keys.smooth",
-    "keys.timeReverse",
-    "keys.toggleHold",
-    "keys.transform",
-    "keys.velocity",
-    "keys.wiggle",
+    "keyframe.copy",
+    "keyframe.delete",
+    "keyframe.easyEase",
+    "keyframe.easyEaseIn",
+    "keyframe.easyEaseOut",
+    "keyframe.exponentialScale",
+    "keyframe.info",
+    "keyframe.interpolation",
+    "keyframe.move",
+    "keyframe.nudge",
+    "keyframe.nudgeBackward",
+    "keyframe.nudgeBackward10",
+    "keyframe.nudgeForward",
+    "keyframe.nudgeForward10",
+    "keyframe.paste",
+    "keyframe.select",
+    "keyframe.selectAll",
+    "keyframe.selectEqual",
+    "keyframe.selectFollowing",
+    "keyframe.selectLabelGroup",
+    "keyframe.selectPrevious",
+    "keyframe.set",
+    "keyframe.setLabel",
+    "keyframe.smooth",
+    "keyframe.timeReverse",
+    "keyframe.toggleHold",
+    "keyframe.transform",
+    "keyframe.velocity",
+    "keyframe.wiggle",
     "learn.step",
     "mask.interpolate",
     "motion.sketch",
@@ -113,7 +113,7 @@ pub fn moves_the_editor(id: &str) -> bool {
     id.starts_with("time.")
         || id.starts_with("view.")
         || id.starts_with("layer.select")
-        || id.starts_with("keys.select")
+        || id.starts_with("keyframe.select")
         || matches!(
             id,
             "comp.open"
@@ -128,7 +128,7 @@ pub fn moves_the_editor(id: &str) -> bool {
                 | "layer.openLayer"
                 | "layer.openSource"
                 | "layer.revealSource"
-                | "anim.reveal"
+                | "animation.reveal"
                 | "text.edit"
                 | "text.endEdit"
                 | "text.setSelection"
@@ -180,12 +180,12 @@ pub(crate) fn object_type(id: &str, name: &str) -> Option<&'static str> {
         "layer" if matches!(id, "time.start" | "time.end" | "time.layerIn" | "time.layerOut" | "time.nextKey" | "time.previousKey" | "time.go") => return None,
         "layers" if id == "layer.style.convertToEditable" => return None,
         "comp" if id == "mask.interpolationOptions" => return None,
-        "layer" if matches!(id, "renderQueue.add" | "renderQueue.setRenderSettings" | "file.createProxy") => return None,
+        "layer" if matches!(id, "renderQueue.add" | "renderQueue.setRenderSettings" | "file.addProxy") => return None,
         "comp" if matches!(id, "renderQueue.setRenderSettings" | "file.importMultiple" | "file.runScript") => return None,
         "item" if id == "footage.reloadChanged" => return None,
         "data" if id == "layer.alignVideoToData" => "Item",
-        "keys[].layer" if matches!(id, "keys.select" | "keys.info") => "Layer",
-        "visible[].layer" if matches!(id, "keys.selectAll" | "time.nextKey" | "time.previousKey" | "time.go") => "Layer",
+        "keys[].layer" if matches!(id, "keyframe.select" | "keyframe.info") => "Layer",
+        "visible[].layer" if matches!(id, "keyframe.selectAll" | "time.nextKey" | "time.previousKey" | "time.go") => "Layer",
         "vertices[].layer" if matches!(id, "mask.selectVertices" | "mask.moveVertices" | "mask.deleteVertices" | "mask.convertVertex") => "Layer",
         "target.layer" if id == "prop.pickWhip" => "Layer",
         "target.comp" if id == "prop.pickWhip" => "Item",
@@ -236,9 +236,9 @@ fn object_params(id: &str, schema: &Value, prefix: &str, out: &mut Vec<String>) 
                             | "project.usage"
                     ))
                 || (path == "layers" && matches!(id, "edit.paste" | "layer.mask.remove" | "layer.mask.lockOthers" | "path.rotoBezier" | "path.freeTransform"))
-                || (path == "comp" && id == "file.createProxy")
+                || (path == "comp" && id == "file.addProxy")
                 || (path == "cloneSource" && id == "paint.options")
-                || (path == "toLayer" && id == "markers.convert"))
+                || (path == "toLayer" && id == "marker.convert"))
         {
             out.push(path.clone());
         }

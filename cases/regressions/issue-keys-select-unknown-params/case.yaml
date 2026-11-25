@@ -2,13 +2,13 @@ format: 1
 id: regressions/issue-keys-select-unknown-params
 feature: motion.keys.select
 intent: >-
-  keys.select rejects an unknown or misspelled parameter (`times`, a top-level `layer` or `path`)
+  keyframe.select rejects an unknown or misspelled parameter (`times`, a top-level `layer` or `path`)
   and a missing `keys` list with invalid params naming the accepted keys, instead of answering 0
   and leaving the next keyframe command disabled; `keys: []` still clears the selection.
 layer: unit
 source:
   kind: probe
-  from: /tmp/motion-audit/t5c.mjs (PROMO-10b; keys.select {layer, path, times} answered 0, then keys.velocity failed)
+  from: /tmp/motion-audit/t5c.mjs (PROMO-10b; keyframe.select {layer, path, times} answered 0, then keyframe.velocity failed)
   license: Apache-2.0
 input: []
 steps:

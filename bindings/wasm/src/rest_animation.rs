@@ -314,14 +314,14 @@ fn sampled_times(snapshot: &Value, property: Uid, time: Tick) -> Option<Vec<i64>
 
 pub(crate) fn covered(session: &Session, command: &str, params: &Value, objects: &[CoveredAsk]) -> Option<CoveredAt> {
     let sampled = matches!(command, "prop.set" | "prop.addKey");
-    if !sampled && !matches!(command, "keys.set" | "keys.setEase") {
+    if !sampled && !matches!(command, "keyframe.set" | "keyframe.setEase") {
         return None;
     }
     let target = address(session, params, &mut Reads::default())?;
     if !stable_layer_address(params, &target) {
         return None;
     }
-    let time = if command == "keys.setEase" {
+    let time = if command == "keyframe.setEase" {
         Tick::from_seconds_f64(params.get("time")?.as_f64().filter(|time| time.is_finite())?)
     } else {
         kition_motion_engine::commands::written_key_time(session, params, command)?
@@ -341,7 +341,7 @@ pub(crate) fn covered(session: &Session, command: &str, params: &Value, objects:
         } else {
             let before = object.before.get("~keyTimes").unwrap_or(&current);
             let same_locator = uid_address(params) || before.get(&property)?.get(0) == current.get(&property)?.get(0);
-            let same_roving = command != "keys.set" || before.get(&property)?.get(2) == current.get(&property)?.get(2);
+            let same_roving = command != "keyframe.set" || before.get(&property)?.get(2) == current.get(&property)?.get(2);
             let same = if sampled {
                 sampled_times(before, target.property.uid, time).zip(sampled_times(&current, target.property.uid, time)).map(|(before, now)| before == now)
             } else {
@@ -412,7 +412,7 @@ pub(crate) fn supplemental(session: &Session, command: &str, params: &Value) -> 
         }
         return Some(reads.finish());
     }
-    if command != "keys.set" || uid_address(params) {
+    if command != "keyframe.set" || uid_address(params) {
         return None;
     }
     let mut reads = Reads::default();
@@ -438,7 +438,7 @@ pub(crate) fn supplemental(session: &Session, command: &str, params: &Value) -> 
 }
 
 fn set_key(reads: &mut Reads, target: &Address<'_>, session: &Session, params: &Value) -> Option<()> {
-    let time = kition_motion_engine::commands::written_key_time(session, params, "keys.set")?;
+    let time = kition_motion_engine::commands::written_key_time(session, params, "keyframe.set")?;
     let index = nearest(target.property, time)?;
     let key = target.property.keys.get(index)?;
     let prefix = format!("{}.keys[time={}]", target.path, key.time.0);
@@ -512,17 +512,17 @@ fn set_ease(reads: &mut Reads, target: &Address<'_>, params: &Value) -> Option<(
 }
 
 pub(crate) fn under(session: &Session, command: &str, params: &Value) -> Option<Under> {
-    if !matches!(command, "prop.setExpression" | "prop.pickWhip" | "keys.set" | "keys.setEase") {
+    if !matches!(command, "prop.setExpression" | "prop.pickWhip" | "keyframe.set" | "keyframe.setEase") {
         return None;
     }
-    if command == "keys.set" && !uid_address(params) {
+    if command == "keyframe.set" && !uid_address(params) {
         return None;
     }
     let mut reads = Reads::default();
     let target = address(session, params, &mut reads)?;
     match command {
-        "keys.set" => set_key(&mut reads, &target, session, params)?,
-        "keys.setEase" => set_ease(&mut reads, &target, params)?,
+        "keyframe.set" => set_key(&mut reads, &target, session, params)?,
+        "keyframe.setEase" => set_ease(&mut reads, &target, params)?,
         "prop.setExpression" => {
             reads.field(target.layer.id.0, format!("{}.expr", target.path));
             if params.get("expression").and_then(Value::as_str).is_none()

@@ -196,7 +196,7 @@ fn create_shapes_from_text_matches_text_render() {
     let opts = RenderOpts::default();
     let text_img = s.render(cid, s.time(), opts);
     s.execute("layer.select", json!({"layers": [lid]})).unwrap();
-    let r = s.execute_checked("layer.create", json!({"op": "shapesFromText"})).unwrap();
+    let r = s.execute_checked("layer.add", json!({"op": "shapesFromText"})).unwrap();
     let sid = r["layers"][0].as_u64().unwrap();
     let c = s.active_comp().unwrap();
     assert_eq!(c.layers[0].id.0, sid);
@@ -221,7 +221,7 @@ fn create_masks_from_text() {
     let cid = s.active_comp_id().unwrap();
     let text_img = s.render(cid, s.time(), RenderOpts::default());
     s.execute("layer.select", json!({"layers": [lid]})).unwrap();
-    let r = s.execute_checked("layer.create", json!({"op": "masksFromText"})).unwrap();
+    let r = s.execute_checked("layer.add", json!({"op": "masksFromText"})).unwrap();
     let mid = kition_motion_project::LayerId(r["layers"][0].as_u64().unwrap());
     let c = s.active_comp().unwrap();
     let l = c.layer(mid).unwrap();
@@ -232,6 +232,6 @@ fn create_masks_from_text() {
     let (d, _) = alpha_diff(&text_img, &img);
     assert!(d < 0.01, "mean alpha difference {d}");
     // Other ops need the right layer type.
-    assert!(s.execute_checked("layer.create", json!({"op": "shapesFromVector", "layers": [lid]})).is_err());
-    assert!(s.execute_checked("layer.create", json!({"op": "nullTracing", "layers": [lid]})).is_err());
+    assert!(s.execute_checked("layer.add", json!({"op": "shapesFromVector", "layers": [lid]})).is_err());
+    assert!(s.execute_checked("layer.add", json!({"op": "nullTracing", "layers": [lid]})).is_err());
 }

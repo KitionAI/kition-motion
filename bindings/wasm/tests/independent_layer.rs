@@ -182,7 +182,7 @@ pub(crate) const ROWS: &[(&str, &str)] = &[
         "path=append; resolves=Solids folder by name; reads=active comp width/height for missing dimensions,Solids folder; holds=editor.activeComp; checks=dimensions >=1; writes=solid item/folder,projectSelection; source=file_more.rs:import_solid,solid_from",
     ),
     (
-        "file.newCompFromSelection",
+        "comp.newFromSelection",
         "path=individual-or-single; resolves=projectSelection,dimensionsFrom index; reads=selected item kind/name/dimensions/rate/duration/pixelAspect/audio/containment,render templates if queued; holds=editor.projectSelection,prefs still duration and layer start; checks=nonfolders selected,valid dimensionsFrom; writes=new comps/layers,optional sequence timing/opacity and queue,open comp,selection,grouped undo; source=file_more.rs:new_comp_from_selection; layer.addItem,layer.sequence,renderQueue.add",
     ),
     (
@@ -294,11 +294,11 @@ pub(crate) const ROWS: &[(&str, &str)] = &[
         "path=interpret; resolves=footage/comp targets with proxy; reads=proxy Footage settings/rate/duration/sequence,first-frame pixels for guess,assigned fields same-field lost-update; holds=editor.projectSelection; checks=some proxy,valid interpretation; writes=proxy.footage interpretation/rate/duration; source=proxy.rs:interpret_proxy; file_more.rs:Interpretation::apply",
     ),
     (
-        "file.createProxy",
+        "file.addProxy",
         "path=still; resolves=comp/item explicit else selected comp else active; reads=comp.posterTime when inactive,frameRate,still-proxy templates,queue ids,comp name/output resolution; holds=editor.projectSelection/activeComp/currentTime; checks=kind valid; writes=new queue item one frame,proxy post-action; source=proxy.rs:create_proxy",
     ),
     (
-        "file.createProxy",
+        "file.addProxy",
         "path=movie; resolves=comp/item explicit else selected comp else active; reads=movie-proxy templates,queue ids,comp name/output resolution; holds=editor.projectSelection/activeComp; checks=kind valid; writes=new queue item full span,proxy post-action; source=proxy.rs:create_proxy",
     ),
     (
@@ -392,23 +392,23 @@ pub(crate) const ROWS: &[(&str, &str)] = &[
         "path=layers; resolves=comp,layers; reads=full target layers,comp layer names/order,parent/matte membership; holds=editor.selectedLayers; checks=target exists; writes=cloned layers fresh ids/names,relinked parent/matte,selection; source=edit.rs:duplicate,reid,relink_copies",
     ),
     (
-        "edit.clear",
+        "edit.delete",
         "path=text; resolves=text editing target; reads=text document and selection; holds=editor.textEdit when layers absent; checks=text edit active; writes=delegated text deletion; source=edit.rs:delete; text_edit.rs:delete",
     ),
     (
-        "edit.clear",
+        "edit.delete",
         "path=time-remap; resolves=selected timeRemap; reads=selected properties,timeRemap keys,selected key membership,layer.source; holds=editor.selectedProps,selectedKeys when layers absent; checks=all remap keys selected; writes=remove timeRemap,selection; source=edit.rs:delete; layer_time.rs:selected_time_remap,disable_time_remap",
     ),
     (
-        "edit.clear",
-        "path=keys-vertices-pins; resolves=selected keys or loose mask vertices or puppet pins; reads=selected target membership/full deleted content; holds=editor.selectedKeys,selectedVertices,selectedProps when layers absent; checks=branch priority keys then vertices then pins; writes=delegated keys/vertices/pins deletion; source=edit.rs:delete; keys.delete,mask.deleteVertices,puppet.removePin",
+        "edit.delete",
+        "path=keys-vertices-pins; resolves=selected keys or loose mask vertices or puppet pins; reads=selected target membership/full deleted content; holds=editor.selectedKeys,selectedVertices,selectedProps when layers absent; checks=branch priority keys then vertices then pins; writes=delegated keys/vertices/pins deletion; source=edit.rs:delete; keyframe.delete,mask.deleteVertices,puppet.removePin",
     ),
     (
-        "edit.clear",
+        "edit.delete",
         "path=effects-groups; resolves=selected effects or masks/contents/animators/trackers; reads=selected groups full content; holds=editor.selectedProps when layers absent; checks=effects priority before groups; writes=remove selected groups; source=edit.rs:delete; effect.remove,prop_groups.rs:remove_selected",
     ),
     (
-        "edit.clear",
+        "edit.delete",
         "path=layers; resolves=comp,layers; reads=full removed layers,locked,target users parent/matte links,orphan transforms/ancestor evaluation; holds=editor.selectedLayers,currentTime,other selection; checks=not all locked; writes=remove layers,orphan parent and compensated transform,matte users links,selection; source=edit.rs:delete; layer.rs:parent_fixes",
     ),
     (
@@ -421,7 +421,7 @@ pub(crate) const ROWS: &[(&str, &str)] = &[
     ),
     (
         "edit.copy",
-        "path=keys-effects-contents; resolves=selected keys/effects/contents; reads=selected full keyframes/effect groups/contents; holds=editor.selectedKeys/selectedProps when layers absent; checks=priority keys then effects then contents; writes=corresponding clipboard,other clipboard clears; source=edit.rs:copy; keys.copy,effect.copy,prop_groups.rs:copy_contents",
+        "path=keys-effects-contents; resolves=selected keys/effects/contents; reads=selected full keyframes/effect groups/contents; holds=editor.selectedKeys/selectedProps when layers absent; checks=priority keys then effects then contents; writes=corresponding clipboard,other clipboard clears; source=edit.rs:copy; keyframe.copy,effect.copy,prop_groups.rs:copy_contents",
     ),
     (
         "edit.copy",
@@ -453,7 +453,7 @@ pub(crate) const ROWS: &[(&str, &str)] = &[
     ),
     (
         "edit.cut",
-        "path=copy-then-clear; resolves=comp,layers or selected effect/groups; reads=union edit.copy and edit.clear branch reads; holds=editor selections and clipboards; checks=copy/delete eligibility; writes=copy clipboard,clear targets; source=edit.rs:cut,copy,delete",
+        "path=copy-then-clear; resolves=comp,layers or selected effect/groups; reads=union edit.copy and edit.delete branch reads; holds=editor selections and clipboards; checks=copy/delete eligibility; writes=copy clipboard,clear targets; source=edit.rs:cut,copy,delete",
     ),
     (
         "edit.paste",
@@ -465,7 +465,7 @@ pub(crate) const ROWS: &[(&str, &str)] = &[
     ),
     (
         "edit.paste",
-        "path=values; resolves=active comp,selected layers,clipboard property paths; reads=layer.locked,timing,property type/value/keys; holds=editor.valueClipboard,keyClipboard,clipIsKeys,currentTime,selectedLayers; checks=nonempty selection,coercible values; writes=property at time,optional keys.paste; source=edit.rs:paste_properties",
+        "path=values; resolves=active comp,selected layers,clipboard property paths; reads=layer.locked,timing,property type/value/keys; holds=editor.valueClipboard,keyClipboard,clipIsKeys,currentTime,selectedLayers; checks=nonempty selection,coercible values; writes=property at time,optional keyframe.paste; source=edit.rs:paste_properties",
     ),
     (
         "edit.paste",
@@ -477,7 +477,7 @@ pub(crate) const ROWS: &[(&str, &str)] = &[
     ),
     (
         "edit.pasteReversedKeyframes",
-        "path=reverse-clipboard; resolves=keys.paste targets; reads=union delegated keys.paste reads; holds=editor.keyClipboard,selectedLayers/Props,currentTime; checks=key paste eligibility; writes=mirrored keys with swapped easing/tangents,clipboard restored; source=edit.rs:paste_reversed",
+        "path=reverse-clipboard; resolves=keyframe.paste targets; reads=union delegated keyframe.paste reads; holds=editor.keyClipboard,selectedLayers/Props,currentTime; checks=key paste eligibility; writes=mirrored keys with swapped easing/tangents,clipboard restored; source=edit.rs:paste_reversed",
     ),
     (
         "edit.splitLayer",
@@ -601,19 +601,19 @@ pub(crate) const ROWS: &[(&str, &str)] = &[
         "path=workArea; resolves=comp; reads=comp.workArea,marker ordering; holds=editor.activeComp fallback; checks=nonempty span; writes=new protected workArea marker; source=comp_more.rs:responsive_time",
     ),
     (
-        "layer.create",
+        "layer.add",
         "path=vector; resolves=comp,layers,source item; reads=source name,source,footage path/layer/page,source transform/timing/switches/parent/matte,comp dimensions/duration/names/stack,source video same-field lost-update,vector bytes; holds=editor.selectedLayers; checks=vector footage,parse; writes=generated shape/image layers,source video=false,selection,image files/import items; source=create.rs:create; vector.rs:shapes_from_vector,image_layer",
     ),
     (
-        "layer.create",
+        "layer.add",
         "path=text-shapes; resolves=comp,layers; reads=source text geometry/fonts evaluated at time,source transform/timing/switches/links,name,comp dimensions/duration/names/stack,source video; holds=editor.currentTime,selectedLayers; checks=text source,glyphs nonempty; writes=new shape layer,source video=false,selection; source=create.rs:create; vector.rs:shapes_from_text",
     ),
     (
-        "layer.create",
+        "layer.add",
         "path=text-masks; resolves=comp,layers; reads=source evaluated text/transform/ancestor dependencies,timing/name,comp dimensions/duration/names/stack,source video; holds=editor.currentTime,selectedLayers; checks=text source,glyphs nonempty; writes=Solids folder/solid,new masked layer,source video=false,selection; source=create.rs:create; vector.rs:text_outlines_in_comp,masks_layer",
     ),
     (
-        "layer.create",
+        "layer.add",
         "path=editable-text; resolves=comp,layers,footage layer selector; reads=full replaced source layer,footage.path/layer,PSD text bytes,comp dimensions/duration/names/stack; holds=editor.selectedLayers; checks=PSD layer contains text; writes=replace source with editable text layer fresh ids,selection; source=create.rs:create; psd_import.rs:editable_text",
     ),
     (
@@ -1068,7 +1068,7 @@ pub(crate) const DECLARATIONS: &[(&str, &str, &str, &str)] = &[
     ("file.importSolid", "p", "", ""),
     // Source-supported correction for maintainer review: file_more.rs:218 opens a fresh comp before layer.addItem;
     // Session::open_comp (lib.rs:895-902) clears the caller's layer selection first.
-    ("file.newCompFromSelection", "pt", "", ""),
+    ("comp.newFromSelection", "pt", "", ""),
     ("file.removeUnusedFootage", "pt", "", ""),
     ("file.consolidateFootage", "pt", "", ""),
     ("file.reduceProject", "pt", "", ""),
@@ -1091,7 +1091,7 @@ pub(crate) const DECLARATIONS: &[(&str, &str, &str, &str)] = &[
     ("file.setProxyNone", "", "", "item:Item items:Item"),
     ("file.useProxy", "", "", "item:Item items:Item"),
     ("file.interpretProxy", "", "", "item:Item items:Item"),
-    ("file.createProxy", "pt", "", "comp:Item item:Item"),
+    ("file.addProxy", "pt", "", "comp:Item item:Item"),
     ("layer.sceneEditDetection", "pst", "layer", "comp:Item"),
     ("file.exportLottie", "p", "", "comp:Item"),
     ("file.importLottie", "p", "", ""),
@@ -1110,7 +1110,7 @@ pub(crate) const DECLARATIONS: &[(&str, &str, &str, &str)] = &[
     ("edit.undo", "pt", "", ""),
     ("edit.redo", "pt", "", ""),
     ("edit.duplicate", "ps", "layers", "comp:Item layer:Layer"),
-    ("edit.clear", "pst", "layers", "comp:Item layer:Layer"),
+    ("edit.delete", "pst", "layers", "comp:Item layer:Layer"),
     ("edit.copy", "ps", "layers", "comp:Item layer:Layer"),
     ("edit.copyWithPropertyLinks", "ps", "layers", "comp:Item layer:Layer"),
     ("edit.copyWithRelativePropertyLinks", "ps", "layers", "comp:Item layer:Layer"),
@@ -1142,7 +1142,7 @@ pub(crate) const DECLARATIONS: &[(&str, &str, &str, &str)] = &[
     ("comp.cropToLayerBounds", "pst", "layers", "comp:Item layer:Layer"),
     ("comp.saveFrameAs", "pt", "", "comp:Item"),
     ("comp.responsiveTime", "pt", "", "comp:Item"),
-    ("layer.create", "pst", "layers", "comp:Item layer:Layer"),
+    ("layer.add", "pst", "layers", "comp:Item layer:Layer"),
     ("project.select", "", "", "items:Item"),
     ("project.rename", "", "", "item:Item"),
     ("project.move", "", "", "folder:Item item:Item items:Item"),
@@ -1225,7 +1225,7 @@ pub(crate) const ADDITIONAL_READS: &[(&str, &[&str])] = &[
     ("renderQueue.saveTemplate", &["area"]),
     ("render.addOutputModule", &["area"]),
     ("render.preRender", &["area"]),
-    ("edit.clear", &["active", "mode"]),
+    ("edit.delete", &["active", "mode"]),
     ("edit.copy", &["active", "mode"]),
     ("edit.cut", &["active", "mode"]),
     ("edit.paste", &["active", "mode"]),

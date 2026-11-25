@@ -11,7 +11,7 @@ fn fixture() -> (Vec<u8>, u64, u64) {
     for (time, value) in [(0, 10), (1, 20), (4, 40)] {
         document.execute("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":time,"value":value})).unwrap();
     }
-    document.execute("keys.setEase", json!({"layer":layer,"path":OPACITY,"time":1,"side":"out","speed":1})).unwrap();
+    document.execute("keyframe.setEase", json!({"layer":layer,"path":OPACITY,"time":1,"side":"out","speed":1})).unwrap();
     let property = document.execute("prop.get", json!({"layer":layer,"path":OPACITY})).unwrap()["uid"].as_u64().unwrap();
     (document.save(None).unwrap(), layer, property)
 }
@@ -22,7 +22,7 @@ async fn apply_after(command: &str, change: &str, named: bool, refuse: bool) {
     let (_, _, basis) = fixture.inspect().await;
     match change {
         "delete" => {
-            fixture.colleague(&[("keys.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":1}]})), ("keys.delete", json!({}))]);
+            fixture.colleague(&[("keyframe.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":1}]})), ("keyframe.delete", json!({}))]);
         }
         "nearer" => {
             fixture.colleague(&[("prop.addKey", json!({"layer":layer,"path":OPACITY,"time":1.1,"value":30}))]);
@@ -34,7 +34,7 @@ async fn apply_after(command: &str, change: &str, named: bool, refuse: bool) {
             fixture.colleague(&[("prop.set", json!({"layer":layer,"path":OPACITY,"time":4,"value":90}))]);
         }
         "distant-delete" => {
-            fixture.colleague(&[("keys.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":4}]})), ("keys.delete", json!({}))]);
+            fixture.colleague(&[("keyframe.select", json!({"keys":[{"layer":layer,"path":OPACITY,"time":4}]})), ("keyframe.delete", json!({}))]);
         }
         _ => {
             fixture.colleague(&[("prop.set", json!({"layer":layer,"path":"transform/rotation","value":45}))]);
@@ -42,7 +42,7 @@ async fn apply_after(command: &str, change: &str, named: bool, refuse: bool) {
     }
     let before = std::fs::read(fixture.file()).unwrap();
     let mut params =
-        if command == "keys.setEase" { json!({"layer":layer,"time":1.2,"side":"out","speed":2}) } else { json!({"layer":layer,"time":1.2,"value":77}) };
+        if command == "keyframe.setEase" { json!({"layer":layer,"time":1.2,"side":"out","speed":2}) } else { json!({"layer":layer,"time":1.2,"value":77}) };
     if named {
         params["path"] = json!(OPACITY);
     } else {
@@ -68,7 +68,7 @@ async fn apply_after(command: &str, change: &str, named: bool, refuse: bool) {
         }
         let keys = property_with_uid(&saved, property).unwrap()["keys"].as_array().unwrap();
         let nearest = keys.iter().find(|key| key["time"] == json!(254_016_000_000_i64)).unwrap();
-        if command == "keys.setEase" {
+        if command == "keyframe.setEase" {
             assert_eq!(nearest["out_ease"][0]["speed"], json!(2.0), "{nearest}");
         } else {
             assert_eq!(nearest["value"]["v"], json!(77.0), "{nearest}");
@@ -79,7 +79,7 @@ async fn apply_after(command: &str, change: &str, named: bool, refuse: bool) {
 
 #[tokio::test]
 async fn nearest_key_address_refuses_deleted_or_replaced_destination() {
-    for command in ["keys.setEase", "keys.set"] {
+    for command in ["keyframe.setEase", "keyframe.set"] {
         for named in [false, true] {
             apply_after(command, "delete", named, true).await;
             apply_after(command, "nearer", named, true).await;
@@ -90,14 +90,14 @@ async fn nearest_key_address_refuses_deleted_or_replaced_destination() {
 #[tokio::test]
 async fn named_stored_ease_accepts_changes_that_keep_its_destination_and_inputs() {
     for change in ["distant", "distant-value", "distant-delete", "other-property"] {
-        apply_after("keys.setEase", change, true, false).await;
+        apply_after("keyframe.setEase", change, true, false).await;
     }
 }
 
 #[tokio::test]
 async fn uid_stored_ease_accepts_changes_that_keep_its_destination_and_inputs() {
     for change in ["distant", "distant-value", "distant-delete", "other-property"] {
-        apply_after("keys.setEase", change, false, false).await;
+        apply_after("keyframe.setEase", change, false, false).await;
     }
 }
 
@@ -105,7 +105,7 @@ async fn uid_stored_ease_accepts_changes_that_keep_its_destination_and_inputs() 
 async fn nearest_key_value_accepts_changes_that_keep_its_destination_and_inputs() {
     for named in [false, true] {
         for change in ["distant", "distant-value", "distant-delete", "other-property"] {
-            apply_after("keys.set", change, named, false).await;
+            apply_after("keyframe.set", change, named, false).await;
         }
     }
 }
@@ -130,7 +130,7 @@ async fn nearest_named_property_refuses_when_equal_named_siblings_trade_places()
     rewrite(&fixture.file(), |project| transform_children(project).swap(index, index + 1));
     let before = std::fs::read(fixture.file()).unwrap();
     let answer = fixture
-        .call("run", json!({"basis":basis,"steps":[{"command":"keys.setEase","params":{"layer":layer,"path":OPACITY,"time":1.2,"side":"out","speed":2}}]}))
+        .call("run", json!({"basis":basis,"steps":[{"command":"keyframe.setEase","params":{"layer":layer,"path":OPACITY,"time":1.2,"side":"out","speed":2}}]}))
         .await;
     assert_eq!(answer.unwrap_err()["error"]["code"], "conflict");
     assert_eq!(std::fs::read(fixture.file()).unwrap(), before);

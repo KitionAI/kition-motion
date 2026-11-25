@@ -64,7 +64,7 @@ async fn moved_key_holds_comp_frame_rate_but_value_only_does_not() {
             let (_, comp, basis) = f.inspect().await;
             f.colleague(&[("comp.settings", json!({"frameRate":24}))]);
             let answer =
-                f.call("run", json!({"basis":basis,"steps":[{"command":"keys.set","params":key_edit(source,uid,address,moving.then_some(1.61))}]})).await;
+                f.call("run", json!({"basis":basis,"steps":[{"command":"keyframe.set","params":key_edit(source,uid,address,moving.then_some(1.61))}]})).await;
             if moving {
                 assert_conflict(&answer.unwrap_err(), &comp.to_string(), "changed");
             } else {
@@ -84,7 +84,7 @@ async fn moved_key_holds_both_neighbor_clamp_bounds() {
             let (_, _, basis) = f.inspect().await;
             rewrite(&f.file(), |project| property(project, source, "scale")["keys"][neighbor]["time"] = json!(changed_time));
             let refused =
-                f.refused("run", json!({"basis":basis,"steps":[{"command":"keys.set","params":key_edit(source,uid,address,Some(destination))}]})).await;
+                f.refused("run", json!({"basis":basis,"steps":[{"command":"keyframe.set","params":key_edit(source,uid,address,Some(destination))}]})).await;
             assert_conflict(&refused, &source.to_string(), "changed");
             f.shutdown().await;
         }
@@ -98,7 +98,7 @@ async fn key_edits_hold_endpoint_roving_flags_they_overwrite() {
         let f = Fixture::from_bytes(&bytes, Default::default());
         let (_, _, basis) = f.inspect().await;
         rewrite(&f.file(), |project| property(project, source, "scale")["keys"][endpoint]["roving"] = json!(true));
-        let refused = f.refused("run", json!({"basis":basis,"steps":[{"command":"keys.set","params":key_edit(source,uid,"uid",None)}]})).await;
+        let refused = f.refused("run", json!({"basis":basis,"steps":[{"command":"keyframe.set","params":key_edit(source,uid,"uid",None)}]})).await;
         assert_conflict(&refused, &source.to_string(), "changed");
         f.shutdown().await;
     }
@@ -111,7 +111,7 @@ async fn key_edits_accept_unrelated_opacity_on_the_same_layer() {
         let f = Fixture::from_bytes(&bytes, Default::default());
         let (_, _, basis) = f.inspect().await;
         f.colleague(&[opacity(source, 23.0)]);
-        let answer = f.call("run", json!({"basis":basis,"steps":[{"command":"keys.set","params":key_edit(source,uid,address,Some(1.6))}]})).await;
+        let answer = f.call("run", json!({"basis":basis,"steps":[{"command":"keyframe.set","params":key_edit(source,uid,address,Some(1.6))}]})).await;
         assert!(answer.is_ok(), "key edit refused unrelated opacity: {answer:?}");
         assert_eq!(opacity_on_disk(&f.file(), source), 23.0);
         f.shutdown().await;
@@ -188,7 +188,7 @@ async fn outgoing_linear_ease_holds_next_value_without_previous_value() {
         let answer = f
             .call(
                 "run",
-                json!({"basis":basis,"steps":[{"command":"keys.setEase","params":{"layer":source,"prop":uid,"time":1,"side":"out","dim":0,"speed":12}}]}),
+                json!({"basis":basis,"steps":[{"command":"keyframe.setEase","params":{"layer":source,"prop":uid,"time":1,"side":"out","dim":0,"speed":12}}]}),
             )
             .await;
         if relevant {

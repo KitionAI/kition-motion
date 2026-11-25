@@ -20,7 +20,7 @@ fn label_p(p: &Value, c: &str) -> Result<u8> {
 }
 
 fn set_label(s: &mut Session, p: &Value) -> Result<Value> {
-    let c = "keys.setLabel";
+    let c = "keyframe.setLabel";
     let label = label_p(p, c)?;
     let n = super::prop::edit_keys(s, "Keyframe Label", None, |keys, i, _| {
         keys[i].label = label;
@@ -33,7 +33,7 @@ fn set_label(s: &mut Session, p: &Value) -> Result<Value> {
 /// layers. `visible` (property uids revealed in the Timeline) limits the "Visible Keyframes"
 /// scopes; without it every property counts as visible.
 fn select_label_group(s: &mut Session, p: &Value) -> Result<Value> {
-    let c = "keys.selectLabelGroup";
+    let c = "keyframe.selectLabelGroup";
     let scope = str_p(p, "scope").unwrap_or("selected");
     let comp = s.active_comp().ok_or(EngineError::NoComp)?;
     let labels: Vec<u8> =
@@ -71,9 +71,9 @@ fn select_label_group(s: &mut Session, p: &Value) -> Result<Value> {
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
-        cmd!("keys.setLabel", "Keyframe Label", [], None, "{label: name|none|0–16}", has_keys, set_label),
+        cmd!("keyframe.setLabel", "Keyframe Label", [], None, "{label: name|none|0–16}", has_keys, set_label),
         cmd!(
-            "keys.selectLabelGroup",
+            "keyframe.selectLabelGroup",
             "Select Keyframe Label Group",
             [],
             None,

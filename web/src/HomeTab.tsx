@@ -21,9 +21,9 @@ export function HomeTab({ info, onCommand, wholeWorkArea, lastEffect }: { info: 
   // Add Keyframe keys the selected properties (those whose keyframes were clicked) at the current
   // time; with none selected, the Position of each selected layer that has no keyframe there.
   const selected = info?.layers.filter((layer) => layer.selected) ?? []
-  const properties = enabled('anim.addKeyframe')
+  const properties = enabled('animation.addKeyframe')
   const unkeyed = selected.filter((layer) => !keyAt(layer.animated.find((property) => property.path === 'transform/position')?.times ?? [], info?.time ?? 0, info?.frame ?? 1 / 30)).map((layer) => layer.id)
-  const addKeyframe = () => void (properties ? run('anim.addKeyframe', {}) : run('keys.toggleTransform', { layers: unkeyed, prop: 'position' }))
+  const addKeyframe = () => void (properties ? run('animation.addKeyframe', {}) : run('keyframe.toggleTransform', { layers: unkeyed, prop: 'position' }))
   return (
     <>
       <RibbonGroup label={p('Layer')} icon={Layers}>
@@ -40,8 +40,8 @@ export function HomeTab({ info, onCommand, wholeWorkArea, lastEffect }: { info: 
 
       <RibbonGroup label={p('Animation')} icon={Diamond}>
         <RibbonButton icon={Diamond} label={p('Add Keyframe')} size="large" primary title={t('home.addKeyHint')} disabled={readOnly || !selected.length || (!properties && !unkeyed.length)} onClick={addKeyframe} data-testid="motion-home-add-key" />
-        <CommandButton command="keys.easyEase" icon={Spline} primary />
-        <CommandButton command="keys.toggleHold" icon={Pause} />
+        <CommandButton command="keyframe.easyEase" icon={Spline} primary />
+        <CommandButton command="keyframe.toggleHold" icon={Pause} />
       </RibbonGroup>
 
       <RibbonGroup label={p('Effect')} icon={Sparkles}>

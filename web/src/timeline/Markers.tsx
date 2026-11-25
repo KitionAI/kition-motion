@@ -3,7 +3,7 @@ import { useEngineQuery, useKitEditor } from '@kition/sdk/editor'
 import { snapIn, useTimeline } from './context'
 import { leftOf, secondsFor } from './view'
 
-/** A marker: the composition's (`layer` null) or a layer's, by its index in `markers.list`. */
+/** A marker: the composition's (`layer` null) or a layer's, by its index in `marker.list`. */
 export type MarkerRef = { layer: number | null; index: number }
 
 type Marker = { index: number; time: number; comment: string; duration: number }
@@ -25,7 +25,7 @@ export function MarkerFlags({ layer, selected, onSelect, onRename }: { layer: nu
   const frame = useTimeline()
   const { info, view, readOnly } = frame
   const { run, t } = useKitEditor()
-  const answer = useEngineQuery<Marker[]>('markers.list', layer == null ? {} : { layer })
+  const answer = useEngineQuery<Marker[]>('marker.list', layer == null ? {} : { layer })
   const markers = Array.isArray(answer) ? answer : []
   const press = useRef<{ pointerId: number; x: number; width: number; index: number; moved: boolean } | null>(null)
   const [moving, setMoving] = useState<{ index: number; time: number } | null>(null)
@@ -72,7 +72,7 @@ export function MarkerFlags({ layer, selected, onSelect, onRename }: { layer: nu
               setMoving(null)
               if (!current.moved) return
               const next = at(marker, current, event.clientX)
-              if (Math.abs(next - marker.time) > 1e-9) void run('markers.set', { ...markerParams(ref), time: next })
+              if (Math.abs(next - marker.time) > 1e-9) void run('marker.set', { ...markerParams(ref), time: next })
             }}
             onPointerCancel={() => {
               press.current = null

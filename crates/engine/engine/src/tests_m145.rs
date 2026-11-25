@@ -385,14 +385,14 @@ fn recent_footage_and_presets_are_remembered() {
     // Presets.
     let path = tmp("fade.ecpreset");
     s.execute("prop.select", json!({"layer": a, "path": "transform/opacity"})).unwrap();
-    s.execute("anim.savePreset", json!({"path": path})).unwrap();
-    s.execute("anim.applyPreset", json!({"path": path, "layers": [a]})).unwrap();
+    s.execute("animation.savePreset", json!({"path": path})).unwrap();
+    s.execute("animation.applyPreset", json!({"path": path, "layers": [a]})).unwrap();
     assert_eq!(s.prefs.recent_presets, [path.to_string_lossy().to_string()]);
     let (e, _) = crate::menus::dynamic(&s, "recentPresets", &Default::default());
     assert_eq!(e[0].label, "fade");
     s.state.selected_layers = vec![LayerId(a)];
-    s.execute("anim.applyRecentPreset", json!({"index": 0})).unwrap();
-    s.execute("anim.clearRecentPresets", json!({})).unwrap();
+    s.execute("animation.applyRecentPreset", json!({"index": 0})).unwrap();
+    s.execute("animation.clearRecentPresets", json!({})).unwrap();
     assert!(s.prefs.recent_presets.is_empty());
     // Recent lists survive a settings round trip and a reset.
     s.prefs.push_recent_footage("/y/a.wav");
@@ -424,15 +424,15 @@ fn save_a_copy_as_xml_opens_again() {
 #[test]
 fn assign_shortcut_slots_move_keys_between_views_and_workspaces() {
     let mut s = session();
-    s.execute("view.3d.top", json!({})).unwrap();
+    s.execute("view.threeD.top", json!({})).unwrap();
     let label = crate::menus::submenu_label(&s, "Assign Shortcut to 3D View", &Default::default());
     assert_eq!(label, "Assign Shortcut to “Top”");
     let (e, _) = crate::menus::dynamic(&s, "view3dShortcuts", &Default::default());
     assert_eq!(e[0].label, "F10 (Replace “Front”)");
     let r = s.execute("view.assign3dShortcut", json!({"slot": "F10"})).unwrap();
     assert_eq!(r["replaced"], json!(["Front"]));
-    assert_eq!(s.shortcuts().shortcut_of("view.3d.top", &Value::Null), Some("F10"));
-    assert_eq!(s.shortcuts().shortcut_of("view.3d.front", &Value::Null), None);
+    assert_eq!(s.shortcuts().shortcut_of("view.threeD.top", &Value::Null), Some("F10"));
+    assert_eq!(s.shortcuts().shortcut_of("view.threeD.front", &Value::Null), None);
     // Workspaces: Shift+F11 now opens Animation instead of Standard.
     s.execute("window.assignWorkspaceShortcut", json!({"slot": "Shift+F11", "workspace": "Animation"})).unwrap();
     assert_eq!(s.shortcuts().shortcut_of("window.workspace", &json!({"name": "Animation"})), Some("Shift+F11"));
@@ -493,7 +493,7 @@ fn create_vr_environment_and_extract_cubemap() {
     s.execute("layer.setSwitch", json!({"layers": [a], "switch": "threeD", "value": true})).unwrap();
     let undo = s.history.undo.len();
     let aname = layer(&s, a).name.clone();
-    let r = s.execute("comp.vr.createEnvironment", json!({"size": 64})).unwrap();
+    let r = s.execute("comp.vr.addEnvironment", json!({"size": 64})).unwrap();
     assert_eq!(s.history.undo.len(), undo + 1, "one undo step");
     assert_eq!(s.history.undo.last().unwrap().0, "Create VR Environment");
     let faces: Vec<u64> = r["faces"].as_array().unwrap().iter().map(|v| v.as_u64().unwrap()).collect();
@@ -553,7 +553,7 @@ fn vr_environment_faces_look_the_right_way() {
         s.execute("prop.set", json!({"layer": l, "path": "transform/position", "value": pos})).unwrap();
         s.execute("prop.set", json!({"layer": l, "path": "transform/rotationX", "value": rot[0]})).unwrap();
         s.execute("prop.set", json!({"layer": l, "path": "transform/rotationY", "value": rot[1]})).unwrap();
-        let r = s.execute("comp.vr.createEnvironment", json!({"size": 64})).unwrap();
+        let r = s.execute("comp.vr.addEnvironment", json!({"size": 64})).unwrap();
         let img = s.render(ItemId(r["output"].as_u64().unwrap()), Tick::ZERO, RenderOpts::default());
         let (w, h) = (img.width as f64, img.height as f64);
         let alpha =
@@ -572,7 +572,7 @@ fn convert_audio_to_keyframes_makes_the_amplitude_null() {
     assert_eq!(crate::commands::amplitudes_for_tests(&[0.5, -0.25, -0.5, 0.25]), (50.0, 25.0, 37.5));
     let mut s = session();
     let undo = s.history.undo.len();
-    let r = s.execute("keys.audioToKeyframes", json!({})).unwrap();
+    let r = s.execute("keyframe.audioToKeyframes", json!({})).unwrap();
     assert_eq!(s.history.undo.len(), undo + 1);
     let l = layer(&s, r["layer"].as_u64().unwrap());
     assert_eq!(l.name, "Audio Amplitude");
@@ -609,13 +609,13 @@ fn keyframe_labels_and_label_groups() {
     assert_eq!(layer(&s, a).props.prop("transform/opacity").unwrap().keys[2].label, blue);
     // Select Keyframe Label Group.
     s.state.selected_keys = vec![k(0.0)];
-    let r = s.execute("keys.selectLabelGroup", json!({"scope": "all"})).unwrap();
+    let r = s.execute("keyframe.selectLabelGroup", json!({"scope": "all"})).unwrap();
     assert_eq!(r["keys"], 2);
     s.state.selected_keys = vec![k(0.5)];
-    s.execute("keys.selectLabelGroup", json!({"scope": "selected"})).unwrap();
+    s.execute("keyframe.selectLabelGroup", json!({"scope": "selected"})).unwrap();
     assert_eq!(s.state.selected_keys, vec![k(0.5)]);
     s.state.selected_keys = vec![k(0.0)];
-    let r = s.execute("keys.selectLabelGroup", json!({"scope": "visibleAll", "visible": [12345]})).unwrap();
+    let r = s.execute("keyframe.selectLabelGroup", json!({"scope": "visibleAll", "visible": [12345]})).unwrap();
     assert_eq!(r["keys"], 0, "only the given (visible) properties");
     s.execute("edit.undo", json!({})).unwrap();
     s.execute("edit.undo", json!({})).unwrap();
@@ -632,7 +632,7 @@ fn rpf_camera_import_reads_json_and_csv_camera_data() {
     )
     .unwrap();
     let undo = s.history.undo.len();
-    let r = s.execute("keys.rpfCameraImport", json!({"path": json_path.to_string_lossy()})).unwrap();
+    let r = s.execute("keyframe.rpfCameraImport", json!({"path": json_path.to_string_lossy()})).unwrap();
     assert_eq!(s.history.undo.len(), undo + 1);
     let cam = layer(&s, r["layer"].as_u64().unwrap());
     assert!(cam.is_camera());
@@ -644,11 +644,11 @@ fn rpf_camera_import_reads_json_and_csv_camera_data() {
     assert!((zoom[0].value.as_f64() - 32.0).abs() < 1e-6, "90° across 64 px = zoom 32: {:?}", zoom[0].value);
     let csv = tmp("cam.csv");
     std::fs::write(&csv, "frame,px,py,pz,rx,ry,rz,zoom\n0,1,2,3,0,0,0,100\n5,4,5,6,10,20,30,200\n").unwrap();
-    let r = s.execute("keys.rpfCameraImport", json!({"path": csv.to_string_lossy()})).unwrap();
+    let r = s.execute("keyframe.rpfCameraImport", json!({"path": csv.to_string_lossy()})).unwrap();
     let cam = layer(&s, r["layer"].as_u64().unwrap());
     let o = &cam.props.prop("transform/orientation").unwrap().keys;
     assert_eq!(o[1].value, KV::Vec3([10.0, 20.0, 30.0]));
-    assert!(s.execute("keys.rpfCameraImport", json!({"path": "/x/scene.rpf"})).unwrap_err().to_string().contains("JSON or CSV"));
+    assert!(s.execute("keyframe.rpfCameraImport", json!({"path": "/x/scene.rpf"})).unwrap_err().to_string().contains("JSON or CSV"));
 }
 
 // ---------------------------------------------------------------- menus

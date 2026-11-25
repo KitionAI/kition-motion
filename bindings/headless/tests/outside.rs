@@ -216,7 +216,7 @@ async fn s4b_another_agent_deleting_the_target_is_refused_as_deleted() {
     let f = Fixture::new(LAYERS);
     let (info, _, basis) = f.inspect().await;
     let mine = layer_ids(&info)[2];
-    f.call_by("agent-other", "run", json!({ "steps": [{ "command": "edit.clear", "params": { "layers": [mine] } }] })).await;
+    f.call_by("agent-other", "run", json!({ "steps": [{ "command": "edit.delete", "params": { "layers": [mine] } }] })).await;
     let before = std::fs::read(f.file()).unwrap();
     let refused = f.refused("run", json!({ "basis": basis, "steps": [set_opacity(mine, 50.0)] })).await;
     assert_conflict(&refused, &mine.to_string(), "deleted");
@@ -233,7 +233,7 @@ async fn s4_a_colleague_deleting_the_target_is_refused_as_deleted() {
     let f = Fixture::new(LAYERS);
     let (info, _, basis) = f.inspect().await;
     let mine = layer_ids(&info)[2];
-    f.colleague(&[("edit.clear", json!({ "layers": [mine] }))]);
+    f.colleague(&[("edit.delete", json!({ "layers": [mine] }))]);
     assert!(!layers_on_disk(&f.file()).contains(&mine));
     let before = std::fs::read(f.file()).unwrap();
     let refused = f.refused("run", json!({ "basis": basis, "steps": [set_opacity(mine, 50.0)] })).await;
@@ -273,7 +273,7 @@ fn comp_markers_on_disk(f: &Fixture, comp: u64) -> Vec<(f64, String)> {
     markers.iter().map(|m| (m["time"].as_i64().unwrap() as f64 / 254_016_000_000.0, m["comment"].as_str().unwrap_or_default().to_owned())).collect()
 }
 
-/// A command that addresses by time alone: `markers.set {at}` edits the comp marker at a comp time,
+/// A command that addresses by time alone: `marker.set {at}` edits the comp marker at a comp time,
 /// with `at.part {comp}` and no other target, so it acts on the comp (C8-fix-6). The agent saw
 /// marker `A` at 2 s and `B` at 3 s; the colleague moves both a second earlier; the agent's rename
 /// of the marker at 2 s (meaning `A`) is refused as `changed` on the comp's item, nothing
@@ -283,14 +283,14 @@ async fn s5b_a_marker_edit_by_time_after_a_retime_is_refused() {
     let f = Fixture::new(LAYERS);
     let (_, comp, _) = f.inspect().await;
     let setup = json!([
-        { "command": "markers.set", "params": { "new": true, "time": 2.0, "comment": "A" }, "at": { "part": { "comp": comp } } },
-        { "command": "markers.set", "params": { "new": true, "time": 3.0, "comment": "B" }, "at": { "part": { "comp": comp } } },
+        { "command": "marker.set", "params": { "new": true, "time": 2.0, "comment": "A" }, "at": { "part": { "comp": comp } } },
+        { "command": "marker.set", "params": { "new": true, "time": 3.0, "comment": "B" }, "at": { "part": { "comp": comp } } },
     ]);
     f.ok("run", json!({ "steps": setup })).await;
     let (_, _, basis) = f.inspect().await;
-    f.colleague(&[("markers.set", json!({ "comp": comp, "at": 2.0, "time": 1.0 })), ("markers.set", json!({ "comp": comp, "at": 3.0, "time": 2.0 }))]);
+    f.colleague(&[("marker.set", json!({ "comp": comp, "at": 2.0, "time": 1.0 })), ("marker.set", json!({ "comp": comp, "at": 3.0, "time": 2.0 }))]);
     assert_eq!(comp_markers_on_disk(&f, comp), [(1.0, "A".to_owned()), (2.0, "B".to_owned())]);
-    let step = json!({ "command": "markers.set", "params": { "at": 2.0, "comment": "agent" }, "at": { "part": { "comp": comp } } });
+    let step = json!({ "command": "marker.set", "params": { "at": 2.0, "comment": "agent" }, "at": { "part": { "comp": comp } } });
     let before = std::fs::read(f.file()).unwrap();
     let refused = f.refused("run", json!({ "basis": basis, "steps": [step] })).await;
     assert_conflict(&refused, &comp.to_string(), "changed");
@@ -306,17 +306,17 @@ async fn s5c_a_marker_edit_by_time_after_another_agents_retime_is_refused() {
     let f = Fixture::new(LAYERS);
     let (_, comp, _) = f.inspect().await;
     let setup = json!([
-        { "command": "markers.set", "params": { "new": true, "time": 2.0, "comment": "A" }, "at": { "part": { "comp": comp } } },
-        { "command": "markers.set", "params": { "new": true, "time": 3.0, "comment": "B" }, "at": { "part": { "comp": comp } } },
+        { "command": "marker.set", "params": { "new": true, "time": 2.0, "comment": "A" }, "at": { "part": { "comp": comp } } },
+        { "command": "marker.set", "params": { "new": true, "time": 3.0, "comment": "B" }, "at": { "part": { "comp": comp } } },
     ]);
     f.ok("run", json!({ "steps": setup })).await;
     let (_, _, basis) = f.inspect().await;
     let moves = json!([
-        { "command": "markers.set", "params": { "comp": comp, "at": 2.0, "time": 1.0 } },
-        { "command": "markers.set", "params": { "comp": comp, "at": 3.0, "time": 2.0 } },
+        { "command": "marker.set", "params": { "comp": comp, "at": 2.0, "time": 1.0 } },
+        { "command": "marker.set", "params": { "comp": comp, "at": 3.0, "time": 2.0 } },
     ]);
     f.call_by("agent-other", "run", json!({ "steps": moves })).await;
-    let step = json!({ "command": "markers.set", "params": { "at": 2.0, "comment": "agent" }, "at": { "part": { "comp": comp } } });
+    let step = json!({ "command": "marker.set", "params": { "at": 2.0, "comment": "agent" }, "at": { "part": { "comp": comp } } });
     let before = std::fs::read(f.file()).unwrap();
     let refused = f.refused("run", json!({ "basis": basis, "steps": [step] })).await;
     assert_conflict(&refused, &comp.to_string(), "changed");
@@ -543,8 +543,8 @@ async fn s10_a_key_at_a_time_is_refused_after_a_change_of_its_property_or_the_la
             let (_, _, basis) = f.inspect().await;
             let theirs: Vec<(&str, Value)> = match change {
                 "(a) shift" => vec![("layer.timing", json!({ "layers": [mine], "delta": 1.0 }))],
-                "(b) the key at T moved" => vec![("keys.set", json!({ "layer": mine, "path": OPACITY, "time": T, "newTime": 2.5 }))],
-                "(c) another key" => vec![("keys.set", json!({ "layer": mine, "path": OPACITY, "time": 3.0, "value": 99 }))],
+                "(b) the key at T moved" => vec![("keyframe.set", json!({ "layer": mine, "path": OPACITY, "time": T, "newTime": 2.5 }))],
+                "(c) another key" => vec![("keyframe.set", json!({ "layer": mine, "path": OPACITY, "time": 3.0, "value": 99 }))],
                 "(d) another property" => vec![("prop.set", json!({ "layer": mine, "path": "transform/rotation", "value": 45 }))],
                 "(e) another layer" => vec![opacity(other, 30.0)],
                 _ => vec![],
@@ -709,12 +709,12 @@ async fn s12_fifty_rounds_of_mixed_editing() {
             Theirs::InsertBelow => {
                 vec![("layer.newSolid", json!({ "name": "Below", "color": "#000000" })), ("layer.arrange", json!({ "layers": ["Below"], "to": "back" }))]
             }
-            Theirs::Delete => vec![("edit.clear", json!({ "layers": [other] }))],
+            Theirs::Delete => vec![("edit.delete", json!({ "layers": [other] }))],
             Theirs::ShiftOther => vec![("layer.timing", json!({ "layers": [other], "delta": 1.0 }))],
             Theirs::ShiftTarget => vec![("layer.timing", json!({ "layers": [mine], "delta": 1.0 }))],
             Theirs::MoveKey => {
                 let t = KEY_TIMES[next(KEY_TIMES.len())];
-                vec![("keys.set", json!({ "layer": mine, "path": OPACITY, "time": t, "newTime": t + 0.5 }))]
+                vec![("keyframe.set", json!({ "layer": mine, "path": OPACITY, "time": t, "newTime": t + 0.5 }))]
             }
         };
         let rotation = |file: &std::path::Path| value_on_disk(file, mine, "transform/rotation");
@@ -920,7 +920,7 @@ async fn zz_receipt_sizes() {
             .collect();
         f.ok("run", json!({ "steps": steps })).await;
         let (_, _, basis) = f.inspect().await;
-        f.colleague(&[("keys.selectAll", json!({ "layers": [mine] })), ("keys.move", json!({ "delta": 0.5 }))]);
+        f.colleague(&[("keyframe.selectAll", json!({ "layers": [mine] })), ("keyframe.move", json!({ "delta": 0.5 }))]);
         let ran =
             f.ok("run", json!({ "basis": basis, "steps": [{ "command": "layer.rename", "params": { "layer": layer_ids(&info)[1], "name": "x" } }] })).await;
         let others = ran["others"].to_string();

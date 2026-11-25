@@ -1,4 +1,4 @@
-//! Wiggler, Smoother and Motion Sketch (`keys.wiggle`, `keys.smooth`, `motion.sketch`).
+//! Wiggler, Smoother and Motion Sketch (`keyframe.wiggle`, `keyframe.smooth`, `motion.sketch`).
 
 use kition_motion_keyframe::evaluate;
 use serde_json::json;
@@ -16,7 +16,7 @@ fn wiggle_adds_keys_at_frequency_within_magnitude() {
     let orig = prop(&s, l, "transform/position");
     select(&mut s, l, "transform/position");
     let opts = json!({"apply": "spatial", "noise": "jagged", "dimensions": "independent", "frequency": 5, "magnitude": 20, "seed": 7});
-    let r = s.execute("keys.wiggle", opts.clone()).unwrap();
+    let r = s.execute("keyframe.wiggle", opts.clone()).unwrap();
     let p = prop(&s, l, "transform/position");
     // 2 s at 5 keys/s: 9 keys between the two originals (one every 6 frames at 30 fps).
     assert_eq!(p.keys.len(), 11, "{r}");
@@ -35,7 +35,7 @@ fn wiggle_adds_keys_at_frequency_within_magnitude() {
     s.execute("edit.undo", json!({})).unwrap();
     assert_eq!(prop(&s, l, "transform/position").keys.len(), 2);
     select(&mut s, l, "transform/position");
-    s.execute("keys.wiggle", opts).unwrap();
+    s.execute("keyframe.wiggle", opts).unwrap();
     assert_eq!(prop(&s, l, "transform/position").keys, p.keys);
 }
 
@@ -44,7 +44,7 @@ fn wiggle_one_dimension_and_smooth_noise() {
     let (mut s, l) = setup();
     animate(&mut s, l, "transform/position", &[(0.0, json!([100, 100])), (1.0, json!([100, 100]))]);
     select(&mut s, l, "transform/position");
-    s.execute("keys.wiggle", json!({"dimensions": "one", "dimension": 1, "frequency": 10, "magnitude": 50})).unwrap();
+    s.execute("keyframe.wiggle", json!({"dimensions": "one", "dimension": 1, "frequency": 10, "magnitude": 50})).unwrap();
     let p = prop(&s, l, "transform/position");
     assert_eq!(p.keys.len(), 11);
     for k in &p.keys {
@@ -55,11 +55,11 @@ fn wiggle_one_dimension_and_smooth_noise() {
     // Opacity (non-spatial): the temporal path deviates the value.
     animate(&mut s, l, "transform/opacity", &[(0.0, json!(50)), (1.0, json!(50))]);
     select(&mut s, l, "transform/opacity");
-    s.execute("keys.wiggle", json!({"apply": "temporal", "frequency": 4, "magnitude": 10})).unwrap();
+    s.execute("keyframe.wiggle", json!({"apply": "temporal", "frequency": 4, "magnitude": 10})).unwrap();
     let o = prop(&s, l, "transform/opacity");
     assert!(o.keys.len() >= 5);
     assert!(o.keys.iter().all(|k| (k.value.as_f64() - 50.0).abs() <= 10.0));
-    assert!(s.execute("keys.wiggle", json!({"noise": "wobbly"})).is_err());
+    assert!(s.execute("keyframe.wiggle", json!({"noise": "wobbly"})).is_err());
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn smoother_reduces_keys_within_tolerance() {
     let orig = prop(&s, l, "transform/opacity");
     assert_eq!(orig.keys.len(), 61);
     select(&mut s, l, "transform/opacity");
-    let r = s.execute("keys.smooth", json!({"tolerance": 1.0})).unwrap();
+    let r = s.execute("keyframe.smooth", json!({"tolerance": 1.0})).unwrap();
     let p = prop(&s, l, "transform/opacity");
     assert!(p.keys.len() < 10, "{} keys ({r})", p.keys.len());
     for f in 0..=60 {
@@ -105,10 +105,10 @@ fn smoother_never_touches_keys_outside_the_selected_span() {
         };
         let select = |s: &mut crate::Session, times: Vec<f64>| {
             let picked: Vec<_> = times.into_iter().map(|t| json!({"layer": l, "path": "transform/position", "time": t})).collect();
-            s.execute("keys.select", json!({"keys": picked})).unwrap();
+            s.execute("keyframe.select", json!({"keys": picked})).unwrap();
         };
         select(&mut s, order.iter().map(|&i| orig.keys[i].time.seconds()).collect());
-        s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+        s.execute("keyframe.smooth", json!({"tolerance": tolerance})).unwrap();
         let once = prop(&s, l, "transform/position");
         assert_eq!(outside(&once), outside(&orig), "{order:?}: the keyframes outside the span are kept");
         assert_eq!(ends(&once), ends(&orig), "{order:?}: the span's ends are kept");
@@ -116,7 +116,7 @@ fn smoother_never_touches_keys_outside_the_selected_span() {
         assert!(inside(&once) <= inside(&orig), "{order:?}: no more keys than were there");
         // Again, with the same tolerance, over the same span.
         select(&mut s, once.keys.iter().filter(|k| k.time >= first && k.time <= last).map(|k| k.time.seconds()).collect());
-        s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+        s.execute("keyframe.smooth", json!({"tolerance": tolerance})).unwrap();
         let twice = prop(&s, l, "transform/position");
         assert_eq!(outside(&twice), outside(&orig), "{order:?}: a second run keeps them too");
         assert_eq!(ends(&twice), ends(&orig));
@@ -149,7 +149,7 @@ fn smoother_never_adds_keys() {
             s.prefs.general.default_spatial_linear = straight;
             animate(&mut s, l, "transform/position", &LINE.map(|(t, v)| (t, json!(v))));
             select(&mut s, l, "transform/position");
-            let r = s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+            let r = s.execute("keyframe.smooth", json!({"tolerance": tolerance})).unwrap();
             let after = prop(&s, l, "transform/position").keys.len();
             assert!(after <= 4, "straight {straight}, tolerance {tolerance}: {after} keys ({r})");
             assert!(r["after"].as_u64() <= r["before"].as_u64(), "{r}");
@@ -159,7 +159,7 @@ fn smoother_never_adds_keys() {
     let (mut s, l) = setup();
     animate(&mut s, l, "transform/opacity", &[(0.0, json!(0)), (0.3, json!(90)), (0.5, json!(10)), (0.9, json!(80)), (1.0, json!(20))]);
     select(&mut s, l, "transform/opacity");
-    s.execute("keys.smooth", json!({"tolerance": 0.5})).unwrap();
+    s.execute("keyframe.smooth", json!({"tolerance": 0.5})).unwrap();
     assert!(prop(&s, l, "transform/opacity").keys.len() <= 5);
 }
 
@@ -174,7 +174,7 @@ fn smoothing_collinear_keys_stays_on_the_line_and_moves_one_way() {
             s.prefs.general.default_spatial_linear = straight;
             animate(&mut s, l, "transform/position", &LINE.map(|(t, v)| (t, json!(v))));
             select(&mut s, l, "transform/position");
-            s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+            s.execute("keyframe.smooth", json!({"tolerance": tolerance})).unwrap();
             let p = prop(&s, l, "transform/position");
             let path = xs(&s, &p, 0.0, 2.5);
             for (i, (x, y)) in path.iter().enumerate() {
@@ -200,7 +200,7 @@ fn smoothing_smooth_keys_again_changes_nothing() {
         let mut runs = Vec::new();
         for _ in 0..3 {
             select(&mut s, l, "transform/position");
-            s.execute("keys.smooth", json!({"tolerance": tolerance})).unwrap();
+            s.execute("keyframe.smooth", json!({"tolerance": tolerance})).unwrap();
             runs.push(prop(&s, l, "transform/position").keys);
         }
         assert_eq!(runs[2], runs[1], "straight {straight}, tolerance {tolerance}: a third run changes nothing");

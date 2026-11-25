@@ -17,8 +17,8 @@ fn whole(command: &str, params: &Value) -> bool {
             | "file.saveCopy"
             | "file.collectFiles"
             | "file.openRecent"
-            | "templates.create"
-            | "templates.saveAs"
+            | "template.add"
+            | "template.saveAs"
     ) || command == "edit.history.goto" && params.get("steps").is_none()
 }
 pub(crate) fn check(session: &Session, command: &str, params: &Value) -> Result<(), String> {

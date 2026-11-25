@@ -171,16 +171,16 @@ fn views_switch_and_override_camera() {
     let id = s.execute("layer.newSolid", json!({"width": 100, "height": 100})).unwrap()["layer"].as_u64().unwrap();
     s.execute("layer.setSwitch", json!({"layer": id, "switch": "threeD", "value": true})).unwrap();
     assert!(s.view_camera(cid).is_none());
-    s.execute("view.3d.top", json!({})).unwrap();
+    s.execute("view.threeD.top", json!({})).unwrap();
     let cam = s.view_camera(cid).unwrap();
     assert!(cam.ortho);
     assert!((cam.forward().y - 1.0).abs() < 1e-9);
     s.execute("view.set3DView", json!({"view": "Custom View 2"})).unwrap();
     assert!(!s.view_camera(cid).unwrap().ortho);
-    s.execute("view.3d.last", json!({})).unwrap();
+    s.execute("view.threeD.last", json!({})).unwrap();
     assert_eq!(s.state.views3d[&cid].current, View3D::Top);
     // Orbit a custom view: edits the view camera, not the project.
-    s.execute("view.3d.custom1", json!({})).unwrap();
+    s.execute("view.threeD.custom1", json!({})).unwrap();
     let rev = s.revision;
     let before = s.view_camera(cid).unwrap().eye;
     s.execute("camera.orbit", json!({"yaw": 20})).unwrap();
@@ -188,7 +188,7 @@ fn views_switch_and_override_camera() {
     assert_eq!(s.revision, rev);
     s.execute("view.reset3DView", json!({})).unwrap();
     assert!((s.view_camera(cid).unwrap().eye - before).length() < 1e-9);
-    s.execute("view.3d.activeCamera", json!({})).unwrap();
+    s.execute("view.threeD.activeCamera", json!({})).unwrap();
     assert!(s.view_camera(cid).is_none());
     let q = s.execute("view.get3D", json!({})).unwrap();
     assert_eq!(q["view"], "activeCamera");

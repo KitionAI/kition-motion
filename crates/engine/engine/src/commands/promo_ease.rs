@@ -1,4 +1,4 @@
-//! Promo motion: named easing curves and springs (`keys.applyEase`), and the key helpers the
+//! Promo motion: named easing curves and springs (`keyframe.applyEase`), and the key helpers the
 //! promo presets (text, light, camera) build their keyframes with.
 //!
 //! A curve is written as a CSS `cubic-bezier(x1, y1, x2, y2)` from 0 to 1 and converted exactly
@@ -406,7 +406,7 @@ enum Shape {
 }
 
 fn shape_p(p: &Value) -> Result<Shape> {
-    const C: &str = "keys.applyEase";
+    const C: &str = "keyframe.applyEase";
     if let Some(c) = bezier_p(p, "bezier", C)? {
         return Ok(Shape::Curve(format!("cubic-bezier({}, {}, {}, {})", c.x1, c.y1, c.x2, c.y2), c));
     }
@@ -424,7 +424,7 @@ fn shape_p(p: &Value) -> Result<Shape> {
 }
 
 fn apply_ease(s: &mut Session, p: &Value) -> Result<Value> {
-    const C: &str = "keys.applyEase";
+    const C: &str = "keyframe.applyEase";
     let (cid, lid, uid) = prop_ref(s, p, C)?;
     let shape = shape_p(p)?;
     // `from` and `to` snap to the comp's frame grid, as prop.addKey snaps the keys' times.
@@ -479,7 +479,7 @@ fn list(_: &mut Session, _: &Value) -> Result<Value> {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
-            "keys.applyEase",
+            "keyframe.applyEase",
             "Apply Ease Preset",
             [],
             None,
@@ -487,6 +487,6 @@ pub fn specs() -> Vec<CommandSpec> {
             has_comp,
             apply_ease
         ),
-        query!("keys.easePresets", "Ease Presets", "{}", list),
+        query!("keyframe.easePresets", "Ease Presets", "{}", list),
     ]
 }

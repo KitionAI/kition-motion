@@ -1,5 +1,5 @@
 //! 3D Camera Tracker runtime: the analysis job (`camera.analyze`, `track.camera`), keeping
-//! analyses valid, and turning a solve into composition layers (`camera.createFromSolve`).
+//! analyses valid, and turning a solve into composition layers (`camera.addFromSolve`).
 //!
 //! The job renders the layer's input to the effect (`Renderer::layer_input`) for every frame
 //! between the layer's In and Out points on a background thread and tracks features through
@@ -619,7 +619,7 @@ pub fn placed(project: &Project, cid: ItemId, lid: LayerId, uid: Uid) -> Option<
     Some(Placed { solve, world, scale, times, comp_size })
 }
 
-/// What to create from a target (`camera.createFromSolve`).
+/// What to create from a target (`camera.addFromSolve`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CreateKind {
     Text,

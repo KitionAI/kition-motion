@@ -170,8 +170,8 @@ pub(crate) fn exec(s: &mut Session, id: &str, params: J) -> Result<J, String> {
     r.map_err(|e| e.to_string())
 }
 
-/// Run a keyframe command that acts on the selected keys (`keys.velocity`, `keys.interpolation`,
-/// `keys.delete`) on the keys `targets` names instead (`[{layer, prop, index}]`, 0-based, in the
+/// Run a keyframe command that acts on the selected keys (`keyframe.velocity`, `keyframe.interpolation`,
+/// `keyframe.delete`) on the keys `targets` names instead (`[{layer, prop, index}]`, 0-based, in the
 /// command's comp): the usual per-key methods (`setTemporalEaseAtKey`, `removeKey`…) leave
 /// the user's key selection as it was. Selected keys that no longer exist drop out of it.
 fn exec_on_keys(s: &mut Session, id: &str, params: J, targets: &J) -> Result<J, String> {

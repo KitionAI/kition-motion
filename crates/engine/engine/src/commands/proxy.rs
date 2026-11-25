@@ -141,7 +141,7 @@ fn interpret_proxy(s: &mut Session, p: &Value) -> Result<Value> {
 /// File ▸ Create Proxy ▸ Still / Movie: queue a half-resolution render of the composition whose
 /// post-render action sets the result as its proxy.
 fn create_proxy(s: &mut Session, p: &Value) -> Result<Value> {
-    const C: &str = "file.createProxy";
+    const C: &str = "file.addProxy";
     let cid = match p.get("comp").or(p.get("item")) {
         Some(_) => {
             let q = json!({"comp": p.get("comp").or(p.get("item")).cloned()});
@@ -213,7 +213,7 @@ fn has_comp_selection(s: &Session) -> std::result::Result<(), String> {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
-            "file.createProxy",
+            "file.addProxy",
             "Create Proxy",
             [],
             None,

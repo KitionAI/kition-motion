@@ -10,7 +10,7 @@ async fn deleted_recipient_reason_survives_an_intervening_read() {
         let f = Fixture::new(2);
         let (info, _, basis) = f.inspect().await;
         let layer = layer_ids(&info)[0];
-        f.colleague(&[("edit.clear", json!({"layers":[layer]}))]);
+        f.colleague(&[("edit.delete", json!({"layers":[layer]}))]);
         if reread_before_write {
             f.inspect().await;
         }

@@ -15,11 +15,11 @@
 //!   project (`projectPath`: `<project dir>/<stem> Footage/`), into `footageDir`, or into the
 //!   settings folder's `Template Footage/<name>/` (the browser: its storage), and points the
 //!   footage at them.
-//! - Opening a template (`templates.create`) makes an untitled copy: the template itself is never
+//! - Opening a template (`template.add`) makes an untitled copy: the template itself is never
 //!   changed.
 //!
-//! Commands: `templates.list`, `templates.thumbnail`, `templates.create`, `templates.saveAs`,
-//! `templates.delete`.
+//! Commands: `template.list`, `template.thumbnail`, `template.add`, `template.saveAs`,
+//! `template.delete`.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -405,7 +405,7 @@ fn builtin(id: &str) -> Option<&'static Builtin> {
 
 /// Build a built-in template's project (the main comp is the one Graphics Templates names).
 pub fn build_builtin(id: &str) -> Result<Project> {
-    let b = builtin(id).ok_or_else(|| bad("templates.create", format!("unknown template `{id}` (see templates.list)")))?;
+    let b = builtin(id).ok_or_else(|| bad("template.add", format!("unknown template `{id}` (see template.list)")))?;
     let mut s = Session::default();
     (b.build)(&mut s).map_err(|e| EngineError::Other(format!("template {id}: {e}")))?;
     let mut p = (*s.project).clone();
@@ -510,14 +510,14 @@ pub fn thumbnail(s: &Session, id: &str) -> Result<String> {
         if let Some((_, t)) = entries.iter().find(|(k, _)| k == "thumb.txt") {
             return Ok(String::from_utf8_lossy(t).into_owned());
         }
-        let (_, p, _) = read_template(&bytes).map_err(|e| bad("templates.thumbnail", e))?;
-        return render_thumb(&p).ok_or_else(|| bad("templates.thumbnail", "nothing to render"));
+        let (_, p, _) = read_template(&bytes).map_err(|e| bad("template.thumbnail", e))?;
+        return render_thumb(&p).ok_or_else(|| bad("template.thumbnail", "nothing to render"));
     }
     if let Some(Some(t)) = cache().lock().ok().and_then(|c| c.get(id).map(|e| e.1.clone())) {
         return Ok(t);
     }
     let p = cached_builtin(id)?;
-    let t = render_thumb(&p).ok_or_else(|| bad("templates.thumbnail", "nothing to render"))?;
+    let t = render_thumb(&p).ok_or_else(|| bad("template.thumbnail", "nothing to render"))?;
     if let Ok(mut c) = cache().lock() {
         c.insert(id.to_string(), (p, Some(t.clone())));
     }
@@ -564,7 +564,7 @@ fn read_user(s: &Session, file: &str) -> Result<Vec<u8>> {
 
 fn write_user(s: &Session, file: &str, bytes: &[u8]) -> Result<String> {
     check_name(file)?;
-    let cfg = s.config.as_ref().ok_or_else(|| bad("templates.saveAs", "no settings store: user templates are unavailable"))?;
+    let cfg = s.config.as_ref().ok_or_else(|| bad("template.saveAs", "no settings store: user templates are unavailable"))?;
     match user_dir(s) {
         Some(d) => {
             let path = d.join(file);
@@ -581,9 +581,9 @@ fn write_user(s: &Session, file: &str, bytes: &[u8]) -> Result<String> {
 
 fn remove_user(s: &Session, file: &str) -> Result<()> {
     check_name(file)?;
-    let cfg = s.config.as_ref().ok_or_else(|| bad("templates.delete", "no settings store"))?;
+    let cfg = s.config.as_ref().ok_or_else(|| bad("template.delete", "no settings store"))?;
     if !user_files(s).iter().any(|f| f == file) {
-        return Err(bad("templates.delete", format!("no user template `{file}`")));
+        return Err(bad("template.delete", format!("no user template `{file}`")));
     }
     match user_dir(s) {
         Some(d) => cfg.files().remove(&d.join(file)),
@@ -629,15 +629,15 @@ type Opened = (Project, String, Vec<(String, Vec<u8>)>);
 fn project_of(s: &Session, id: Option<&str>, path: Option<&str>) -> Result<Opened> {
     if let Some(path) = path {
         let bytes = s.services.read_file(path).map_err(|e| EngineError::Other(format!("cannot read {path}: {e}")))?;
-        let (m, p, e) = read_template(&bytes).map_err(|e| bad("templates.create", e))?;
+        let (m, p, e) = read_template(&bytes).map_err(|e| bad("template.add", e))?;
         return Ok((p, str_of(&m, "name"), e));
     }
-    let id = id.ok_or_else(|| bad("templates.create", "missing `id` (see templates.list) or `path`"))?;
+    let id = id.ok_or_else(|| bad("template.add", "missing `id` (see template.list) or `path`"))?;
     if let Some(f) = id.strip_prefix("user/") {
-        let (m, p, e) = read_template(&read_user(s, f)?).map_err(|e| bad("templates.create", e))?;
+        let (m, p, e) = read_template(&read_user(s, f)?).map_err(|e| bad("template.add", e))?;
         return Ok((p, str_of(&m, "name"), e));
     }
-    let b = builtin(id).ok_or_else(|| bad("templates.create", format!("unknown template `{id}` (see templates.list)")))?;
+    let b = builtin(id).ok_or_else(|| bad("template.add", format!("unknown template `{id}` (see template.list)")))?;
     Ok((cached_builtin(id)?, b.name.to_string(), vec![]))
 }
 
@@ -781,7 +781,7 @@ fn list_cmd(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn thumb_cmd(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = str_p(p, "id").ok_or_else(|| bad("templates.thumbnail", "missing `id`"))?;
+    let id = str_p(p, "id").ok_or_else(|| bad("template.thumbnail", "missing `id`"))?;
     Ok(json!({"id": id, "width": THUMB_W, "height": THUMB_H, "rgb": thumbnail(s, id)?}))
 }
 
@@ -811,7 +811,7 @@ fn create(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn save_as(s: &mut Session, p: &Value) -> Result<Value> {
-    const C: &str = "templates.saveAs";
+    const C: &str = "template.saveAs";
     let name = str_p(p, "name").map(str::trim).filter(|n| !n.is_empty()).ok_or_else(|| bad(C, "missing `name`"))?.to_string();
     if s.project.comps().next().is_none() {
         return Err(bad(C, "the project has no compositions"));
@@ -896,8 +896,8 @@ fn save_as(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn delete(s: &mut Session, p: &Value) -> Result<Value> {
-    let id = str_p(p, "id").ok_or_else(|| bad("templates.delete", "missing `id`"))?;
-    let file = id.strip_prefix("user/").ok_or_else(|| bad("templates.delete", "only user templates (`user/…`) can be deleted"))?;
+    let id = str_p(p, "id").ok_or_else(|| bad("template.delete", "missing `id`"))?;
+    let file = id.strip_prefix("user/").ok_or_else(|| bad("template.delete", "only user templates (`user/…`) can be deleted"))?;
     remove_user(s, file)?;
     Ok(json!({"deleted": id}))
 }
@@ -909,23 +909,23 @@ fn has_comps(s: &Session) -> std::result::Result<(), String> {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         query!(
-            "templates.list",
+            "template.list",
             "Project Templates",
             "{thumbnails?: bool} → [{id, name, description, category, builtin, width, height, frameRate, duration, controls, thumbnail? (hex RGB 256×144)}]",
             list_cmd
         ),
-        query!("templates.thumbnail", "Template Thumbnail", "{id} → {id, width, height, rgb (hex)}", thumb_cmd),
+        query!("template.thumbnail", "Template Thumbnail", "{id} → {id, width, height, rgb (hex)}", thumb_cmd),
         cmd!(
-            "templates.create",
+            "template.add",
             "New Project from Template",
             [],
             None,
-            "{id (templates.list) | path (.ectemplate), projectPath? (save the new project there; embedded footage goes to `<stem> Footage/` next to it), footageDir?} → an untitled copy (embedded footage extracted: `footage` lists the files)",
+            "{id (template.list) | path (.ectemplate), projectPath? (save the new project there; embedded footage goes to `<stem> Footage/` next to it), footageDir?} → an untitled copy (embedded footage extracted: `footage` lists the files)",
             always,
             create
         ),
         cmd!(
-            "templates.saveAs",
+            "template.saveAs",
             "Save as Template...",
             ["File"],
             None,
@@ -933,7 +933,7 @@ pub fn specs() -> Vec<CommandSpec> {
             has_comps,
             save_as
         ),
-        cmd!("templates.delete", "Delete Template", [], None, "{id: user/<file>}", always, delete),
+        cmd!("template.delete", "Delete Template", [], None, "{id: user/<file>}", always, delete),
         cmd!("file.newFromTemplate", "New Project from Template...", ["File", "New"], None, "{} → the Home screen's Templates tab", always, |s, p| {
             crate::commands::frontend(s, "file.newFromTemplate", p)
         }),
@@ -969,7 +969,7 @@ mod tests {
     #[test]
     fn create_opens_an_untitled_copy() {
         let mut s = Session::default();
-        let r = s.execute("templates.create", json!({"id": "title-card"})).unwrap();
+        let r = s.execute("template.add", json!({"id": "title-card"})).unwrap();
         assert_eq!(r["template"], "Title Card");
         assert!(s.path.is_none());
         let cid = s.active_comp_id().unwrap();
@@ -978,35 +978,35 @@ mod tests {
         // The Graphics Templates controls came along and drive the title.
         let eg = s.execute("templateProps.list", json!({})).unwrap();
         assert_eq!(eg["controls"][0]["name"], "Title");
-        assert!(s.execute("templates.create", json!({"id": "nope"})).is_err());
-        assert!(s.execute("templates.create", json!({})).is_err());
+        assert!(s.execute("template.add", json!({"id": "nope"})).is_err());
+        assert!(s.execute("template.add", json!({})).is_err());
     }
 
     fn user_roundtrip(mut s: Session) {
-        s.execute("templates.create", json!({"id": "kinetic-type"})).unwrap();
+        s.execute("template.add", json!({"id": "kinetic-type"})).unwrap();
         s.execute("layer.newSolid", json!({"name": "Mine", "color": "#ff00ff"})).unwrap();
-        let r = s.execute("templates.saveAs", json!({"name": "My Promo", "description": "Mine", "category": "Work"})).unwrap();
+        let r = s.execute("template.saveAs", json!({"name": "My Promo", "description": "Mine", "category": "Work"})).unwrap();
         assert_eq!(r["id"], "user/My Promo.ectemplate");
         let l = list(&s);
         let mine = l.iter().find(|t| !t.builtin).unwrap();
         assert_eq!((mine.name.as_str(), mine.category.as_str(), mine.description.as_str()), ("My Promo", "Work", "Mine"));
         assert_eq!(mine.controls, ["Word 1", "Word 2", "Word 3"]);
         assert!(decode_thumb(&thumbnail(&s, &mine.id).unwrap()).is_some());
-        let j = s.execute("templates.list", json!({"thumbnails": true})).unwrap();
+        let j = s.execute("template.list", json!({"thumbnails": true})).unwrap();
         assert!(j.as_array().unwrap().iter().all(|t| t["thumbnail"].is_string()));
         // Overwrite protection.
-        assert!(s.execute("templates.saveAs", json!({"name": "My Promo", "overwrite": false})).is_err());
+        assert!(s.execute("template.saveAs", json!({"name": "My Promo", "overwrite": false})).is_err());
         // Open: an untitled copy with the added layer.
         s.execute("file.newProject", json!({})).unwrap();
-        s.execute("templates.create", json!({"id": mine.id})).unwrap();
+        s.execute("template.add", json!({"id": mine.id})).unwrap();
         assert!(s.path.is_none());
         assert!(s.active_comp().unwrap().layers.iter().any(|l| l.name == "Mine"));
         // Built-ins can't be deleted; user ones can.
-        assert!(s.execute("templates.delete", json!({"id": "title-card"})).is_err());
-        s.execute("templates.delete", json!({"id": mine.id})).unwrap();
+        assert!(s.execute("template.delete", json!({"id": "title-card"})).is_err());
+        s.execute("template.delete", json!({"id": mine.id})).unwrap();
         assert!(list(&s).iter().all(|t| t.builtin));
-        assert!(s.execute("templates.delete", json!({"id": "user/My Promo.ectemplate"})).is_err());
-        assert!(s.execute("templates.create", json!({"id": "user/../x.ectemplate"})).is_err());
+        assert!(s.execute("template.delete", json!({"id": "user/My Promo.ectemplate"})).is_err());
+        assert!(s.execute("template.add", json!({"id": "user/../x.ectemplate"})).is_err());
     }
 
     #[test]
@@ -1020,13 +1020,13 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("ec-templates-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let mut s = Session { config: Some(Arc::new(DirConfig::new(&dir))), ..Default::default() };
-        s.execute("templates.create", json!({"id": "lower-third"})).unwrap();
-        s.execute("templates.saveAs", json!({"name": "On Disk"})).unwrap();
+        s.execute("template.add", json!({"id": "lower-third"})).unwrap();
+        s.execute("template.saveAs", json!({"name": "On Disk"})).unwrap();
         let f = dir.join(TEMPLATES_DIR).join("On Disk.ectemplate");
         // A real template file: the Graphics Templates reader understands it too.
         let info = s.execute("templateProps.templateInfo", json!({"path": f.to_string_lossy()})).unwrap();
         assert_eq!((info["kind"].as_str(), info["name"].as_str()), (Some("project"), Some("On Disk")));
-        s.execute("templates.create", json!({"path": f.to_string_lossy()})).unwrap();
+        s.execute("template.add", json!({"path": f.to_string_lossy()})).unwrap();
         let _ = std::fs::remove_dir_all(&dir);
         let dir2 = std::env::temp_dir().join(format!("ec-templates-b-{}", std::process::id()));
         let s = Session { config: Some(Arc::new(DirConfig::new(&dir2))), ..Default::default() };
@@ -1088,12 +1088,12 @@ mod tests {
         let seq: Vec<String> = (0..3).map(|k| file(&format!("shot_{k:03}.png"), 500, 10 + k as u8)).collect();
         let big = file("big.mov", 2 * 1024 * 1024, 7);
         let mut s = Session { config: Some(Arc::new(DirConfig::new(root.join("config")))), ..Default::default() };
-        s.execute("templates.create", json!({"id": "lower-third"})).unwrap();
+        s.execute("template.add", json!({"id": "lower-third"})).unwrap();
         add_footage(&mut s, "Still", &still, vec![]);
         add_footage(&mut s, "Shot", &seq[0], seq.clone());
         add_footage(&mut s, "Big", &big, vec![]);
         add_footage(&mut s, "Gone", &media.join("gone.png").to_string_lossy(), vec![]);
-        let r = s.execute("templates.saveAs", json!({"name": "With Footage", "embedLimitMB": 1})).unwrap();
+        let r = s.execute("template.saveAs", json!({"name": "With Footage", "embedLimitMB": 1})).unwrap();
         assert_eq!(r["embedded"], 2, "{r}");
         assert_eq!(r["embeddedBytes"], 2500);
         let linked = r["linked"].as_array().unwrap();
@@ -1114,7 +1114,7 @@ mod tests {
         }
         let proj_path = root.join("work").join("Promo.kmotion");
         std::fs::create_dir_all(proj_path.parent().unwrap()).unwrap();
-        let r = s.execute("templates.create", json!({"id": "user/With Footage.ectemplate", "projectPath": proj_path.to_string_lossy()})).unwrap();
+        let r = s.execute("template.add", json!({"id": "user/With Footage.ectemplate", "projectPath": proj_path.to_string_lossy()})).unwrap();
         assert_eq!(r["untitled"], false);
         assert_eq!(r["footage"].as_array().unwrap().len(), 4, "{r}");
         assert_eq!(s.path.as_deref(), Some(&*proj_path.to_string_lossy()));
@@ -1131,14 +1131,14 @@ mod tests {
         // Over the cap: still linked to the original file.
         assert_eq!(get("Big").1, big);
         // Without a project path: a fresh folder under the settings folder each time.
-        s.execute("templates.create", json!({"id": "user/With Footage.ectemplate"})).unwrap();
+        s.execute("template.add", json!({"id": "user/With Footage.ectemplate"})).unwrap();
         let base = root.join("config").join(FOOTAGE_DIR);
         assert!(base.join("With Footage").join("still.png").exists());
         assert!(s.path.is_none());
-        s.execute("templates.create", json!({"id": "user/With Footage.ectemplate"})).unwrap();
+        s.execute("template.add", json!({"id": "user/With Footage.ectemplate"})).unwrap();
         assert!(base.join("With Footage 2").join("still.png").exists());
         // Not embedding: no media entries.
-        let r = s.execute("templates.saveAs", json!({"name": "Linked", "embedFootage": false})).unwrap();
+        let r = s.execute("template.saveAs", json!({"name": "Linked", "embedFootage": false})).unwrap();
         assert_eq!(r["embedded"], 0);
         let entries = kition_motion_lottie::zip::read_stored(&read_user(&s, "Linked.ectemplate").unwrap());
         assert!(entries.iter().all(|(k, _)| !k.starts_with("media/")));
@@ -1184,15 +1184,15 @@ mod tests {
             importer: Some(Arc::new(Imp(mem.clone()))),
             ..Default::default()
         };
-        s.execute("templates.create", json!({"id": "title-card"})).unwrap();
+        s.execute("template.add", json!({"id": "title-card"})).unwrap();
         add_footage(&mut s, "Clip", "/clip.png", vec![]);
-        s.execute("templates.saveAs", json!({"name": "Web"})).unwrap();
-        s.execute("templates.create", json!({"id": "user/Web.ectemplate"})).unwrap();
+        s.execute("template.saveAs", json!({"name": "Web"})).unwrap();
+        s.execute("template.add", json!({"id": "user/Web.ectemplate"})).unwrap();
         let want = format!("/{FOOTAGE_DIR}/Web/clip.png");
         assert_eq!(mem.0.lock().unwrap().get(&want), Some(&vec![3; 64]));
         assert_eq!(*mem.1.lock().unwrap(), vec![want.clone()]);
         assert!(footage_paths(&s).iter().any(|f| f.1 == want));
-        s.execute("templates.create", json!({"id": "user/Web.ectemplate"})).unwrap();
+        s.execute("template.add", json!({"id": "user/Web.ectemplate"})).unwrap();
         assert!(mem.0.lock().unwrap().contains_key(&format!("/{FOOTAGE_DIR}/Web 2/clip.png")));
     }
 

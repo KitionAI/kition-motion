@@ -268,7 +268,7 @@ try {
   const marquee = { at1: await marked.getAttribute('aria-selected'), at25: await last.getAttribute('aria-selected') }
   step('a marquee on empty track selects the keyframes inside it', marquee.at1 === 'true' && marquee.at25 === 'false', JSON.stringify(marquee))
   await page.keyboard.press('F9')
-  // prop.get: keys.info with a property path for `prop` answers nothing (it finds keys by uid only).
+  // prop.get: keyframe.info with a property path for `prop` answers nothing (it finds keys by uid only).
   const keyAt = async (time) => (await query('prop.get', { layer: SHAPE, path: 'transform/position' })).keys.find((key) => near(key.compTime, time))
   await until(async () => (await keyAt(1))?.in === 'Bezier')
   const eased = await keyAt(1)

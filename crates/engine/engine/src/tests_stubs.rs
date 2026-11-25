@@ -181,11 +181,11 @@ fn look_at_layers_2d_and_3d() {
     s.execute("layer.setSwitch", json!({"layer": a, "switch": "threeD", "value": true})).unwrap();
     s.execute("layer.newCamera", json!({})).unwrap();
     let cid = s.active_comp_id().unwrap();
-    s.execute("view.3d.custom1", json!({})).unwrap();
+    s.execute("view.threeD.custom1", json!({})).unwrap();
     let r = s.execute("view.lookAtAll", json!({})).unwrap();
     let poi = r["poi"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect::<Vec<_>>();
     assert!((poi[0] - 50.0).abs() < 1e-6 && (poi[1] - 60.0).abs() < 1e-6, "{r}");
-    s.execute("view.3d.activeCamera", json!({})).unwrap();
+    s.execute("view.threeD.activeCamera", json!({})).unwrap();
     let cam = s.active_comp().unwrap().layers.iter().find(|l| l.is_camera()).unwrap().id;
     let before = s.active_comp().unwrap().layer(cam).unwrap().props.prop("transform/position").unwrap().value.clone();
     s.execute("layer.select", json!({"layers": [a]})).unwrap();
@@ -201,7 +201,7 @@ fn camera_from_view_and_view_layout() {
     let mut s = comp();
     s.execute("layer.newSolid", json!({"color": "#ff0000"})).unwrap();
     assert!(s.execute("camera.fromView", json!({})).is_err(), "needs a 3D view");
-    s.execute("view.3d.custom2", json!({})).unwrap();
+    s.execute("view.threeD.custom2", json!({})).unwrap();
     let cid = s.active_comp_id().unwrap();
     let vc = s.state.views3d[&cid].cam(kition_motion_render::three_d::View3D::Custom2, 400.0, 300.0);
     let r = s.execute("camera.fromView", json!({})).unwrap();

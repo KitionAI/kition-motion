@@ -156,13 +156,13 @@ fn comp_proxy_and_create_proxy() {
     s.execute("file.setProxyNone", json!({"item": inner.0})).unwrap();
     // Create Proxy queues a half-resolution render whose post-render action sets the proxy.
     s.state.project_selection = vec![inner];
-    let r = s.execute("file.createProxy", json!({"kind": "still"})).unwrap();
+    let r = s.execute("file.addProxy", json!({"kind": "still"})).unwrap();
     let it = s.project.render_queue.last().unwrap().clone();
     assert_eq!(it.comp, inner);
     assert_eq!(it.post_render, kition_motion_project::render_queue::PostRenderAction::SetProxy);
     assert_eq!(it.settings.resolution, 0.5);
     assert!(r["output"].as_str().unwrap().contains("Inner_proxy_"), "{r}");
-    let m = s.execute("file.createProxy", json!({"kind": "movie", "comp": inner.0})).unwrap();
+    let m = s.execute("file.addProxy", json!({"kind": "movie", "comp": inner.0})).unwrap();
     assert!(m["output"].as_str().unwrap().ends_with("Inner_proxy.mov"), "{m}");
     // The post-render action (what a finished render runs) attaches the file.
     let id = it.id;

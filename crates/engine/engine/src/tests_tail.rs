@@ -233,23 +233,23 @@ fn keyframe_label_groups() {
     let uid = |s: &Session, l: u64| s.active_comp().unwrap().layer(LayerId(l)).unwrap().props.prop("transform/opacity").unwrap().uid;
     let (ua, ub) = (uid(&s, a), uid(&s, b));
     // Label a's first key and b's last key Blue.
-    s.execute("keys.select", json!({"keys": [{"layer": a, "prop": ua, "time": 0.0}, {"layer": b, "prop": ub, "time": 1.0}]})).unwrap();
-    s.execute("keys.setLabel", json!({"label": "Blue"})).unwrap();
-    s.execute("keys.select", json!({"keys": [{"layer": a, "prop": ua, "time": 0.5}]})).unwrap();
-    s.execute("keys.setLabel", json!({"label": "Green"})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [{"layer": a, "prop": ua, "time": 0.0}, {"layer": b, "prop": ub, "time": 1.0}]})).unwrap();
+    s.execute("keyframe.setLabel", json!({"label": "Blue"})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [{"layer": a, "prop": ua, "time": 0.5}]})).unwrap();
+    s.execute("keyframe.setLabel", json!({"label": "Green"})).unwrap();
     // On selected layers: from a's first key, only a's Blue key.
     s.execute("layer.select", json!({"layers": [a]})).unwrap();
-    s.execute("keys.select", json!({"keys": [{"layer": a, "prop": ua, "time": 0.0}]})).unwrap();
-    assert_eq!(s.execute("keys.selectLabelGroup", json!({"scope": "selected"})).unwrap()["keys"], json!(1));
+    s.execute("keyframe.select", json!({"keys": [{"layer": a, "prop": ua, "time": 0.0}]})).unwrap();
+    assert_eq!(s.execute("keyframe.selectLabelGroup", json!({"scope": "selected"})).unwrap()["keys"], json!(1));
     // On all layers: both Blue keys.
-    assert_eq!(s.execute("keys.selectLabelGroup", json!({"scope": "all"})).unwrap()["keys"], json!(2));
+    assert_eq!(s.execute("keyframe.selectLabelGroup", json!({"scope": "all"})).unwrap()["keys"], json!(2));
     assert!(s.state.selected_keys.iter().any(|k| k.layer == LayerId(b) && (k.time.seconds() - 1.0).abs() < 1e-6));
     // Visible keyframes: only the revealed properties count.
-    s.execute("keys.select", json!({"keys": [{"layer": a, "prop": ua, "time": 0.0}]})).unwrap();
-    assert_eq!(s.execute("keys.selectLabelGroup", json!({"scope": "visibleAll", "visible": [ua]})).unwrap()["keys"], json!(1));
+    s.execute("keyframe.select", json!({"keys": [{"layer": a, "prop": ua, "time": 0.0}]})).unwrap();
+    assert_eq!(s.execute("keyframe.selectLabelGroup", json!({"scope": "visibleAll", "visible": [ua]})).unwrap()["keys"], json!(1));
     // Unlabelled keys group together too (label None).
-    s.execute("keys.select", json!({"keys": [{"layer": a, "prop": ua, "time": 1.0}]})).unwrap();
-    assert_eq!(s.execute("keys.selectLabelGroup", json!({"scope": "all"})).unwrap()["keys"], json!(3));
+    s.execute("keyframe.select", json!({"keys": [{"layer": a, "prop": ua, "time": 1.0}]})).unwrap();
+    assert_eq!(s.execute("keyframe.selectLabelGroup", json!({"scope": "all"})).unwrap()["keys"], json!(3));
     // Undo, serde.
     let lab = |s: &Session| s.active_comp().unwrap().layer(LayerId(a)).unwrap().props.prop("transform/opacity").unwrap().keys[1].label;
     assert_eq!(lab(&s), 9);
@@ -257,7 +257,7 @@ fn keyframe_label_groups() {
     assert_eq!(lab(&s), 0);
     s.execute("edit.redo", json!({})).unwrap();
     assert_eq!(roundtrip(&s).comp(s.active_comp_id().unwrap()).unwrap().layer(LayerId(a)).unwrap().props.prop("transform/opacity").unwrap().keys[1].label, 9);
-    assert!(s.execute("keys.setLabel", json!({"label": "Mauve"})).is_err());
+    assert!(s.execute("keyframe.setLabel", json!({"label": "Mauve"})).is_err());
 }
 
 #[test]

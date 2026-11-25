@@ -25,8 +25,8 @@ fn complete_stored_ease_holds_the_edited_key_without_the_whole_curve() {
     for time in [0, 1] {
         document.execute("prop.addKey", json!({"layer":layer,"path":"transform/opacity","time":time,"value":20})).unwrap();
     }
-    document.execute("keys.setEase", json!({"layer":layer,"path":"transform/opacity","time":1,"side":"out","speed":1})).unwrap();
-    let under = document.under("keys.setEase", &json!({"layer":layer,"path":"transform/opacity","time":1.2,"side":"out","speed":2})).unwrap().unwrap();
+    document.execute("keyframe.setEase", json!({"layer":layer,"path":"transform/opacity","time":1,"side":"out","speed":1})).unwrap();
+    let under = document.under("keyframe.setEase", &json!({"layer":layer,"path":"transform/opacity","time":1.2,"side":"out","speed":2})).unwrap().unwrap();
     println!("{}", serde_json::to_string(&under).unwrap());
     assert!(under.premises.iter().all(|premise| premise.fields.as_ref().is_some_and(|fields| fields.iter().all(|field| !field.ends_with("/opacity.keys")))));
 }

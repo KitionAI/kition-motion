@@ -3,7 +3,7 @@
 // Rove Across Time (showing when it is on), reverses keyframes in time and selects the previous,
 // following and equal ones; Animation ▸ Keyframe Assistant runs Exponential Scale and Convert
 // Expression to Keyframes; J and K go to the previous and next keyframe. Each edit is undone.
-// Results are read from the engine (`prop.get`, `keys.info`). Prints PASS or FAIL per step.
+// Results are read from the engine (`prop.get`, `keyframe.info`). Prints PASS or FAIL per step.
 import { start } from './harness.mjs'
 
 const h = await start(process.argv[2] ?? 'chromium')
@@ -18,7 +18,7 @@ const mark = (ms, path = 'transform.position') => kit.getByTestId(`motion-key-${
 const selectedMarks = () => kit.locator('.motion-key[aria-selected="true"]').count()
 const roving = async (time) => {
   const uid = (await prop(POSITION)).uid
-  return (await h.query('keys.info', { keys: [{ layer: SHAPE, prop: uid, time }] }))[0]?.roving
+  return (await h.query('keyframe.info', { keys: [{ layer: SHAPE, prop: uid, time }] }))[0]?.roving
 }
 /** Opens a keyframe's right-click menu and picks a row. */
 async function keyMenu(ms, row) {
@@ -132,7 +132,7 @@ try {
   await mark(0, 'transform.scale').click()
   await mark(500, 'transform.scale').click({ modifiers: ['Shift'] })
   await h.until(async () => (await selectedMarks()) === 2)
-  await assistant('keys.exponentialScale')
+  await assistant('keyframe.exponentialScale')
   await h.until(async () => (await keys('transform/scale')).length > 2)
   const scaled = await keys('transform/scale')
   const mid = scaled.find((key) => near(key.compTime ?? key.time, 0.25, 0.02))

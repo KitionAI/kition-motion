@@ -15,7 +15,7 @@ export type GraphTarget = { layer: MotionLayer; path: string; name: string }
 /** What the graph draws: the properties' values over time, or how fast they change. */
 export type GraphMode = 'value' | 'speed'
 
-/** One side's temporal ease as `keys.info` answers it, per dimension (null where it has none). */
+/** One side's temporal ease as `keyframe.info` answers it, per dimension (null where it has none). */
 type Ease = { speed: number; influence: number } | null
 type KeyInfo = { time: number; inEase?: Ease[]; outEase?: Ease[] }
 
@@ -74,7 +74,7 @@ function useCurves(targets: readonly GraphTarget[], from: number, to: number, co
         const prop = await query<PropRead>('prop.get', { layer: target.layer.id, path: target.path }).catch(() => null)
         const dims = dimsOf(prop?.type, target.layer)
         if (!prop || prop.uid == null || !dims || !prop.keys?.length) continue
-        const info = await query<KeyInfo[]>('keys.info', { keys: prop.keys.map((key) => ({ layer: target.layer.id, prop: prop.uid, time: key.layerTime })) }).catch(() => null)
+        const info = await query<KeyInfo[]>('keyframe.info', { keys: prop.keys.map((key) => ({ layer: target.layer.id, prop: prop.uid, time: key.layerTime })) }).catch(() => null)
         const eases = new Map((Array.isArray(info) ? info : []).map((key) => [Math.round(key.time * 1e6), key]))
         const keys = prop.keys.flatMap((key): GraphKey[] => {
           const value = numbersOf(key.value, dims)
@@ -184,7 +184,7 @@ type Drag =
  * in the speed graph in time. A selected eased key shows its handles, which drag its influence
  * (sideways) and speed: in the value graph as the curve's slope, in the speed graph as the height,
  * which is also where Position and Anchor Point, whose ease is their speed along the path, show
- * theirs. Each drag is one step (`keys.set`, `keys.setEase`, `keys.select`), sent on release.
+ * theirs. Each drag is one step (`keyframe.set`, `keyframe.setEase`, `keyframe.select`), sent on release.
  */
 export function GraphEditor({
   targets,
@@ -340,7 +340,7 @@ export function GraphEditor({
     // behind the engine (a click elsewhere just before, not answered yet). The drag's edit waits
     // for it.
     const params = add ? { toggle: true } : isSelected(curve, key) ? { add: true } : {}
-    selecting.current = run('keys.select', { keys: [keyRef(curve, key)], timeBase: 'comp', selectProperties: true, ...params })
+    selecting.current = run('keyframe.select', { keys: [keyRef(curve, key)], timeBase: 'comp', selectProperties: true, ...params })
     if (readOnly) return
     event.currentTarget.setPointerCapture(event.pointerId)
     held.current = live
@@ -407,10 +407,10 @@ export function GraphEditor({
       )
       // A click on empty space (no box) without Shift clears the selected keys.
       if (right - left <= CLICK_SLOP && bottom - top <= CLICK_SLOP) {
-        if (!drag.add) void run('keys.select', { keys: [], timeBase: 'comp' })
+        if (!drag.add) void run('keyframe.select', { keys: [], timeBase: 'comp' })
         return
       }
-      void run('keys.select', { keys: inside, timeBase: 'comp', ...(drag.add ? { add: true } : {}) })
+      void run('keyframe.select', { keys: inside, timeBase: 'comp', ...(drag.add ? { add: true } : {}) })
       return
     }
     const { curve, key, dim } = drag
@@ -423,11 +423,11 @@ export function GraphEditor({
         params.value = curve.dims === 1 ? value[0] : value
       }
       if (Math.abs(drag.time - key.compTime) > 1e-9) params.newTime = drag.time
-      if (params.value !== undefined || params.newTime !== undefined) void selecting.current.then(() => run('keys.set', params))
+      if (params.value !== undefined || params.newTime !== undefined) void selecting.current.then(() => run('keyframe.set', params))
       return
     }
     const ease = handleEase(drag, key, mode)
-    if (ease) void run('keys.setEase', { layer: layer.id, path, time: key.layerTime, side: drag.side, dim, influence: ease.influence, speed: ease.speed })
+    if (ease) void run('keyframe.setEase', { layer: layer.id, path, time: key.layerTime, side: drag.side, dim, influence: ease.influence, speed: ease.speed })
   }
 
   // The layer whose curves show, chosen here as well as in the viewer (the timeline's layer rows

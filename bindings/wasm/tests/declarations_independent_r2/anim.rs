@@ -29,7 +29,7 @@ macro_rules! nudge {
 
 pub(super) const ROWS: &[Row] = &[
     Row {
-        command: "keys.copy",
+        command: "keyframe.copy",
         path: "clipboard only",
         resolves: &["selected_keys in active comp by layer/property/exact time"],
         reads: &["selected key records", "layer.start_time/stretch", "property match path"],
@@ -39,7 +39,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/anim.rs:21",
     },
     Row {
-        command: "keys.paste",
+        command: "keyframe.paste",
         path: "resolve compatible target and paste clipboard",
         resolves: &[
             "comp id/name/default active",
@@ -60,7 +60,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/anim.rs:61; keyframe/src/lib.rs:431",
     },
     Row {
-        command: "keys.selectAll",
+        command: "keyframe.selectAll",
         path: "selection only",
         resolves: &["visible property uid list else selected properties else layers/default all"],
         reads: &["key times", "layer.switches.locked", "property tree membership"],
@@ -69,13 +69,13 @@ pub(super) const ROWS: &[Row] = &[
         state: &["active_comp", "selected_props", "selected_layers"],
         source: "commands/anim.rs:145",
     },
-    nudge!("keys.nudge"),
-    nudge!("keys.nudgeForward"),
-    nudge!("keys.nudgeBackward"),
-    nudge!("keys.nudgeForward10"),
-    nudge!("keys.nudgeBackward10"),
+    nudge!("keyframe.nudge"),
+    nudge!("keyframe.nudgeForward"),
+    nudge!("keyframe.nudgeBackward"),
+    nudge!("keyframe.nudgeForward10"),
+    nudge!("keyframe.nudgeBackward10"),
     Row {
-        command: "keys.set",
+        command: "keyframe.set",
         path: "nearest stored key value only",
         resolves: &["prop_ref uid/path", "time exact stored time else nearest key; timeBase layer default or comp"],
         reads: &[
@@ -90,7 +90,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/anim.rs:211; commands/prop.rs:163; keyframe/src/lib.rs:431",
     },
     Row {
-        command: "keys.set",
+        command: "keyframe.set",
         path: "newTime supplied",
         resolves: &["as value-only branch", "newTime converted through comp frame grid then clamped between adjacent keys"],
         reads: &[
@@ -106,7 +106,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/anim.rs:230; commands/prop.rs:163; keyframe/src/lib.rs:431",
     },
     Row {
-        command: "keys.setEase",
+        command: "keyframe.setEase",
         path: "nearest key one side, continuous may update both",
         resolves: &["prop_ref", "layer time exact else nearest key"],
         reads: &[
@@ -128,7 +128,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/anim.rs:253; keyframe/src/lib.rs:392",
     },
     Row {
-        command: "keys.timeReverse",
+        command: "keyframe.timeReverse",
         path: "reverse selected keys within each property",
         resolves: &["selected_keys exact layer/property/time in active comp"],
         reads: &["selected key full records and extreme times", "destination collision keys"],
@@ -138,7 +138,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/anim.rs:410; keyframe time_reverse",
     },
     Row {
-        command: "keys.selectEqual",
+        command: "keyframe.selectEqual",
         path: "selection only",
         resolves: &["selected_keys properties"],
         reads: &["selected and candidate key values/times"],
@@ -148,7 +148,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/anim.rs:174",
     },
     Row {
-        command: "keys.selectPrevious",
+        command: "keyframe.selectPrevious",
         path: "selection only",
         resolves: &["selected_keys properties"],
         reads: &["key times before first selected"],
@@ -158,7 +158,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "commands/anim.rs:174",
     },
     Row {
-        command: "keys.selectFollowing",
+        command: "keyframe.selectFollowing",
         path: "selection only",
         resolves: &["selected_keys properties"],
         reads: &["key times after last selected"],

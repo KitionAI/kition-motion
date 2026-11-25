@@ -73,7 +73,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "crates/engine/engine/src/commands/proxy.rs:126; crates/engine/engine/src/commands/file_more.rs:728",
     },
     Row {
-        command: "file.createProxy",
+        command: "file.addProxy",
         path: "movie",
         resolves: &["comp|item via shared comp_id else first selected comp else active_comp"],
         reads: &[
@@ -87,7 +87,7 @@ pub(super) const ROWS: &[Row] = &[
         source: "crates/engine/engine/src/commands/proxy.rs:150",
     },
     Row {
-        command: "file.createProxy",
+        command: "file.addProxy",
         path: "still",
         resolves: &["comp|item via shared comp_id else first selected comp else active_comp", "time: CTI if target active, else comp.poster_time"],
         reads: &["StillProxy default render/output templates", "comp.frame_rate", "comp.poster_time when target inactive", "render_queue[*].id to allocate"],

@@ -89,7 +89,7 @@ fn legacy_outside_selection_keeps_its_numeric_count_without_an_edit() {
     outside_key(&s, layer, "transform/opacity", LAYER_TIME, COMP_TIME);
     let before = project(&s);
     let history_before = s.history.undo.len();
-    let reply = s.execute("keys.select", json!({"keys": [{"layer": layer, "path": "transform/opacity", "time": LAYER_TIME}]})).unwrap();
+    let reply = s.execute("keyframe.select", json!({"keys": [{"layer": layer, "path": "transform/opacity", "time": LAYER_TIME}]})).unwrap();
     assert_eq!(s.state.selected_keys.len(), 1, "actual owner selected");
     assert_eq!(s.state.selected_keys[0].layer, LayerId(layer));
     assert_eq!(s.state.selected_keys[0].time, Tick::from_seconds_f64(LAYER_TIME));
@@ -174,7 +174,8 @@ fn explicit_time_bases_keep_timing_and_existing_object_warnings() {
     seconds(&inside["compTime"], 15.3);
     assert_eq!(inside["count"].as_u64(), Some(2));
     assert!(inside.get("warning").is_none());
-    let selected = s.execute("keys.select", json!({"keys": [{"layer": layer, "path": "transform/opacity", "time": COMP_TIME}], "timeBase": "comp"})).unwrap();
+    let selected =
+        s.execute("keyframe.select", json!({"keys": [{"layer": layer, "path": "transform/opacity", "time": COMP_TIME}], "timeBase": "comp"})).unwrap();
     assert_eq!(selected["count"].as_u64(), Some(1));
     seconds(&selected["keys"][0]["compTime"], COMP_TIME);
     assert!(selected["warning"].as_str().unwrap().contains("outside"));
@@ -190,8 +191,8 @@ fn explicit_time_bases_keep_timing_and_existing_object_warnings() {
     assert!(key["warning"].as_str().unwrap().contains("outside"), "prop.get already has an object response");
     let before = project(&s);
     let history_before = s.history.undo.len();
-    let moved = s.execute("keys.set", json!({"layer": layer, "path": "transform/opacity", "time": LAYER_TIME, "newTime": 15.4})).unwrap();
-    assert!(moved.is_object(), "keys.set already returned an object without timeBase");
+    let moved = s.execute("keyframe.set", json!({"layer": layer, "path": "transform/opacity", "time": LAYER_TIME, "newTime": 15.4})).unwrap();
+    assert!(moved.is_object(), "keyframe.set already returned an object without timeBase");
     seconds(&moved["layerTime"], 15.4);
     seconds(&moved["compTime"], 25.9);
     assert!(moved["warning"].as_str().unwrap().contains("outside"));

@@ -130,7 +130,7 @@ fn background_imports_report_progress_and_select_what_arrived() {
     let r = s.execute("file.import", json!({"paths": ["/drop/a.png", "/drop/b.png", "/drop/a.png"], "background": true})).unwrap();
     let job = r["job"].as_str().unwrap().to_string();
     // The first file is through; the second is being read.
-    let running = |s: &mut Session| s.execute("jobs.list", json!({})).unwrap()["running"].as_array().unwrap().clone();
+    let running = |s: &mut Session| s.execute("job.list", json!({})).unwrap()["running"].as_array().unwrap().clone();
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     while running(&mut s)[0]["done"] != json!(1) && std::time::Instant::now() < deadline {
         std::thread::sleep(std::time::Duration::from_millis(2));
@@ -142,7 +142,7 @@ fn background_imports_report_progress_and_select_what_arrived() {
     assert_eq!((row["done"].as_u64(), row["total"].as_u64()), (Some(1), Some(3)));
     assert!(s.project.items.values().all(|i| i.name != "a.png"), "nothing is added before the import finishes");
     allow.store(usize::MAX, Ordering::SeqCst);
-    s.execute("jobs.wait", json!({})).unwrap();
+    s.execute("job.wait", json!({})).unwrap();
     let names = |s: &Session, ids: &[ItemId]| ids.iter().map(|i| s.project.item(*i).unwrap().name.clone()).collect::<Vec<_>>();
     assert_eq!(names(&s, &s.state.project_selection), ["a.png", "b.png", "a.png"], "everything imported is selected, the same file twice too");
     assert_eq!(s.history.undo.len(), undo + 1, "one undo step");
@@ -151,7 +151,7 @@ fn background_imports_report_progress_and_select_what_arrived() {
     assert!(s.drain_events().iter().any(|e| matches!(e, crate::Event::Toast { message, .. } if message == "Imported 3 items")));
     // Dropped on the viewer: they become layers too; a file that can't be read is reported.
     s.execute("file.import", json!({"paths": ["/drop/c.png", "/drop/d.xyz"], "background": true, "addToComp": true, "position": [10.0, 20.0]})).unwrap();
-    s.execute("jobs.wait", json!({})).unwrap();
+    s.execute("job.wait", json!({})).unwrap();
     assert_eq!(s.active_comp().unwrap().layers.iter().map(|l| l.name.as_str()).collect::<Vec<_>>(), ["c.png"]);
     assert_eq!(s.job_log.last().unwrap().message, "Imported 1 item. /drop/d.xyz: unsupported file");
     // Agents and scripts import at once by default.
@@ -206,8 +206,8 @@ fn layer_workflow_with_undo() {
     assert_eq!(pos.keys.len(), 2);
     s.execute("prop.select", json!({"layer": lid, "path": "transform/position"})).unwrap();
     assert_eq!(s.state.selected_keys.len(), 2);
-    s.execute("keys.easyEase", json!({})).unwrap();
-    s.execute("keys.move", json!({"delta": 0.5})).unwrap();
+    s.execute("keyframe.easyEase", json!({})).unwrap();
+    s.execute("keyframe.move", json!({"delta": 0.5})).unwrap();
     let pos = s.active_comp().unwrap().layers[0].props.prop("transform/position").unwrap().clone();
     assert!((pos.keys[0].time.seconds() - 0.5).abs() < 0.02);
     assert_eq!(pos.keys[0].out_interp, kition_motion_keyframe::Interp::Bezier);
@@ -300,7 +300,7 @@ fn selecting_a_mask_selects_its_points() {
     s.execute("prop.select", json!({"layer": l, "prop": m2})).unwrap();
     assert_eq!((points(&s, m1), points(&s, m2)), (0, 4));
     // Delete removes the selected mask (not only its points).
-    s.execute("edit.clear", json!({})).unwrap();
+    s.execute("edit.delete", json!({})).unwrap();
     let masks = |s: &Session| s.active_comp().unwrap().layer(kition_motion_project::LayerId(l)).unwrap().masks().unwrap().children.len();
     assert_eq!(masks(&s), 1);
     s.execute("prop.select", json!({"layer": l, "path": "transform/opacity"})).unwrap();
@@ -424,7 +424,7 @@ fn near_misses_are_named_and_sizes_read_both_ways() {
     for missing in [json!(0), json!(99), json!("Nope")] {
         let err = s.execute("layer.tree", json!({"layer": missing})).unwrap_err().to_string();
         assert!(err.contains(&format!("{ring} \"Ring\"")) && err.contains(&format!("{card} \"Card\"")), "{missing}: {err}");
-        let err = s.execute("edit.clear", json!({"layers": [missing]})).unwrap_err().to_string();
+        let err = s.execute("edit.delete", json!({"layers": [missing]})).unwrap_err().to_string();
         assert!(err.contains("\"Ring\""), "{missing}: {err}");
     }
 }
@@ -464,10 +464,10 @@ fn property_groups_report_actionable_errors() {
     let err = s.execute("prop.get", json!({"layer": l, "path": "missing"})).unwrap_err().to_string();
     assert!(err.contains("no property `missing`"), "{err}");
     // The Transform group's properties by their short names, as agents write them, in `path` or
-    // as a name in `prop` (khp-bench: `{"prop": "position"}`), and in keys.select's keys.
+    // as a name in `prop` (khp-bench: `{"prop": "position"}`), and in keyframe.select's keys.
     s.execute("prop.addKey", json!({"layer": l, "path": "position", "time": 0, "value": [10, 10]})).unwrap();
     s.execute("prop.addKey", json!({"layer": l, "prop": "position", "time": 1, "value": [20, 20]})).unwrap();
-    s.execute("keys.select", json!({"keys": [{"layer": l, "prop": "position", "time": 0}]})).unwrap();
+    s.execute("keyframe.select", json!({"keys": [{"layer": l, "prop": "position", "time": 0}]})).unwrap();
     let value = s.execute("prop.get", json!({"layer": l, "path": "transform/position"})).unwrap();
     assert!(value.to_string().contains("10"), "{value}");
 }

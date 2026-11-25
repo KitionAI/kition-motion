@@ -55,9 +55,9 @@ async fn removing_an_effect_by_uid_holds_that_effect_only() {
 /// marker itself edited since refuses.
 #[tokio::test]
 async fn setting_a_marker_by_index_holds_that_marker_only() {
-    let set = json!({"command":"markers.set","params":{"index":1,"comment":"Mine"}});
+    let set = json!({"command":"marker.set","params":{"index":1,"comment":"Mine"}});
     let later = stale(&[("comp.addMarker", json!({"time":9,"comment":"C9"}))], set.clone()).await;
     assert!(later.is_ok(), "{later:?}");
-    let edited = stale(&[("markers.set", json!({"index":1,"comment":"Theirs"}))], set).await;
+    let edited = stale(&[("marker.set", json!({"index":1,"comment":"Theirs"}))], set).await;
     assert_eq!(edited.expect_err("the marker was edited")["error"]["code"], "conflict");
 }

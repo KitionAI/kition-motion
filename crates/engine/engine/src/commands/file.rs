@@ -130,7 +130,7 @@ fn revert(s: &mut Session, _: &Value) -> Result<Value> {
 ///
 /// With `background` (files dropped on the window or picked in the Import dialog) the files are
 /// probed on a background thread, so decoding a slow video doesn't freeze the app: the job shows
-/// the file being read and how many are left (Window ▸ Progress, `jobs.list`), then adds them in
+/// the file being read and how many are left (Window ▸ Progress, `job.list`), then adds them in
 /// one undo step, selects them and reports how many arrived ("Imported 3 items").
 fn import_cmd(s: &mut Session, p: &Value) -> Result<Value> {
     let target = s.active_comp_id();
@@ -717,7 +717,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "File...",
             ["File", "Import"],
             Some("Cmd+I"),
-            "{paths: [string] (files or folders), sequence?: bool (the Sequence checkbox: true imports numbered stills of one run as one image sequence, one picked file bringing its whole run and several picked files that range; default: a numbered still brings its run, except dropped files (drag), which import as stills as is usual; folders' runs import as sequences; false imports stills and a folder's files individually), alphabetical?: bool (Force Alphabetical Order: every image of that type in the folder, by name), frameRate?: fps (image sequences; default Settings ▸ Import ▸ Sequence Footage), importAs?: footage|composition|compositionLayerSizes (PSD, PDF, .ai and EPS files), layer?: name|index (footage of one PSD layer), page?: number from 1 (PDF / .ai page), drag?: bool (dropped files: Settings ▸ Import ▸ Default Drag Import As; files import as stills unless sequence), addToComp?: bool (also add them to the active comp, at time?, index?, position?: as in layer.addItem), background?: bool (probe the files in a background job, jobs.list / jobs.wait; returns {job})}",
+            "{paths: [string] (files or folders), sequence?: bool (the Sequence checkbox: true imports numbered stills of one run as one image sequence, one picked file bringing its whole run and several picked files that range; default: a numbered still brings its run, except dropped files (drag), which import as stills as is usual; folders' runs import as sequences; false imports stills and a folder's files individually), alphabetical?: bool (Force Alphabetical Order: every image of that type in the folder, by name), frameRate?: fps (image sequences; default Settings ▸ Import ▸ Sequence Footage), importAs?: footage|composition|compositionLayerSizes (PSD, PDF, .ai and EPS files), layer?: name|index (footage of one PSD layer), page?: number from 1 (PDF / .ai page), drag?: bool (dropped files: Settings ▸ Import ▸ Default Drag Import As; files import as stills unless sequence), addToComp?: bool (also add them to the active comp, at time?, index?, position?: as in layer.addItem), background?: bool (probe the files in a background job, job.list / job.wait; returns {job})}",
             always,
             import_cmd
         ),

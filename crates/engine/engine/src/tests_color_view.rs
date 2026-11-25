@@ -22,7 +22,7 @@ fn default_3d_view_ignores_camera_layers() {
     let mut s = session();
     let cid = s.active_comp_id().unwrap();
     s.execute("layer.newCamera", json!({"position": [32, 24, -300], "poi": [32, 24, 0]})).unwrap();
-    assert_eq!(s.execute("view.3d.default", json!({})).unwrap()["view"], "default");
+    assert_eq!(s.execute("view.threeD.default", json!({})).unwrap()["view"], "default");
     let vs = s.state.views3d.get(&cid).unwrap().clone();
     assert_eq!(vs.current, View3D::Default);
     // The comp's default camera: at −zoom looking at the centre, not the camera layer.
@@ -34,7 +34,7 @@ fn default_3d_view_ignores_camera_layers() {
     assert!((s.view_camera(cid).unwrap().eye.x - 32.0).abs() > 1.0);
     s.execute("view.reset3DView", json!({})).unwrap();
     assert!((s.view_camera(cid).unwrap().eye.x - 32.0).abs() < 1e-9);
-    s.execute("view.3d.last", json!({})).unwrap();
+    s.execute("view.threeD.last", json!({})).unwrap();
     assert_eq!(s.state.views3d[&cid].current, View3D::ActiveCamera);
     assert_eq!(s.execute("view.set3DView", json!({"view": "Default"})).unwrap()["view"], "default");
 }
@@ -43,7 +43,7 @@ fn default_3d_view_ignores_camera_layers() {
 fn locked_viewer_keeps_its_comp() {
     let mut s = session();
     let a = s.active_comp_id().unwrap();
-    s.execute("view.3d.top", json!({})).unwrap();
+    s.execute("view.threeD.top", json!({})).unwrap();
     assert!(!s.is_enabled("view.closeLockedViewer"));
     let r = s.execute("view.splitLockedViewer", json!({})).unwrap();
     assert_eq!(r, json!({"comp": a.0, "view": "top"}));

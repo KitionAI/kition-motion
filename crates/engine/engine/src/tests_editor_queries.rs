@@ -56,20 +56,20 @@ fn a_keyframe_value_stays_in_its_propertys_range() {
     let mut s = comp();
     let solid = s.execute("layer.newSolid", json!({"color": "#336699"})).unwrap()["layer"].as_u64().unwrap();
     s.execute("prop.toggleAnimation", json!({"layer": solid, "path": "transform/opacity"})).unwrap();
-    s.execute("keys.set", json!({"layer": solid, "path": "transform/opacity", "time": 0, "value": 180})).unwrap();
+    s.execute("keyframe.set", json!({"layer": solid, "path": "transform/opacity", "time": 0, "value": 180})).unwrap();
     let opacity = |s: &Session| s.active_comp().unwrap().layers[0].props.prop("transform/opacity").unwrap().keys[0].value.clone();
     assert_eq!(opacity(&s), kition_motion_keyframe::Value::Scalar(100.0), "Opacity cannot pass 100");
-    s.execute("keys.set", json!({"layer": solid, "path": "transform/opacity", "time": 0, "value": -20})).unwrap();
+    s.execute("keyframe.set", json!({"layer": solid, "path": "transform/opacity", "time": 0, "value": -20})).unwrap();
     assert_eq!(opacity(&s), kition_motion_keyframe::Value::Scalar(0.0), "nor go below 0");
     // A property without a declared range takes any number.
     s.execute("prop.toggleAnimation", json!({"layer": solid, "path": "transform/rotation"})).unwrap();
-    s.execute("keys.set", json!({"layer": solid, "path": "transform/rotation", "time": 0, "value": 720})).unwrap();
+    s.execute("keyframe.set", json!({"layer": solid, "path": "transform/rotation", "time": 0, "value": 720})).unwrap();
     let rotation = s.active_comp().unwrap().layers[0].props.prop("transform/rotation").unwrap().keys[0].value.clone();
     assert_eq!(rotation, kition_motion_keyframe::Value::Scalar(720.0));
 }
 
 /// A malformed project's slider range (its minimum above its maximum, or NaN) and keys sharing a
-/// time made `prop.set` and `keys.set` panic in `clamp`; they now keep the value or the key.
+/// time made `prop.set` and `keyframe.set` panic in `clamp`; they now keep the value or the key.
 #[test]
 fn a_broken_range_or_keys_at_one_time_do_not_panic() {
     let mut s = comp();
@@ -90,7 +90,7 @@ fn a_broken_range_or_keys_at_one_time_do_not_panic() {
         pr.keys[2].time = one;
         pr.keys[3].time = kition_motion_time::Tick(one.0 + 1);
     });
-    let moved = s.execute("keys.set", json!({"layer": solid, "path": "transform/opacity", "time": 1, "newTime": 3}));
+    let moved = s.execute("keyframe.set", json!({"layer": solid, "path": "transform/opacity", "time": 1, "newTime": 3}));
     assert!(moved.is_ok(), "{moved:?}");
 }
 

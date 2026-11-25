@@ -11,10 +11,10 @@ use crate::{EngineError, Result, Session, cmd};
 const OPS: &str = "editableText|shapesFromText|masksFromText|shapesFromVector";
 
 fn create(s: &mut Session, p: &Value) -> Result<Value> {
-    let op = str_p(p, "op").ok_or_else(|| bad("layer.create", format!("missing `op` ({OPS})")))?;
+    let op = str_p(p, "op").ok_or_else(|| bad("layer.add", format!("missing `op` ({OPS})")))?;
     let (cid, lids) = layers_p(s, p)?;
     if lids.is_empty() {
-        return Err(bad("layer.create", "select a layer first"));
+        return Err(bad("layer.add", "select a layer first"));
     }
     let time = s.time();
     let mut created = vec![];
@@ -95,7 +95,7 @@ fn create(s: &mut Session, p: &Value) -> Result<Value> {
                 let snapshot = s.project.clone();
                 let id = s.edit("Create Shapes from Text", None, |proj, st| {
                     let l = crate::vector::shapes_from_text(proj, &comp, &snapshot, cid, &src, time)
-                        .ok_or_else(|| bad("layer.create", "the text layer has no glyphs"))?;
+                        .ok_or_else(|| bad("layer.add", "the text layer has no glyphs"))?;
                     let id = l.id;
                     insert_above(proj, cid, lid, l, true)?;
                     st.selected_layers = vec![id];
@@ -141,7 +141,7 @@ fn create(s: &mut Session, p: &Value) -> Result<Value> {
                 let psd = kition_motion_psd::Psd::parse(bytes).map_err(|e| EngineError::Other(e.to_string()))?;
                 let id = s.edit("Convert to Editable Text", None, |proj, st| {
                     let l = crate::psd_import::editable_text(proj, &comp, &src, &psd, sl.index as usize)
-                        .ok_or_else(|| bad("layer.create", format!("{}: the PSD layer has no text", src.name)))?;
+                        .ok_or_else(|| bad("layer.add", format!("{}: the PSD layer has no text", src.name)))?;
                     let id = l.id;
                     let c = proj.comp_mut(cid).ok_or(EngineError::NoComp)?;
                     let at = c.layers.iter().position(|x| x.id == lid).ok_or(EngineError::NoComp)?;
@@ -151,11 +151,11 @@ fn create(s: &mut Session, p: &Value) -> Result<Value> {
                 })?;
                 created.push(id.0);
             }
-            other => return Err(bad("layer.create", format!("`{other}` is not available yet (supported: {OPS})"))),
+            other => return Err(bad("layer.add", format!("`{other}` is not available yet (supported: {OPS})"))),
         }
     }
     if created.is_empty() && !skipped.is_empty() {
-        return Err(bad("layer.create", skipped.join("; ")));
+        return Err(bad("layer.add", skipped.join("; ")));
     }
     Ok(json!({"layers": created, "skipped": skipped}))
 }
@@ -198,5 +198,5 @@ fn insert_above(
 }
 
 pub fn specs() -> Vec<CommandSpec> {
-    vec![cmd!("layer.create", "Create", [], None, "{op: editableText|shapesFromText|masksFromText|shapesFromVector, layers?}", has_layers, create)]
+    vec![cmd!("layer.add", "Create", [], None, "{op: editableText|shapesFromText|masksFromText|shapesFromVector, layers?}", has_layers, create)]
 }

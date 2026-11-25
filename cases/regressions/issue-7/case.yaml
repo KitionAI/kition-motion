@@ -2,7 +2,7 @@ format: 1
 id: regressions/issue-7
 feature: motion.keys.properties
 intent: >-
-  keys.applyEase snaps from and to to the comp's frame grid as prop.addKey snaps key times, so a
+  keyframe.applyEase snaps from and to to the comp's frame grid as prop.addKey snaps key times, so a
   range given off the grid (0.333 to 1.666 s at 30 fps) finds the keys added at those times.
   Before, it answered no two consecutive keyframes.
 layer: gate

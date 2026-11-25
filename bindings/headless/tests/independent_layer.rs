@@ -144,12 +144,12 @@ async fn shared_solid_settings_hold_layer_membership() {
             bytes.clone()
         } else {
             let mut doc = MotionDocument::open(FILE, &bytes).unwrap();
-            doc.execute("edit.clear", json!({"layers":[other]})).unwrap();
+            doc.execute("edit.delete", json!({"layers":[other]})).unwrap();
             doc.save(None).unwrap()
         };
         let f = Fixture::from_bytes(&bytes, Default::default());
         let (_, _, basis) = f.inspect().await;
-        f.colleague(&[if remove { ("edit.clear", json!({"layers":[other]})) } else { ("layer.addItem", json!({"item":item})) }]);
+        f.colleague(&[if remove { ("edit.delete", json!({"layers":[other]})) } else { ("layer.addItem", json!({"item":item})) }]);
         let refused =
             f.refused("run", json!({"basis":basis,"steps":[{"command":"layer.settings","params":{"layer":layer,"color":"#445566","affectAll":false}}]})).await;
         assert_eq!(refused["error"]["code"], "conflict", "the set of source users changed: {refused}");
@@ -183,7 +183,7 @@ async fn source_user_removed_from_another_comp() {
     let (bytes, layer, _, other_comp, other) = other_comp_source_user(true);
     let f = Fixture::from_bytes(&bytes, Default::default());
     let (_, _, basis) = f.inspect().await;
-    f.colleague(&[("edit.clear", json!({"comp":other_comp,"layers":[other.unwrap()]}))]);
+    f.colleague(&[("edit.delete", json!({"comp":other_comp,"layers":[other.unwrap()]}))]);
     let refused =
         f.refused("run", json!({"basis":basis,"steps":[{"command":"layer.settings","params":{"layer":layer,"color":"#445566","affectAll":false}}]})).await;
     assert_eq!(refused["error"]["code"], "conflict", "a deleted source user changed the clone decision without moving the target: {refused}");

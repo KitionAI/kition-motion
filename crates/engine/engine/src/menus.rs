@@ -90,7 +90,7 @@ pub fn dynamic(s: &Session, name: &str, cx: &DynCtx) -> (Vec<MenuEntry>, Option<
     match name {
         "recentProjects" => (indexed(&s.prefs.recent_projects, "file.openRecent", false), Some("No Recent Projects")),
         "recentFootage" => (indexed(&s.prefs.recent_footage, "file.importRecent", false), Some("No Recent Footage")),
-        "recentPresets" => (indexed(&s.prefs.recent_presets, "anim.applyRecentPreset", true), Some("No Recent Presets")),
+        "recentPresets" => (indexed(&s.prefs.recent_presets, "animation.applyRecentPreset", true), Some("No Recent Presets")),
         "history" => (
             s.history.undo.iter().rev().enumerate().map(|(i, (l, _))| dyn_entry(format!("Undo {l}"), "edit.history", json!({"steps": i + 1}))).collect(),
             Some("No History"),
@@ -517,7 +517,7 @@ File
     Save As... | file.saveAs
     Save a Copy... | file.saveCopy
     Save a Copy As XML... | file.saveCopyAsXml
-  Save as Template... | templates.saveAs
+  Save as Template... | template.saveAs
   Increment and Save | file.incrementAndSave
   Revert | file.revert
   ---
@@ -540,10 +540,10 @@ File
     Lottie JSON... | file.exportLottie
     Graphics Template... | templateProps.exportTemplate
   ---
-  Find | app.find
+  Find | edit.find
   ---
   Add Footage to Comp | layer.addItem
-  New Comp from Selection... | file.newCompFromSelection
+  New Comp from Selection... | comp.newFromSelection
   ---
   Dependencies
     Collect Files... | file.collectFiles
@@ -564,8 +564,8 @@ File
     Run Script File... | file.runScript
   ---
   Create Proxy
-    Still... | file.createProxy {"kind":"still"}
-    Movie... | file.createProxy {"kind":"movie"}
+    Still... | file.addProxy {"kind":"still"}
+    Movie... | file.addProxy {"kind":"movie"}
   Set Proxy
     File... | file.setProxy
     None | file.setProxyNone
@@ -602,7 +602,7 @@ Edit
   Paste Reversed Keyframes | edit.pasteReversedKeyframes
   Paste Text and Match Formatting | edit.pasteTextMatchFormatting
   Paste Text Formatting Only | edit.pasteTextFormattingOnly
-  Clear | edit.clear
+  Clear | edit.delete
   ---
   Duplicate | edit.duplicate
   Split Layer | edit.splitLayer
@@ -634,10 +634,10 @@ Edit
     ---
     Edit Label Colors... | app.settings {"page":"labels"}
   Select Keyframe Label Group
-    On Selected Layers | keys.selectLabelGroup {"scope":"selected"}
-    On All Layers | keys.selectLabelGroup {"scope":"all"}
-    Visible Keyframes on Selected Layers | keys.selectLabelGroup {"scope":"visibleSelected"}
-    Visible Keyframes on All Layers | keys.selectLabelGroup {"scope":"visibleAll"}
+    On Selected Layers | keyframe.selectLabelGroup {"scope":"selected"}
+    On All Layers | keyframe.selectLabelGroup {"scope":"all"}
+    Visible Keyframes on Selected Layers | keyframe.selectLabelGroup {"scope":"visibleSelected"}
+    Visible Keyframes on All Layers | keyframe.selectLabelGroup {"scope":"visibleAll"}
   ---
   Purge
     All Cache... | edit.purge {"what":"all"}
@@ -706,7 +706,7 @@ Composition
   Composition Mini-Flowchart | comp.miniFlowchart
   ---
   VR
-    Create VR Environment... | comp.vr.createEnvironment
+    Create VR Environment... | comp.vr.addEnvironment
     Extract Cubemap... | comp.vr.extractCubemap
 Layer
   New
@@ -917,16 +917,16 @@ Layer
     Reveal Composition in Project | comp.revealInProject
     Reveal Expression Errors | layer.revealExpressionErrors
   Create
-    Convert to Editable Text | layer.create {"op":"editableText"}
-    Create Shapes from Text | layer.create {"op":"shapesFromText"}
-    Create Masks from Text | layer.create {"op":"masksFromText"}
-    Create Shapes from Vector Layer | layer.create {"op":"shapesFromVector"}
-    Create Keyframes from Data | layer.create {"op":"keyframesFromData"}
-    Null Controllers for Positional Points | layer.create {"op":"nullsPositional"}
-    Null Controllers for Path Points | layer.create {"op":"nullsPathPoints"}
-    Nulls Following Path Points | layer.create {"op":"nullsFollowing"}
-    Null Tracing Along Path | layer.create {"op":"nullTracing"}
-    Create 3D Layer Instance | layer.create {"op":"instance3d"}
+    Convert to Editable Text | layer.add {"op":"editableText"}
+    Create Shapes from Text | layer.add {"op":"shapesFromText"}
+    Create Masks from Text | layer.add {"op":"masksFromText"}
+    Create Shapes from Vector Layer | layer.add {"op":"shapesFromVector"}
+    Create Keyframes from Data | layer.add {"op":"keyframesFromData"}
+    Null Controllers for Positional Points | layer.add {"op":"nullsPositional"}
+    Null Controllers for Path Points | layer.add {"op":"nullsPathPoints"}
+    Nulls Following Path Points | layer.add {"op":"nullsFollowing"}
+    Null Tracing Along Path | layer.add {"op":"nullTracing"}
+    Create 3D Layer Instance | layer.add {"op":"instance3d"}
   ---
   Camera
     Create Camera from 3D View | camera.fromView
@@ -959,13 +959,13 @@ Effect
   ---
   @effects
 Animation
-  Save Animation Preset... | anim.savePreset
-  Apply Animation Preset... | anim.applyPreset
+  Save Animation Preset... | animation.savePreset
+  Apply Animation Preset... | animation.applyPreset
   Recent Animation Presets
     @dynamic:recentPresets
     ---
-    Clear Recent Presets | anim.clearRecentPresets
-  Browse Presets... | anim.browsePresets
+    Clear Recent Presets | animation.clearRecentPresets
+  Browse Presets... | animation.browsePresets
   Text Animation Presets
     Typewriter | layer.applyTextPreset {"preset":"typewriter"}
     Fade Up Characters | layer.applyTextPreset {"preset":"fadeUpCharacters"}
@@ -976,25 +976,25 @@ Animation
     Jitter | layer.applyTextPreset {"preset":"jitter"}
     Drop In Lines | layer.applyTextPreset {"preset":"dropInLines"}
   ---
-  Add Keyframe | anim.addKeyframe
-  Toggle Hold Keyframe | keys.toggleHold
-  Keyframe Interpolation... | keys.interpolation
-  Keyframe Velocity... | keys.velocity
+  Add Keyframe | animation.addKeyframe
+  Toggle Hold Keyframe | keyframe.toggleHold
+  Keyframe Interpolation... | keyframe.interpolation
+  Keyframe Velocity... | keyframe.velocity
   Keyframe Assistant
-    Convert Audio to Keyframes | keys.audioToKeyframes
+    Convert Audio to Keyframes | keyframe.audioToKeyframes
     Convert Expression to Keyframes | prop.convertExpressionToKeyframes
-    Create Keyframes from Data | layer.create {"op":"keyframesFromData"}
-    Easy Ease | keys.easyEase
-    Easy Ease In | keys.easyEaseIn
-    Easy Ease Out | keys.easyEaseOut
-    Exponential Scale | keys.exponentialScale
-    Null Controllers for Path Points | layer.create {"op":"nullsPathPoints"}
-    Null Controllers for Positional Points | layer.create {"op":"nullsPositional"}
-    Null Tracing Along Path | layer.create {"op":"nullTracing"}
-    Nulls Following Path Points | layer.create {"op":"nullsFollowing"}
-    RPF Camera Import | keys.rpfCameraImport
+    Create Keyframes from Data | layer.add {"op":"keyframesFromData"}
+    Easy Ease | keyframe.easyEase
+    Easy Ease In | keyframe.easyEaseIn
+    Easy Ease Out | keyframe.easyEaseOut
+    Exponential Scale | keyframe.exponentialScale
+    Null Controllers for Path Points | layer.add {"op":"nullsPathPoints"}
+    Null Controllers for Positional Points | layer.add {"op":"nullsPositional"}
+    Null Tracing Along Path | layer.add {"op":"nullTracing"}
+    Nulls Following Path Points | layer.add {"op":"nullsFollowing"}
+    RPF Camera Import | keyframe.rpfCameraImport
     Sequence Layers... | layer.sequence
-    Time-Reverse Keyframes | keys.timeReverse
+    Time-Reverse Keyframes | keyframe.timeReverse
   ---
   Animate Text
     Enable Per-character 3D | layer.enablePerChar3D {"toggle":true}
@@ -1047,9 +1047,9 @@ Animation
   Track Mask | track.mask
   Track this Property | track.property
   ---
-  Reveal Properties with Keyframes | anim.reveal {"kind":"keyframes"} | U
-  Reveal Properties with Animation | anim.reveal {"kind":"animation"}
-  Reveal All Modified Properties | anim.reveal {"kind":"modified"}
+  Reveal Properties with Keyframes | animation.reveal {"kind":"keyframes"} | U
+  Reveal Properties with Animation | animation.reveal {"kind":"animation"}
+  Reveal All Modified Properties | animation.reveal {"kind":"modified"}
 View
   New Viewer | view.newViewer
   Split with New Locked Viewer | view.splitLockedViewer
@@ -1115,24 +1115,24 @@ View
     ---
     Share View Options | view.shareViewOptions
   Switch 3D View
-    Active Camera | view.3d.activeCamera
-    Default | view.3d.default
+    Active Camera | view.threeD.activeCamera
+    Default | view.threeD.default
     ---
-    Front | view.3d.front
-    Left | view.3d.left
-    Top | view.3d.top
-    Back | view.3d.back
-    Right | view.3d.right
-    Bottom | view.3d.bottom
+    Front | view.threeD.front
+    Left | view.threeD.left
+    Top | view.threeD.top
+    Back | view.threeD.back
+    Right | view.threeD.right
+    Bottom | view.threeD.bottom
     ---
-    Custom View 1 | view.3d.custom1
-    Custom View 2 | view.3d.custom2
-    Custom View 3 | view.3d.custom3
+    Custom View 1 | view.threeD.custom1
+    Custom View 2 | view.threeD.custom2
+    Custom View 3 | view.threeD.custom3
     ---
     Reset 3D View | view.reset3DView
   Assign Shortcut to 3D View
     @dynamic:view3dShortcuts
-  Switch to Last 3D View | view.3d.last | Escape
+  Switch to Last 3D View | view.threeD.last | Escape
   Look at Selected Layers | view.lookAtSelected
   Look at All Layers | view.lookAtAll
   ---
@@ -1207,7 +1207,7 @@ Help
   Kition Motion Help... | help.docs {"page":"help"} | F1
   Expression Reference... | help.docs {"page":"expressions"}
   Effect Reference... | help.docs {"page":"effects"}
-  Animation Presets... | anim.browsePresets
+  Animation Presets... | animation.browsePresets
   Keyboard Shortcuts... | app.keyboardShortcuts
   ---
   In-App Tutorials... | help.inAppTutorials

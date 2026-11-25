@@ -105,9 +105,9 @@ fn one_command_one_transaction_reproduces_in_a_peer() {
             let green = layer(s, "Green");
             s.execute("layer.rename", json!({"layer": green, "name": "Lime"})).unwrap();
         }),
-        ("edit.clear (a layer deleted)", |s| {
+        ("edit.delete (a layer deleted)", |s| {
             let green = layer(s, "Green");
-            s.execute("edit.clear", json!({"layers": [green]})).unwrap();
+            s.execute("edit.delete", json!({"layers": [green]})).unwrap();
         }),
         ("layer.setParent", |s| {
             let (red, blue) = (layer(s, "Red"), layer(s, "Blue"));
@@ -505,7 +505,7 @@ fn random_command(s: &mut Session, rng: &mut Rng) -> String {
             None => return "no layer".into(),
         },
         6 => match pick(rng) {
-            Some(l) if ids.len() > 1 => ("edit.clear", json!({"layers": [l]})),
+            Some(l) if ids.len() > 1 => ("edit.delete", json!({"layers": [l]})),
             _ => return "keep one".into(),
         },
         7 => ("layer.newSolid", json!({"name": format!("S{}", rng.below(1000))})),

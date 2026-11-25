@@ -50,7 +50,7 @@ fn transform(s: &mut Session, p: &Value) -> Result<Value> {
         _ => None,
     };
     if !ts.is_finite() || ts <= 0.0 {
-        return Err(bad("keys.transform", "`timeScale` must be positive"));
+        return Err(bad("keyframe.transform", "`timeScale` must be positive"));
     }
     // Default time anchor: the earliest selected key (comp time).
     let first = sel.iter().filter_map(|k| comp.layer(k.layer).map(|l| l.comp_time(k.time))).min().unwrap_or(Tick::ZERO);
@@ -113,21 +113,21 @@ fn transform(s: &mut Session, p: &Value) -> Result<Value> {
 /// value. Setting one side only mirrors it to the other unless `break` is true; the key stops
 /// being auto Bezier.
 fn spatial_tangents(s: &mut Session, p: &Value) -> Result<Value> {
-    let (cid, lid, uid) = prop_ref(s, p, "keys.setSpatialTangents")?;
-    let t = Tick::from_seconds_f64(f_p(p, "time").ok_or_else(|| bad("keys.setSpatialTangents", "missing `time` (layer s)"))?);
+    let (cid, lid, uid) = prop_ref(s, p, "keyframe.setSpatialTangents")?;
+    let t = Tick::from_seconds_f64(f_p(p, "time").ok_or_else(|| bad("keyframe.setSpatialTangents", "missing `time` (layer s)"))?);
     let (tin, tout) = (v3(p.get("in")), v3(p.get("out")));
     if tin.is_none() && tout.is_none() {
-        return Err(bad("keys.setSpatialTangents", "pass `in` and/or `out` [dx, dy, dz?]"));
+        return Err(bad("keyframe.setSpatialTangents", "pass `in` and/or `out` [dx, dy, dz?]"));
     }
     let brk = b_p(p, "break").unwrap_or(false);
     s.edit("Edit Spatial Tangents", merge_p(p), |proj, _| {
         let l = super::layer_mut(proj, cid, lid)?;
-        let pr = l.props.find_mut(uid).ok_or_else(|| bad("keys.setSpatialTangents", "no property"))?;
+        let pr = l.props.find_mut(uid).ok_or_else(|| bad("keyframe.setSpatialTangents", "no property"))?;
         if !pr.spatial {
-            return Err(bad("keys.setSpatialTangents", "not a spatial property"));
+            return Err(bad("keyframe.setSpatialTangents", "not a spatial property"));
         }
         let i = pr.keys.iter().position(|k| k.time == t).or_else(|| pr.keys.iter().enumerate().min_by_key(|(_, k)| k.time.0.abs_diff(t.0)).map(|(i, _)| i));
-        let i = i.ok_or_else(|| bad("keys.setSpatialTangents", "the property has no keyframes"))?;
+        let i = i.ok_or_else(|| bad("keyframe.setSpatialTangents", "the property has no keyframes"))?;
         let (cur_in, cur_out) = kition_motion_keyframe::spatial_tangents(&pr.keys, i);
         let k = &mut pr.keys[i];
         let neg = |v: [f64; 3]| [-v[0], -v[1], -v[2]];
@@ -149,7 +149,7 @@ fn spatial_tangents(s: &mut Session, p: &Value) -> Result<Value> {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
-            "keys.transform",
+            "keyframe.transform",
             "Transform Keyframes",
             [],
             None,
@@ -158,7 +158,7 @@ pub fn specs() -> Vec<CommandSpec> {
             transform
         ),
         cmd!(
-            "keys.setSpatialTangents",
+            "keyframe.setSpatialTangents",
             "Edit Spatial Tangents",
             [],
             None,

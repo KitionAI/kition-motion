@@ -185,7 +185,7 @@ try {
   await kit.getByTestId(`motion-key-${SHAPE}-transform.position-0`).click()
   await until(async () => (await kit.getByTestId(`motion-key-${SHAPE}-transform.position-0`).getAttribute('aria-selected')) === 'true')
   await kit.getByTestId('motion-menu-Animation').click()
-  await kit.locator('[role=menu] [data-testid="motion-cmd-anim.savePreset"]').first().click()
+  await kit.locator('[role=menu] [data-testid="motion-cmd-animation.savePreset"]').first().click()
   await kit.getByTestId('motion-preset-dialog').waitFor()
   await kit.getByTestId('motion-preset-name').fill('Slide in')
   await kit.getByTestId('motion-preset-dialog-ok').click()
@@ -196,7 +196,7 @@ try {
   const solidKeys = async () => (await query('prop.get', { layer: SOLID, path: 'transform/position' })).keys?.length ?? 0
   const keysBefore = await solidKeys()
   await kit.getByTestId('motion-menu-Animation').click()
-  await kit.locator('[role=menu] [data-testid="motion-cmd-anim.applyPreset"]').first().click()
+  await kit.locator('[role=menu] [data-testid="motion-cmd-animation.applyPreset"]').first().click()
   await until(async () => (await solidKeys()) > keysBefore)
   step('应用动画预设 applies the picked preset to the selected layer', (await solidKeys()) > keysBefore, `${keysBefore} → ${await solidKeys()}`)
   await undo()

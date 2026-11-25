@@ -10,7 +10,7 @@
 //! empty space while vertices are selected boxes vertices in, a press on a segment selects its
 //! whole path (the Pen adds a vertex there instead, `mask.insertVertex`), Alt-click turns a vertex
 //! from corner to smooth and back (`mask.convertVertex`), and a selected vertex's curve handles
-//! drag (`mask.setVertex`). Delete removes the selected vertices (the editor's `edit.clear`).
+//! drag (`mask.setVertex`). Delete removes the selected vertices (the editor's `edit.delete`).
 //! Each gesture is one undo step.
 
 use kition_kit::tools::{ToolMods, ToolOverlay};

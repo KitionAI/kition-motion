@@ -2,11 +2,11 @@
 //! Smoother / Motion Sketch). Each is one undoable command, so agents get the same results as the
 //! panels:
 //!
-//! * `keys.wiggle` adds random deviation keys between the first and last selected keys of each
+//! * `keyframe.wiggle` adds random deviation keys between the first and last selected keys of each
 //!   property (Spatial or Temporal path, smooth or jagged noise, one / all-the-same / independent
 //!   dimensions, frequency in keys per second, magnitude in the property's units). Seeded, so a
 //!   given selection and seed always produce the same keys.
-//! * `keys.smooth` replaces the selected run of keys by the fewest auto-Bezier keys that stay
+//! * `keyframe.smooth` replaces the selected run of keys by the fewest auto-Bezier keys that stay
 //!   within `tolerance` of the original curve (sampled every frame).
 //! * `motion.sketch` turns a recorded pointer path (comp pixels, with capture timestamps) into
 //!   Position keys, one per frame, then smooths them like the Smoother.
@@ -291,7 +291,7 @@ fn grouped_selection(s: &Session) -> std::collections::BTreeMap<(LayerId, Uid), 
 }
 
 fn parse_wiggle(p: &Value) -> Result<WiggleOpts> {
-    let c = "keys.wiggle";
+    let c = "keyframe.wiggle";
     let spatial = match str_p(p, "apply").unwrap_or("spatial") {
         "spatial" | "Spatial Path" => true,
         "temporal" | "Temporal Path" => false,
@@ -372,12 +372,12 @@ fn run_on_selection(
 
 fn wiggle(s: &mut Session, p: &Value) -> Result<Value> {
     let o = parse_wiggle(p)?;
-    run_on_selection(s, "Wiggler", "keys.wiggle", 2, &|keys, a, b, spatial, fr, tc, tl, uid| wiggle_keys(keys, a, b, spatial, fr, tc, tl, &o, uid))
+    run_on_selection(s, "Wiggler", "keyframe.wiggle", 2, &|keys, a, b, spatial, fr, tc, tl, uid| wiggle_keys(keys, a, b, spatial, fr, tc, tl, &o, uid))
 }
 
 fn smooth(s: &mut Session, p: &Value) -> Result<Value> {
     let tol = f_p(p, "tolerance").unwrap_or(1.0).max(0.0);
-    run_on_selection(s, "Smoother", "keys.smooth", 3, &|keys, a, b, spatial, fr, tc, tl, _| {
+    run_on_selection(s, "Smoother", "keyframe.smooth", 3, &|keys, a, b, spatial, fr, tc, tl, _| {
         let samples = sample_curve(keys, keys[a].time, keys[b].time, spatial, fr, tc, tl);
         smooth_keys(keys, a, b, &samples, tol, spatial)
     })
@@ -457,7 +457,7 @@ fn sketch(s: &mut Session, p: &Value) -> Result<Value> {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
-            "keys.wiggle",
+            "keyframe.wiggle",
             "Wiggler",
             [],
             None,
@@ -465,7 +465,7 @@ pub fn specs() -> Vec<CommandSpec> {
             has_keys,
             wiggle
         ),
-        cmd!("keys.smooth", "Smoother", [], None, "{tolerance? (property units, 1)}", has_keys, smooth),
+        cmd!("keyframe.smooth", "Smoother", [], None, "{tolerance? (property units, 1)}", has_keys, smooth),
         cmd!(
             "motion.sketch",
             "Motion Sketch",

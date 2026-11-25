@@ -17,7 +17,7 @@ fn nearest_spatial_key_with_hostile_stored_ticks_uses_an_overflow_safe_distance(
     for key in &mut position.keys {
         key.spatial_auto = false;
     }
-    session.execute("keys.setSpatialTangents", json!({"layer":layer,"path":"transform/position","time":1e100,"out":[3,4,0]})).unwrap();
+    session.execute("keyframe.setSpatialTangents", json!({"layer":layer,"path":"transform/position","time":1e100,"out":[3,4,0]})).unwrap();
     let position = session.project.comp(ItemId(comp)).unwrap().layer(LayerId(layer)).unwrap().props.prop("transform/position").unwrap();
     assert_eq!(position.keys[0].spatial_out, [0.0; 3]);
     assert_eq!(position.keys[1].spatial_out, [3.0, 4.0, 0.0]);

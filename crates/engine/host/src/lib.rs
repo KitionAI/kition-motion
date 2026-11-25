@@ -243,7 +243,7 @@ mod tests {
         let r = s.execute("file.import", json!({"paths": [path.to_string_lossy()]})).unwrap();
         assert_eq!(r["errors"], json!([]), "{r}");
         s.state.project_selection = vec![kition_motion_project::ItemId(r["items"][0].as_u64().unwrap())];
-        s.execute("file.newCompFromSelection", json!({})).unwrap();
+        s.execute("comp.newFromSelection", json!({})).unwrap();
         let comp = s.active_comp().unwrap();
         assert_eq!(comp.renderer, kition_motion_project::Renderer::Advanced3D);
         let layer = comp.layers[0].id.0;
@@ -525,7 +525,7 @@ mod tests {
         let none = centre(&mut s, &p("use_none_0.png"));
         assert!(none[0] > 0.99 && none[2] < 0.01, "Use No Proxies renders the red source: {none:?}");
         // Create Proxy ▸ Still: rendered at half size and attached to the comp.
-        s.execute("file.createProxy", json!({"kind": "still", "comp": red.0, "path": p("red_proxy_[#####].png")})).unwrap();
+        s.execute("file.addProxy", json!({"kind": "still", "comp": red.0, "path": p("red_proxy_[#####].png")})).unwrap();
         s.execute("renderQueue.render", json!({"wait": true})).unwrap();
         s.poll_render();
         let px = s.project.item(red).unwrap().proxy.clone().expect("Create Proxy attached the rendered still");

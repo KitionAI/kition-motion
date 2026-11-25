@@ -493,7 +493,7 @@ fn probe(bytes: &[u8], command: &kition_kit::KitCommand, requirement: &Value, en
         .as_array()
         .into_iter()
         .flatten()
-        .any(|step| matches!(step[0].as_str(), Some("keys.select" | "prop.select" | "mask.selectVertices")));
+        .any(|step| matches!(step[0].as_str(), Some("keyframe.select" | "prop.select" | "mask.selectVertices")));
     if !selection.is_empty() {
         let _ = document.execute("layer.select", json!({"layers":selection,"add":keeps}));
     }

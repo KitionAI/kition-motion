@@ -538,7 +538,7 @@ fn toggle_key_at(pr: &mut Property, lt: Tick) -> bool {
 /// property of every selected layer, in one undo step. Position covers separated X / Y / Z;
 /// Rotation on a 3D layer covers Orientation and X / Y / Z Rotation.
 fn toggle_transform_key(s: &mut Session, p: &Value) -> Result<Value> {
-    const C: &str = "keys.toggleTransform";
+    const C: &str = "keyframe.toggleTransform";
     let which = str_p(p, "prop").ok_or_else(|| bad(C, "missing `prop` (anchor | position | scale | rotation | opacity)"))?.to_string();
     let (cid, layers) = layers_p(s, p)?;
     let t = s.time_of(cid);
@@ -752,33 +752,38 @@ fn select_keys(s: &mut Session, p: &Value) -> Result<Value> {
     // A guessed or misspelled parameter (`times`, `layer` + `path` at the top level) would
     // otherwise select nothing and leave the next key command disabled: reject it with the
     // accepted keys, on every path (editor, scripts, agents).
-    if let Some(spec) = super::find("keys.select") {
+    if let Some(spec) = super::find("keyframe.select") {
         super::check_params(spec, p)?;
     }
     let keys = match p.get("keys") {
         Some(Value::Array(keys)) => keys,
-        _ => return Err(bad("keys.select", "missing `keys`: [{layer, prop: uid | path, time}] (an empty list clears the selection)")),
+        _ => return Err(bad("keyframe.select", "missing `keys`: [{layer, prop: uid | path, time}] (an empty list clears the selection)")),
     };
-    let base = KeyTimeBase::from_params(p, "keys.select")?;
+    let base = KeyTimeBase::from_params(p, "keyframe.select")?;
     let comp = s.active_comp().ok_or(EngineError::NoComp)?;
     let mut sel = vec![];
     for k in keys {
         // `{layer, prop: uid | path, time}` (or `path`); anything that matches nothing is an
         // error rather than a silently empty selection.
-        let lv = k.get("layer").ok_or_else(|| bad("keys.select", format!("{k}: missing `layer`")))?;
-        let l = super::resolve_layer(comp, lv).ok_or_else(|| bad("keys.select", format!("no layer {lv}")))?;
+        let lv = k.get("layer").ok_or_else(|| bad("keyframe.select", format!("{k}: missing `layer`")))?;
+        let l = super::resolve_layer(comp, lv).ok_or_else(|| bad("keyframe.select", format!("no layer {lv}")))?;
         let ly = comp.layer(l).ok_or(EngineError::NoComp)?;
         let pr = match (k.get("prop"), k.get("path").and_then(Value::as_str)) {
             (Some(Value::Number(n)), _) => n.as_u64().and_then(|u| ly.props.find(u)),
             (Some(Value::String(path)), _) => find_prop(&ly.props, path),
             (None, Some(path)) => find_prop(&ly.props, path),
-            _ => return Err(bad("keys.select", format!("{k}: give `prop` (uid) or `path`"))),
+            _ => return Err(bad("keyframe.select", format!("{k}: give `prop` (uid) or `path`"))),
         }
-        .ok_or_else(|| bad("keys.select", format!("{k}: no such property on layer {lv}")))?;
-        let t = key_time(ly, comp.frame_rate, k, "time", base, "keys.select", false)?.ok_or_else(|| bad("keys.select", format!("{k}: missing `time`")))?;
+        .ok_or_else(|| bad("keyframe.select", format!("{k}: no such property on layer {lv}")))?;
+        let t =
+            key_time(ly, comp.frame_rate, k, "time", base, "keyframe.select", false)?.ok_or_else(|| bad("keyframe.select", format!("{k}: missing `time`")))?;
         // Snap to the stored key time.
-        let kt =
-            pr.keys.iter().map(|k| k.time).min_by_key(|kt| (kt.0 - t.0).abs()).ok_or_else(|| bad("keys.select", format!("`{}` has no keyframes", pr.name)))?;
+        let kt = pr
+            .keys
+            .iter()
+            .map(|k| k.time)
+            .min_by_key(|kt| (kt.0 - t.0).abs())
+            .ok_or_else(|| bad("keyframe.select", format!("`{}` has no keyframes", pr.name)))?;
         sel.push(KeyRef { layer: l, prop: pr.uid, time: kt });
     }
     // Keys of locked layers can't be selected (so nothing edits them).
@@ -965,7 +970,7 @@ pub(crate) fn shift_keys(s: &mut Session, label: &str, merge: Option<&str>, d: T
 }
 
 fn move_keys(s: &mut Session, p: &Value) -> Result<Value> {
-    let d = Tick::from_seconds_f64(f_p(p, "delta").ok_or_else(|| bad("keys.move", "missing `delta` (seconds)"))?);
+    let d = Tick::from_seconds_f64(f_p(p, "delta").ok_or_else(|| bad("keyframe.move", "missing `delta` (seconds)"))?);
     shift_keys(s, "Move Keyframes", merge_p(p), d)
 }
 
@@ -1235,7 +1240,7 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!("prop.addKey", "Add Keyframe", [], None, "{layer?, path|prop, time? (layer s by default), timeBase?: layer|comp, value?}", has_layers, add_key),
         cmd!("prop.toggleKey", "Add or Remove Keyframe at Current Time", [], None, "{layer?, path|prop, selected?}", has_layers, toggle_key_selected),
         cmd!(
-            "keys.toggleTransform",
+            "keyframe.toggleTransform",
             "Add or Remove Transform Keyframe",
             [],
             None,
@@ -1273,7 +1278,7 @@ pub fn specs() -> Vec<CommandSpec> {
             convert_expr_to_keys
         ),
         cmd!(
-            "keys.select",
+            "keyframe.select",
             "Select Keyframes",
             [],
             None,
@@ -1281,17 +1286,20 @@ pub fn specs() -> Vec<CommandSpec> {
             has_comp,
             select_keys
         ),
-        cmd!("keys.move", "Move Keyframes", [], None, "{delta (s), merge?}", has_keys, move_keys),
-        cmd!("keys.delete", "Delete Keyframes", [], None, "{}", has_keys, delete_keys),
-        cmd!("keys.easyEase", "Easy Ease", ["Animation", "Keyframe Assistant"], Some("F9"), "{which?: both|in|out}", has_keys, ease),
-        cmd!("keys.easyEaseIn", "Easy Ease In", ["Animation", "Keyframe Assistant"], Some("Shift+F9"), "{}", has_keys, |s, _| ease(s, &json!({"which": "in"}))),
-        cmd!("keys.easyEaseOut", "Easy Ease Out", ["Animation", "Keyframe Assistant"], Some("Cmd+Shift+F9"), "{}", has_keys, |s, _| ease(
+        cmd!("keyframe.move", "Move Keyframes", [], None, "{delta (s), merge?}", has_keys, move_keys),
+        cmd!("keyframe.delete", "Delete Keyframes", [], None, "{}", has_keys, delete_keys),
+        cmd!("keyframe.easyEase", "Easy Ease", ["Animation", "Keyframe Assistant"], Some("F9"), "{which?: both|in|out}", has_keys, ease),
+        cmd!("keyframe.easyEaseIn", "Easy Ease In", ["Animation", "Keyframe Assistant"], Some("Shift+F9"), "{}", has_keys, |s, _| ease(
+            s,
+            &json!({"which": "in"})
+        )),
+        cmd!("keyframe.easyEaseOut", "Easy Ease Out", ["Animation", "Keyframe Assistant"], Some("Cmd+Shift+F9"), "{}", has_keys, |s, _| ease(
             s,
             &json!({"which": "out"})
         )),
-        cmd!("keys.toggleHold", "Toggle Hold Keyframe", ["Animation"], Some("Cmd+Alt+H"), "{}", has_keys, toggle_hold),
+        cmd!("keyframe.toggleHold", "Toggle Hold Keyframe", ["Animation"], Some("Cmd+Alt+H"), "{}", has_keys, toggle_hold),
         cmd!(
-            "keys.interpolation",
+            "keyframe.interpolation",
             "Keyframe Interpolation...",
             ["Animation"],
             Some("Cmd+Alt+K"),
@@ -1300,7 +1308,7 @@ pub fn specs() -> Vec<CommandSpec> {
             interpolation
         ),
         cmd!(
-            "keys.velocity",
+            "keyframe.velocity",
             "Keyframe Velocity...",
             ["Animation"],
             Some("Cmd+Shift+K"),
@@ -1311,7 +1319,7 @@ pub fn specs() -> Vec<CommandSpec> {
     ]
 }
 
-/// The layer time of the key `cmd` (`prop.addKey`, `keys.set`, or `prop.set` of a keyed property)
+/// The layer time of the key `cmd` (`prop.addKey`, `keyframe.set`, or `prop.set` of a keyed property)
 /// writes given `p`, as those commands compute it: `time` in its base (snapped for `prop.addKey`
 /// and `prop.set`),
 /// else the current time of the comp in layer time. For kition-sdk's premise naming the key by its
@@ -1328,7 +1336,7 @@ pub fn written_key_time(s: &Session, p: &Value, cmd: &str) -> Option<Tick> {
 }
 
 /// PROMO-10b (`regressions/issue-keys-select-unknown-params`): a misspelled or guessed
-/// `keys.select` parameter is an invalid-params error, not a silently empty selection.
+/// `keyframe.select` parameter is an invalid-params error, not a silently empty selection.
 #[cfg(test)]
 mod select_keys_param_tests {
     use super::*;
@@ -1340,19 +1348,19 @@ mod select_keys_param_tests {
         let l = s.execute("layer.newSolid", json!({"name": "A", "color": "#ffffff"})).unwrap()["layer"].clone();
         s.execute("prop.addKey", json!({"layer": l, "path": "transform/rotation", "time": 0, "value": 0})).unwrap();
         s.execute("prop.addKey", json!({"layer": l, "path": "transform/rotation", "time": 1, "value": 90})).unwrap();
-        let e = s.execute("keys.select", json!({"layer": l, "path": "transform/rotation", "times": [0, 1]})).unwrap_err();
+        let e = s.execute("keyframe.select", json!({"layer": l, "path": "transform/rotation", "times": [0, 1]})).unwrap_err();
         assert!(matches!(e, EngineError::BadParams { .. }), "{e:?}");
         let msg = e.to_string();
         assert!(msg.contains("`times`") && msg.contains("keys"), "{msg}");
-        assert!(s.execute("keys.select", json!({})).is_err(), "no `keys`: nothing to select is a mistake");
+        assert!(s.execute("keyframe.select", json!({})).is_err(), "no `keys`: nothing to select is a mistake");
         // The documented form still works, and an empty list still clears.
         let n = s
             .execute(
-                "keys.select",
+                "keyframe.select",
                 json!({"keys": [{"layer": l, "path": "transform/rotation", "time": 0}, {"layer": l, "path": "transform/rotation", "time": 1}]}),
             )
             .unwrap();
         assert_eq!(n, json!(2));
-        assert_eq!(s.execute("keys.select", json!({"keys": []})).unwrap(), json!(0));
+        assert_eq!(s.execute("keyframe.select", json!({"keys": []})).unwrap(), json!(0));
     }
 }

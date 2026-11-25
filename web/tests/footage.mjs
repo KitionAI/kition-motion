@@ -42,7 +42,7 @@ const layers = async () => (await details()).info.layers
 const activeComp = async () => (await details()).comp.id
 const items = async () => (await query('project.summary', {})).items
 const position = async (layer) => (await query('prop.get', { layer, path: 'transform/position' })).value
-const compMarkers = async () => await query('markers.list', {})
+const compMarkers = async () => await query('marker.list', {})
 const kit = page.frameLocator('#kit')
 let primary = 'Meta'
 
@@ -426,9 +426,9 @@ try {
   await until(async () => (await kit.getByTestId(`motion-layer-${text.id}`).getAttribute('data-selected')) === 'true')
   await focusEditor()
   await page.keyboard.press('Shift+Digit8')
-  await until(async () => (await query('markers.list', { layer: text.id })).length === 1)
+  await until(async () => (await query('marker.list', { layer: text.id })).length === 1)
   await kit.getByTestId(`motion-marker-${text.id}-0`).waitFor({ timeout: 5000 }).catch(() => undefined)
-  step('with a layer selected, * marks the layer', (await query('markers.list', { layer: text.id })).length === 1 && (await kit.getByTestId(`motion-marker-${text.id}-0`).count()) === 1, JSON.stringify({ markers: await query('markers.list', { layer: text.id }), comp: await compMarkers(), flags: await kit.getByTestId(`motion-marker-${text.id}-0`).count() }))
+  step('with a layer selected, * marks the layer', (await query('marker.list', { layer: text.id })).length === 1 && (await kit.getByTestId(`motion-marker-${text.id}-0`).count()) === 1, JSON.stringify({ markers: await query('marker.list', { layer: text.id }), comp: await compMarkers(), flags: await kit.getByTestId(`motion-marker-${text.id}-0`).count() }))
   await undo()
 
   // 13. Export: the dialog renders the work area at half size to an MP4 beside the project.

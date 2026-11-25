@@ -138,7 +138,7 @@ try {
   const positionName = kit.getByTestId(`motion-prop-row-${SHAPE}-transform.position`).locator('.motion-prop-label')
   await positionName.waitFor()
   await positionName.click()
-  await h.until(async () => ((await h.query('keys.info', {})) ?? []).length === 4)
+  await h.until(async () => ((await h.query('keyframe.info', {})) ?? []).length === 4)
   // The menu's row names the Smoother once the editor has read the four selected keyframes (until
   // then it says it waits for three): opened again until it does.
   const smootherRow = kit.locator('[role=menu] [data-testid="motion-control-smoother"]').first()

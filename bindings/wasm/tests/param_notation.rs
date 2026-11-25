@@ -35,9 +35,9 @@ fn the_keys_the_notation_lost_are_parameters() {
         ("layer.setText", &["hScale", "vScale", "tsume"]),
         ("camera.orbit", &["yaw", "dx", "pitch", "dy"]),
         ("layer.newModel", &["path"]),
-        ("keys.interpolation", &["in", "out"]),
-        ("keys.velocity", &["inInfluence", "outInfluence"]),
-        ("keys.setEase", &["influence"]),
+        ("keyframe.interpolation", &["in", "out"]),
+        ("keyframe.velocity", &["inInfluence", "outInfluence"]),
+        ("keyframe.setEase", &["influence"]),
         ("view.customRgb", &["red", "green", "blue", "white"]),
         ("shape.toolOptions", &["fillOpacity"]),
     ];

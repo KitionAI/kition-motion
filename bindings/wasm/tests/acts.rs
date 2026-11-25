@@ -960,7 +960,7 @@ fn every_command_declares_the_editor_state_its_code_reads() {
 
 /// The commands that read the keyframe selection are exactly the kit's table of them: they read
 /// the selection, but `on` carries layer ids, and keyframes have none, so a run selects keyframes
-/// with `keys.select` (by layer, property and time) in an earlier step.
+/// with `keyframe.select` (by layer, property and time) in an earlier step.
 #[test]
 fn the_key_selection_table_is_what_the_code_reads() {
     let doc = MotionDocument::create("a.kmotion", 64, 36).unwrap();

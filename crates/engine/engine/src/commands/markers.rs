@@ -1,7 +1,7 @@
-//! Composition and layer markers: the Composition/Layer Marker dialog (`markers.set`), dragging
-//! and Alt-dragging the duration in the Timeline (`markers.set` with `merge`), deleting
-//! (`markers.delete`, Ctrl/Cmd-click), converting between layer and comp markers
-//! (`markers.convert`) and Layer ▸ Markers ▸ Update Markers From Source. Times in parameters are
+//! Composition and layer markers: the Composition/Layer Marker dialog (`marker.set`), dragging
+//! and Alt-dragging the duration in the Timeline (`marker.set` with `merge`), deleting
+//! (`marker.delete`, Ctrl/Cmd-click), converting between layer and comp markers
+//! (`marker.convert`) and Layer ▸ Markers ▸ Update Markers From Source. Times in parameters are
 //! comp seconds; layer markers are stored in layer time. All commands are undoable.
 
 use kition_motion_color::Label;
@@ -49,14 +49,14 @@ fn to_comp_time(c: &Comp, o: Owner, t: Tick) -> Tick {
     }
 }
 
-/// The existing marker `markers.set` (without `new`) or `markers.delete` names, as its handler
+/// The existing marker `marker.set` (without `new`) or `marker.delete` names, as its handler
 /// finds it ([`find_index`]): its owner layer (`None` for a comp marker), its index and its stored
 /// time (layer time for a layer marker). `None` when it names none. No edit (C8-time-policy: what
 /// the guard holds of the markers is what this lookup reads).
 pub fn addressed_marker(s: &Session, p: &Value) -> Option<(Option<LayerId>, usize, Tick)> {
-    let (cid, o) = owner(s, p, "markers.set").ok()?;
+    let (cid, o) = owner(s, p, "marker.set").ok()?;
     let comp = s.project.comp(cid)?;
-    let index = find_index(comp, o, p, "markers.set").ok()?;
+    let index = find_index(comp, o, p, "marker.set").ok()?;
     let time = markers_of(comp, o)?.get(index)?.time;
     Some((if let Owner::Layer(l) = o { Some(l) } else { None }, index, time))
 }
@@ -91,7 +91,7 @@ fn marker_json(c: &Comp, o: Owner, i: usize, m: &Marker) -> Value {
 }
 
 fn list(s: &mut Session, p: &Value) -> Result<Value> {
-    let (cid, o) = owner(s, p, "markers.list")?;
+    let (cid, o) = owner(s, p, "marker.list")?;
     let c = s.project.comp(cid).ok_or(EngineError::NoComp)?;
     let ms = markers_of(c, o).cloned().unwrap_or_default();
     Ok(Value::Array(ms.iter().enumerate().map(|(i, m)| marker_json(c, o, i, m)).collect()))
@@ -132,9 +132,9 @@ pub fn nested_markers<'a>(project: &'a Project, comp_id: ItemId, comp: &Comp, la
         .collect()
 }
 
-/// `markers.nested`: the nested comp's markers on a precomp layer (see [`nested_markers`]).
+/// `marker.nested`: the nested comp's markers on a precomp layer (see [`nested_markers`]).
 fn nested(s: &mut Session, p: &Value) -> Result<Value> {
-    let cmd = "markers.nested";
+    let cmd = "marker.nested";
     let cid = comp_id(s, p)?;
     let c = s.project.comp(cid).ok_or(EngineError::NoComp)?;
     let lid = p.get("layer").and_then(|v| resolve_layer(c, v)).ok_or_else(|| bad(cmd, "missing `layer` (a precomp layer)"))?;
@@ -221,7 +221,7 @@ fn markers_mut(c: &mut Comp, o: Owner) -> Option<&mut Vec<Marker>> {
 
 /// Edit (or with `new: true`, add) a marker. Returns its new index.
 fn set(s: &mut Session, p: &Value) -> Result<Value> {
-    let c = "markers.set";
+    let c = "marker.set";
     let (cid, o) = owner(s, p, c)?;
     let comp = s.project.comp(cid).ok_or(EngineError::NoComp)?;
     if locked(comp, o) {
@@ -251,7 +251,7 @@ fn set(s: &mut Session, p: &Value) -> Result<Value> {
 }
 
 fn delete(s: &mut Session, p: &Value) -> Result<Value> {
-    let c = "markers.delete";
+    let c = "marker.delete";
     let (cid, o) = owner(s, p, c)?;
     let comp = s.project.comp(cid).ok_or(EngineError::NoComp)?;
     if locked(comp, o) {
@@ -268,7 +268,7 @@ fn delete(s: &mut Session, p: &Value) -> Result<Value> {
 /// Layer marker → comp marker (when `layer` is given), or comp marker → layer marker on
 /// `toLayer` (default: the selected layers).
 fn convert(s: &mut Session, p: &Value) -> Result<Value> {
-    let c = "markers.convert";
+    let c = "marker.convert";
     let (cid, o) = owner(s, p, c)?;
     let comp = s.project.comp(cid).ok_or(EngineError::NoComp)?.clone();
     let i = find_index(&comp, o, p, c)?;
@@ -360,15 +360,15 @@ fn has_precomp_layer(s: &Session) -> std::result::Result<(), String> {
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
-        query!("markers.list", "List Markers", "{layer? (omit for composition markers)}", list),
+        query!("marker.list", "List Markers", "{layer? (omit for composition markers)}", list),
         query!(
-            "markers.nested",
+            "marker.nested",
             "Nested Comp Markers",
             "{layer: a precomp layer, comp?} — its comp's markers at their times in this comp (as on the layer bar)",
             nested
         ),
         cmd!(
-            "markers.set",
+            "marker.set",
             "Marker Settings",
             [],
             None,
@@ -376,9 +376,9 @@ pub fn specs() -> Vec<CommandSpec> {
             has_comp,
             set
         ),
-        cmd!("markers.delete", "Delete Marker", [], None, "{layer?, index? | at? (comp s)}", has_comp, delete),
+        cmd!("marker.delete", "Delete Marker", [], None, "{layer?, index? | at? (comp s)}", has_comp, delete),
         cmd!(
-            "markers.convert",
+            "marker.convert",
             "Convert Marker",
             [],
             None,

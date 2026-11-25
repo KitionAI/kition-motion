@@ -100,4 +100,4 @@ fail the search without edits, and searches are limited to 100,000 entries.
 
 Agents: `file.relinkFootage {"folder": "/moved/shots", "dryRun": true, "wait": true}` returns
 a report without edits. Omit `dryRun` to apply unique high-confidence matches. Without `wait`,
-the command returns a cancellable job; `jobs.wait` / `jobs.list` expose its report.
+the command returns a cancellable job; `job.wait` / `job.list` expose its report.

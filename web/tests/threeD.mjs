@@ -84,7 +84,7 @@ try {
   step('choosing 顶部 shows the Top view', (await view3d()).view === 'top' && (await kit.getByTestId('motion-workspace').getAttribute('data-view3d')) === 'top')
   await kit.getByTestId('motion-menu-View').click()
   await kit.locator('[role=menu] [role=menuitem]', { hasText: '3D 视图' }).first().hover()
-  await kit.locator('[role=menu] [data-testid="motion-cmd-view.3d.front"]').first().click()
+  await kit.locator('[role=menu] [data-testid="motion-cmd-view.threeD.front"]').first().click()
   await until(async () => (await view3d()).view === 'front')
   step('View ▸ 3D 视图 ▸ 正面 shows the Front view', (await view3d()).view === 'front')
   await views.selectOption('activeCamera')

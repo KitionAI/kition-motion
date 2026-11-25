@@ -119,7 +119,7 @@ async fn project_items_a_step_reads_refuse_and_others_apply() {
 async fn other_layers_a_step_reads_refuse_and_others_apply() {
     let (ids, _) = solids();
     let select = json!({"command":"layer.select","params":{"layers":[ids[1]]}});
-    let deleted = stale(&[], |file| drop(colleague(file, &[("edit.clear", json!({"layers":[ids[1]]}))])), select.clone()).await;
+    let deleted = stale(&[], |file| drop(colleague(file, &[("edit.delete", json!({"layers":[ids[1]]}))])), select.clone()).await;
     conflict(deleted, "the selected layer was deleted");
     let renamed = stale(&[], |file| drop(colleague(file, &[("layer.rename", json!({"layer":ids[0],"name":"Other"}))])), select).await;
     assert!(renamed.is_ok(), "{renamed:?}");

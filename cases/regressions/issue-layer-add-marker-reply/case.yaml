@@ -3,7 +3,7 @@ id: regressions/issue-layer-add-marker-reply
 feature: motion.markers.layer
 intent: >-
   layer.addMarker answers with what it added, as comp.addMarker does: the time in comp seconds and
-  each marker's layer and index (the index markers.list and markers.delete use), not null.
+  each marker's layer and index (the index marker.list and marker.delete use), not null.
 layer: unit
 source:
   kind: probe

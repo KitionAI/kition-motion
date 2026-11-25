@@ -25,7 +25,7 @@ macro_rules! pin {
 
 pub(super) const ROWS: &[Row] = &[
     path!(
-        "paths.nullsFollowPoints",
+        "path.nullsFollowPoints",
         "path vertex branch",
         &[
             "sampled full Path and expression dependency closure",
@@ -43,7 +43,7 @@ pub(super) const ROWS: &[Row] = &[
         ]
     ),
     pin!(
-        "paths.nullsFollowPoints",
+        "path.nullsFollowPoints",
         &[
             "new null per moving pin with sampled Position and generated following expression",
             "comp.layers insertion",
@@ -52,7 +52,7 @@ pub(super) const ROWS: &[Row] = &[
         ]
     ),
     path!(
-        "paths.pointsFollowNulls",
+        "path.pointsFollowNulls",
         "path vertex branch",
         &[
             "sampled full Path and expression dependencies: vertices determine null positions; tangents/closed embedded in path expression",
@@ -71,7 +71,7 @@ pub(super) const ROWS: &[Row] = &[
         ]
     ),
     pin!(
-        "paths.pointsFollowNulls",
+        "path.pointsFollowNulls",
         &[
             "new null per moving pin with sampled Position",
             "each source pin Position.expr",
@@ -81,7 +81,7 @@ pub(super) const ROWS: &[Row] = &[
         ]
     ),
     path!(
-        "paths.tracePath",
+        "path.tracePath",
         "path only, optional loop",
         &[
             "sampled path/expression dependency closure for first vertex position",

@@ -446,7 +446,7 @@ const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).re
  * ones it asks values for in its own dialogs, Pre-compose (which then offers to open the new
  * composition), and the ones given another shortcut (`SHORTCUT_OVERRIDES`).
  */
-const OWN_SHORTCUTS = ['project.newFolder', 'comp.new', 'comp.settings', 'layer.newText', 'layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keys.interpolation', 'keys.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'anim.savePreset', 'anim.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
+const OWN_SHORTCUTS = ['project.newFolder', 'comp.new', 'comp.settings', 'layer.newText', 'layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keyframe.interpolation', 'keyframe.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'animation.savePreset', 'animation.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
 
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
@@ -1035,17 +1035,17 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     setDialog({ kind: 'solid', mode, layer: layer.id, values: { name: item?.name ?? layer.name, width: item?.width ?? comp.width, height: item?.height ?? comp.height, color: toHex(item?.color ?? [0.5, 0.5, 0.5]), comp } })
   }
   const end = () => seek((state?.comp?.duration ?? 0) - (state?.frame ?? 0))
-  /** What `keys.info` answers for the selected keyframes (the fields the dialogs read). */
+  /** What `keyframe.info` answers for the selected keyframes (the fields the dialogs read). */
   type SelectedKeyInfo = { dims?: number; spatial?: string; units?: string; inEase?: Array<{ speed: number; influence: number } | null>; outEase?: Array<{ speed: number; influence: number } | null> }
   /** Keyframe Interpolation, with Spatial when a selected keyframe is on a moving property (Position, Anchor Point). */
   const openInterpolation = async () => {
-    const keys = await query<SelectedKeyInfo[]>('keys.info', {})
+    const keys = await query<SelectedKeyInfo[]>('keyframe.info', {})
     if (!Array.isArray(keys) || !keys.length) return
     setDialog({ kind: 'interpolation', spatial: keys.some((key) => typeof key.spatial === 'string') })
   }
   /** Keyframe Velocity, starting from the first selected keyframe's first dimension. */
   const openVelocity = async () => {
-    const keys = await query<SelectedKeyInfo[]>('keys.info', {})
+    const keys = await query<SelectedKeyInfo[]>('keyframe.info', {})
     const first = Array.isArray(keys) ? keys[0] : undefined
     if (!first) return
     const side = (ease: SelectedKeyInfo['inEase']) => ease?.find((one) => one != null) ?? { speed: 0, influence: 33.33 }
@@ -1054,7 +1054,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }
   /** The keyframe value dialog, on the one selected keyframe (a double-click on it, or its menu's Edit Value…). */
   const openKeyValue = async () => {
-    const keys = await query<Array<{ layer: number; path?: string; name?: string; compTime: number; value: unknown }>>('keys.info', {})
+    const keys = await query<Array<{ layer: number; path?: string; name?: string; compTime: number; value: unknown }>>('keyframe.info', {})
     const key = Array.isArray(keys) && keys.length === 1 ? keys[0] : null
     if (!key || !state?.comp || !key.path) return
     // The property's name as the timeline shows it (in the editor's language); a 2D layer's
@@ -1073,9 +1073,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   }
   /**
    * Animation presets go through the host: Save writes the selected properties' and effects'
-   * animation (`anim.savePreset`, in memory) to `<name>.ecpreset` beside the project; Apply picks
+   * animation (`animation.savePreset`, in memory) to `<name>.ecpreset` beside the project; Apply picks
    * a preset in the workspace and applies it to the selected layers at the current time
-   * (`anim.applyPreset`, one undo step).
+   * (`animation.applyPreset`, one undo step).
    */
   const savePreset = async (name: string, inside: string) => {
     const file = `${name}.ecpreset`
@@ -1086,7 +1086,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       // Asked again next time.
     }
     try {
-      if ((await run('anim.savePreset', { path: file, name })) === null) return
+      if ((await run('animation.savePreset', { path: file, name })) === null) return
       const bytes = await session.doc?.invoke<Uint8Array | undefined>('takeFile', file)
       if (!bytes) throw new Error(t('preset.notWritten'))
       const written = await host.exportFile([folder, inside, file].filter(Boolean).join('/'), bytes)
@@ -1108,7 +1108,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       toast.info(t('preset.noneChosen'))
       return
     }
-    if ((await run('anim.applyPreset', { path: relativePath(folder, path) })) !== null) toast.success(t('preset.applied', { name: path.split('/').pop() ?? path }))
+    if ((await run('animation.applyPreset', { path: relativePath(folder, path) })) !== null) toast.success(t('preset.applied', { name: path.split('/').pop() ?? path }))
   }
   // What the canvas tools name the shape layers they make, in the editor's language.
   useEffect(() => {
@@ -1190,7 +1190,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [KIT.renderQueue]: () => setQueueOpen((now) => !now),
     [KIT.rove]: () => {
       if (keyState.rovable === false) toast.info(t('keyMenu.roveEnds'))
-      else void run('keys.interpolation', { roving: !keyState.roving })
+      else void run('keyframe.interpolation', { roving: !keyState.roving })
     },
     'kit:edit-key': () => void openKeyValue(),
     [KIT.collectFiles]: () => {
@@ -1225,16 +1225,16 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [KIT.zoomFit]: fit,
     [KIT.zoom100]: () => canvas.current?.zoomTo(1),
     'comp.new': () => void openComp('new'),
-    'keys.interpolation': () => void openInterpolation(),
-    'keys.velocity': () => void openVelocity(),
+    'keyframe.interpolation': () => void openInterpolation(),
+    'keyframe.velocity': () => void openVelocity(),
     'layer.timeStretch': () => void openStretch(),
     'kit:sequence': () => state?.comp && setDialog({ kind: 'sequence', fps: state.comp.fps }),
     [KIT.alignTo]: () => setAlignTo((current) => (current === 'composition' ? 'selection' : 'composition')),
-    'anim.savePreset': () => setDialog({ kind: 'savePreset', name: t('preset.defaultName'), folder: storedPresetFolder(), onSave: (name, inside) => void savePreset(name, inside) }),
+    'animation.savePreset': () => setDialog({ kind: 'savePreset', name: t('preset.defaultName'), folder: storedPresetFolder(), onSave: (name, inside) => void savePreset(name, inside) }),
     [KIT.gridSettings]: () => setDialog({ kind: 'grid', spacing: gridSpacing, onSave: setGridSpacing }),
     [KIT.newGuide]: () => state?.comp && setDialog({ kind: 'guide', comp: { width: state.comp.width, height: state.comp.height } }),
-    'anim.applyPreset': () => void applyPreset(),
-    ...Object.fromEntries(INTERPOLATIONS.map((row) => [row.command, () => void run('keys.interpolation', { interpolation: row.interpolation })])),
+    'animation.applyPreset': () => void applyPreset(),
+    ...Object.fromEntries(INTERPOLATIONS.map((row) => [row.command, () => void run('keyframe.interpolation', { interpolation: row.interpolation })])),
     'comp.settings': () => void openComp('settings'),
     'layer.newSolid': () => void openSolid('new'),
     // A new drop shadow is seen at once, even on a dark background (one already there is only turned on).
@@ -1299,7 +1299,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     return off
   }, [idle, alignTo, state?.layers])
   // The selected keyframes, for Rove Across Time: whether any moves through space, and whether they all rove.
-  const keysSelected = editor.enabled('keys.interpolation')
+  const keysSelected = editor.enabled('keyframe.interpolation')
   const [keyState, setKeyState] = useState<SelectedKeys>({ spatial: false, roving: false })
   useEffect(() => {
     if (!keysSelected || playback.playing) {
@@ -1307,13 +1307,13 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       return undefined
     }
     let current = true
-    void query<Array<{ spatial?: string | null; roving?: boolean }>>('keys.info', {}).then(async (keys) => {
+    void query<Array<{ spatial?: string | null; roving?: boolean }>>('keyframe.info', {}).then(async (keys) => {
       if (!current || !Array.isArray(keys)) return
       const moving = keys.filter((key) => typeof key.spatial === 'string')
       const spatial = moving.length > 0
       const roving = spatial && moving.every((key) => key.roving === true)
       // Roving on a first or last keyframe changes nothing (the engine tries it on a copy).
-      const rovable = !spatial || roving ? true : await (session.doc?.invoke<boolean>('wouldChange', 'keys.interpolation', JSON.stringify({ roving: true })) ?? Promise.resolve(true)).catch(() => true)
+      const rovable = !spatial || roving ? true : await (session.doc?.invoke<boolean>('wouldChange', 'keyframe.interpolation', JSON.stringify({ roving: true })) ?? Promise.resolve(true)).catch(() => true)
       if (!current) return
       const next = { spatial, roving, rovable, count: keys.length }
       setKeyState((before) => (before.spatial === next.spatial && before.roving === next.roving && before.rovable === next.rovable && before.count === next.count ? before : next))
@@ -1450,7 +1450,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       return true
     }
     // The 3D views' keys that browsers leave alone (as F10, F11 and F12).
-    const view3dKey = pressed(EDITOR_KEYS.view3dFront, event) ? 'view.3d.front' : pressed(EDITOR_KEYS.view3dCustom, event) ? 'view.3d.custom1' : pressed(EDITOR_KEYS.view3dCamera, event) ? 'view.3d.activeCamera' : null
+    const view3dKey = pressed(EDITOR_KEYS.view3dFront, event) ? 'view.threeD.front' : pressed(EDITOR_KEYS.view3dCustom, event) ? 'view.threeD.custom1' : pressed(EDITOR_KEYS.view3dCamera, event) ? 'view.threeD.activeCamera' : null
     if (view3dKey) {
       if (view3d.has3D) void run(view3dKey, {})
       return true

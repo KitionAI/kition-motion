@@ -24,7 +24,7 @@ async fn stale(command: &str, change: impl FnOnce(&Fixture, &[u64]), setup: &[(&
 
 #[tokio::test]
 async fn deleting_a_layer_holds_its_children_and_mattes_but_not_unrelated_layers() {
-    for command in ["edit.clear", "edit.cut"] {
+    for command in ["edit.delete", "edit.cut"] {
         // A colleague parents L1 to the layer being deleted: the deletion would unparent and
         // compensate a child the agent never saw.
         let parented = stale(command, |f, ids| drop(f.colleague(&[("layer.setParent", json!({"layers":[ids[1]],"parent":ids[0]}))])), &[]).await;
@@ -63,7 +63,7 @@ async fn fixture_ids() -> Vec<u64> {
 #[tokio::test]
 async fn a_new_layer_tied_to_the_deleted_layer_refuses_and_an_unrelated_one_applies() {
     let deleted = fixture_ids().await[0];
-    for command in ["edit.clear", "edit.cut"] {
+    for command in ["edit.delete", "edit.cut"] {
         let tied = |relation: &'static str| {
             move |f: &Fixture, ids: &[u64]| {
                 let added = f.colleague(&[("layer.newSolid", json!({"name":"Late","color":"#00ff00"}))]);
