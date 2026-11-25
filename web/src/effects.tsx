@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { SearchIcon as Search, SparklesIcon as Sparkles, RotateCwIcon as Again } from '@kition/tessera/icons/react'
 import { Button, Dialog, MenuItem, RibbonButton, RibbonGroup, RibbonMenu, TextInput, useKitEditor, useReadOnly, type MenuRow } from '@kition/sdk/editor'
 import type { EffectParam } from './properties/meta'
+import { counted } from './strings'
 
 /** One effect the engine has (`effect.list`), with its parameters for the Properties panel. */
 export type MotionEffect = { id: string; name: string; category: string; params?: EffectParam[] }
@@ -161,7 +162,7 @@ export function FindEffectDialog({ effects, onApply, onClose }: { effects: reado
     const named = all.map((param) => p(param.name))
     const params = named.slice(0, 3)
     const more = all.length > params.length ? '…' : ''
-    const settings = params.length ? t('effect.params', { names: params.join(t('effect.listSeparator')) + more }) : all.length ? t('effect.paramCount', { count: all.length }) : t('effect.noParams')
+    const settings = params.length ? t('effect.params', { names: params.join(t('effect.listSeparator')) + more }) : all.length ? counted(t, 'effect.paramCount', all.length) : t('effect.noParams')
     const key = `effect.desc.${effect.id}`
     const own = t(key)
     // Without its own line, only its settings (not its category's words standing in for it).

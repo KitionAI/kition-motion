@@ -24,7 +24,7 @@ import {
   Select,
 } from '@kition/sdk/editor'
 import { engineManifest } from './engine'
-import { CATALOGS } from './strings'
+import { CATALOGS, counted } from './strings'
 import { learnEffectNames } from './effectNames'
 import { describe, picturePanBounds, timecode } from './motion'
 import { ARRANGE, ASSISTANT_NEEDS, type Convertible, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands, waitingRowStyles, waitingRows } from './menus'
@@ -738,7 +738,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
         if (!bytes) throw new Error(name)
         await host.exportFile([folder, name].filter(Boolean).join('/'), bytes)
       }
-      toast.success(t('collect.done', { count: answer.files.length, folder: inside }), answer.missing.length ? { description: t('collect.missing', { names: answer.missing.join(', ') }) } : undefined)
+      toast.success(counted(t, 'collect.done', answer.files.length, { folder: inside }), answer.missing.length ? { description: t('collect.missing', { names: answer.missing.join(', ') }) } : undefined)
     } catch (error) {
       toast.error(t('collect.failed'), { description: error instanceof Error ? error.message : String(error) })
     }
@@ -1649,8 +1649,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               ) : null}
             </Button>
           ) : null}
-          <span className="motion-summary" title={state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : undefined} data-testid="motion-status">
-            {state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: state.layers.length }) : t('noComp')}
+          <span className="motion-summary" title={state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: counted(t, 'count.layers', state.layers.length) }) : undefined} data-testid="motion-status">
+            {state?.comp ? t('summary', { name: state.comp.name, width: state.comp.width, height: state.comp.height, fps: Math.round(state.comp.fps * 100) / 100, layers: counted(t, 'count.layers', state.layers.length) }) : t('noComp')}
           </span>
           </>
         }

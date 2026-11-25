@@ -2,6 +2,7 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNod
 import { useKitEditor } from '@kition/sdk/editor'
 import { snapIn, useTimeline } from './context'
 import { leftOf, rulerLabel, rulerStep, timeAtX } from './view'
+import { counted } from '../strings'
 
 type Edge = 'start' | 'end'
 
@@ -114,7 +115,7 @@ export function CacheBar({ frames }: { frames: readonly number[] }) {
     else runs.push([frame, frame])
   }
   return (
-    <span className="motion-cache-bar" data-testid="motion-cache-bar" data-frames={frames.length} title={t('cache.title', { count: frames.length })} aria-hidden="true">
+    <span className="motion-cache-bar" data-testid="motion-cache-bar" data-frames={frames.length} title={counted(t, 'cache.title', frames.length)} aria-hidden="true">
       {runs.map(([from, to]) => (
         <span key={from} className="motion-cache-run" style={{ left: leftOf(view, from / fps), width: `${((to - from + 1) / fps / view.span) * 100}%` }} />
       ))}

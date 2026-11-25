@@ -136,7 +136,9 @@ try {
       const strings = (locale) => (key, values = {}) => (CATALOGS[locale][key] ?? key).replace(/\{(\w+)\}/g, (all, name) => String(values[name] ?? all))
       const [tZh, tEn] = [strings('zh-CN'), strings('en-US')]
       const byId = new Map(list.map((effect) => [effect.id, effect]))
-      const out = { enums: 0, digits: [], groups: new Set(), headings: [], sources: 0, badSources: [], names: {} }
+      const out = { enums: 0, digits: [], groups: new Set(), headings: [], sources: 0, badSources: [], names: {}, settings: 0, collisions: [] }
+      // (7k) Each effect's setting names, in Chinese and in English, keyed without their spaces.
+      let seen = null
       const walk = (node, effect, parent) => {
         for (const child of node.children ?? []) {
           if (child.children) {
@@ -149,6 +151,20 @@ try {
           }
           const meta = propMeta(child, parent, effect)
           out.names[`${effect.id}/${child.path.replace(/^effects\/[^/]+\//, '')}`] = nodeName(child, effect, meta, false, named, tZh)
+          out.settings += 1
+          // Two names of one effect that differ only by spaces, anywhere in it; or the same name twice
+          // in one group (the same name in two groups reads apart by its group's heading).
+          const path = child.path.replace(/^effects\/[^/]+\//, '')
+          const group = path.split('/').slice(0, -1).join('/')
+          for (const [locale, name] of [['zh', nodeName(child, effect, meta, false, named, tZh)], ['en', nodeName(child, effect, meta, false, (text) => text, tEn)]]) {
+            const bare = name.replace(/\s+/g, '')
+            const spaced = seen.get(`${locale}:${bare}`)
+            if (spaced && spaced.name !== name) out.collisions.push(`${effect.id} (${locale}): "${spaced.name}" ${spaced.path} / "${name}" ${path}`)
+            else if (!spaced) seen.set(`${locale}:${bare}`, { name, path })
+            const twin = seen.get(`${locale}:${group}:${bare}`)
+            if (twin) out.collisions.push(`${effect.id} (${locale}): "${twin.name}" ${twin.path} / "${name}" ${path} (one group)`)
+            else seen.set(`${locale}:${group}:${bare}`, { name, path })
+          }
           for (const option of meta?.options ?? []) out.names[`${effect.id}/${child.path.replace(/^effects\/[^/]+\//, '')}=${option.label}`] = option.key ? tZh(option.key) : named(option.label)
           if (child.type !== 'enum') continue
           out.enums += 1
@@ -163,6 +179,7 @@ try {
       }
       for (const node of effects) {
         const effect = byId.get(node.effect)
+        seen = new Map()
         if (effect) walk(node, effect, node)
       }
       return { ...out, groups: out.groups.size }
@@ -174,6 +191,9 @@ try {
   h.step(`no drop-down of any effect lists bare digits (${scan.enums} drop-downs in ${trees.length} effects)`, scan.digits.length === 0 && scan.enums > 500, scan.digits.slice(0, 20).join(' | '))
   h.step(`every layer setting’s source reads "<setting> 来源" / "<setting> Source" (${scan.sources})`, scan.sources >= 70 && scan.badSources.length === 0, scan.badSources.slice(0, 10).join(' | '))
   h.step(`every group heading inside an effect card reads in Chinese, but for abbreviations (${scan.groups} headings)`, scan.groups > 150 && headingsLeft.length === 0, headingsLeft.slice(0, 20).join(' | '))
+  // (7k) "添加相位来源" and "添加相位 来源" were two settings of one effect: within an effect no two
+  // setting names differ only by their spaces, and no group has one name twice, in Chinese or English.
+  h.step(`within each effect, no two setting names differ only by spaces, nor repeat in one group, zh and en (${scan.settings} settings)`, scan.settings > 1000 && scan.collisions.length === 0, `${scan.collisions.length}: ${scan.collisions.slice(0, 40).join(' | ')}`)
   // The reworded names, as the editor names them in their effects.
   const WORDS = {
     'ec.color.grade/basicCorrection/tone': '影调',
@@ -389,6 +409,8 @@ try {
     const lower = kit.getByTestId('motion-cache-lower')
     const more = kit.getByTestId('motion-cache-more-memory')
     const loopCached = kit.getByTestId('motion-cache-loop-cached')
+    // (7k: a check row, ticked while on; its hint and the looped stretch sit on the row around it.)
+    const loopRow = kit.getByTestId('motion-cache-loop-cached-row')
     await h.until(async () => (await lower.count()) === 1 && (await more.count()) === 1 && (await loopCached.count()) === 1)
     const texts = [(await lower.textContent()) ?? '', (await more.textContent()) ?? '', (await loopCached.textContent()) ?? '']
     const expected = locale === 'en' ? ['Set preview to Half to cache more', 'Use more memory (1 GB)', 'Loop only the cached part'] : ['把预览分辨率改为二分之一可缓存更多', '使用更多内存（1 GB）', '只循环已缓存的部分']
@@ -399,15 +421,15 @@ try {
     // English tooltips: "51 of 300 frames cached (the first 1.7 s)", no brackets inside brackets.
     const held = Number(await cacheButton.getAttribute('data-done'))
     const seconds = (Math.round((held / 30) * 10) / 10).toFixed(1)
-    const tips = [(await cacheButton.getAttribute('title')) ?? '', (await loopCached.getAttribute('title')) ?? '', explained]
+    const tips = [(await cacheButton.getAttribute('title')) ?? '', (await loopRow.getAttribute('title')) ?? '', explained]
     const nested = (text) => /\([^()]*\(/.test(text) || /（[^（）]*（/.test(text)
     const said = locale === 'en' ? `${held} of 300 frames cached (the first ${seconds} s)` : `已缓存前 ${held} 帧（${seconds} 秒）`
     h.step(`${at}: the tooltips say ${said}, no brackets inside brackets`, tips.every((tip) => tip.includes(said)) && !tips.some(nested), tips.join(' || '))
     await loopCached.click()
-    await h.until(async () => (await loopCached.getAttribute('aria-pressed')) === 'true')
-    h.step(`${at}: its loop toggle works from there`, (await loopCached.getAttribute('aria-pressed')) === 'true' && (await loopCached.getAttribute('data-area')) === `0.000 ${(held / 30).toFixed(3)}`, await loopCached.getAttribute('data-area'))
+    await h.until(async () => (await loopCached.getAttribute('aria-checked')) === 'true')
+    h.step(`${at}: its loop toggle works from there`, (await loopCached.getAttribute('aria-checked')) === 'true' && (await loopRow.getAttribute('data-area')) === `0.000 ${(held / 30).toFixed(3)}`, await loopRow.getAttribute('data-area'))
     await loopCached.click()
-    await h.until(async () => (await loopCached.getAttribute('aria-pressed')) === 'false')
+    await h.until(async () => (await loopCached.getAttribute('aria-checked')) === 'false')
     await page.keyboard.press('Escape')
     await h.until(async () => (await popover.count()) === 0)
     // The cache button itself still turns caching off.

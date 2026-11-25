@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Button, Popover, PopoverContent, PopoverTrigger, useKitEditor } from '@kition/sdk/editor'
+import { Button, MenuItem, Popover, PopoverContent, PopoverTrigger, useKitEditor } from '@kition/sdk/editor'
 
 /**
  * What can be done about a full preview cache, behind one ▾ beside the cache button (together
  * they read "Cache full N/M ▾"): what the cache holds, then Set preview to Half (Third, Quarter),
  * Use more memory (1 GB) when the browser does not say how much it has, and Loop only the cached
- * part. One small button instead of three keeps the status bar's zoom controls in view in a
- * narrow window.
+ * part (a check row, ticked while on). One small button instead of three keeps the status bar's
+ * zoom controls in view in a narrow window.
  */
 export function CacheFullMenu({
   held,
@@ -55,17 +55,11 @@ export function CacheFullMenu({
             </Button>
           ) : null}
           {loop ? (
-            <Button
-              variant="ghost"
-              className="motion-toggle"
-              aria-pressed={loop.on}
-              title={t('cacheAhead.loopCachedHint', { held })}
-              onClick={loop.toggle}
-              data-testid="motion-cache-loop-cached"
-              data-area={loop.area ? loop.area.map((each) => each.toFixed(3)).join(' ') : undefined}
-            >
-              {t('cacheAhead.loopCached')}
-            </Button>
+            // A check row (the SDK editor's menu row with `checked`): a tick shows while it is on.
+            // Its hint and the looped stretch sit on the row around it (the menu row takes neither).
+            <div className="motion-cache-loop-row" title={t('cacheAhead.loopCachedHint', { held })} data-testid="motion-cache-loop-cached-row" data-area={loop.area ? loop.area.map((each) => each.toFixed(3)).join(' ') : undefined}>
+              <MenuItem label={t('cacheAhead.loopCached')} checked={loop.on} onSelect={loop.toggle} testId="motion-cache-loop-cached" />
+            </div>
           ) : null}
         </div>
       </PopoverContent>

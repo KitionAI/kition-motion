@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Button, Checkbox, Dialog, Field, Select, TextInput, toast, useKitEditor, type HostConnection, type KitEngine } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
+import { counted } from './strings'
 
 /**
  * The formats the web build renders (`bindings/wasm/src/movie.rs`), with their extensions: movies
@@ -314,7 +315,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose, onSaveFrame }
         )}
         {warnings ? (
           <div className="motion-export-warnings" role="status" data-testid="motion-export-warnings">
-            <p>{t('export.lottie.warnings', { count: warnings.length })}</p>
+            <p>{counted(t, 'export.lottie.warnings', warnings.length)}</p>
             <ul>
               {warnings.map((warning, index) => (
                 <li key={index}>{warning}</li>

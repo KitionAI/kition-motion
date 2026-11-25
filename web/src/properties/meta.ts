@@ -171,6 +171,15 @@ const IN_EFFECT: Record<string, string> = {
   'ec.distort.ccbendit/renderPrestart=None': 'fx.bendIt.none',
   'ec.distort.ccbendit/renderPrestart=Static': 'fx.bendIt.static',
   'ec.generate.advancedlightning/lightningType=Direction': 'fx.lightning.direction',
+  // Particle Playground's property mappers hold each colour's Min and Max (and Operator) in one
+  // group: each named with its colour (Red Min, Green Min, …), not three alike.
+  ...Object.fromEntries(
+    ['persistentPropertyMapper', 'ephemeralPropertyMapper'].flatMap((mapper) =>
+      ['red', 'green', 'blue'].flatMap((colour) =>
+        ['Min', 'Max', ...(mapper === 'ephemeralPropertyMapper' ? ['Operator'] : [])].map((what) => [`ec.sim.particleplayground/${mapper}/${colour}${what}`, `fx.playground.${colour}${what}`]),
+      ),
+    ),
+  ),
 }
 
 /** An effect setting's meta with the options that read differently in this effect keyed to the editor's own strings. */

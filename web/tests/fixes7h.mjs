@@ -214,22 +214,24 @@ try {
   await h.until(async () => ((await cacheButton.getAttribute('title')) ?? '').includes(said))
   h.step(`the full cache says exactly what it holds (${said})`, ((await cacheButton.getAttribute('title')) ?? '').includes(said) && ((await cacheButton.getAttribute('title')) ?? '').includes('共 300 帧'), await cacheButton.getAttribute('title'))
   const loopCached = kit.getByTestId('motion-cache-loop-cached')
+  // (7k: a check row, ticked while on; its hint and the looped stretch sit on the row around it.)
+  const loopRow = kit.getByTestId('motion-cache-loop-cached-row')
   // (7j: the full cache's actions sit in the ▾ right after the cache button; a click elsewhere closes it.)
   const cacheMenu = async () => {
     if ((await loopCached.count()) === 0) await kit.getByTestId('motion-cache-full-menu').click()
     await h.until(async () => (await loopCached.count()) === 1)
   }
   await cacheMenu()
-  h.step('in its ▾: 只循环已缓存的部分 (off)', (await loopCached.count()) === 1 && (await loopCached.textContent()) === '只循环已缓存的部分' && (await loopCached.getAttribute('aria-pressed')) === 'false', await loopCached.textContent().catch(() => '(none)'))
+  h.step('in its ▾: 只循环已缓存的部分 (off)', (await loopCached.count()) === 1 && (await loopCached.textContent()) === '只循环已缓存的部分' && (await loopCached.getAttribute('aria-checked')) === 'false', await loopCached.textContent().catch(() => '(none)'))
   const end = held / 30
   const timeNow = async () => (await h.details()).time
   const play = () => kit.getByTestId('motion-play').click()
   const stopped = () => h.until(async () => (await kit.getByTestId('motion-play').getAttribute('aria-label')) === '播放')
   // On: looping playback goes round the cached frames, from 0 to where the cache ends.
   await loopCached.click()
-  await h.until(async () => (await loopCached.getAttribute('data-area')) !== null)
-  const area = (await loopCached.getAttribute('data-area')) ?? ''
-  h.step('on: the loop is the cached frames', (await loopCached.getAttribute('aria-pressed')) === 'true' && area === `0.000 ${end.toFixed(3)}`, area)
+  await h.until(async () => (await loopRow.getAttribute('data-area')) !== null)
+  const area = (await loopRow.getAttribute('data-area')) ?? ''
+  h.step('on: the loop is the cached frames', (await loopCached.getAttribute('aria-checked')) === 'true' && area === `0.000 ${end.toFixed(3)}`, area)
   await h.setUp([{ command: 'time.set', params: { time: Math.max(0, end - 0.3) } }])
   await play()
   const times = []
@@ -244,7 +246,7 @@ try {
   // Off: playback goes on past the cached frames (drawn as it reaches them) rather than going round early.
   await cacheMenu()
   await loopCached.click()
-  await h.until(async () => (await loopCached.getAttribute('aria-pressed')) === 'false' && (await loopCached.getAttribute('data-area')) === null)
+  await h.until(async () => (await loopCached.getAttribute('aria-checked')) === 'false' && (await loopRow.getAttribute('data-area')) === null)
   await h.setUp([{ command: 'time.set', params: { time: Math.max(0, end - 0.3) } }])
   await play()
   const past = await h.until(async () => (await timeNow()) > end + 0.05, 600)

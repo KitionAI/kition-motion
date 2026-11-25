@@ -6,7 +6,7 @@ import { editableNumbers, type TreeNode } from '../timeline/tree'
 import { cameraOrLight } from '../timeline/SwitchCells'
 import { NumberField } from '../ValueField'
 import { blendModes } from './LayerHeader'
-import { propMeta } from './meta'
+import { nodeName, propMeta } from './meta'
 import { Section } from './Section'
 
 /** One property every selected layer has: its name and each layer's numbers (parts shown). */
@@ -32,8 +32,8 @@ let edits = 0
  * The Properties panel with several layers selected: what they have in common, edited on all of
  * them at once. Blending mode and parent (a menu showing "mixed" where they differ); Transform's
  * properties every selected layer has (Anchor Point, Position, Scale, Rotation, Opacity, and a 3D
- * layer's Orientation and X/Y Rotation when all are 3D), each number empty with a dash where the
- * layers differ. A typed number goes to every layer (one undo step); a scrub moves each layer's
+ * layer's Orientation and X/Y Rotation, with Rotation named Z Rotation, when all are 3D), each
+ * number empty with a dash where the layers differ. A typed number goes to every layer (one undo step); a scrub moves each layer's
  * value by the same amount from where it was (one undo step per drag). Each change goes to the
  * engine as `prop.set` per layer with one `merge` key, so the history has one step.
  */
@@ -63,14 +63,15 @@ export function MultiLayers({ info, layers, readOnly }: { info: MotionInfo; laye
         const first = nodes[0].node as TreeNode
         // Its Transform group as the parent: the units and decimals the single-layer panel shows.
         const meta = propMeta(first, groups[0].transform, undefined)
-        rows.push({ path: first.path, name: phrase(first.name), values: values.map((value) => ({ ...value, parts: value.parts.slice(0, count) })), decimals: meta?.decimals ?? 2, unit: meta?.unit ?? UNITS[match], min: meta?.min, max: meta?.max })
+        // With every selected layer 3D, Rotation (beside X and Y Rotation) reads Z Rotation, as for one layer.
+        rows.push({ path: first.path, name: nodeName(first, undefined, null, allThreeD, phrase, t), values: values.map((value) => ({ ...value, parts: value.parts.slice(0, count) })), decimals: meta?.decimals ?? 2, unit: meta?.unit ?? UNITS[match], min: meta?.min, max: meta?.max })
       }
       setCommon((before) => (JSON.stringify(before) === JSON.stringify(rows) ? before : rows))
     })
     return () => {
       current = false
     }
-  }, [ids, info, query, phrase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ids, info, query, phrase, t]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Every layer's new value of `row`, sent one after another under one merge key (one undo step);
   // while the engine is busy only the latest values wait.

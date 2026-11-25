@@ -13,22 +13,34 @@ const SHAPE = 27
 const button = kit.getByTestId('motion-cache-ahead')
 const playing = async () => (await kit.getByTestId('motion-play').getAttribute('aria-label')) === '暂停'
 
-/** Plays from the current time to the end (Loop off); answers the frame rate the transport showed while it played (the median). */
-async function playRate() {
+/** Plays from the current time to the end (Loop off); answers the frame rates the transport showed while it played. */
+async function playRates() {
   const rates = []
   await kit.getByTestId('motion-play').click()
   await until(playing, 30)
   for (let i = 0; i < 200 && (await playing()); i += 1) {
-    const fps = Number(await kit.getByTestId('motion-fps').getAttribute('data-fps', { timeout: 200 }).catch(() => NaN))
+    // A read waits for the page's answer (seconds on a busy runner), not a fixed 200 ms.
+    const fps = Number(await kit.getByTestId('motion-fps').getAttribute('data-fps', { timeout: 5000 }).catch(() => NaN))
     if (Number.isFinite(fps)) rates.push(fps)
     await page.waitForTimeout(100)
   }
   await until(async () => !(await playing()), 30)
   await page.waitForTimeout(600)
-  // The middle of the rates read while it played (not the last read alone: at the very end the
-  // transport's rate falls to 0 as playback stops).
+  return rates
+}
+
+/** The middle of the rates read while it played (not the last read alone: at the very end the transport's rate falls to 0 as playback stops). */
+function median(rates) {
   const heard = rates.filter((fps) => fps > 0).sort((a, b) => a - b)
   return heard.length ? heard[Math.floor(heard.length / 2)] : NaN
+}
+
+/** From the start: Home, then playback to the end. */
+async function playFromStart() {
+  await h.focusEditor()
+  await page.keyboard.press('Home')
+  await until(async () => (await h.details()).time === 0)
+  return playRates()
 }
 
 try {
@@ -58,12 +70,17 @@ try {
   await page.keyboard.press('Escape')
 
   // 2. Playback takes them from the cache, at the composition's rate.
-  await h.focusEditor()
-  await page.keyboard.press('Home')
-  await until(async () => (await h.details()).time === 0)
+  // Playback keeps to the wall clock and skips the frames the page has no time to show: on a slow
+  // runner one pass shows fewer frames than a fast machine. It plays from the start again (every
+  // frame still from the cache) until a third of the frames have been shown, at most 8 passes.
   const start0 = await h.cache()
-  const fps = await playRate()
-  const played = await h.cache()
+  const rates = []
+  let played = start0
+  for (let pass = 0; pass < 8 && played.hits - start0.hits < frames / 3; pass += 1) {
+    rates.push(...(await playFromStart()))
+    played = await h.cache()
+  }
+  const fps = median(rates)
   step('playback renders nothing: every frame comes from the cache', played.rendered - start0.rendered <= 1 && played.hits - start0.hits >= frames / 3, JSON.stringify({ rendered: played.rendered - start0.rendered, hits: played.hits - start0.hits }))
   console.log(`MEASURE ${h.which}: cached ahead, playback ${fps.toFixed?.(1)} fps of ${comp.frameRate}`)
 
@@ -96,10 +113,7 @@ try {
   // the cache's, so there it must be at least the uncached rate measured in this same run (the
   // cache is not slower than rendering) and a third of the composition's rate; that every frame
   // came from the cache is checked strictly above.
-  await h.focusEditor()
-  await page.keyboard.press('Home')
-  await until(async () => (await h.details()).time === 0)
-  const uncached = await playRate()
+  const uncached = median(await playFromStart())
   console.log(`MEASURE ${h.which}: not cached, playback ${uncached.toFixed?.(1)} fps of ${comp.frameRate}`)
   // With the engine's answers slowed down on purpose (ENGINE_DELAY_MS), each frame waits for one
   // answer: the rate that allows, at most.

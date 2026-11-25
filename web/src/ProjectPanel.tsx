@@ -16,6 +16,7 @@ import { Button, ContextMenu, Dialog, IconButton, MenuItem, MenuSeparator, Renam
 import type { MotionInfo } from './motion'
 import { ITEM_MIME, ITEMS_MIME, isLayerSource, parseAnswer, type ProjectItem, type ProjectSummary } from './footage'
 import { LabelMenu, labelHex } from './labels'
+import { counted } from './strings'
 
 const KEY = 'kition-motion.project-width'
 const OPEN_KEY = 'kition-motion.project-open'
@@ -633,7 +634,7 @@ export function ProjectPanel({
             </>
           }
         >
-          <p>{t('project.deleteUsed', { layers: deleting.layers, comps: deleting.comps })}</p>
+          <p>{t('project.deleteUsed', { layers: counted(t, 'count.layers', deleting.layers), comps: counted(t, 'count.compositions', deleting.comps) })}</p>
         </Dialog>
       ) : null}
     </aside>
@@ -662,7 +663,7 @@ function ProjectDetails({ items, typeName }: { items: ProjectItem[]; typeName: (
     if (footage.hasVideo && Math.abs(footage.pixelAspect - 1) > 1e-6) rows.push(['pixelAspect', t('project.info.pixelAspect'), String(round(footage.pixelAspect))])
     if (footage.missing) rows.push(['missing', t('project.info.file'), t('project.info.missing')])
   }
-  if (item.uses != null) rows.push(['uses', t('project.info.uses'), t('project.info.usedTimes', { count: item.uses })])
+  if (item.uses != null) rows.push(['uses', t('project.info.uses'), counted(t, 'project.info.usedTimes', item.uses)])
   return (
     <div className="motion-project-info" data-testid="motion-project-info" data-item={item.id}>
       <strong className="motion-project-info-name" title={item.name}>

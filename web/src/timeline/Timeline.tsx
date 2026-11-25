@@ -18,6 +18,7 @@ import { MarkerFlags, markerParams, type MarkerRef } from './Markers'
 import { PropertyRows } from './PropertyRows'
 import { CacheBar, Ruler } from './Ruler'
 import { SOLO_PATHS, type Twirl } from './tree'
+import { counted } from '../strings'
 import { useKeyGestures } from './useKeyGestures'
 import { useRowDrag } from './useRowDrag'
 import { useTimeView } from './useTimeView'
@@ -420,7 +421,7 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
           ) : hideShy ? (
             // Every layer is shy and Hide Shy Layers is on: say so, with the way to show them.
             <p className="kui-muted motion-empty" data-testid="motion-all-shy">
-              {t('shy.allHidden', { count: all.layers.length })}{' '}
+              {counted(t, 'shy.allHidden', all.layers.length)}{' '}
               <Button onClick={() => void run('comp.setSwitch', { switch: 'hideShy', value: false })} data-testid="motion-show-shy">
                 {t('shy.show')}
               </Button>

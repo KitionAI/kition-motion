@@ -4,6 +4,7 @@ import { Button, Checkbox, Dialog, Field, IconButton, Select, TextInput, formatT
 import { presetFolder } from './dialogs'
 import { SEQUENCES, sequenceName, writeExport } from './ExportDialog'
 import { parseAnswer, type ProjectItem, type ProjectSummary } from './footage'
+import { counted } from './strings'
 
 /**
  * The Render Queue: export jobs kept in the project (the engine's `renderQueue.*`: each job is a
@@ -193,16 +194,39 @@ function newSettings(comp: { name: string; width: number; height: number }, t: S
     height: last.height ?? comp.height,
     frameRate: typeof last.frameRate === 'number' && last.frameRate > 0 ? last.frameRate : null,
     name: '',
-    folder: SEQUENCES.has(format) ? sequenceFolder(comp.name, t, taken) : typeof last.folder === 'string' ? (presetFolder(last.folder) ?? '') : '',
+    folder: defaultFolder(format, comp.name, t, taken),
     alpha: last.alpha !== false,
   }
 }
 
 type Strings = (key: string, values?: Record<string, string | number>) => string
 
+/**
+ * The folder a job of `format` gets by itself: an image sequence its own folder (`sequenceFolder`),
+ * anything else the folder of the last job that was not a sequence (else the project's folder).
+ */
+function defaultFolder(format: QueueFormat, compName: string, t: Strings, taken: ReadonlySet<string>) {
+  if (SEQUENCES.has(format)) return sequenceFolder(compName, t, taken)
+  const last = lastSettings().folder
+  return typeof last === 'string' ? (presetFolder(last) ?? '') : ''
+}
+
+/** The name of a composition's image-sequence folder, before any number. */
+const sequenceBase = (compName: string, t: Strings) => presetFolder(fileName(t('queue.sequenceFolder', { name: fileName(compName) || 'Composition' }))) || 'sequence'
+
+/**
+ * Whether a job's folder is still one the editor chose for it (none, or its composition's
+ * image-sequence folder, numbered or not) rather than one the person typed or took from a preset.
+ */
+function automaticFolder(folder: string, compName: string, t: Strings) {
+  if (!folder) return true
+  const base = sequenceBase(compName, t)
+  return folder === base || (folder.startsWith(`${base} `) && /^\d+$/.test(folder.slice(base.length + 1)))
+}
+
 /** An image sequence's own folder, named after its composition, numbered past the folders in `taken`. */
 function sequenceFolder(compName: string, t: Strings, taken: ReadonlySet<string>) {
-  const base = presetFolder(fileName(t('queue.sequenceFolder', { name: fileName(compName) || 'Composition' }))) || 'sequence'
+  const base = sequenceBase(compName, t)
   for (let n = 1; n < 1000; n += 1) {
     const folder = n === 1 ? base : `${base} ${n}`
     if (!taken.has(folder)) return folder
@@ -319,7 +343,7 @@ export function useRenderQueue({ doc, host, run, query, t }: { doc: KitEngine | 
       setCurrent(null)
       setRendering(false)
       busy.current = false
-      if (written) toast.success(t('queue.finished', { count: written }))
+      if (written) toast.success(counted(t, 'queue.finished', written))
     },
     [doc, folder, host, t],
   )
@@ -455,7 +479,7 @@ export function RenderQueuePanel({ queue, onClose }: { queue: RenderQueueRuns; o
           <p className="kui-muted motion-empty">{t('queue.empty')}</p>
         )}
       </div>
-      {editing ? <JobDialog item={editing.item} comp={editing.comp} onClose={() => setEditing(null)} /> : null}
+      {editing ? <JobDialog item={editing.item} comp={editing.comp} queued={items} onClose={() => setEditing(null)} /> : null}
     </section>
   )
 }
@@ -467,14 +491,26 @@ export function RenderQueuePanel({ queue, onClose }: { queue: RenderQueueRuns; o
  * output settings kept in this browser. OK changes the job (`renderQueue.setRenderSettings` and
  * `setOutputModule`, one undo step each).
  */
-function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: ProjectItem | null; onClose: () => void }) {
+function JobDialog({ item, comp, queued, onClose }: { item: QueueItem | null; comp: ProjectItem | null; queued: readonly QueueItem[]; onClose: () => void }) {
   const { run, t } = useKitEditor()
   const compName = item?.compName ?? comp?.name ?? ''
   const fps = comp?.frameRate ?? item?.frameRate ?? 30
-  const queued = useEngineQuery<{ items?: QueueItem[] }>('renderQueue.list', {})
-  const start = item ? settingsOf(item) : newSettings({ name: compName, width: comp?.size?.[0] ?? 1920, height: comp?.size?.[1] ?? 1080 }, t, foldersOf(queued?.items))
+  // The queue's jobs as the panel lists them (already read when a job's settings open: a change of
+  // format right away still sees which sequence folders the other jobs take).
+  const start = item ? settingsOf(item) : newSettings({ name: compName, width: comp?.size?.[0] ?? 1920, height: comp?.size?.[1] ?? 1080 }, t, foldersOf(queued))
   const [settings0] = useState<JobSettings>(() => ({ ...start, frameRate: item?.frameRate != null && Math.abs(item.frameRate - fps) > 1e-3 ? item.frameRate : null }))
   const [settings, setSettings] = useState<JobSettings>(settings0)
+  // While the folder is still the one the editor chose (the person has not typed one or taken a
+  // preset's), a change of format chooses it again: an image sequence its own folder, anything
+  // else the folder a new job of that format would get (or the job's own, when it had one).
+  const [autoFolder, setAutoFolder] = useState(() => automaticFolder(settings0.folder, compName, t))
+  const changeFormat = (format: QueueFormat) => {
+    if (!autoFolder || SEQUENCES.has(format) === SEQUENCES.has(settings.format)) return set({ format })
+    const own = item ? outputOf(item).folder : ''
+    const others = new Set([...foldersOf(queued)].filter((each) => each !== own))
+    const folder = !SEQUENCES.has(format) && !SEQUENCES.has(settings0.format) ? settings0.folder : defaultFolder(format, compName, t, others)
+    set({ format, folder })
+  }
   const [from, setFrom] = useState(formatTimecode(start.start, fps))
   const [to, setTo] = useState(formatTimecode(start.end, fps))
   const [width, setWidth] = useState(String(settings.width))
@@ -516,6 +552,7 @@ function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: Proj
   const applyPreset = (name: string) => {
     const preset = presets.find((each) => each.name === name)
     if (!preset) return
+    setAutoFolder(false)
     set({ format: preset.format, size: preset.size, frameRate: preset.frameRate, folder: preset.folder, ...(preset.alpha != null ? { alpha: preset.alpha } : {}) })
     setWidth(String(preset.width))
     setHeight(String(preset.height))
@@ -615,7 +652,7 @@ function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: Proj
         ) : null}
         <Field label={t('export.format')}>
           {({ id }) => (
-            <Select id={id} value={settings.format} onChange={(event) => set({ format: event.target.value as QueueFormat })} data-testid="motion-job-format">
+            <Select id={id} value={settings.format} onChange={(event) => changeFormat(event.target.value as QueueFormat)} data-testid="motion-job-format">
               {QUEUE_FORMATS.map((format) => (
                 <option key={format.id} value={format.id}>
                   {t(`export.format.${format.id}`)}
@@ -664,7 +701,18 @@ function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: Proj
           {({ id, invalid }) => <TextInput id={id} invalid={invalid} value={settings.name} placeholder={fileName(compName)} onChange={(event) => set({ name: event.target.value })} data-testid="motion-job-name" />}
         </Field>
         <Field label={t('queue.folder')} error={folder === null ? t('preset.badFolder') : undefined}>
-          {({ id, invalid }) => <TextInput id={id} invalid={invalid} value={settings.folder} onChange={(event) => set({ folder: event.target.value })} data-testid="motion-job-folder" />}
+          {({ id, invalid }) => (
+            <TextInput
+              id={id}
+              invalid={invalid}
+              value={settings.folder}
+              onChange={(event) => {
+                setAutoFolder(false)
+                set({ folder: event.target.value })
+              }}
+              data-testid="motion-job-folder"
+            />
+          )}
         </Field>
         <div className="motion-form-input">
           <TextInput value={presetName} placeholder={t('queue.presetName')} aria-label={t('queue.presetName')} onChange={(event) => setPresetName(event.target.value)} data-testid="motion-job-preset-name" />
