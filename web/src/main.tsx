@@ -4,6 +4,7 @@ import '@kition/sdk/editor/styles.css'
 import './app.css'
 import { App } from './App'
 import { AMERICAN, CATALOGS, PHRASES } from './strings'
+import { LEARNED_NAMES_ZH, shapedZh } from './effectNames'
 import manifest from '../../kit.json'
 import './commandIcons'
 
@@ -38,7 +39,12 @@ void connectHost({ id: 'kit.motion', version: '0.1.3', capabilities: ['ai', 'rep
   const translated = withPhrases(await loadPhrases({}, host.init.locale), PHRASES, host.init.locale)
   // In English, the engine's few British spellings read American ("Screen Color").
   const english = host.init.locale.toLowerCase().startsWith('en')
-  const phrase = numbered(english ? (text: string) => AMERICAN[text] ?? translated(text) : translated)
+  const chinese = host.init.locale.toLowerCase().startsWith('zh')
+  const chineseOf = (text: string) => {
+    const known = translated(text)
+    return known !== text ? known : (shapedZh(text) ?? text)
+  }
+  const phrase = numbered(english ? (text: string) => AMERICAN[text] ?? translated(text) : chinese ? (text: string) => LEARNED_NAMES_ZH.get(text) ?? chineseOf(text) : translated)
   // No StrictMode: its doubled effects would open the document twice, in two engine workers.
   root.render(<App host={host} phrase={phrase} />)
 })

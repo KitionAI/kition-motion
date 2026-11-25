@@ -12,6 +12,9 @@ import { useSetProp } from './useSetProp'
 /** Whether Scale keeps its proportions, for the session (on by default, as in After Effects). */
 let scaleLinked = true
 
+/** The characters a number shows in the timeline's three-number rows while it is not typed in. */
+const FIT_CHARS = 6
+
 /** Properties whose two numbers can be linked to keep proportions. */
 const LINKABLE = new Set(['scale'])
 
@@ -45,7 +48,7 @@ export function PropertyValue({ layer, node, meta, time, name, testId, readOnly,
     }
     const slider = !compact && node.type === 'scalar' ? meta?.slider : undefined
     return (
-      <span className="motion-prop-values" data-kind={slider ? 'slider' : undefined}>
+      <span className="motion-prop-values" data-kind={slider ? 'slider' : undefined} data-count={numbers.length}>
         {numbers.map((value, index) => (
           <NumberField
             key={index}
@@ -60,6 +63,7 @@ export function PropertyValue({ layer, node, meta, time, name, testId, readOnly,
             unit={compact || numbers.length > 1 ? undefined : meta?.unit}
             testId={`${testId}-${index}`}
             readOnly={readOnly}
+            fit={compact && numbers.length > 2 ? FIT_CHARS : undefined}
           />
         ))}
         {linkable && !compact ? (

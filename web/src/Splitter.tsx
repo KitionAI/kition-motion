@@ -50,13 +50,23 @@ export function Splitter({ height, onHeight, main }: { height: number; onHeight:
       data-dragging={dragging || undefined}
       onPointerDown={(event) => {
         if (event.button !== 0) return
+        // No text selection or drag-and-drop may start from the press: WebKit would take the
+        // pointer away mid-drag without a pointerup, leaving the divider following the pointer.
+        event.preventDefault()
         event.currentTarget.setPointerCapture(event.pointerId)
         drag.current = { pointerId: event.pointerId, y: event.clientY, height }
         setDragging(true)
       }}
       onPointerMove={(event) => {
         const current = drag.current
-        if (current?.pointerId === event.pointerId) onHeight(clamp(current.height + current.y - event.clientY))
+        if (current?.pointerId !== event.pointerId) return
+        // A move with no button held means the press ended where this bar did not hear it.
+        if ((event.buttons & 1) === 0) {
+          drag.current = null
+          setDragging(false)
+          return
+        }
+        onHeight(clamp(current.height + current.y - event.clientY))
       }}
       onPointerUp={(event) => {
         if (drag.current?.pointerId !== event.pointerId) return
@@ -64,6 +74,10 @@ export function Splitter({ height, onHeight, main }: { height: number; onHeight:
         setDragging(false)
       }}
       onPointerCancel={() => {
+        drag.current = null
+        setDragging(false)
+      }}
+      onLostPointerCapture={() => {
         drag.current = null
         setDragging(false)
       }}

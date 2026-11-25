@@ -824,9 +824,11 @@ fn tools_the_status_bar_says_what_the_3d_handle_under_the_pointer_does() {
 fn tools_the_second_view_renders_another_3d_view_with_its_ground_and_outlines() {
     let mut doc = doc();
     card(&mut doc);
-    let (rgba, width, height, lines, layers) = doc.view_frame("top", 320).unwrap();
+    let frame = doc.view_frame("top", 320, None).unwrap();
+    let (rgba, width, height, lines, layers) = (frame.rgba, frame.width, frame.height, frame.lines, frame.layers);
     assert_eq!((width, height), (320, 180));
     assert_eq!(rgba.len(), 320 * 180 * 4);
+    assert_eq!(frame.origin, [0.0, 0.0]);
     assert!(lines.as_array().is_some_and(|lines| lines.len() >= 10), "the Top view's ground and outlines: {lines}");
     // The 3D layer with its name, label colour, selection and outline (edge-on from the top: flat).
     let card = layers.as_array().and_then(|layers| layers.first()).cloned().unwrap_or_default();
@@ -836,8 +838,73 @@ fn tools_the_second_view_renders_another_3d_view_with_its_ground_and_outlines() 
     assert_eq!(card["label"].as_array().map(Vec::len), Some(3));
     // The viewer's own view is untouched.
     assert!(doc.session.view_camera(doc.session.active_comp_id().unwrap()).is_none());
-    let (_, _, _, none, no_layers) = doc.view_frame("activeCamera", 320).unwrap();
-    assert_eq!(none, serde_json::json!([]), "the active camera's view draws no ground");
-    assert_eq!(no_layers, serde_json::json!([]));
-    assert!(doc.view_frame("sideways", 320).is_err());
+    let active = doc.view_frame("activeCamera", 320, None).unwrap();
+    assert_eq!(active.lines, serde_json::json!([]), "the active camera's view draws no ground");
+    assert_eq!(active.layers, serde_json::json!([]));
+    assert!(doc.view_frame("sideways", 320, None).is_err());
+}
+
+#[test]
+fn tools_the_second_view_takes_the_shape_of_its_pane_and_sees_more_of_the_scene() {
+    let mut doc = doc();
+    let card = card(&mut doc);
+    let comp = doc.session.project.comp(doc.session.active_comp_id().unwrap()).unwrap();
+    let (w, h) = (f64::from(comp.width), f64::from(comp.height));
+    // A tall pane (3 : 4) beside a wide composition: the picture is 3 : 4, the frame in its middle.
+    let tall = doc.view_frame("top", 300, Some(0.75)).unwrap();
+    assert_eq!((tall.width, tall.height), (300, 400));
+    assert_eq!(tall.rgba.len(), 300 * 400 * 4);
+    let down = w / 0.75;
+    assert!((tall.origin[0]).abs() < 1e-9 && (tall.origin[1] - (h - down) / 2.0).abs() < 1e-9, "{:?}", tall.origin);
+    assert!((tall.scale - 300.0 / w).abs() < 1e-9);
+    // The same outlines as at the composition's shape: they are in composition pixels.
+    let plain = doc.view_frame("top", 300, None).unwrap();
+    assert_eq!(tall.layers, plain.layers);
+    assert_eq!(tall.lines, plain.lines);
+    // A wide pane (3 : 1): more of the scene on each side, the frame centred.
+    let wide = doc.view_frame("front", 600, Some(3.0)).unwrap();
+    assert_eq!((wide.width, wide.height), (600, 200));
+    let across = h * 3.0;
+    assert!((wide.origin[0] - (w - across) / 2.0).abs() < 1e-9 && wide.origin[1].abs() < 1e-9, "{:?}", wide.origin);
+    // The card, seen from the front, is drawn where its outline says (its middle is not the background).
+    let quad = wide.layers.as_array().and_then(|layers| layers.iter().find(|layer| layer["id"] == card)).map(|layer| layer["quad"].clone()).unwrap();
+    let points: Vec<[f64; 2]> = quad.as_array().unwrap().iter().map(|p| [p[0].as_f64().unwrap(), p[1].as_f64().unwrap()]).collect();
+    let cx = points.iter().map(|p| p[0]).sum::<f64>() / 4.0;
+    let cy = points.iter().map(|p| p[1]).sum::<f64>() / 4.0;
+    let (px, py) = (((cx - wide.origin[0]) * wide.scale) as usize, ((cy - wide.origin[1]) * wide.scale) as usize);
+    let at = (py * wide.width as usize + px) * 4;
+    let pixel = &wide.rgba[at..at + 4];
+    assert!(pixel[0] > 200 && pixel[1] < 60 && pixel[2] < 60, "the red card is drawn at its outline's middle: {pixel:?}");
+    // Nonsense shapes fall back to the composition's.
+    let odd = doc.view_frame("top", 320, Some(f64::NAN)).unwrap();
+    assert_eq!((odd.width, odd.height), (320, 180));
+}
+
+#[test]
+fn tools_the_3d_handles_name_their_axes_and_the_depth_dot() {
+    use super::gizmo::{AXIS, Part, overlays, spot};
+    use kition_kit::tools::ToolOverlay;
+    let mut doc = doc();
+    card(&mut doc);
+    let mut out = Vec::new();
+    overlays(&doc.session, 1.0, &mut out);
+    let labels: Vec<(String, [u8; 4], [f64; 2])> = out
+        .iter()
+        .filter_map(|overlay| match overlay {
+            ToolOverlay::Label { x, y, text, color } => Some((text.clone(), *color, [*x, *y])),
+            _ => None,
+        })
+        .collect();
+    for (axis, name) in ["X", "Y", "Z"].into_iter().enumerate() {
+        let coloured: Vec<_> = labels.iter().filter(|(text, color, _)| text == name && *color == AXIS[axis]).collect();
+        assert_eq!(coloured.len(), 1, "{name} is drawn once in its axis colour: {labels:?}");
+        // Outlined: eight dark copies one pixel around it.
+        let outline = labels.iter().filter(|(text, color, _)| text == name && *color != AXIS[axis]).count();
+        assert_eq!(outline, 8, "{name} is outlined");
+        // Beside its tip (the Z arrow points at the viewer: its dot).
+        let tip = spot(&doc.session, Part::Axis(axis), 1.0).unwrap();
+        let at = coloured[0].2;
+        let off = (at[0] - tip[0]).hypot(at[1] - tip[1]);
+        assert!((8.0..=20.0).contains(&off), "{name} sits {off} px from its tip");
+    }
 }

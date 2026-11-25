@@ -543,7 +543,29 @@ pub(super) fn overlays(session: &Session, zoom: f64, out: &mut Vec<ToolOverlay>)
         out.push(ToolOverlay::Path { d: circle.clone(), color: HALO_DARK, width: 3.0, dashed: false });
         out.push(ToolOverlay::Path { d: circle, color: HALO_LIGHT, width: 1.5, dashed: false });
         out.push(ToolOverlay::Handle { x: tip[0], y: tip[1], color: AXIS[axis] });
+        // Its letter, past the tip along the arrow (beside the dot when the arrow points at the viewer).
+        let (dx, dy) = (tip[0] - g.origin_s[0], tip[1] - g.origin_s[1]);
+        let length = dx.hypot(dy);
+        let at = if g.stubbed(axis, zoom) || length * zoom < 1.0 {
+            [tip[0] + 9.0 / zoom, tip[1] - 9.0 / zoom]
+        } else {
+            [tip[0] + dx / length * 16.0 / zoom, tip[1] + dy / length * 16.0 / zoom]
+        };
+        letter(out, at, AXIS_LETTERS[axis], AXIS[axis], zoom);
     }
+}
+
+/// The axes' letters at their arrows' tips.
+const AXIS_LETTERS: [&str; 3] = ["X", "Y", "Z"];
+
+/// A letter at `at` (comp pixels) in `color`, outlined dark like the handles: drawn dark one screen
+/// pixel around, then in its colour.
+fn letter(out: &mut Vec<ToolOverlay>, at: Pt, text: &str, color: [u8; 4], zoom: f64) {
+    let step = 1.0 / zoom;
+    for (ox, oy) in [(-1.0, -1.0), (0.0, -1.0), (1.0, -1.0), (-1.0, 0.0), (1.0, 0.0), (-1.0, 1.0), (0.0, 1.0), (1.0, 1.0)] {
+        out.push(ToolOverlay::Label { x: at[0] + ox * step, y: at[1] + oy * step, text: text.to_owned(), color: HALO_DARK });
+    }
+    out.push(ToolOverlay::Label { x: at[0], y: at[1], text: text.to_owned(), color });
 }
 
 /// The cursor over the handles, if `p` is on them.

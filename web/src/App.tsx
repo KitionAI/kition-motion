@@ -25,8 +25,9 @@ import {
 } from '@kition/sdk/editor'
 import { engineManifest } from './engine'
 import { CATALOGS } from './strings'
+import { learnEffectNames } from './effectNames'
 import { describe, picturePanBounds, timecode } from './motion'
-import { ARRANGE, ASSISTANT_NEEDS, type Convertible, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands } from './menus'
+import { ARRANGE, ASSISTANT_NEEDS, type Convertible, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands, waitingRowStyles, waitingRows } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, rememberEffect, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
@@ -208,6 +209,11 @@ type CacheAhead = { done: number; total: number; full: boolean; bytes?: number; 
  * (`navigator.deviceMemory`, which it rounds and caps at 8), at least 400 MB and at most 1536 MB.
  * A browser that does not report it gets 400 MB.
  */
+/** What 使用更多内存 raises the budget to for the session, where the browser does not report its memory. */
+export const MORE_MEMORY_MB = 1024
+/** The most the preview cache ever takes. */
+export const MOST_MEMORY_MB = 1536
+
 export function cacheBudgetMb(deviceMemory: number | undefined): number {
   if (!(typeof deviceMemory === 'number' && Number.isFinite(deviceMemory) && deviceMemory > 0)) return 400
   return Math.min(1536, Math.max(400, Math.round(deviceMemory * 192)))
@@ -220,7 +226,7 @@ export function cacheBudgetMb(deviceMemory: number | undefined): number {
  * or the cache's memory budget is reached; the cache bar fills as it goes. An edit empties the
  * cache (the engine cannot tell which frames it changed): caching starts again a moment later.
  */
-function useCacheAhead(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, on: boolean, playing: boolean, state: unknown, preview: number, refresh: () => Promise<unknown>) {
+function useCacheAhead(doc: { invoke: <T>(name: string, ...args: unknown[]) => Promise<T> } | null, on: boolean, playing: boolean, state: unknown, preview: number, refresh: () => Promise<unknown>, budget: number) {
   const [progress, setProgress] = useState<CacheAhead | null>(null)
   const latestRefresh = useRef(refresh)
   latestRefresh.current = refresh
@@ -228,6 +234,7 @@ function useCacheAhead(doc: { invoke: <T>(name: string, ...args: unknown[]) => P
   useEffect(() => {
     setProgress(null)
   }, [on, preview])
+  // It starts again after an edit, at another resolution, and with a larger budget (使用更多内存: a full cache goes on).
   useEffect(() => {
     if (!doc || !on || playing) return undefined
     let stopped = false
@@ -248,7 +255,7 @@ function useCacheAhead(doc: { invoke: <T>(name: string, ...args: unknown[]) => P
     return () => {
       stopped = true
     }
-  }, [doc, on, playing, state, preview])
+  }, [doc, on, playing, state, preview, budget])
   return on ? progress : null
 }
 
@@ -782,13 +789,17 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       // Kept for this page only.
     }
   }, [session.doc, preview])
-  // The preview cache's memory budget, from the device's memory.
+  // The preview cache's memory budget, from the device's memory; a browser that does not say how
+  // much it has gets the safe 400 MB, raised for the session by 使用更多内存 when the cache fills.
+  const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+  const memoryReported = typeof deviceMemory === 'number' && Number.isFinite(deviceMemory) && deviceMemory > 0
+  const [moreMemory, setMoreMemory] = useState(false)
+  const budgetMb = Math.min(MOST_MEMORY_MB, moreMemory && !memoryReported ? MORE_MEMORY_MB : cacheBudgetMb(deviceMemory))
   useEffect(() => {
     if (!session.doc) return
-    const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
-    void session.doc.invoke<number>('setPreviewCacheBudget', cacheBudgetMb(memory)).catch(() => undefined)
-  }, [session.doc])
-  const ahead = useCacheAhead(session.doc, cacheAhead, playback.playing, state, preview, frameCache.refresh)
+    void session.doc.invoke<number>('setPreviewCacheBudget', budgetMb).catch(() => undefined)
+  }, [session.doc, budgetMb])
+  const ahead = useCacheAhead(session.doc, cacheAhead, playback.playing, state, preview, frameCache.refresh, budgetMb)
   // The cache is full: the next lower preview resolution holds about that many times more frames.
   const lowerResolution = ahead?.full ? RESOLUTIONS.find(([, , divisor]) => divisor === preview + 1) : undefined
   useEffect(() => {
@@ -926,7 +937,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const [lastEffect, setLastEffect] = useState(false)
   useEffect(() => {
     if (!session.doc) return
-    void query<MotionEffect[]>('effect.list', {}).then((list) => setEffects((list ?? []).map(({ id, name, category, params }) => ({ id, name, category, params }))))
+    void query<MotionEffect[]>('effect.list', {}).then((list) => {
+      // Names translated by id (effectNames.ts) are known once the engine names them.
+      learnEffectNames(list ?? [])
+      setEffects((list ?? []).map(({ id, name, category, params }) => ({ id, name, category, params })))
+    })
   }, [session.doc, query])
   const applyEffect = (effect: string) =>
     void run('effect.apply', { effect }).then((done) => {
@@ -961,7 +976,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const openSolid = async (mode: 'new' | 'settings') => {
     const comp = { width: state?.comp?.width ?? 1920, height: state?.comp?.height ?? 1080 }
     if (mode === 'new') {
-      setDialog({ kind: 'solid', mode, values: { name: await unusedName(t('defaultSolid')), width: comp.width, height: comp.height, color: '#808080', comp } })
+      setDialog({ kind: 'solid', mode, values: { name: await unusedName(t('defaultSolid')), width: comp.width, height: comp.height, color: '#808080', comp, layers: state?.layers.length ?? 0 } })
       return
     }
     const layer = state?.layers.find((item) => item.selected)
@@ -1313,6 +1328,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   // The label every selected layer has (Layer ▸ Label ticks it and calls it current).
   const labelNow = state ? currentLabel(state.layers) : null
   const canConvert: Convertible = convertible.length > 0 ? true : expressionOff ? 'off' : false
+  // The Animation menu's rows that cannot run now look it (greyed; a click still says why).
+  const waitingStyles = useMemo(() => waitingRowStyles(waitingRows(keyState, canConvert)), [keyState, canConvert])
   const rows = useMemo(() => menuRows(effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews, canConvert, labelNow), [effects, overlays, alignTo, skipFrames, remapOn, styled, keyState, cacheAhead, twoViews, canConvert, labelNow])
   // Only the menus' engine commands (and a few more) run from their shortcuts.
   const allowed = useMemo(() => shortcutCommands(rows), [rows])
@@ -1418,6 +1435,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   return (
     <KitEditorProvider editor={editor} tools={tools}>
       <style>{LABEL_ROW_STYLES}</style>
+      <style data-testid="motion-waiting-rows">{waitingStyles}</style>
       <EffectCatalog.Provider value={effects}>
       <SamplerContext.Provider value={sampler}>
       <WaveformContext.Provider value={waveform}>
@@ -1522,6 +1540,11 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
           {state?.comp && cacheAhead && lowerResolution ? (
             <Button variant="ghost" title={t('cacheAhead.lowerHint', { resolution: phrase(lowerResolution[1]) })} onClick={() => setPreview(lowerResolution[2])} data-testid="motion-cache-lower">
               {t('cacheAhead.lower', { resolution: phrase(lowerResolution[1]) })}
+            </Button>
+          ) : null}
+          {state?.comp && cacheAhead && ahead?.full && !memoryReported && !moreMemory ? (
+            <Button variant="ghost" title={t('cacheAhead.moreMemoryHint', { megabytes: MORE_MEMORY_MB })} onClick={() => setMoreMemory(true)} data-testid="motion-cache-more-memory">
+              {t('cacheAhead.moreMemory')}
             </Button>
           ) : null}
           {state?.comp && view3d.has3D ? (

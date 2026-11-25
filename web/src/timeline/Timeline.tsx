@@ -239,7 +239,10 @@ export function Timeline({ info: all, onSeek, keys, onOpenPrecomp, onPrecompose,
   }
   const openMenu = (layer: MotionLayer, at: { x: number; y: number }) => {
     if (!layer.selected) void run('layer.select', { layers: [layer.id] })
-    setMenu({ at, layer: layer.id, layers: layer.selected ? selected : [layer.id], precomp: layer.type === 'Composition', source: HAS_SOURCE.has(layer.type), label: layer.label })
+    const layers = layer.selected ? selected : [layer.id]
+    // The colour the menu ticks: the one every layer it acts on has (none when they differ).
+    const labels = new Set(info.layers.filter((each) => layers.includes(each.id)).map((each) => each.label))
+    setMenu({ at, layer: layer.id, layers, precomp: layer.type === 'Composition', source: HAS_SOURCE.has(layer.type), label: labels.size === 1 ? [...labels][0] : undefined })
   }
 
   // The split between the names (with their columns) and the tracks drags; kept in the browser.

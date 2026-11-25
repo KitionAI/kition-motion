@@ -591,7 +591,7 @@ export function ProjectPanel({
         ) : null}
         {menuItems.length && !readOnly ? (
           <LabelMenu
-            current={menuFirst?.label}
+            current={menuItems.length && menuItems.every((item) => item.label === menuItems[0].label) ? menuItems[0].label : undefined}
             onLabel={(label) => void run('project.setLabel', { items: menuItems.map((item) => item.id), label })}
             onSelectGroup={() => void run('edit.selectLabelGroup', {})}
             testId="motion-item-menu"

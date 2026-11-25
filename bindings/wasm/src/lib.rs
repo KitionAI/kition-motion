@@ -1639,17 +1639,18 @@ pub mod web {
             self.0.gizmo_handles(zoom).to_string()
         }
 
-        /// The two-view layout's second view: the length of a JSON header `{width, height, lines, layers}`
-        /// (four bytes, little-endian), the header, then the RGBA picture (see [`MotionDocument::view_frame`]).
+        /// The two-view layout's second view: the length of a JSON header `{width, height, lines,
+        /// layers, origin, scale}` (four bytes, little-endian), the header, then the RGBA picture;
+        /// `aspect` is the pane's width over its height (see [`MotionDocument::view_frame`]).
         #[wasm_bindgen(js_name = viewFrame)]
-        pub fn view_frame(&self, view: &str, width: u32) -> Result<Vec<u8>, JsError> {
-            let (rgba, w, h, lines, layers) = self.0.view_frame(view, width).map_err(|message| JsError::new(&message))?;
+        pub fn view_frame(&self, view: &str, width: u32, aspect: Option<f64>) -> Result<Vec<u8>, JsError> {
+            let frame = self.0.view_frame(view, width, aspect).map_err(|message| JsError::new(&message))?;
             // The header (JSON, its length first as four bytes) and the picture in one answer.
-            let head = json!({ "width": w, "height": h, "lines": lines, "layers": layers }).to_string().into_bytes();
-            let mut out = Vec::with_capacity(4 + head.len() + rgba.len());
-            out.extend_from_slice(&(head.len() as u32).to_le_bytes());
+            let head = json!({ "width": frame.width, "height": frame.height, "lines": frame.lines, "layers": frame.layers, "origin": frame.origin, "scale": frame.scale }).to_string().into_bytes();
+            let mut out = Vec::with_capacity(4 + head.len() + frame.rgba.len());
+            out.extend_from_slice(&u32::try_from(head.len()).unwrap_or(u32::MAX).to_le_bytes());
             out.extend_from_slice(&head);
-            out.extend_from_slice(&rgba);
+            out.extend_from_slice(&frame.rgba);
             Ok(out)
         }
 

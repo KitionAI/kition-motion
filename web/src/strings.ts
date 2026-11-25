@@ -1,6 +1,6 @@
 import type { Catalog } from '@kition/sdk/editor'
 import { EFFECT_ABOUT_EN, EFFECT_ABOUT_ZH } from './effectAbout'
-import { EFFECT_NAMES_ZH, PARAM_NAMES_ZH } from './effectNames'
+import { EFFECT_NAMES_ZH, OPTION_NAMES_ZH, PARAM_NAMES_ZH } from './effectNames'
 
 /** The editor's own strings (`en-US` is required; others fall back to it). */
 const enUS: Catalog = {
@@ -231,6 +231,8 @@ const enUS: Catalog = {
   "frameFailed": "Could not save the frame",
   "precomposed": "Pre-composed. Double-click the new layer to open its composition.",
   "precomposed.open": "Open",
+  "solid.covers": "The solid covers the layers below",
+  "solid.sendToBack": "Send to Back",
   "layerMenu.open": "Open composition",
   "compPath": "Compositions opened from precomp layers",
   "compPath.back": "Back to {name}",
@@ -517,6 +519,8 @@ const enUS: Catalog = {
   "cacheAhead.fullShort": "Cache full {done}/{total}",
   "cacheAhead.lower": "Set preview to {resolution} to cache more",
   "cacheAhead.lowerHint": "The cache is full: set the preview resolution to {resolution} to cache more frames",
+  "cacheAhead.moreMemory": "Use more memory (1 GB)",
+  "cacheAhead.moreMemoryHint": "This browser does not say how much memory it has, so the preview cache keeps to 400 MB. Let it use up to {megabytes} MB for this session to cache more frames (it uses more of the computer's memory)",
   "cacheAhead.off": "Cache the work area in the background while nothing plays, so it then plays at full speed (click to turn on)",
   "cacheAhead.on": "Caching the work area in the background: {done} of {total} frames held (click to turn off)",
   "cacheAhead.full": "The preview cache is full ({megabytes} MB): {done} of {total} frames held; shorten the work area to hold more (click to turn off)",
@@ -956,6 +960,8 @@ const zhCN: Catalog = {
   "frameFailed": "无法保存当前帧",
   "precomposed": "已预合成。双击新图层可进入它的合成。",
   "precomposed.open": "进入",
+  "solid.covers": "纯色图层盖住了下面的图层",
+  "solid.sendToBack": "移到最下面",
   "layerMenu.open": "打开合成",
   "compPath": "从预合成图层进入的合成",
   "compPath.back": "返回 {name}",
@@ -1242,6 +1248,8 @@ const zhCN: Catalog = {
   "cacheAhead.fullShort": "缓存已满 {done}/{total}",
   "cacheAhead.lower": "把预览分辨率改为{resolution}可缓存更多",
   "cacheAhead.lowerHint": "缓存已满：把预览分辨率改为{resolution}可缓存更多帧",
+  "cacheAhead.moreMemory": "使用更多内存（1 GB）",
+  "cacheAhead.moreMemoryHint": "这个浏览器不报告内存大小，预览缓存只用 400 MB。本次会话里允许它用到 {megabytes} MB 可缓存更多帧（会占用更多电脑内存）",
   "cacheAhead.off": "不播放时在后台缓存工作区域，之后能全速播放（单击打开）",
   "cacheAhead.on": "正在后台缓存工作区域：已缓存 {done}/{total} 帧（单击关闭）",
   "cacheAhead.full": "预览缓存已满（{megabytes} MB）：已缓存 {done}/{total} 帧；缩短工作区域可以缓存更多（单击关闭）",
@@ -1482,7 +1490,8 @@ export const AMERICAN: Record<string, string> = {
 }
 
 export const PHRASES: Record<string, Record<string, string>> = { 'zh-CN': {
-  // Effect names and common effect parameters (effectNames.ts); the entries below win.
+  // Effect names, common effect parameters and drop-down options (effectNames.ts); the entries below win.
+  ...OPTION_NAMES_ZH,
   ...PARAM_NAMES_ZH,
   ...EFFECT_NAMES_ZH,
   // The canvas tools on the rail (bindings/wasm/src/tools.rs).

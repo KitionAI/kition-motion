@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { Button, Checkbox, Dialog, Field, Select, TextInput, formatTimecode, parseHex, parseTimecode, rgbToHex, useKitEditor } from '@kition/sdk/editor'
+import { Button, Checkbox, Dialog, Field, Select, TextInput, formatTimecode, parseHex, parseTimecode, rgbToHex, toast, useKitEditor } from '@kition/sdk/editor'
 import { ColorSwatch } from './properties/ColorSwatch'
-import type { ProjectItem } from './footage'
+import { parseAnswer, type ProjectItem } from './footage'
 
 /** A colour as the engine gives it: [r, g, b] from 0 to 1. */
 export type Rgb = readonly [number, number, number]
@@ -12,7 +12,10 @@ export const toHex = (rgb: Rgb) => rgbToHex([Math.round(rgb[0] * 255), Math.roun
 export type CompValues = { name: string; width: number; height: number; frameRate: number; duration: number; background: string }
 
 /** The solid a Solid dialog starts with; `comp` is the active composition's size, for Make Comp Size. */
-export type SolidValues = { name: string; width: number; height: number; color: string; comp: { width: number; height: number } }
+export type SolidValues = { name: string; width: number; height: number; color: string; comp: { width: number; height: number }; layers?: number }
+
+/** Whether this page has already said that a new solid covers the layers below (once per session). */
+let coverNoticeShown = false
 
 /** The editor's own dialogs: what each asks and what it starts with. */
 export type MotionDialog =
@@ -225,7 +228,20 @@ function SolidDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kind:
   const submit = () => {
     if (!valid) return
     const params = { name: name.trim(), width: Math.round(w), height: Math.round(h), color }
-    void run(dialog.mode === 'new' ? 'layer.newSolid' : 'layer.settings', dialog.mode === 'new' ? params : { ...params, layer: dialog.layer })
+    if (dialog.mode !== 'new') {
+      void run('layer.settings', { ...params, layer: dialog.layer })
+      onDone()
+      return
+    }
+    // A new layer goes on top: a solid covering the whole frame hides what was there. Once per
+    // session the editor says so and offers to send it to the back (its own undo step).
+    const covers = !coverNoticeShown && (start.layers ?? 0) > 0 && params.width >= start.comp.width && params.height >= start.comp.height
+    void run('layer.newSolid', params).then((answer) => {
+      const layer = parseAnswer<{ layer?: number }>(answer)?.layer
+      if (!covers || layer == null || coverNoticeShown) return
+      coverNoticeShown = true
+      toast.info(t('solid.covers'), { duration: 10000, action: { label: t('solid.sendToBack'), onClick: () => void run('layer.arrange', { layers: [layer], to: 'back' }) } })
+    })
     onDone()
   }
   const invalid = t('dialog.badNumber')

@@ -64,7 +64,7 @@ function dimsOf(type: string | undefined, layer: MotionLayer) {
 function useCurves(targets: readonly GraphTarget[], from: number, to: number, count: number, revision: unknown) {
   const { query } = useKitEditor()
   const sample = useSampler()
-  const [curves, setCurves] = useState<Curve[]>([])
+  const [curves, setCurves] = useState<{ curves: Curve[]; of: readonly GraphTarget[] | null }>({ curves: [], of: null })
   const asked = useRef(0)
   useEffect(() => {
     const ask = ++asked.current
@@ -88,9 +88,10 @@ function useCurves(targets: readonly GraphTarget[], from: number, to: number, co
         const spatial = dims > 1 && keys.some((key) => key.outEase.length === 1 || key.inEase.length === 1)
         read.push({ target, uid: prop.uid, dims, keys, samples, from, to, spatial })
       }
-      if (ask === asked.current) setCurves(read)
+      if (ask === asked.current) setCurves({ curves: read, of: targets })
     })()
   }, [targets, from, to, count, revision, query, sample])
+  // The curves, and the targets they were read for (the fit waits for the current targets' curves).
   return curves
 }
 
@@ -217,7 +218,7 @@ export function GraphEditor({
     return () => observer.disconnect()
   }, [])
   const count = Math.round(Math.min(600, Math.max(48, width / 3)))
-  const all = useCurves(targets, view.start, view.start + view.span, count, revision)
+  const { curves: all, of: readFor } = useCurves(targets, view.start, view.start + view.span, count, revision)
   // The legend's eyes hide curves, its solo shows one alone; the rest draw, select and fit only what shows.
   const [hiddenCurves, setHiddenCurves] = useState<ReadonlySet<string>>(() => new Set())
   const [solo, setSolo] = useState<string | null>(null)
@@ -275,12 +276,44 @@ export function GraphEditor({
     onFit(Math.max(0, first - room), last + room)
   }
   fitRef.current = fit
-  // Fits once per `autoFit`, as soon as the curves with keys are read.
+  // Where the person last pressed: a change made in the graph (a click or box on keys, the legend,
+  // Delete after them) must not re-fit the time under the pointer, and nothing re-fits while a press
+  // here is held. A press outside the graph makes the next change of the shown properties fit.
+  const pressedHere = useRef(false)
+  const lastInside = useRef(false)
+  useEffect(() => {
+    const doc = box.current?.ownerDocument
+    if (!doc) return undefined
+    const inside = (event: Event) => event.target instanceof Node && box.current?.contains(event.target) === true
+    const press = (event: PointerEvent) => {
+      lastInside.current = inside(event)
+      pressedHere.current = lastInside.current
+    }
+    const release = () => {
+      pressedHere.current = false
+    }
+    doc.addEventListener('pointerdown', press, true)
+    doc.addEventListener('pointerup', release, true)
+    doc.addEventListener('pointercancel', release, true)
+    return () => {
+      doc.removeEventListener('pointerdown', press, true)
+      doc.removeEventListener('pointerup', release, true)
+      doc.removeEventListener('pointercancel', release, true)
+    }
+  }, [])
+  // Fits once per `autoFit`, as soon as the curves with keys are read: the first one (the graph
+  // opening) always, a later one (the shown layers or properties changed) only when the change came
+  // from outside the graph; never while a press in the graph is held.
   const fitted = useRef(0)
+  const opened = useRef(false)
   const hasKeys = curves.some((curve) => curve.keys.length > 0)
   useEffect(() => {
-    if (autoFit === fitted.current || !hasKeys) return
+    // The curves in hand may still be the previous layers' (a fit to them would show the wrong time).
+    if (autoFit === fitted.current || readFor !== targets || !hasKeys) return
     fitted.current = autoFit
+    const first = !opened.current
+    opened.current = true
+    if (pressedHere.current || dragNow.current || (!first && lastInside.current)) return
     fit()
   }) // eslint-disable-line react-hooks/exhaustive-deps
 

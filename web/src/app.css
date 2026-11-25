@@ -530,6 +530,30 @@ button.motion-switch:focus-visible {
 
 .motion-prop-names .motion-prop-values {
   flex: 0 0 132px;
+  flex-wrap: nowrap;
+}
+
+/* The timeline's numbers fit inside its 26 px rows. */
+.motion-prop-names .motion-number {
+  height: 22px;
+  font-size: 12px;
+}
+
+/* Three numbers (a 3D layer's Anchor Point, Position, Scale, Orientation) stay on the row: a wider
+   cell, narrower fields with less padding; each shows what fits and the whole value when typed in. */
+.motion-prop-names .motion-prop-values[data-count='3'] {
+  flex-basis: 180px;
+  gap: 3px;
+}
+
+.motion-prop-names .motion-prop-values[data-count='3'] > .motion-number-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.motion-prop-names .motion-prop-values[data-count='3'] .motion-number {
+  padding-left: 3px;
+  padding-right: 3px;
 }
 
 .motion-empty {
@@ -1118,6 +1142,8 @@ p.motion-effect-group-head {
   background: var(--kit-surface);
   cursor: row-resize;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .motion-splitter::before {
@@ -2559,6 +2585,8 @@ p.motion-effect-group-head {
   width: 8px;
   cursor: col-resize;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .motion-second-divider::before {

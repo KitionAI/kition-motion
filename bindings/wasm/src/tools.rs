@@ -340,6 +340,22 @@ fn hover_cursor(session: &Session, p: Pt, zoom: f64) -> String {
     if over { "move" } else { "default" }.to_owned()
 }
 
+/// The two-view layout's second view as [`MotionDocument::view_frame`] draws it.
+pub struct ViewFrame {
+    /// The picture, RGBA over the composition's background, `width` × `height`.
+    pub rgba: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+    /// The ground, outlines, cameras and lights, in composition pixels.
+    pub lines: Value,
+    /// The 3D layers' outlines, names, label colours and selection.
+    pub layers: Value,
+    /// The composition point at the picture's top left.
+    pub origin: [f64; 2],
+    /// Picture pixels per composition pixel.
+    pub scale: f64,
+}
+
 impl MotionDocument {
     /// Whether paths are being edited: a vertex is picked, or a selected layer is in path editing.
     pub(crate) fn editing_paths(&self, st: &ToolState) -> bool {
@@ -354,20 +370,37 @@ impl MotionDocument {
 
     /// The second view of the two-view layout: the active composition at the current time seen
     /// through 3D view `view` (`top`, `front`, `activeCamera`…; its edited camera, or its default),
-    /// at most `width` pixels wide, as RGBA over the background (`rgba`, `width`, `height`), with
-    /// the ground, the 3D layers' outlines, cameras and lights for that view as lines in
-    /// composition pixels (`lines`: `[ax, ay, bx, by, r, g, b, a, dashed]`), and each 3D layer's
-    /// outline with its name, label colour and whether it is selected (`layers`, see
-    /// [`view3d::layers_through`]).
-    pub fn view_frame(&self, view: &str, width: u32) -> Result<(Vec<u8>, u32, u32, Value, Value), String> {
+    /// at most `width` pixels wide, as RGBA over the background, with the ground, the 3D layers'
+    /// outlines, cameras and lights for that view as lines in composition pixels (`lines`:
+    /// `[ax, ay, bx, by, r, g, b, a, dashed]`), and each 3D layer's outline with its name, label
+    /// colour and whether it is selected (`layers`, see [`view3d::layers_through`]).
+    ///
+    /// With `aspect` (the pane's width over its height) the picture has that shape: the view sees
+    /// more of the scene beside (or above and below) the composition's frame, centred on it, so it
+    /// fills the pane. The picture's top left is composition point `origin`, at `scale` picture
+    /// pixels per composition pixel.
+    pub fn view_frame(&self, view: &str, width: u32, aspect: Option<f64>) -> Result<ViewFrame, String> {
         use kition_motion_engine::render::three_d::View3D;
         let cid = self.session.active_comp_id().ok_or("no composition is open")?;
         let comp = self.session.project.comp(cid).ok_or("no composition is open")?;
         let which = View3D::from_id(view).ok_or_else(|| format!("no 3D view `{view}`"))?;
         let (w, h) = (f64::from(comp.width.max(1)), f64::from(comp.height.max(1)));
+        // The region seen, in composition pixels: the frame, widened or heightened to the pane's shape.
+        let region = match aspect.filter(|a| a.is_finite() && *a > 0.0).map(|a| a.clamp(0.05, 20.0)) {
+            Some(a) if a > w / h + 1e-6 => {
+                let across = h * a;
+                [(w - across) / 2.0, 0.0, across, h]
+            }
+            Some(a) if a < w / h - 1e-6 => {
+                let down = w / a;
+                [0.0, (h - down) / 2.0, w, down]
+            }
+            _ => [0.0, 0.0, w, h],
+        };
         let camera = (which != View3D::ActiveCamera).then(|| self.session.state.views3d.get(&cid).cloned().unwrap_or_default().cam(which, w, h).state());
-        let scale = (f64::from(width.clamp(16, 4096)) / w).min(1.0);
-        let opts = kition_motion_engine::render::RenderOpts { scale, view: camera, ..Default::default() };
+        let scale = (f64::from(width.clamp(16, 4096)) / region[2]).min(1.0);
+        let roi = (region != [0.0, 0.0, w, h]).then_some(region);
+        let opts = kition_motion_engine::render::RenderOpts { scale, view: camera, roi, ..Default::default() };
         let mut renderer = kition_motion_engine::render::Renderer::new(&self.session.project, &*self.session.footage, opts);
         renderer.expr = self.session.expr.as_deref();
         let image = renderer.comp_frame(cid, comp.frame_rate.snap(self.session.time()));
@@ -384,7 +417,17 @@ impl MotionDocument {
                 }
             }
         }
-        Ok((rgba, image.width, image.height, Value::Array(lines), Value::Array(layers)))
+        // The picture's own scale: whole pixels round the region's size.
+        let scale = f64::from(image.width) / region[2].max(1.0);
+        Ok(ViewFrame {
+            rgba,
+            width: image.width,
+            height: image.height,
+            lines: Value::Array(lines),
+            layers: Value::Array(layers),
+            origin: [region[0], region[1]],
+            scale,
+        })
     }
 
     /// Runs an engine command for a tool, as the editor would.

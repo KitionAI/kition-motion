@@ -28,6 +28,9 @@ type Head = {
   height: number
   lines: Array<[number, number, number, number, number, number, number, number, boolean]>
   layers?: Array<{ id: number; name: string; label: [number, number, number]; selected: boolean; quad: Array<[number, number]> }>
+  /** The composition point at the picture's top left, and picture pixels per composition pixel. */
+  origin?: [number, number]
+  scale?: number
 }
 
 /** Whether point (`x`, `y`) is inside the polygon `points`. */
@@ -140,10 +143,8 @@ export function SecondView({
     if (playing) return undefined
     const timer = window.setTimeout(async () => {
       const ratio = Math.min(2, window.devicePixelRatio || 1)
-      const aspect = (compWidth || 16) / (compHeight || 9)
-      // As wide as the pane, or as the pane's height allows at the composition's aspect.
-      const fit = Math.min(size.width, size.height * aspect)
-      const answer = await doc.invoke<Uint8Array>('viewFrame', view, Math.max(16, Math.round(fit * ratio))).catch(() => null)
+      // The picture takes the pane's shape: the view sees more of the scene around the frame.
+      const answer = await doc.invoke<Uint8Array>('viewFrame', view, Math.max(16, Math.round(size.width * ratio)), size.width / size.height).catch(() => null)
       const element = canvas.current
       if (!current || !answer || !element || answer.length < 4) return
       const headSize = new DataView(answer.buffer, answer.byteOffset, 4).getUint32(0, true)
@@ -167,9 +168,12 @@ export function SecondView({
       context.clearRect(0, 0, element.width, element.height)
       context.imageSmoothingEnabled = true
       context.drawImage(picture, ox, oy, pw, ph)
-      // The lines are in composition pixels: drawn at the picture's scale.
-      const scale = (head.width / (compWidth || head.width)) * fitScale
-      const at = ([x, y]: readonly [number, number]) => [ox + x * scale, oy + y * scale] as const
+      // The lines are in composition pixels: drawn at the picture's scale, from its origin.
+      const scale = (head.scale ?? head.width / (compWidth || head.width)) * fitScale
+      const [originX, originY] = head.origin ?? [0, 0]
+      const left = ox - originX * scale
+      const top = oy - originY * scale
+      const at = ([x, y]: readonly [number, number]) => [left + x * scale, top + y * scale] as const
       context.lineWidth = 1
       for (const [ax, ay, bx, by, r, g, b, a, dashed] of head.lines) {
         context.strokeStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`
@@ -220,7 +224,7 @@ export function SecondView({
         context.fillStyle = '#ffffff'
         context.fillText(text, x + 4, y + h / 2)
       }
-      placed.current = { x: ox, y: oy, scale, layers }
+      placed.current = { x: left, y: top, scale, layers }
       // Each layer's middle in CSS pixels from the canvas's top left (for the browser tests' clicks).
       const centres = layers
         .map((layer) => {
@@ -276,17 +280,29 @@ export function SecondView({
         tabIndex={0}
         onPointerDown={(event) => {
           if (event.button !== 0) return
+          // No text selection or drag-and-drop may start from the press: WebKit would take the
+          // pointer away mid-drag without a pointerup, leaving the divider following the pointer.
+          event.preventDefault()
           event.currentTarget.setPointerCapture(event.pointerId)
           drag.current = { pointerId: event.pointerId, x: event.clientX, width }
         }}
         onPointerMove={(event) => {
           const current = drag.current
-          if (current?.pointerId === event.pointerId) keep(clampSecondWidth(current.width + current.x - event.clientX, room || window.innerWidth))
+          if (current?.pointerId !== event.pointerId) return
+          // A move with no button held means the press ended where this divider did not hear it.
+          if ((event.buttons & 1) === 0) {
+            drag.current = null
+            return
+          }
+          keep(clampSecondWidth(current.width + current.x - event.clientX, room || window.innerWidth))
         }}
         onPointerUp={(event) => {
           if (drag.current?.pointerId === event.pointerId) drag.current = null
         }}
         onPointerCancel={() => {
+          drag.current = null
+        }}
+        onLostPointerCapture={() => {
           drag.current = null
         }}
         onKeyDown={(event) => {

@@ -2,7 +2,7 @@ import { ContextMenu, MenuItem, MenuSeparator, useKitEditor, type ContextMenuPoi
 import { LabelMenu } from '../labels'
 
 /** The layer a right-click opened the menu on, the layers it acts on, and where it opened. */
-export type LayerMenuTarget = { at: ContextMenuPoint; layer: number; layers: number[]; precomp?: boolean; source?: boolean; /** The clicked layer's colour label. */ label?: string }
+export type LayerMenuTarget = { at: ContextMenuPoint; layer: number; layers: number[]; precomp?: boolean; source?: boolean; /** The colour label every layer it acts on has (none when they differ). */ label?: string }
 
 /** The layer types made from a project item (footage, a composition, a solid): Reveal Layer Source in Project finds it. */
 export const HAS_SOURCE: ReadonlySet<string> = new Set(['Footage', 'Composition', 'Solid'])

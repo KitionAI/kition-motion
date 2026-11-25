@@ -252,6 +252,24 @@ export const ASSISTANT_NEEDS = {
 /** Whether Convert Expression to Keyframes can run: yes, not until the selected expression is turned on, or not without a selected property with an expression. */
 export type Convertible = boolean | 'off'
 
+/**
+ * The Animation menu's rows that cannot run now (their labels say why): the SDK has no disabled
+ * state for a kit's own rows, so `waitingRowStyles` greys them; choosing one still says why.
+ */
+export function waitingRows(keys: SelectedKeys, convertible: Convertible): string[] {
+  const rows: string[] = []
+  if (convertible !== true) rows.push(KIT.convertExpression)
+  if ((keys.count ?? 0) < 2) rows.push(KIT.wiggler)
+  if ((keys.count ?? 0) < 3) rows.push(KIT.smoother)
+  if (!keys.roving && keys.rovable === false) rows.push(KIT.rove)
+  return rows
+}
+
+/** A style sheet greying `rows` (`kit:…` ids) in the menu bar, keyed by their Kit UI ids (`control:…`). */
+export function waitingRowStyles(rows: readonly string[]): string {
+  return rows.map((row) => `.kui-menu-item[data-kit-ui-id="control:${row.replace(/^kit:/, '')}"] { color: var(--kit-text-muted); cursor: default; }`).join('\n')
+}
+
 
 const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapOn: boolean, styled: ReadonlySet<string>, keys: SelectedKeys, cacheAhead: boolean, twoViews: boolean, convertible: Convertible, labelNow: string | null): ReadonlyArray<readonly [string, readonly Entry[]]> => [
   [

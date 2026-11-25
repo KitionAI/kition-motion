@@ -66,9 +66,11 @@ async function click(cx, cy, modifiers = []) {
   for (const key of modifiers) await page.keyboard.up(key)
 }
 /** A press at composition point `from`, moved in small steps to `to` (composition pixels), released; `held` keys are down for the move only, `pressed` from the press. */
-async function drag(from, to, { held = [], pressed = [] } = {}) {
-  const a = await at(...from)
-  const b = await at(...to)
+async function drag(from, to, { held = [], pressed = [], whole = false } = {}) {
+  const snap = (p) => (whole ? { x: Math.round(p.x), y: Math.round(p.y) } : p)
+  const a = snap(await at(...from))
+  const b = snap(await at(...to))
+  const { zoom } = await view()
   for (const key of pressed) await page.keyboard.down(key)
   await page.mouse.move(a.x, a.y)
   await page.mouse.down()
@@ -81,6 +83,8 @@ async function drag(from, to, { held = [], pressed = [] } = {}) {
   await page.mouse.up()
   for (const key of [...held, ...pressed].reverse()) await page.keyboard.up(key)
   await page.waitForTimeout(150)
+  // The composition pixels the pointer travelled (exact when `whole` put both ends on page pixels).
+  return [(b.x - a.x) / zoom, (b.y - a.y) / zoom]
 }
 const active = async () => (await kit.locator('[data-testid^="motion-tool-"][aria-pressed="true"]').getAttribute('data-testid'))?.replace('motion-tool-', '')
 /** Keys go to the editor, not to a field. */
@@ -244,13 +248,17 @@ try {
   await page.mouse.click(ruler.x + ruler.width * 0.5, ruler.y + ruler.height / 2)
   await until(async () => (await details()).time > 1.3)
   const now = (await details()).time
-  await drag([850, 200], [890, 220], { held: [primary] })
+  // Both ends on whole page pixels: WebKit reports the pointer in whole pixels, and at the viewer's
+  // zoom one page pixel is about two composition pixels, so the layer moves by what the pointer
+  // travelled between those pixels (about 40, 20), from where the drag drew it.
+  const travelled = await drag([850, 200], [890, 220], { held: [primary], whole: true })
+  await until(async () => ((await query('prop.get', { layer: rect.id, path: 'transform/position' })).keys ?? []).length === 2)
   const keys = (await query('prop.get', { layer: rect.id, path: 'transform/position' })).keys ?? []
   const atNow = (await query('prop.get', { layer: rect.id, path: 'transform/position', time: now })).value
   step(
     'moving an animated position keys it at the current time',
-    keys.length === 2 && nearAll(atNow, [890, 220], 1.5),
-    `${keys.length} keys, ${JSON.stringify(atNow)} at ${now}`,
+    keys.length === 2 && nearAll(atNow, from(...travelled), 1.5) && nearAll(travelled, [40, 20], 2.5),
+    `${keys.length} keys, ${JSON.stringify(atNow)} at ${now}, travelled ${JSON.stringify(travelled)}`,
   )
   await undo()
   await focusEditor()
