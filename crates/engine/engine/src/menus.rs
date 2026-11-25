@@ -18,8 +18,8 @@
 //! ```
 //!
 //! An entry's shortcut is the command's default shortcut unless the line gives one (needed for
-//! entries with bound parameters). Adobe-service entries (Team Projects, Libraries, Bridge, Media
-//! Encoder, Behance, Creative Cloud…) are intentionally absent; the Graphics Templates workspace
+//! entries with bound parameters). Entries for the target app's online services and companion apps
+//! (team projects, cloud libraries, an asset browser, an external encoder…) are intentionally absent; the Graphics Templates workspace
 //! uses the Properties panel and the Graphics Templates panel, whose templates use Kition Motion's
 //! own open `.ectemplate` format.
 
@@ -524,7 +524,7 @@ File
   Import
     File... | file.import
     Multiple Files... | file.importMultiple
-    Adobe Premiere Pro Project... | file.importTimeline
+    Editing Timeline... | file.importTimeline
     Placeholder... | file.importPlaceholder
     Solid... | file.importSolid
     Lottie... | file.importLottie
@@ -536,7 +536,7 @@ File
     Clear Recent Footage | file.clearRecentFootage
   Export
     Add to Render Queue | renderQueue.add
-    Adobe Premiere Pro Project... | file.exportTimeline
+    Editing Timeline... | file.exportTimeline
     Lottie JSON... | file.exportLottie
     Graphics Template... | templateProps.exportTemplate
   ---

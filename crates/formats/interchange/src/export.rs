@@ -1,5 +1,5 @@
-//! Compositions → timeline documents (File ▸ Export ▸ Adobe Premiere Pro Project…, which writes
-//! Final Cut Pro XML that Premiere Pro imports; FCPXML, OTIO and EDL on request).
+//! Compositions → timeline documents (File ▸ Export ▸ Editing Timeline…, which writes Final Cut
+//! Pro XML that editing timelines import; FCPXML, OTIO and EDL on request).
 
 use std::collections::HashMap;
 
@@ -24,7 +24,7 @@ pub enum PrerenderMode {
     /// mattes, expressions, time remapping…) are pre-rendered.
     #[default]
     Unsupported,
-    /// Every visual layer is pre-rendered (what you see is what Premiere shows).
+    /// Every visual layer is pre-rendered (what you see is what the editing timeline shows).
     All,
 }
 
@@ -154,7 +154,7 @@ fn unsupported(project: &Project, comp: &Comp, l: &Layer, format: TimelineFormat
     if l.blend_mode != kition_motion_color::BlendMode::Normal && !fp::effect::BLEND_MODES.iter().any(|m| m.eq_ignore_ascii_case(l.blend_mode.label())) {
         return Some(format!("blend mode {}", l.blend_mode.label()));
     }
-    // Premiere's Basic Motion in the interchange formats has one (uniform) scale.
+    // Basic Motion in the interchange formats has one (uniform) scale.
     if let Some(s) = l.transform().and_then(|t| t.get("scale"))
         && std::iter::once(&s.value).chain(s.keys.iter().map(|k| &k.value)).any(|v| {
             let a = v.as_vec3();

@@ -119,9 +119,14 @@ try {
   // answer: the rate that allows, at most.
   const delay = Number(process.env.ENGINE_DELAY_MS ?? 0)
   const reachable = delay > 0 ? Math.min(comp.frameRate, 1000 / (delay * 1.5)) : comp.frameRate
+  // With the page's CPU slowed down on purpose (CPU_THROTTLE, Chromium only: the harness applies
+  // it there), every frame's drawing takes that many times longer, so the floor of a third of the
+  // composition's rate is divided by that factor too. Only then: CI and normal runs set neither
+  // variable and keep the floor of a third exactly.
+  const throttle = h.which === 'chromium' && Number(process.env.CPU_THROTTLE) > 1 ? Number(process.env.CPU_THROTTLE) : 1
   const full = fps >= reachable * 0.8
-  const asFastAsTheRunner = fps >= uncached * 0.9 && fps >= reachable / 3
-  step('cached playback runs at (nearly) the composition’s rate, or (on a slow runner) no slower than uncached playback', full || asFastAsTheRunner, `${fps} of ${comp.frameRate}, uncached ${uncached}${delay > 0 ? ` (at most ${reachable.toFixed(1)} with answers ${delay} ms late)` : ''}`)
+  const asFastAsTheRunner = fps >= uncached * 0.9 && fps >= reachable / 3 / throttle
+  step('cached playback runs at (nearly) the composition’s rate, or (on a slow runner) no slower than uncached playback', full || asFastAsTheRunner, `${fps} of ${comp.frameRate}, uncached ${uncached}${delay > 0 ? ` (at most ${reachable.toFixed(1)} with answers ${delay} ms late)` : ''}${throttle > 1 ? ` (floor ${(reachable / 3 / throttle).toFixed(1)} with the CPU ${throttle}× slower)` : ''}`)
 } catch (error) {
   h.crashed(error)
 } finally {

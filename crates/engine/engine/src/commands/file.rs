@@ -250,7 +250,7 @@ struct Prober {
     /// Image sequences' frames per second: the import's `frameRate`, or Settings ▸ Import ▸
     /// Sequence Footage.
     sequence_rate: kition_motion_time::FrameRate,
-    /// PDF / Illustrator page (0-based).
+    /// PDF / `.ai` page (0-based).
     page: u32,
     /// Choose Layer: one layer of a PSD document.
     psd_layer: Option<Value>,
@@ -302,7 +302,7 @@ impl Prober {
                 None => ask_alpha = true,
             }
         }
-        // Page: another page of a PDF / Illustrator file.
+        // Page: another page of a PDF / `.ai` file.
         if self.page > 0 && matches!(f.codec.as_str(), "PDF" | "AI") {
             let doc = self
                 .services
@@ -331,7 +331,7 @@ impl Prober {
 }
 
 /// The first part of an import: read the parameters, note the files as recent footage, and
-/// import layered files (PSD, PDF, Illustrator, EPS) as compositions when `importAs` (or,
+/// import layered files (PSD, PDF, `.ai`, EPS) as compositions when `importAs` (or,
 /// for dropped files, Default Drag Import As) asks for that. The other files are left to probe.
 fn prepare_import(s: &mut Session, p: &Value) -> Result<PendingImport> {
     let paths: Vec<String> = match p.get("paths").or(p.get("path")) {
@@ -353,7 +353,7 @@ fn prepare_import(s: &mut Session, p: &Value) -> Result<PendingImport> {
         "compositionLayerSizes" | "compositionRetainLayerSizes" | "layerSizes" => Some(true),
         other => return Err(bad("file.import", format!("importAs: footage|composition|compositionLayerSizes, not `{other}`"))),
     };
-    // PDF / Illustrator: which page (1-based, as in the Import dialog).
+    // PDF / `.ai`: which page (1-based, as in the Import dialog).
     let page = match p.get("page") {
         None | Some(Value::Null) => 0,
         Some(v) => match v.as_u64().or_else(|| v.as_f64().filter(|x| x.fract() == 0.0 && *x >= 1.0).map(|x| x as u64)) {
@@ -371,7 +371,7 @@ fn prepare_import(s: &mut Session, p: &Value) -> Result<PendingImport> {
             let bytes = match s.services.read_file(&path) {
                 Ok(b) if kition_motion_psd::is_psd(&b) => b,
                 Ok(b) if kition_motion_pdf::sniff(&b).is_some() && !path.to_ascii_lowercase().ends_with(".svg") => {
-                    // PDF / Illustrator / EPS: one layer per file layer.
+                    // PDF / `.ai` / EPS: one layer per file layer.
                     match import_vector_comp(s, &path, &b, page) {
                         Ok((comp, made)) => {
                             comps.push(comp);
@@ -510,7 +510,7 @@ pub(crate) fn import_psd_comp(s: &mut Session, path: &str, bytes: Vec<u8>, retai
     Ok((r.comp.0, items, r.warnings))
 }
 
-/// Import page `page` of a PDF / Illustrator / EPS file as a composition (one undo step).
+/// Import page `page` of a PDF / `.ai` / EPS file as a composition (one undo step).
 /// Returns (comp, items).
 fn import_vector_comp(s: &mut Session, path: &str, bytes: &[u8], page: u32) -> Result<(u64, Vec<u64>)> {
     let mut name = std::path::Path::new(path).file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Vector".into());
@@ -717,7 +717,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "File...",
             ["File", "Import"],
             Some("Cmd+I"),
-            "{paths: [string] (files or folders), sequence?: bool (the Sequence checkbox: true imports numbered stills of one run as one image sequence, one picked file bringing its whole run and several picked files that range; default: a numbered still brings its run, except dropped files (drag), which import as stills as is usual; folders' runs import as sequences; false imports stills and a folder's files individually), alphabetical?: bool (Force Alphabetical Order: every image of that type in the folder, by name), frameRate?: fps (image sequences; default Settings ▸ Import ▸ Sequence Footage), importAs?: footage|composition|compositionLayerSizes (PSD, PDF, Illustrator and EPS files), layer?: name|index (footage of one PSD layer), page?: number from 1 (PDF / Illustrator page), drag?: bool (dropped files: Settings ▸ Import ▸ Default Drag Import As; files import as stills unless sequence), addToComp?: bool (also add them to the active comp, at time?, index?, position?: as in layer.addItem), background?: bool (probe the files in a background job, jobs.list / jobs.wait; returns {job})}",
+            "{paths: [string] (files or folders), sequence?: bool (the Sequence checkbox: true imports numbered stills of one run as one image sequence, one picked file bringing its whole run and several picked files that range; default: a numbered still brings its run, except dropped files (drag), which import as stills as is usual; folders' runs import as sequences; false imports stills and a folder's files individually), alphabetical?: bool (Force Alphabetical Order: every image of that type in the folder, by name), frameRate?: fps (image sequences; default Settings ▸ Import ▸ Sequence Footage), importAs?: footage|composition|compositionLayerSizes (PSD, PDF, .ai and EPS files), layer?: name|index (footage of one PSD layer), page?: number from 1 (PDF / .ai page), drag?: bool (dropped files: Settings ▸ Import ▸ Default Drag Import As; files import as stills unless sequence), addToComp?: bool (also add them to the active comp, at time?, index?, position?: as in layer.addItem), background?: bool (probe the files in a background job, jobs.list / jobs.wait; returns {job})}",
             always,
             import_cmd
         ),

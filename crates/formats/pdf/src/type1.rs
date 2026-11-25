@@ -1,4 +1,4 @@
-//! Type 1 font programs (`FontFile`), from Adobe's published *Adobe Type 1 Font Format*:
+//! Type 1 font programs (`FontFile`), from the published *Adobe Type 1 Font Format* specification:
 //! the cleartext part (`/FontMatrix`, the built-in `/Encoding`), `eexec` decryption, `/Subrs`
 //! and `/CharStrings`, and a Type 1 charstring interpreter (including flex and hint
 //! replacement through `callothersubr`, and `seac` accented characters).

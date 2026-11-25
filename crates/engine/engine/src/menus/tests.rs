@@ -112,7 +112,7 @@ fn shortcuts_are_unambiguous() {
 fn menus_cover_after_effects_structure() {
     let entries = platform_entries(true);
     let count = |m: &str| entries.iter().filter(|(p, _)| p[0] == m).count();
-    // Floors (target app 2026 minus Adobe-service, history and user-specific entries).
+    // Floors (target app 2026 minus online-service, history and user-specific entries).
     assert!(count("File") >= 40, "File {}", count("File"));
     assert!(count("Edit") >= 54, "Edit {}", count("Edit"));
     assert!(count("Composition") >= 19, "Composition {}", count("Composition"));

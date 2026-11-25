@@ -1,4 +1,4 @@
-//! Premiere Pro interop through timeline interchange, with real media: documents written in code
+//! Editing-timeline interop through timeline interchange, with real media: documents written in code
 //! with Kition Film's writers are imported (`file.importTimeline`) and rendered; compositions are
 //! exported (`file.exportTimeline`, with a ProRes 4444 pre-render) and re-imported, and both
 //! render the same pixels.
@@ -114,7 +114,7 @@ fn render(s: &kition_motion_engine::Session, cid: ItemId, secs: f64) -> Image {
 }
 
 #[test]
-fn imported_timelines_render_like_premiere() {
+fn imported_timelines_render_as_edited() {
     for (fmt, motion) in [(fc::Format::Fcp7Xml, true), (fc::Format::Otio, false)] {
         let path = tmp(&format!("interop.{}", fmt.extension()));
         std::fs::write(&path, document(fmt)).unwrap();
@@ -145,7 +145,7 @@ fn export_prerenders_and_reimports_the_same_pixels() {
     let item = s.execute("file.import", json!({"paths": [red]})).unwrap()["items"][0].as_u64().unwrap();
     let lr = s.execute("layer.addItem", json!({"item": item})).unwrap()["layer"].as_u64().unwrap();
     s.execute("prop.set", json!({"layer": lr, "path": "transform/opacity", "value": 60})).unwrap();
-    // A small solid: a rendered-only layer (Premiere's colour mattes fill the frame).
+    // A small solid: a rendered-only layer (an editing timeline's colour mattes fill the frame).
     s.execute("layer.newSolid", json!({"color": "#00ffff", "width": 16, "height": 12})).unwrap();
     let out = tmp("Spot.xml");
     let r = s.execute("file.exportTimeline", json!({"path": out})).unwrap();

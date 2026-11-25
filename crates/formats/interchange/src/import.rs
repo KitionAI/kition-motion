@@ -1,5 +1,4 @@
-//! Timeline documents → compositions (File ▸ Import ▸ Adobe Premiere Pro Project / Timeline
-//! Interchange…).
+//! Timeline documents → compositions (File ▸ Import ▸ Editing Timeline…).
 
 use std::collections::{BTreeMap, HashMap};
 

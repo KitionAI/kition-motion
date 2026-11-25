@@ -1,6 +1,6 @@
 # kition-motion-pdf
 
-Vector footage from PDF files, PDF-compatible Adobe Illustrator files (`.ai`, which are PDF
+Vector footage from PDF files, PDF-compatible `.ai` vector files (which are PDF
 documents) and Encapsulated PostScript (`.eps`). Files parse into the same render tree as SVG
 (`kition_motion_svg::Doc`), so they rasterise at any scale (Continuously Rasterize), convert to shape
 layers (Layer ▸ Create ▸ Create Shapes from Vector Layer) and import as compositions with one
@@ -34,7 +34,7 @@ ffmpeg elsewhere) to check the code tables against an independent implementation
   component count), CalGray / CalRGB, Lab, Indexed, Separation and DeviceN (tint transforms of
   function types 0, 2 and 3), axial and radial shadings as pattern fills and through `sh`, form
   XObjects (matrix, bounding-box clip, nested resources).
-- **Layers:** top-level optional-content marked sequences (`/OC … BDC`, Illustrator's layers)
+- **Layers:** top-level optional-content marked sequences (`/OC … BDC`, the layers vector files keep)
   become the document's layers, named after their OCG; content outside them is gathered into
   layers "Layer N".
 - **EPS:** a PostScript interpreter for the subset exported vector EPS uses: operand and
@@ -72,8 +72,8 @@ ffmpeg elsewhere) to check the code tables against an independent implementation
   when the PDF gives no widths.
 - **Images** (§8.9): image XObjects and inline images (`BI … ID … EI`, abbreviated keys);
   1, 2, 4, 8 and 16 bits per component with `/Decode`; any colour space above (Indexed through
-  its palette, ICCBased through its `/Alternate` space); DCT (JPEG, through zune-jpeg; Adobe
-  inverted CMYK) and the general filters; stencil masks (`/ImageMask`) in the fill colour;
+  its palette, ICCBased through its `/Alternate` space); DCT (JPEG, through zune-jpeg; inverted
+  CMYK marked by the APP14 segment) and the general filters; stencil masks (`/ImageMask`) in the fill colour;
   soft masks (`/SMask` images) and colour-key and explicit `/Mask`s. Images become image nodes
   of the render tree (bilinear, box-filtered when minified).
 - **Transparency:** blend modes (`/BM`, all 16 PDF modes) and soft masks in the graphics state
@@ -109,12 +109,12 @@ ffmpeg elsewhere) to check the code tables against an independent implementation
 - JPX and JBIG2 images, predefined CJK CMaps other than Identity-H / Identity-V, and transfer
   functions (`/TR`) are not read. JBIG2 is deferred. Predefined CMaps (`UniGB-UCS2-H`,
   `90ms-RKSJ-H` …) need the CMap data, and there is no permissively licensed pure-Rust source
-  of it (Adobe's CMap resources are Adobe assets, which this project does not ship); text in
+  of it (the published CMap resources are not open assets, so this project does not ship them); text in
   such fonts is reported in `Doc::skipped`. Mesh shadings are raster images in the render tree
   (sharp to about 4× the document size). Knockout uses each child's coverage as its shape (a
   child with constant opacity knocks out fully where it covers). What a document skipped is
   listed in `Doc::skipped`.
-- Illustrator EPS files whose drawing depends on Adobe's procedure-set resources (defined in
+- EPS files from vector editors whose drawing depends on the editor's procedure-set resources (defined in
   the file through constructs beyond this subset) and Level 3 `shfill` gradients in EPS draw
   only what the subset understands; save such artwork as PDF-compatible `.ai` or PDF instead.
   EPS images are skipped; Type 3 (procedure) fonts defined in EPS files draw nothing (reported).

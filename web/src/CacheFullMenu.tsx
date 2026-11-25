@@ -43,20 +43,22 @@ export function CacheFullMenu({
         <p className="motion-cache-full-text kui-muted" data-testid="motion-cache-full-text">
           {t('cacheAhead.fullExplain', { held, total, megabytes })}
         </p>
+        {/* The SDK editor's menu rows, all three: each keeps the same slot before its text (the
+            check row's tick), so the three texts line up whether the loop is on or off. A row's
+            hint sits on the row around it (the menu row takes none). */}
         <div className="motion-cache-full-actions">
           {lower ? (
-            <Button variant="ghost" title={t('cacheAhead.lowerHint', { resolution: lower.label })} onClick={lower.set} data-testid="motion-cache-lower">
-              {t('cacheAhead.lower', { resolution: lower.label })}
-            </Button>
+            <div title={t('cacheAhead.lowerHint', { resolution: lower.label })} data-testid="motion-cache-lower-row">
+              <MenuItem label={t('cacheAhead.lower', { resolution: lower.label })} onSelect={lower.set} testId="motion-cache-lower" />
+            </div>
           ) : null}
           {moreMemory ? (
-            <Button variant="ghost" title={t('cacheAhead.moreMemoryHint', { megabytes: moreMemory.megabytes })} onClick={moreMemory.use} data-testid="motion-cache-more-memory">
-              {t('cacheAhead.moreMemory')}
-            </Button>
+            <div title={t('cacheAhead.moreMemoryHint', { megabytes: moreMemory.megabytes })} data-testid="motion-cache-more-memory-row">
+              <MenuItem label={t('cacheAhead.moreMemory')} onSelect={moreMemory.use} testId="motion-cache-more-memory" />
+            </div>
           ) : null}
           {loop ? (
-            // A check row (the SDK editor's menu row with `checked`): a tick shows while it is on.
-            // Its hint and the looped stretch sit on the row around it (the menu row takes neither).
+            // A check row (`checked`): a tick shows while it is on; the looped stretch is on the row around it.
             <div className="motion-cache-loop-row" title={t('cacheAhead.loopCachedHint', { held })} data-testid="motion-cache-loop-cached-row" data-area={loop.area ? loop.area.map((each) => each.toFixed(3)).join(' ') : undefined}>
               <MenuItem label={t('cacheAhead.loopCached')} checked={loop.on} onSelect={loop.toggle} testId="motion-cache-loop-cached" />
             </div>

@@ -1,6 +1,6 @@
 //! Layered and vector stills: PSD documents (`kition-motion-psd`: the merged image, or one
 //! layer for footage imported as a composition) and vector files rasterised at any scale: SVG
-//! (`kition-motion-svg`), PDF / Illustrator / EPS (`kition-motion-pdf`; one layer of the file for
+//! (`kition-motion-svg`), PDF / `.ai` / EPS (`kition-motion-pdf`; one layer of the file for
 //! footage imported as a composition).
 
 use kition_motion_project::{AlphaMode, Footage};

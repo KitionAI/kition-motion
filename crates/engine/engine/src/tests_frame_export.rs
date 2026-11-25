@@ -23,7 +23,7 @@ fn frame() -> Session {
 }
 
 #[test]
-fn photoshop_layers_writes_one_psd_layer_per_comp_layer() {
+fn psd_layers_writes_one_psd_layer_per_comp_layer() {
     let mut s = frame();
     let dir = out_dir("frame-psd");
     let path = dir.join("frame.psd").to_string_lossy().to_string();

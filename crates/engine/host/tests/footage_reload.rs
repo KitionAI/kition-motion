@@ -83,7 +83,7 @@ fn reload_footage_shows_the_new_pixels() {
 }
 
 #[test]
-fn reload_keeps_a_photoshop_layer_item_on_its_layer() {
+fn reload_keeps_a_psd_layer_item_on_its_layer() {
     let path = tmp("layers.psd");
     let mut d = WDoc::new(64, 48);
     d.layers = vec![WLayer::solid("Background", Rect::new(0, 0, 64, 48), RED), WLayer::solid("Patch", Rect::new(0, 0, 32, 48), BLUE)];

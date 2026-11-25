@@ -440,7 +440,7 @@ background task runs inline (`engine::jobs`) unless the session has an `Offload`
 
 ## 6a. Premiere Pro interop (timeline interchange)
 
-After Effects' File ▸ Import / Export ▸ Adobe Premiere Pro Project… go through the public
+File ▸ Import / Export ▸ Editing Timeline… go through the public
 interchange formats Premiere Pro itself reads and writes, not the native `.prproj` file (it has no
 public specification; supporting it awaits a decision). `crates/formats/interchange` (L3, no file I/O)
 maps Kition Film's timeline model (`kition-film-project`, parsed and written by `kition-film-interchange`,
@@ -468,9 +468,9 @@ to compositions and back:
   3D, effects, masks, track mattes, parenting, expressions, animated time remapping, non-uniform
   scale, blend modes Premiere lacks) are pre-rendered to ProRes 4444 with alpha next to the
   document (`prerender: unsupported`, the default; `all` renders every visual layer; `none` leaves
-  them out with a warning) and referenced as media. The menu keeps After Effects' label "Adobe
-  Premiere Pro Project…", but the file written is Final Cut Pro XML (`.xml`), which Premiere Pro
-  imports with File ▸ Import. FCPXML, OTIO, EDL, AAF and OMF are the other formats.
+  them out with a warning) and referenced as media. The menu entry reads "Editing Timeline…"
+  (round 7l: no other product's name in the editor), and the file written is Final Cut Pro XML
+  (`.xml`), which editing apps import. FCPXML, OTIO, EDL, AAF and OMF are the other formats.
 
 AAF and OMF (Kition Film's structured-storage and Bento readers/writers) import and export too;
 media embedded in them is not extracted, and the AAF writer keeps neither speed nor nesting.

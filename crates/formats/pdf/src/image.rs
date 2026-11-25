@@ -120,7 +120,7 @@ fn jpeg_decode(data: &[u8]) -> Result<(Vec<u8>, usize), String> {
     let opts = DecoderOptions::default().jpeg_set_out_colorspace(out).set_max_width(MAX_SIDE).set_max_height(MAX_SIDE);
     let mut dec = JpegDecoder::new_with_options(std::io::Cursor::new(data), opts);
     let mut px = dec.decode().map_err(|_| "image (JPEG)".to_string())?;
-    // Adobe CMYK JPEGs (an APP14 "Adobe" marker) store inverted values.
+    // CMYK JPEGs with an APP14 "Adobe" marker (the marker's name in the JPEG format) store inverted values.
     if n == 4 && data.windows(5).take(4096).any(|w| w == b"Adobe") {
         for v in &mut px {
             *v = 255 - *v;

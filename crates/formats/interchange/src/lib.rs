@@ -1,8 +1,8 @@
-//! Premiere Pro interop through the public timeline interchange formats Premiere itself reads and
-//! writes (File ▸ Import / Export ▸ Adobe Premiere Pro Project…):
+//! Interop with editing timelines through the public timeline interchange formats they read and
+//! write (File ▸ Import / Export ▸ Editing Timeline…):
 //!
-//! - **Final Cut Pro 7 XML** (`xmeml`, `.xml`): Premiere's File ▸ Export ▸ Final Cut Pro XML and
-//!   File ▸ Import; the default for export;
+//! - **Final Cut Pro 7 XML** (`xmeml`, `.xml`): what editing timelines export as Final Cut Pro XML
+//!   and import; the default for export;
 //! - **FCPXML** 1.9–1.11 (`.fcpxml`);
 //! - **OpenTimelineIO** (`.otio`);
 //! - **CMX 3600 EDL** (`.edl`);
@@ -53,7 +53,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TimelineFormat {
-    /// Final Cut Pro 7 XML (`xmeml`), the format Premiere Pro imports and exports.
+    /// Final Cut Pro 7 XML (`xmeml`), the format editing timelines most often import and export.
     Fcp7Xml,
     /// FCPXML 1.9–1.11.
     Fcpxml,
@@ -61,7 +61,7 @@ pub enum TimelineFormat {
     Otio,
     /// CMX 3600 edit decision list.
     Edl,
-    /// Advanced Authoring Format (AAF Edit Protocol), as Premiere Pro exports for audio post.
+    /// Advanced Authoring Format (AAF Edit Protocol), as editing timelines export for audio post.
     Aaf,
     /// OMF Interchange 2.0.
     Omf,
@@ -85,7 +85,7 @@ impl TimelineFormat {
 
     pub fn label(self) -> &'static str {
         match self {
-            TimelineFormat::Fcp7Xml => "Final Cut Pro XML (Premiere Pro)",
+            TimelineFormat::Fcp7Xml => "Final Cut Pro XML",
             TimelineFormat::Fcpxml => "FCPXML",
             TimelineFormat::Otio => "OpenTimelineIO",
             TimelineFormat::Edl => "CMX 3600 EDL",

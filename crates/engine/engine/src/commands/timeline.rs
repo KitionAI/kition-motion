@@ -1,7 +1,7 @@
-//! Premiere Pro interop (`kition-motion-interchange`): File ▸ Import ▸ Adobe Premiere Pro Project /
-//! Timeline Interchange… and File ▸ Export ▸ Adobe Premiere Pro Project…, through the public
-//! interchange formats Premiere reads and writes. Export writes Final Cut Pro XML (`.xml`) by
-//! default, which Premiere Pro imports (File ▸ Import); FCPXML, OpenTimelineIO and EDL on request.
+//! Editing-timeline interop (`kition-motion-interchange`): File ▸ Import ▸ Editing Timeline… and
+//! File ▸ Export ▸ Editing Timeline…, through the public interchange formats editing timelines
+//! read and write. Export writes Final Cut Pro XML (`.xml`) by default, which editing timelines
+//! import; FCPXML, OpenTimelineIO and EDL on request.
 //! The native `.prproj` format has no public specification and is not read or written.
 
 use std::collections::HashMap;
@@ -25,10 +25,7 @@ fn import_timeline(s: &mut Session, p: &Value) -> Result<Value> {
     const CMD: &str = "file.importTimeline";
     let path = str_p(p, "path").ok_or_else(|| bad(CMD, "missing `path`"))?.to_string();
     if path.to_ascii_lowercase().ends_with(".prproj") {
-        return Err(bad(
-            CMD,
-            "native Premiere Pro projects (.prproj) are not supported: in Premiere Pro use File ▸ Export ▸ Final Cut Pro XML… and import the .xml",
-        ));
+        return Err(bad(CMD, "native .prproj projects are not supported: export the timeline as Final Cut Pro XML from the editing app and import the .xml"));
     }
     let format = format_p(p, CMD)?;
     let bytes = s.services.read_file(&path).map_err(|e| EngineError::Other(format!("cannot read {path}: {e}")))?;
@@ -178,7 +175,7 @@ fn export_timeline(s: &mut Session, p: &Value) -> Result<Value> {
     let mut warnings = out.warnings.clone();
     warnings.extend(errors.iter().map(|e| format!("pre-render failed: {e}")));
     s.toast(match format {
-        TimelineFormat::Fcp7Xml => format!("Exported {path} (Final Cut Pro XML; import it in Premiere Pro with File ▸ Import)"),
+        TimelineFormat::Fcp7Xml => format!("Exported {path} (Final Cut Pro XML; import it in an editing timeline)"),
         _ => format!("Exported {path} ({})", format.label()),
     });
     Ok(json!({
@@ -208,19 +205,19 @@ pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(
             "file.importTimeline",
-            "Adobe Premiere Pro Project...",
+            "Editing Timeline...",
             ["File", "Import"],
             None,
-            "{path (.xml Final Cut Pro XML from Premiere Pro or .fcpxml .otio .edl .aaf .omf), format?: auto|xml|fcpxml|otio|edl|aaf|omf, edlFrameRate?: number}",
+            "{path (.xml Final Cut Pro XML from an editing app or .fcpxml .otio .edl .aaf .omf), format?: auto|xml|fcpxml|otio|edl|aaf|omf, edlFrameRate?: number}",
             always,
             import_timeline
         ),
         cmd!(
             "file.exportTimeline",
-            "Adobe Premiere Pro Project...",
+            "Editing Timeline...",
             ["File", "Export"],
             None,
-            "{comp?, path (Final Cut Pro XML .xml for Premiere Pro or .fcpxml .otio .edl .aaf .omf), format?: xml|fcpxml|otio|edl|aaf|omf, prerender?: none|unsupported|all, precomps?: nest|prerender}",
+            "{comp?, path (Final Cut Pro XML .xml for an editing app or .fcpxml .otio .edl .aaf .omf), format?: xml|fcpxml|otio|edl|aaf|omf, prerender?: none|unsupported|all, precomps?: nest|prerender}",
             has_comp,
             export_timeline
         ),

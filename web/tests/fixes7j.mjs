@@ -3,7 +3,7 @@
 // format when the format changes (a movie switched to a PNG sequence gets its own `<comp>_序列`
 // folder, unique among the queued jobs, and its frames land there; a sequence switched to GIF
 // leaves that folder), while a folder the person typed never changes; Colorama's channel pickers
-// read 相位取自 / 添加相位取自, apart from 添加相位 来源; the reworded group headings read as
+// read 相位取自 / 添加相位取自, apart from 添加相位 取用; the reworded group headings read as
 // meant; with only 3D layers selected the Properties panel names the fourth rotation Z 轴旋转;
 // the English status bar says "1 layer"; and the cache-full popover's Loop only the cached part is
 // a check row whose tick shows while it is on. Results are read from the engine (`renderQueue.list`,
@@ -183,7 +183,7 @@ try {
   const inputPhase = await openGroup('effects/#1/inputPhase')
   const names = []
   for (const id of ['mode', 'addPhase', 'addPhaseFrom', 'addPhaseSource']) names.push(await settingName(`effects/#1/inputPhase/${id}`))
-  h.step('Colorama ▸ 输入相位: 相位取自 / 添加相位 / 添加相位取自 / 添加相位 来源', inputPhase === '输入相位' && names.join(' / ') === '相位取自 / 添加相位 / 添加相位取自 / 添加相位 来源', `${inputPhase}: ${names.join(' / ')}`)
+  h.step('Colorama ▸ 输入相位: 相位取自 / 添加相位 / 添加相位取自 / 添加相位 取用', inputPhase === '输入相位' && names.join(' / ') === '相位取自 / 添加相位 / 添加相位取自 / 添加相位 取用', `${inputPhase}: ${names.join(' / ')}`)
   const bare = names.map((name) => name.replace(/\s+/g, ''))
   h.step('no two of them are the same without their spaces', new Set(bare).size === bare.length, bare.join(' | '))
   for (let index = 2; index <= applied.length; index += 1) {

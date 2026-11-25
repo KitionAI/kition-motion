@@ -50,7 +50,8 @@
     "test:fixes7g": "node tests/fixes7g.mjs chromium && node tests/fixes7g.mjs webkit",
     "test:fixes7h": "node tests/fixes7h.mjs chromium && node tests/fixes7h.mjs webkit",
     "test:fixes7i": "node tests/fixes7i.mjs chromium && node tests/fixes7i.mjs webkit",
-    "test:fixes7j": "node tests/fixes7j.mjs chromium && node tests/fixes7j.mjs webkit"
+    "test:fixes7j": "node tests/fixes7j.mjs chromium && node tests/fixes7j.mjs webkit",
+    "test:fixes7k": "node tests/fixes7k.mjs chromium && node tests/fixes7k.mjs webkit"
   },
   "dependencies": {
     "@kition/sdk": "npm:@kitionstage/sdk@0.5.2-stage.16",

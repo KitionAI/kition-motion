@@ -71,7 +71,7 @@ fn item(p: &mut fp::Project, it: fp::ItemId, kind: fp::TrackKind, start: f64, sr
     p.make_track_item(it, kind, secs(start), kition_film_time::TimeRange::new(secs(src), secs(dur)), rate()).unwrap()
 }
 
-/// A Premiere-like edit: two clips with a cross dissolve on V1, a speed-changed, scaled and
+/// An edit as an editing timeline makes it: two clips with a cross dissolve on V1, a speed-changed, scaled and
 /// faded clip on V2, a nested sequence on V3, and an audio clip at -6 dB on A1.
 fn edit() -> (fp::Project, fp::ItemId) {
     let mut p = fp::Project::new("Edit");
@@ -201,8 +201,8 @@ fn check_structure(p: &Project, r: &ImportResult, motion: bool) {
     assert!(p.items.values().filter(|i| i.id != r.folder).all(|i| i.parent.is_some()));
 }
 
-/// A Premiere-style xmeml export with a bin, a master clip, Basic Motion and Opacity keyframes.
-const PREMIERE_XML: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+/// An xmeml export as an editing timeline writes it, with a bin, a master clip, Basic Motion and Opacity keyframes.
+const XMEML_EXPORT: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xmeml>
 <xmeml version="4">
   <project>
@@ -274,9 +274,9 @@ const PREMIERE_XML: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 "#;
 
 #[test]
-fn premiere_xml_bins_motion_and_opacity() {
+fn xmeml_bins_motion_and_opacity() {
     let mut paths = vec![];
-    let (p, r) = import_doc(PREMIERE_XML.as_bytes(), "Promo.xml", &mut |path| {
+    let (p, r) = import_doc(XMEML_EXPORT.as_bytes(), "Promo.xml", &mut |path| {
         paths.push(path.to_string());
         probe(path)
     });

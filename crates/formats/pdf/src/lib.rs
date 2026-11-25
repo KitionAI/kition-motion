@@ -1,11 +1,11 @@
-//! Vector footage: PDF, PDF-compatible Illustrator files (`.ai`) and Encapsulated PostScript
+//! Vector footage: PDF, PDF-compatible `.ai` vector files and Encapsulated PostScript
 //! (see README.md for what is read and the specifications used).
 //!
 //! Files parse into the same render tree as SVG ([`kition_motion_svg::Doc`]): document pixels are
 //! PostScript points (1/72 in), y down, so footage rasterises at any scale (Continuously
 //! Rasterize) and converts to shape layers (Create Shapes from Vector Layer). The root group's
 //! children are the document's **layers**: one group per top-level optional-content group
-//! (Illustrator layers), with content outside them gathered into groups of its own.
+//! (the layers vector files keep), with content outside them gathered into groups of its own.
 
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
@@ -38,7 +38,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::NotVector => write!(f, "not a PDF, Illustrator or EPS file"),
+            Error::NotVector => write!(f, "not a PDF, .ai or EPS file"),
             Error::Encrypted => write!(f, "encrypted PDF files are not supported"),
             Error::NoPages => write!(f, "the PDF has no pages"),
             Error::PageOutOfRange(n) => write!(f, "the PDF has no page {}", n + 1),
@@ -125,7 +125,7 @@ fn finish(nodes: Vec<Node>, flags: Vec<bool>, skipped: Vec<String>, width: f64, 
         }
     }
     flush(&mut loose, &mut layers);
-    // Name unnamed layers "Layer N" (bottom first, as Illustrator numbers them).
+    // Name unnamed layers "Layer N" (bottom first, as vector editors number them).
     for (i, l) in layers.iter_mut().enumerate() {
         if let Node::Group(g) = l
             && g.name.is_empty()

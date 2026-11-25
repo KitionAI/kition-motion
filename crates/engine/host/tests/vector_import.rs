@@ -185,7 +185,7 @@ fn svg_footage_continuously_rasterizes() {
     assert!(sharp < soft, "sharper than the upscaled pixels ({sharp} vs {soft})");
 }
 
-/// A two-layer Illustrator-style PDF (optional-content layers "Sky" and "Art"): a gradient sky,
+/// A two-layer PDF as vector editors write it (optional-content layers "Sky" and "Art"): a gradient sky,
 /// a red curved shape with a dark outline, and a clipped green bar.
 fn layered_pdf() -> Vec<u8> {
     let content = "/OC /L0 BDC\n/Pattern cs /P0 scn 0 0 120 80 re f\nEMC\n\

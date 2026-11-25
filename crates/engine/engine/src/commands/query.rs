@@ -353,7 +353,7 @@ fn capabilities(s: &mut Session, _: &Value) -> Result<Value> {
         "scripting": s.script.is_some(),
         "gpu": s.accel.is_some(),
         "parity": {
-            "target": "Adobe After Effects 2026",
+            "target": "After Effects 2026",
             "summary": PARITY,
             "doc": "docs/parity/target-app-parity.md",
         },

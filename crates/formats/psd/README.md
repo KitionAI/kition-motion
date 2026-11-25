@@ -4,7 +4,7 @@ Reads PSD documents (`.psd`, and `.psb` large documents) for File ▸ Import (as
 composition, or as a composition with layer sizes retained), and writes a minimal subset (used to
 generate test fixtures).
 
-Implemented from Adobe's public **Adobe Photoshop File Formats Specification** (November 2019
+Implemented from the public **Adobe Photoshop File Formats Specification** (November 2019
 edition): file header, colour mode data, image resources, layer and mask information (layer
 records, channel image data, layer mask data, additional layer information: `luni`, `lsct`/`lsdk`,
 `lyid`, `iOpa`, `TySh`, `lfx2`, `SoCo`, `nvrt`, `brit`, `hue2`, `levl`, `expA`, `vmsk`/`vsms`,
@@ -23,5 +23,5 @@ and `quiltSliceX` / `quiltSliceY`) is baked as placed over the placed bounds, at
 document resolution ([`placed`](src/placed.rs)). Custom meshes are evaluated exactly; the
 named styles' curves are not published, so they are clean-room geometric definitions matching
 each style by behaviour. Externally linked files
-fall back to the layer's rendered pixels. No Adobe code, sample files or assets were used; test
+fall back to the layer's rendered pixels. No vendor code, sample files or assets were used; test
 fixtures are generated in-test by the writer in this crate ([`write`](src/write.rs)).

@@ -1,4 +1,4 @@
-//! File ▸ Import / Export ▸ Adobe Premiere Pro Project… (timeline interchange) through the command
+//! File ▸ Import / Export ▸ Editing Timeline… (timeline interchange) through the command
 //! registry, without media decoding (pixels: `crates/engine/host/tests/timeline_interop.rs`).
 
 use serde_json::json;
@@ -58,9 +58,9 @@ fn export_and_reimport_timeline_commands() {
 }
 
 #[test]
-fn premiere_menu_entries_keep_after_effects_labels() {
+fn timeline_menu_entries_name_no_other_product() {
     let entries = crate::menus::entries();
     let find = |cmd: &str| entries.iter().find(|(_, e)| e.command == cmd).map(|(p, e)| (p.join(" > "), e.label.clone()));
-    assert_eq!(find("file.exportTimeline"), Some(("File > Export".into(), "Adobe Premiere Pro Project...".into())));
-    assert_eq!(find("file.importTimeline"), Some(("File > Import".into(), "Adobe Premiere Pro Project...".into())));
+    assert_eq!(find("file.exportTimeline"), Some(("File > Export".into(), "Editing Timeline...".into())));
+    assert_eq!(find("file.importTimeline"), Some(("File > Import".into(), "Editing Timeline...".into())));
 }

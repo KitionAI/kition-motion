@@ -1659,7 +1659,7 @@ RenderQueue.prototype = {
   stopRendering: function () { __call("renderQueue.stop", {}); },
   pauseRendering: function () {},
   showWindow: function () {},
-  queueInAME: function () { throw __err("Adobe Media Encoder is not available: render with app.project.renderQueue.render()"); },
+  queueInAME: function () { throw __err("An external encoder queue is not available: render with app.project.renderQueue.render()"); },
   toString: function () { return "[object RenderQueue]"; },
 };
 

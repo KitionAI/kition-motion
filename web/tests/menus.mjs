@@ -185,6 +185,24 @@ const undo = async ({ kit, page }) => {
   await page.waitForTimeout(500)
 }
 
+/**
+ * Waits until an export has ended: its notice is up (已导出 …, or an error notice). The bound only
+ * keeps a hung export from stopping the run; a render that ends in time never reaches it.
+ */
+async function exportEnded({ page, kit }) {
+  const ended = async () => (await kit.locator('.kui-toast').filter({ hasText: /已导出/ }).count()) > 0 || (await errorToasts(kit)) > 0
+  for (let i = 0; i < 1200 && !(await ended()); i += 1) await page.waitForTimeout(100)
+  if (!(await ended())) throw new Error('the export said neither that it was done nor that it failed in 2 minutes')
+}
+/** Polls `ok` until it holds (a few rendered frames after the event it follows); answers whether it did. */
+async function settled(page, ok) {
+  for (let i = 0; i < 50; i += 1) {
+    if (await ok()) return true
+    await page.waitForTimeout(100)
+  }
+  return ok()
+}
+
 /** A dialog the click opened: filled, confirmed, and its result checked. Answers a note, or throws. */
 async function finishDialog(ctx, leaf, state) {
   const { kit, page, details } = ctx
@@ -317,21 +335,29 @@ async function finishDialog(ctx, leaf, state) {
   if ((await field('motion-export-dialog').count()) && (await field('motion-export-format').inputValue()) === 'lottie') {
     const written = async () => (await page.evaluate(() => [...window.devHost.files.keys()])).filter((name) => name.endsWith('.json'))
     await field('motion-export-dialog-ok').click()
-    for (let i = 0; i < 100 && !(await written()).length; i += 1) await page.waitForTimeout(100)
+    // The export's own end: its notice (done, or why it failed). The host has the file a moment
+    // before the editor hears back, so the file alone does not mean the dialog has finished.
+    await exportEnded(ctx)
     if (!(await written()).length) throw new Error('Export ▸ Lottie wrote no JSON')
     const json = await page.evaluate((name) => new TextDecoder().decode(window.devHost.files.get(name).bytes), (await written())[0])
     if (!JSON.parse(json).layers) throw new Error('the Lottie file has no layers')
+    // Then the dialog either lists what Lottie could not carry (closed with its button) or closes.
+    await settled(page, async () => (await field('motion-export-warnings').count()) > 0 || !(await dialogOpen(kit)))
     const warned = await field('motion-export-warnings').count()
     if (warned) await field('motion-export-dialog-close').click()
-    await page.waitForTimeout(200)
+    await settled(page, async () => !(await dialogOpen(kit)))
     if (await dialogOpen(kit)) throw new Error('the Export dialog stayed open')
     return `exported ${(await written())[0]} as Lottie${warned ? ', listing what it could not carry' : ''}`
   }
   if (await field('motion-export-dialog').count()) {
     const movies = async () => (await page.evaluate(() => [...window.devHost.files.keys()])).filter((name) => name.endsWith('.mp4'))
     await field('motion-export-dialog-ok').click()
-    for (let i = 0; i < 300 && !(await movies()).length; i += 1) await page.waitForTimeout(100)
+    // Waits for the render's own end, its notice (done, or why it failed), not for the file: the
+    // host has the file a moment before the editor hears back and closes the dialog (round 7l: a
+    // check made right when the file appeared once found the dialog still open on a slow runner).
+    await exportEnded(ctx)
     if (!(await movies()).length) throw new Error('Export wrote no MP4')
+    await settled(page, async () => !(await dialogOpen(kit)))
     if (await dialogOpen(kit)) throw new Error('the Export dialog stayed open after rendering')
     return `exported ${(await movies())[0]}`
   }

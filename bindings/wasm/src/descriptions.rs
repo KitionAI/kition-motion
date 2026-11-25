@@ -413,7 +413,7 @@ pub fn description(id: &str) -> &'static str {
             "Renders the active composition to H.264 MP4 through a scratch Render Queue item and returns it (base64 `data`, `mime`, `bytes`); only `format: mp4`. Writes no file and leaves the project's queue as it is: use <prefix>_export to save."
         }
         "file.exportTimeline" => {
-            "Exports `comp` as an editing timeline to `path`: Final Cut Pro XML for Premiere Pro (default), .fcpxml, .otio, .edl, .aaf or .omf (`format`). `prerender` renders layers the format can't express; `precomps` nest or prerender."
+            "Exports `comp` as an editing timeline to `path`: Final Cut Pro XML for editing apps (default), .fcpxml, .otio, .edl, .aaf or .omf (`format`). `prerender` renders layers the format can't express; `precomps` nest or prerender."
         }
         "file.findMissing" => {
             "Finds what the project lacks: `what` footage (missing files, also selected in the project), effects (unknown effect ids per layer) or fonts. Returns the list; changes nothing."
@@ -435,7 +435,7 @@ pub fn description(id: &str) -> &'static str {
             "Adds a solid footage item (`name`, `color`, `width`, `height`) to the project's Solids folder without placing it in a comp; use layer.newSolid to add a solid layer to a comp. Returns {item}."
         }
         "file.importTimeline" => {
-            "Imports an editing timeline from `path` (Final Cut Pro XML exported from Premiere Pro, .fcpxml, .otio, .edl, .aaf, .omf) as compositions with its clips; `edlFrameRate` for EDLs. Native .prproj is refused."
+            "Imports an editing timeline from `path` (Final Cut Pro XML exported from an editing app, .fcpxml, .otio, .edl, .aaf, .omf) as compositions with its clips; `edlFrameRate` for EDLs. Native .prproj is refused."
         }
         "file.importVanishingPoint" => "Import an exported preset (renamed if the name is taken) and activate it.",
         "file.incrementAndSave" => {

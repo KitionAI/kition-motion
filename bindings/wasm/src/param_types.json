@@ -1152,7 +1152,7 @@
    "type": "integer"
   },
   "page": {
-   "description": "number from 1 (PDF / Illustrator page); PDF / Illustrator page",
+   "description": "number from 1 (PDF / .ai page); PDF / .ai page",
    "type": "string"
   }
  },

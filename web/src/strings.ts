@@ -911,7 +911,7 @@ const zhCN: Catalog = {
   "wave.Triangle": "三角波",
   "wave.Saw": "锯齿波",
   "wave.Sawtooth": "锯齿波",
-  "effect.layerSource": "{name} 来源",
+  "effect.layerSource": "{name} 取用",
   "fx.grade.tone": "影调",
   "fx.grade.look": "调色风格",
   "fx.grade.key": "键控",

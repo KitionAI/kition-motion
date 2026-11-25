@@ -16,8 +16,8 @@
 //! * looks are ASC CDLs applied in ACEScct;
 //! * CDL maths follows the ASC CDL v1.2 specification (slope, offset, power, then saturation with
 //!   Rec. 709 luma weights); the "No Clamp" style mirrors power around zero;
-//! * File Transform reads `.cube` (Adobe/Resolve), `.3dl` (Autodesk Lustre/Flame integer
-//!   lattices), `.csp` (cineSpace, with its per-channel pre-LUT shaper), Sony Imageworks
+//! * File Transform reads `.cube` (both common dialects), `.3dl` (integer lattices),
+//!   `.csp` (cineSpace, with its per-channel pre-LUT shaper), Sony Imageworks
 //!   `.spi1d` / `.spi3d` / `.spimtx` and ASC `.cc` / `.ccc` / `.cdl` XML, with nearest, trilinear
 //!   or tetrahedral interpolation and an inverse direction (exact for 1D/CDL/matrices, iterative
 //!   for 3D lattices);

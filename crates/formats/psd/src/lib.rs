@@ -1,5 +1,5 @@
-//! PSD / PSB document reader, implemented from Adobe's public *Photoshop File Formats
-//! Specification* (see README.md), and a minimal writer ([`write`]) for fixtures.
+//! PSD / PSB document reader, implemented from the public PSD file format specification (README.md
+//! names its edition), and a minimal writer ([`write`]) for fixtures.
 //!
 //! [`Psd::parse`] reads the structure (header, layer records and their additional information,
 //! the layer tree) without decoding pixels; [`Psd::composite`] decodes the merged image and

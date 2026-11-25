@@ -235,7 +235,25 @@ function sequenceFolder(compName: string, t: Strings, taken: ReadonlySet<string>
 }
 
 /** The folders the queue's jobs write to. */
-const foldersOf = (items: readonly QueueItem[] | undefined) => new Set((items ?? []).map((item) => outputOf(item).folder).filter(Boolean))
+const foldersOf = (items: readonly QueueItem[] | undefined, t: Strings) => new Set((items ?? []).map((item) => jobFolder(item, t)).filter(Boolean))
+
+/**
+ * The folder a job really writes to: its own, or for an image sequence without one its
+ * composition's sequence folder (`Comp 1_sequence`): frames never land loose in the project's
+ * folder. The job's row shows this folder, so what it shows is what the render does.
+ */
+function jobFolder(item: QueueItem, t: Strings) {
+  const { folder } = outputOf(item)
+  const format = formatOf(item)
+  return folder || (format && SEQUENCES.has(format.id) ? sequenceBase(item.compName ?? '', t) : '')
+}
+
+/**
+ * The folder each job of this page got from the job before it when it was added (the folder used
+ * last), by job id: a default, not the person's choice, so a change of format may still replace
+ * it. A job whose folder was typed or taken from a preset in its own dialog leaves this list.
+ */
+const inheritedFolders = new Map<number, string>()
 
 /** Milliseconds as `1:05` (minutes and seconds). */
 const clock = (ms: number) => {
@@ -266,12 +284,14 @@ export function useRenderQueue({ doc, host, run, query, t }: { doc: KitEngine | 
   const add = useCallback(
     async (comps: Array<{ id: number; name: string; width: number; height: number }>, settings?: JobSettings) => {
       const made: number[] = []
-      const taken = foldersOf((await query<{ items?: QueueItem[] }>('renderQueue.list', {}).catch(() => null))?.items)
+      const taken = foldersOf((await query<{ items?: QueueItem[] }>('renderQueue.list', {}).catch(() => null))?.items, t)
       for (const comp of comps) {
         const values = settings ?? newSettings(comp, t, taken)
         taken.add(values.folder)
         const answer = parseAnswer<{ item?: number }>(await run('renderQueue.add', { comp: comp.id, ...renderParams(values), ...outputParams(values, comp.name) }))
-        if (answer?.item != null) made.push(answer.item)
+        if (answer?.item == null) continue
+        made.push(answer.item)
+        if (!settings && values.folder) inheritedFolders.set(answer.item, values.folder)
       }
       if (made.length) toast.success(made.length === 1 ? t('queue.added', { name: comps[0]?.name ?? '' }) : t('queue.addedMany', { count: made.length }))
       return made
@@ -302,7 +322,8 @@ export function useRenderQueue({ doc, host, run, query, t }: { doc: KitEngine | 
       for (const id of ids) {
         if (stopAll.current) break
         const item = byId.get(id)
-        const { folder: inside, file } = item ? outputOf(item) : { folder: '', file: `render-${id}.mp4` }
+        const { file } = item ? outputOf(item) : { file: `render-${id}.mp4` }
+        const inside = item ? jobFolder(item, t) : ''
         stopOne.current = false
         setCurrent(id)
         const started = performance.now()
@@ -414,7 +435,8 @@ export function RenderQueuePanel({ queue, onClose }: { queue: RenderQueueRuns; o
         {items.length ? (
           items.map((item, at) => {
             const job = queue.jobs.get(item.id)
-            const { folder, file } = outputOf(item)
+            const { file } = outputOf(item)
+            const folder = jobFolder(item, t)
             const format = formatOf(item)
             const canRender = format != null
             const elapsed = job?.state === 'rendering' && job.started != null ? performance.now() - job.started : (job?.elapsed ?? 0)
@@ -497,18 +519,21 @@ function JobDialog({ item, comp, queued, onClose }: { item: QueueItem | null; co
   const fps = comp?.frameRate ?? item?.frameRate ?? 30
   // The queue's jobs as the panel lists them (already read when a job's settings open: a change of
   // format right away still sees which sequence folders the other jobs take).
-  const start = item ? settingsOf(item) : newSettings({ name: compName, width: comp?.size?.[0] ?? 1920, height: comp?.size?.[1] ?? 1080 }, t, foldersOf(queued))
+  const start = item ? settingsOf(item) : newSettings({ name: compName, width: comp?.size?.[0] ?? 1920, height: comp?.size?.[1] ?? 1080 }, t, foldersOf(queued, t))
   const [settings0] = useState<JobSettings>(() => ({ ...start, frameRate: item?.frameRate != null && Math.abs(item.frameRate - fps) > 1e-3 ? item.frameRate : null }))
   const [settings, setSettings] = useState<JobSettings>(settings0)
-  // While the folder is still the one the editor chose (the person has not typed one or taken a
-  // preset's), a change of format chooses it again: an image sequence its own folder, anything
-  // else the folder a new job of that format would get (or the job's own, when it had one).
-  const [autoFolder, setAutoFolder] = useState(() => automaticFolder(settings0.folder, compName, t))
+  // While the folder is still the one the editor chose (empty, the composition's sequence folder,
+  // or the folder this job took from the job before it), a change of format chooses it again: an
+  // image sequence its own folder, anything else the folder it started with (when that was the
+  // editor's too) or the folder a new job of that format would get. A folder typed or taken from a
+  // preset in this job's dialog stays, unless the box is emptied again: an empty box is automatic.
+  const [startedAuto] = useState(() => automaticFolder(settings0.folder, compName, t) || (item != null && inheritedFolders.get(item.id) === settings0.folder))
+  const [autoFolder, setAutoFolder] = useState(startedAuto)
   const changeFormat = (format: QueueFormat) => {
-    if (!autoFolder || SEQUENCES.has(format) === SEQUENCES.has(settings.format)) return set({ format })
-    const own = item ? outputOf(item).folder : ''
-    const others = new Set([...foldersOf(queued)].filter((each) => each !== own))
-    const folder = !SEQUENCES.has(format) && !SEQUENCES.has(settings0.format) ? settings0.folder : defaultFolder(format, compName, t, others)
+    if (!(autoFolder || !settings.folder.trim()) || SEQUENCES.has(format) === SEQUENCES.has(settings.format)) return set({ format })
+    const own = item ? jobFolder(item, t) : ''
+    const others = new Set([...foldersOf(queued, t)].filter((each) => each !== own))
+    const folder = !SEQUENCES.has(format) && startedAuto && !SEQUENCES.has(settings0.format) ? settings0.folder : defaultFolder(format, compName, t, others)
     set({ format, folder })
   }
   const [from, setFrom] = useState(formatTimecode(start.start, fps))
@@ -547,6 +572,8 @@ function JobDialog({ item, comp, queued, onClose }: { item: QueueItem | null; co
     const outputChanged = JSON.stringify(outputParams(values, compName)) !== JSON.stringify(outputParams(was, compName))
     if (renderChanged && (await run('renderQueue.setRenderSettings', { item: item.id, ...renderParams(values) })) === null) return
     if (outputChanged && (await run('renderQueue.setOutputModule', { item: item.id, ...outputParams(values, compName) })) === null) return
+    // A folder the person chose here is theirs from now on.
+    if (!autoFolder && values.folder) inheritedFolders.delete(item.id)
     onClose()
   }
   const applyPreset = (name: string) => {

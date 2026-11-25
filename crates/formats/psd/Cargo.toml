@@ -1,6 +1,6 @@
 [package]
 name = "kition-motion-psd"
-description = "PSD/PSB reader (layers, groups, masks, blend modes, text, layer effects, adjustment layers; 8/16/32-bit, RGB/CMYK/Gray/Lab/Indexed, raw/RLE/ZIP) and a minimal writer, from Adobe's published file format specification"
+description = "PSD/PSB reader (layers, groups, masks, blend modes, text, layer effects, adjustment layers; 8/16/32-bit, RGB/CMYK/Gray/Lab/Indexed, raw/RLE/ZIP) and a minimal writer, from the published PSD file format specification"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

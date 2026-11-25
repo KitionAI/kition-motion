@@ -207,7 +207,7 @@ pub struct ProjectSettings {
     /// The project's comment (Metadata panel).
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub comment: String,
-    /// Color Engine (Adobe-style built-in or OCIO with ACES working spaces).
+    /// Color Engine (the built-in one or OCIO with ACES working spaces).
     #[serde(default)]
     pub color_engine: ColorEngine,
     /// HDR handling for standard-dynamic-range output (display and renders).
@@ -988,7 +988,7 @@ pub struct Footage {
     /// project so expressions read it everywhere (and on the web).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data: Option<String>,
-    /// PDF / Illustrator footage: the page shown (0-based; File ▸ Import ▸ Page).
+    /// PDF / `.ai` footage: the page shown (0-based; File ▸ Import ▸ Page).
     #[serde(default, skip_serializing_if = "is_default")]
     pub page: u32,
     /// Image sequences imported with Force Alphabetical Order: the files play one after another
@@ -1077,7 +1077,7 @@ pub struct Proxy {
     pub enabled: bool,
 }
 
-/// A layer of a layered still (a PSD document, or a PDF / Illustrator / EPS file) used as
+/// A layer of a layered still (a PSD document, or a PDF / `.ai` / EPS file) used as
 /// footage (File ▸ Import ▸ Composition / Composition – Retain Layer Sizes, or Choose Layer).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceLayer {
