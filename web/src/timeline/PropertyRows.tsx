@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronDownIcon as Open, ChevronRightIcon as Closed } from '@kition/tessera/icons/react'
 import { useEngineQuery, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
-import { useEffectParams } from '../properties/catalog'
+import { useEffectOf } from '../properties/catalog'
 import { KeyDiamond } from '../properties/KeyDiamond'
-import { propMeta } from '../properties/meta'
+import { nodeName, propMeta } from '../properties/meta'
 import { PropertyValue } from '../properties/PropertyValue'
 import { PARAMETRIC_SHAPES, ShapeAddMenu, ShapeItemMenu } from '../properties/ShapeItems'
 import type { ContextMenuPoint } from '@kition/sdk/editor'
@@ -12,7 +12,7 @@ import { useTimeline } from './context'
 import { KeyMark } from './KeyMark'
 import { sideOf, type PropRead } from './interp'
 import { keyTimes } from './keys'
-import { effectOf, parentsOf, propertyRows, type TreeNode, type Twirl } from './tree'
+import { effectOf, isThreeD, parentsOf, propertyRows, type TreeNode, type Twirl } from './tree'
 import { ExpressionRow, errorLine, explainError, type ExprError } from './ExpressionRow'
 import { leftOf } from './view'
 import { useWaveformReader, type Waveform } from './samples'
@@ -90,7 +90,7 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
   const { info, view, readOnly } = useTimeline()
   // Expressions that fail now (the engine evaluates them at the current time).
   const failing = useEngineQuery<{ errors?: ExprError[] }>('expr.errors', { time: info.time })
-  const paramsOf = useEffectParams()
+  const catalogEffect = useEffectOf()
   const tree = useEngineQuery<{ properties?: TreeNode }>('layer.tree', { layer: layer.id, depth: TREE_DEPTH, time: info.time })
   const parents = useMemo(() => (tree?.properties ? parentsOf(tree.properties) : new Map<string, TreeNode>()), [tree])
   // A Rectangle, Ellipse or Polystar Path row's right-click menu (Convert to Bezier Path).
@@ -101,8 +101,11 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
     <>
       {rows.map((row) => {
         const { node, depth } = row
-        // Group and property names are the engine's English ones, translated where the editor knows them.
-        const name = phrase(node.name)
+        // Group and property names are the engine's English ones, translated where the editor knows
+        // them (a layer setting's source, a name that reads differently in its effect, a 3D layer's Z Rotation).
+        const effect = catalogEffect(effectOf(node.path, parents))
+        const meta = row.kind === 'property' ? propMeta(node, parents.get(node.path), effect) : null
+        const name = nodeName(node, effect, meta, row.kind === 'property' && isThreeD(layer), phrase, t)
         const id = `${layer.id}-${pathId(node.path)}`
         if (row.kind === 'waveform') {
           return (
@@ -148,7 +151,6 @@ export function PropertyRows({ layer, twirl, toggled, onToggle, selected }: { la
           )
         }
         const times = keyTimes(layer, node.path)
-        const meta = propMeta(node, parents.get(node.path), paramsOf(effectOf(node.path, parents)))
         const failure = (failing?.errors ?? []).find((error) => error.layer === layer.id && error.path === node.path)
         const expression =
           node.expression !== undefined ? (

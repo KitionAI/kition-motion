@@ -175,7 +175,10 @@ try {
   await h.until(async () => (await jobs()).length === 2)
   const second = (await jobs())[1]
   await h.until(async () => (await folderOf(second.id).count()) === 1)
-  h.step('the next job writes to the project’s folder, not the sequence’s', (await folderOf(second.id).getAttribute('data-folder')) === '' && ((await folderOf(second.id).textContent()) ?? '').includes('项目文件夹'), await folderOf(second.id).textContent())
+  // (7j: the next job is an image sequence too, so it gets a folder of its own, named after the
+  // composition, rather than the project's folder: fixes7i checks that folder and its files.)
+  const ownFolder = `${second.compName}_序列`
+  h.step('the next job does not write into the sequence’s folder (a sequence again, it gets its own)', (await folderOf(second.id).getAttribute('data-folder')) === ownFolder && ((await folderOf(second.id).textContent()) ?? '').includes(`${ownFolder}/`) && !((await folderOf(second.id).textContent()) ?? '').includes('job-png'), await folderOf(second.id).textContent())
   await kit.getByTestId(`motion-queue-item-${second.id}-settings`).click()
   await kit.getByTestId('motion-job-dialog').waitFor()
   await kit.getByTestId('motion-job-format').selectOption('gif')
@@ -211,7 +214,13 @@ try {
   await h.until(async () => ((await cacheButton.getAttribute('title')) ?? '').includes(said))
   h.step(`the full cache says exactly what it holds (${said})`, ((await cacheButton.getAttribute('title')) ?? '').includes(said) && ((await cacheButton.getAttribute('title')) ?? '').includes('共 300 帧'), await cacheButton.getAttribute('title'))
   const loopCached = kit.getByTestId('motion-cache-loop-cached')
-  h.step('beside it: 只循环已缓存的部分 (off)', (await loopCached.count()) === 1 && (await loopCached.textContent()) === '只循环已缓存的部分' && (await loopCached.getAttribute('aria-pressed')) === 'false', await loopCached.textContent().catch(() => '(none)'))
+  // (7j: the full cache's actions sit in the ▾ right after the cache button; a click elsewhere closes it.)
+  const cacheMenu = async () => {
+    if ((await loopCached.count()) === 0) await kit.getByTestId('motion-cache-full-menu').click()
+    await h.until(async () => (await loopCached.count()) === 1)
+  }
+  await cacheMenu()
+  h.step('in its ▾: 只循环已缓存的部分 (off)', (await loopCached.count()) === 1 && (await loopCached.textContent()) === '只循环已缓存的部分' && (await loopCached.getAttribute('aria-pressed')) === 'false', await loopCached.textContent().catch(() => '(none)'))
   const end = held / 30
   const timeNow = async () => (await h.details()).time
   const play = () => kit.getByTestId('motion-play').click()
@@ -233,6 +242,7 @@ try {
   const wrapped = times.some((time, at) => at > 0 && time < times[at - 1] - 0.1)
   h.step('and playback goes round inside them', times.every((time) => time <= end + 1e-6) && wrapped, times.map((time) => time.toFixed(2)).join(' '))
   // Off: playback goes on past the cached frames (drawn as it reaches them) rather than going round early.
+  await cacheMenu()
   await loopCached.click()
   await h.until(async () => (await loopCached.getAttribute('aria-pressed')) === 'false' && (await loopCached.getAttribute('data-area')) === null)
   await h.setUp([{ command: 'time.set', params: { time: Math.max(0, end - 0.3) } }])

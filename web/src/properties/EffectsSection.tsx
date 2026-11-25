@@ -3,7 +3,7 @@ import { ChevronRightIcon as Chevron, EllipsisIcon as More, GripVerticalIcon as 
 import { Button, IconButton, MenuButton, MenuItem, MenuSeparator, Switch, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
 import type { TreeNode } from '../timeline/tree'
-import { useEffectParams } from './catalog'
+import { useEffectOf } from './catalog'
 import { PropertyChildren, usePanel } from './PropertyTree'
 import { Section, remember, useOpen } from './Section'
 
@@ -14,7 +14,7 @@ const cardKey = (effect: TreeNode) => `effect:${effect.uid ?? effect.path}`
 function EffectCard({ effect, index, count, scope, selected, onSelect, onGrip }: { effect: TreeNode; index: number; count: number; scope: string; selected: boolean; onSelect: () => void; onGrip: (event: ReactPointerEvent<HTMLElement>) => void }) {
   const { run, t, phrase } = useKitEditor()
   const { layer, readOnly } = usePanel()
-  const paramsOf = useEffectParams()
+  const effectOf = useEffectOf()
   const [open, setOpen] = useOpen(scope, cardKey(effect), false)
   const name = phrase(effect.name)
   const uid = effect.uid
@@ -70,7 +70,7 @@ function EffectCard({ effect, index, count, scope, selected, onSelect, onGrip }:
       </div>
       {open ? (
         <div className="motion-effect-body">
-          <PropertyChildren node={effect} scope={scope} depth={0} params={paramsOf(effect.effect)} />
+          <PropertyChildren node={effect} scope={scope} depth={0} effect={effectOf(effect.effect)} />
         </div>
       ) : null}
     </div>

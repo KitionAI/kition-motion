@@ -3,10 +3,10 @@ import { ChevronDownIcon as Open, ChevronRightIcon as Closed } from '@kition/tes
 import { Checkbox, Select, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
 import { keyTimes } from '../timeline/keys'
-import { shown, type TreeNode } from '../timeline/tree'
+import { isThreeD, shown, type TreeNode } from '../timeline/tree'
 import { pathId } from '../timeline/PropertyRows'
 import { KeyDiamond } from './KeyDiamond'
-import { propMeta, type EffectParam } from './meta'
+import { nodeName, propMeta, type EffectEntry } from './meta'
 import { PropertyValue } from './PropertyValue'
 import { takeReveal, useOpen } from './Section'
 import { PARAMETRIC_SHAPES, ShapeAddMenu, ShapeItemActions, ShapeItemMenu } from './ShapeItems'
@@ -39,17 +39,17 @@ export function propId(path: string) {
 }
 
 /**
- * One property: its keyframe diamond, its name (translated), and its value control. `params`
- * are its effect's parameters (from `effect.list`), when it belongs to one.
+ * One property: its keyframe diamond, its name (translated), and its value control. `effect` is
+ * the effect it belongs to (from `effect.list`), when it belongs to one.
  */
 /** `idPrefix`: a second row of the same property elsewhere in the panel (a shape's quick settings) keeps its test ids apart. */
-export function PropertyRow({ node, parent, params, label, idPrefix = '' }: { node: TreeNode; parent?: TreeNode; params?: readonly EffectParam[]; label?: string; idPrefix?: string }) {
-  const { phrase, run } = useKitEditor()
+export function PropertyRow({ node, parent, effect, label, idPrefix = '' }: { node: TreeNode; parent?: TreeNode; effect?: EffectEntry; label?: string; idPrefix?: string }) {
+  const { phrase, run, t } = useKitEditor()
   const { layer, time, frame, readOnly } = usePanel()
-  const name = label ?? phrase(node.name)
+  const meta = propMeta(node, parent, effect)
+  const name = label ?? nodeName(node, effect, meta, isThreeD(layer), phrase, t)
   const id = `${idPrefix}${propId(node.path)}`
   const chosen = layer.selectedProps.includes(node.path)
-  const meta = propMeta(node, parent, params)
   // Text keeps its own field below its name; the rest sit beside it.
   const wide = node.type === 'text' || node.type === 'gradient' || (node.type === 'scalar' && !!meta?.slider)
   return (
@@ -79,11 +79,12 @@ export function PropertyRow({ node, parent, params, label, idPrefix = '' }: { no
  * contents) at `index` of `count` siblings: its header has its own buttons (on/off, up, down,
  * duplicate, delete), and a shape group an Add menu for what goes inside it.
  */
-export function PropertyGroup({ node, scope, depth, byDefault = false, label, item }: { node: TreeNode; scope: string; depth: number; byDefault?: boolean; label?: string; item?: { index: number; count: number } }) {
-  const { phrase } = useKitEditor()
+/** `effect`: the effect the group sits in (its settings name and describe the rows inside). */
+export function PropertyGroup({ node, scope, depth, byDefault = false, label, item, effect }: { node: TreeNode; scope: string; depth: number; byDefault?: boolean; label?: string; item?: { index: number; count: number }; effect?: EffectEntry }) {
+  const { phrase, t } = useKitEditor()
   const { layer, readOnly } = usePanel()
   const [open, setOpen] = useOpen(scope, node.path, byDefault)
-  const name = label ?? phrase(node.name)
+  const name = label ?? nodeName(node, effect, null, false, phrase, t)
   const id = pathId(node.path)
   // A Rectangle, Ellipse or Polystar Path's header: a right-click converts it to a Bezier path.
   const [menu, setMenu] = useState<ContextMenuPoint | null>(null)
@@ -119,7 +120,7 @@ export function PropertyGroup({ node, scope, depth, byDefault = false, label, it
       </span>
       {convertible && node.uid != null ? <ShapeItemMenu layer={layer.id} uid={node.uid} name={name} at={menu} onClose={() => setMenu(null)} testId={`motion-item-menu-${id}`} /> : null}
       {open && node.mask ? <MaskSettings node={node} mask={node.mask} /> : null}
-      {open ? <PropertyChildren node={node} scope={scope} depth={depth + 1} /> : null}
+      {open ? <PropertyChildren node={node} scope={scope} depth={depth + 1} effect={effect} /> : null}
     </div>
   )
 }
@@ -157,7 +158,7 @@ function MaskSettings({ node, mask }: { node: TreeNode; mask: { mode: string; in
 }
 
 /** A group's children: properties as rows, groups as nested groups (empty ones left out). */
-export function PropertyChildren({ node, scope, depth, params }: { node: TreeNode; scope: string; depth: number; params?: readonly EffectParam[] }) {
+export function PropertyChildren({ node, scope, depth, effect }: { node: TreeNode; scope: string; depth: number; effect?: EffectEntry }) {
   const { layer } = usePanel()
   // A shape layer's contents (or a shape group's): every group in it is a shape item, ordered.
   const items = layer.type === 'Shape' && node.match === 'contents' && node.path.startsWith('contents') ? (node.children ?? []).filter((child) => child.children) : null
@@ -167,9 +168,9 @@ export function PropertyChildren({ node, scope, depth, params }: { node: TreeNod
         .filter((child) => visible(child, layer) && (!child.children || hasRows(child, layer) || items?.includes(child)))
         .map((child) =>
           child.children ? (
-            <PropertyGroup key={child.path} node={child} scope={scope} depth={depth} item={items?.includes(child) ? { index: items.indexOf(child), count: items.length } : undefined} />
+            <PropertyGroup key={child.path} node={child} scope={scope} depth={depth} item={items?.includes(child) ? { index: items.indexOf(child), count: items.length } : undefined} effect={effect} />
           ) : (
-            <PropertyRow key={child.path} node={child} parent={node} params={params} />
+            <PropertyRow key={child.path} node={child} parent={node} effect={effect} />
           ),
         )}
     </div>

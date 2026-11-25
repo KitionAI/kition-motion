@@ -48,6 +48,7 @@ import { SecondView } from './SecondView'
 import { installPointerdownFallback } from './pointerFallback'
 import { ITEM_MIME, parseAnswer, relativePath, useFootage, type ProjectItem, type ProjectSummary } from './footage'
 import { RenderQueuePanel, compsOf, useRenderQueue } from './RenderQueue'
+import { CacheFullMenu } from './CacheFullMenu'
 import { EDITOR_KEYS, pressed } from './keys'
 import { AudioMeters, createMeterFeed, usePreviewAudio } from './audio'
 import { INTERPOLATIONS } from './timeline/interp'
@@ -655,7 +656,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     setReveal({ item: answer.item })
   }
   // The Render Queue: its panel under the Project panel, and its runs (which go on with the panel closed).
-  const renderQueue = useRenderQueue({ doc: session.doc, host, run, t })
+  const renderQueue = useRenderQueue({ doc: session.doc, host, run, query, t })
   const [queueOpen, setQueueOpen] = useState(false)
   /** Add to Render Queue: jobs for `comps` (ids), with the settings used last; the panel opens. */
   const addToQueue = async (comps: number[]) => {
@@ -831,10 +832,10 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const startFrame = Math.round(workArea[0] * compFps)
   const held =
     runs.length === 1 && runs[0].first === startFrame
-      ? t('cacheAhead.heldFirst', { done: heldFrames, seconds: tenths(heldFrames / compFps) })
+      ? t('cacheAhead.heldFirst', { done: heldFrames, total: ahead?.total ?? 0, seconds: tenths(heldFrames / compFps) })
       : runs.length === 1
-        ? t('cacheAhead.heldFrom', { done: heldFrames, seconds: tenths(heldFrames / compFps), from: tenths(runs[0].first / compFps), to: tenths((runs[0].first + runs[0].count) / compFps) })
-        : t('cacheAhead.heldSome', { done: heldFrames, seconds: tenths(heldFrames / compFps) })
+        ? t('cacheAhead.heldFrom', { done: heldFrames, total: ahead?.total ?? 0, seconds: tenths(heldFrames / compFps), from: tenths(runs[0].first / compFps), to: tenths((runs[0].first + runs[0].count) / compFps) })
+        : t('cacheAhead.heldSome', { done: heldFrames, total: ahead?.total ?? 0, seconds: tenths(heldFrames / compFps) })
   // The cached run to loop: the longest (the earliest of equal ones); frames drawn while playing
   // past it do not move the loop.
   const [loopCached, setLoopCached] = useState(false)
@@ -1584,28 +1585,17 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
               {!cacheAhead || !ahead || !(ahead.total > 0) ? t('cacheAhead.label') : ahead.full ? t('cacheAhead.fullShort', { done: ahead.done, total: ahead.total }) : t('cacheAhead.progress', { done: ahead.done, total: ahead.total })}
             </Button>
           ) : null}
-          {state?.comp && cacheAhead && lowerResolution ? (
-            <Button variant="ghost" title={t('cacheAhead.lowerHint', { resolution: phrase(lowerResolution[1]) })} onClick={() => setPreview(lowerResolution[2])} data-testid="motion-cache-lower">
-              {t('cacheAhead.lower', { resolution: phrase(lowerResolution[1]) })}
-            </Button>
-          ) : null}
-          {state?.comp && cacheAhead && ahead?.full && loopFrom !== null ? (
-            <Button
-              variant="ghost"
-              className="motion-toggle"
-              aria-pressed={loopCached}
-              title={t('cacheAhead.loopCachedHint', { held })}
-              onClick={() => setLoopCached((on) => !on)}
-              data-testid="motion-cache-loop-cached"
-              data-area={cachedArea ? cachedArea.map((each) => each.toFixed(3)).join(' ') : undefined}
-            >
-              {t('cacheAhead.loopCached')}
-            </Button>
-          ) : null}
-          {state?.comp && cacheAhead && ahead?.full && !memoryReported && !moreMemory ? (
-            <Button variant="ghost" title={t('cacheAhead.moreMemoryHint', { megabytes: MORE_MEMORY_MB })} onClick={() => setMoreMemory(true)} data-testid="motion-cache-more-memory">
-              {t('cacheAhead.moreMemory')}
-            </Button>
+          {/* A full cache: one ▾ beside the cache button (a split button, "Cache full N/M ▾") opens what
+              can be done about it, so the status bar keeps its zoom controls in a narrow window. */}
+          {state?.comp && cacheAhead && ahead?.full ? (
+            <CacheFullMenu
+              held={held}
+              total={ahead.total}
+              megabytes={Math.round((ahead.budget ?? 0) / 1048576)}
+              lower={lowerResolution ? { label: phrase(lowerResolution[1]), set: () => setPreview(lowerResolution[2]) } : null}
+              loop={loopFrom !== null ? { on: loopCached, toggle: () => setLoopCached((on) => !on), area: cachedArea } : null}
+              moreMemory={!memoryReported && !moreMemory ? { megabytes: MORE_MEMORY_MB, use: () => setMoreMemory(true) } : null}
+            />
           ) : null}
           {state?.comp && view3d.has3D ? (
             <Select

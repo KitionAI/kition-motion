@@ -48,7 +48,8 @@
     "test:labels": "node tests/labels.mjs chromium && node tests/labels.mjs webkit",
     "test:twoViews": "node tests/twoViews.mjs chromium && node tests/twoViews.mjs webkit",
     "test:fixes7g": "node tests/fixes7g.mjs chromium && node tests/fixes7g.mjs webkit",
-    "test:fixes7h": "node tests/fixes7h.mjs chromium && node tests/fixes7h.mjs webkit"
+    "test:fixes7h": "node tests/fixes7h.mjs chromium && node tests/fixes7h.mjs webkit",
+    "test:fixes7i": "node tests/fixes7i.mjs chromium && node tests/fixes7i.mjs webkit"
   },
   "dependencies": {
     "@kition/sdk": "npm:@kitionstage/sdk@0.5.2-stage.16",

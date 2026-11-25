@@ -845,6 +845,15 @@ features:
     gap: "A layer setting's source choice is named in the editor (effect.list does not list it); option names that are waves are told apart by their drop-down's id; the loop of cached frames follows the cache as it changes. Gated by web/tests/fixes7h.mjs, the setting-name scan and the greyed-row steps in web/tests/fixes7g.mjs, and the no-other-product-name test in crates/engine/effects/src/catalog.rs."
     cases: []
     since: "2026-11-25"
+  - id: motion.editor.hand-fixes-7i
+    title: "The phase 7i audit's fixes: every layer setting's source choice, wherever it sits in an effect (inside a group, or declared by the effect with its own default), offers Source / Masks / Effects & Masks and reads “<setting> 来源” / “<setting> Source”; Curves' Channel names its curves; no effect setting offers the bare digits 0 to 9; every group heading inside an effect card reads in Chinese but for abbreviations; misleading names are reworded (影调, 焦外过渡, 渐变图层影响, 模糊图位置 居中 / 伸缩以适合, 起点之前 不显示 / 保持原样, 光带合成方式, 主干衰减, 传导状态（随机形状）, 模拟区域大小 / 模拟区域, 年龄大于/小于（秒）, 渲染意图, 调色风格, the Bezier Warp tangents by edge and position, Radio Waves' 朝向 / 移动方向, 在上面, 定向); a 3D layer's Rotation reads Z Rotation; a new Render Queue job that is an image sequence writes into a folder of its own named after the composition (numbered when a queued job already writes there); a full preview cache keeps its actions (lower the preview resolution, use more memory, loop only the cached part) behind one ▾ beside the cache button, so the status bar's zoom controls stay in view; the English cache tooltips read “N of M frames cached (the first S s)”"
+    dimension: [function]
+    priority: P1
+    status: has
+    paths: [web/src/properties/meta.ts, web/src/properties/PropertyTree.tsx, web/src/properties/EffectsSection.tsx, web/src/properties/catalog.ts, web/src/timeline/PropertyRows.tsx, web/src/effectNames.ts, web/src/strings.ts, web/src/RenderQueue.tsx, web/src/CacheFullMenu.tsx, web/src/App.tsx, web/src/app.css, web/tests/fixes7i.mjs]
+    gap: "A sequence's own folder is kept apart from the folders of the jobs in the queue, not from folders already in the project's folder (the host does not overwrite a file there: it picks an unused name); names that read differently inside one effect are listed by effect and setting in meta.ts. Gated by web/tests/fixes7i.mjs (the scan of every effect's tree among its steps)."
+    cases: []
+    since: "2026-11-25"
   - id: motion.editor.3d-handles
     title: "3D handles on the canvas: with the Selection tool the first selected 3D layer, camera or light shows an arrow per world axis (X red, Y green, Z blue), a square per plane between two arrows and a ring about each of its rotation axes, in every 3D view (the active camera's too); an arrow moves the selected 3D layers, cameras and lights along its axis, a square in its plane, a ring turns X, Y or Z Rotation; each drag is one undo step (prop.set with the gesture's merge key) and Escape undoes it; Shift keeps a plane move to its main direction, an arrow to steps of 10 pixels and a ring to 15° steps; the handles keep their screen size at any zoom and depth"
     dimension: [function]

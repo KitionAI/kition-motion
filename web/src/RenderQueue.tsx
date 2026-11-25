@@ -174,11 +174,17 @@ function settingsOf(item: QueueItem): JobSettings {
   }
 }
 
-/** A new job's settings for `comp`: the ones used last (format, size, rate; the folder of the last job that was not a sequence), the whole composition, its name. */
-function newSettings(comp: { name: string; width: number; height: number }): JobSettings {
+/**
+ * A new job's settings for `comp`: the ones used last (format, size, rate; the folder of the last
+ * job that was not a sequence), the whole composition, its name. An image sequence (one file per
+ * frame) goes into a folder of its own, named after the composition (`Comp 1_sequence`, numbered
+ * when a job in the queue already writes there: `taken`), never loose in the project's folder.
+ */
+function newSettings(comp: { name: string; width: number; height: number }, t: Strings, taken: ReadonlySet<string>): JobSettings {
   const last = lastSettings()
+  const format: QueueFormat = QUEUE_FORMATS.some((each) => each.id === last.format) ? (last.format as QueueFormat) : 'h264'
   return {
-    format: QUEUE_FORMATS.some((format) => format.id === last.format) ? (last.format as QueueFormat) : 'h264',
+    format,
     span: last.span === 'workArea' ? 'workArea' : 'comp',
     start: 0,
     end: 1,
@@ -187,10 +193,25 @@ function newSettings(comp: { name: string; width: number; height: number }): Job
     height: last.height ?? comp.height,
     frameRate: typeof last.frameRate === 'number' && last.frameRate > 0 ? last.frameRate : null,
     name: '',
-    folder: typeof last.folder === 'string' ? (presetFolder(last.folder) ?? '') : '',
+    folder: SEQUENCES.has(format) ? sequenceFolder(comp.name, t, taken) : typeof last.folder === 'string' ? (presetFolder(last.folder) ?? '') : '',
     alpha: last.alpha !== false,
   }
 }
+
+type Strings = (key: string, values?: Record<string, string | number>) => string
+
+/** An image sequence's own folder, named after its composition, numbered past the folders in `taken`. */
+function sequenceFolder(compName: string, t: Strings, taken: ReadonlySet<string>) {
+  const base = presetFolder(fileName(t('queue.sequenceFolder', { name: fileName(compName) || 'Composition' }))) || 'sequence'
+  for (let n = 1; n < 1000; n += 1) {
+    const folder = n === 1 ? base : `${base} ${n}`
+    if (!taken.has(folder)) return folder
+  }
+  return base
+}
+
+/** The folders the queue's jobs write to. */
+const foldersOf = (items: readonly QueueItem[] | undefined) => new Set((items ?? []).map((item) => outputOf(item).folder).filter(Boolean))
 
 /** Milliseconds as `1:05` (minutes and seconds). */
 const clock = (ms: number) => {
@@ -202,7 +223,7 @@ const clock = (ms: number) => {
  * The queue's runs: Render, Stop (the job rendering; the rest go on) and Stop All, and what each
  * job of this session came to. Lives with the editor, so a run goes on with the panel closed.
  */
-export function useRenderQueue({ doc, host, run, t }: { doc: KitEngine | null; host: HostConnection; run: (command: string, params?: Record<string, unknown>) => Promise<string | null>; t: (key: string, values?: Record<string, string | number>) => string }) {
+export function useRenderQueue({ doc, host, run, query, t }: { doc: KitEngine | null; host: HostConnection; run: (command: string, params?: Record<string, unknown>) => Promise<string | null>; query: <T>(command: string, params?: Record<string, unknown>) => Promise<T | null>; t: Strings }) {
   const [jobs, setJobs] = useState<ReadonlyMap<number, JobState>>(() => new Map())
   const [rendering, setRendering] = useState(false)
   const [current, setCurrent] = useState<number | null>(null)
@@ -221,15 +242,17 @@ export function useRenderQueue({ doc, host, run, t }: { doc: KitEngine | null; h
   const add = useCallback(
     async (comps: Array<{ id: number; name: string; width: number; height: number }>, settings?: JobSettings) => {
       const made: number[] = []
+      const taken = foldersOf((await query<{ items?: QueueItem[] }>('renderQueue.list', {}).catch(() => null))?.items)
       for (const comp of comps) {
-        const values = settings ?? newSettings(comp)
+        const values = settings ?? newSettings(comp, t, taken)
+        taken.add(values.folder)
         const answer = parseAnswer<{ item?: number }>(await run('renderQueue.add', { comp: comp.id, ...renderParams(values), ...outputParams(values, comp.name) }))
         if (answer?.item != null) made.push(answer.item)
       }
       if (made.length) toast.success(made.length === 1 ? t('queue.added', { name: comps[0]?.name ?? '' }) : t('queue.addedMany', { count: made.length }))
       return made
     },
-    [run, t],
+    [run, query, t],
   )
 
   /** Render: every job whose Render box is on, one after another, from a copy of the project taken now. */
@@ -448,7 +471,8 @@ function JobDialog({ item, comp, onClose }: { item: QueueItem | null; comp: Proj
   const { run, t } = useKitEditor()
   const compName = item?.compName ?? comp?.name ?? ''
   const fps = comp?.frameRate ?? item?.frameRate ?? 30
-  const start = item ? settingsOf(item) : newSettings({ name: compName, width: comp?.size?.[0] ?? 1920, height: comp?.size?.[1] ?? 1080 })
+  const queued = useEngineQuery<{ items?: QueueItem[] }>('renderQueue.list', {})
+  const start = item ? settingsOf(item) : newSettings({ name: compName, width: comp?.size?.[0] ?? 1920, height: comp?.size?.[1] ?? 1080 }, t, foldersOf(queued?.items))
   const [settings0] = useState<JobSettings>(() => ({ ...start, frameRate: item?.frameRate != null && Math.abs(item.frameRate - fps) > 1e-3 ? item.frameRate : null }))
   const [settings, setSettings] = useState<JobSettings>(settings0)
   const [from, setFrom] = useState(formatTimecode(start.start, fps))
