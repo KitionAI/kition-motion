@@ -51,7 +51,7 @@ trips and renders, checked by tests, not against After Effects), **partial** (na
 | Targa `.tga` | R/W | none | none | Media Browser lists it but import refuses (gap 17) |
 | DPX / Cineon `.dpx` `.cin` | R/W | none | none | Same; common in film VFX |
 | Radiance `.hdr` | R/W | none | none | Same |
-| SGI, PICT, ElectricImage, RLA/RPF images | R | none | none | Legacy; RPF camera data import exists (`keys.rpfCameraImport`) |
+| SGI, PICT, ElectricImage, RLA/RPF images | R | none | none | Legacy; RPF camera data import exists (`keyframe.rpfCameraImport`) |
 | Camera Raw (DNG, CR3, NEF…) | R (Camera Raw) | none | none | — |
 | HEIF / AVIF | R (platform) | none | none | — |
 

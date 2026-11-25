@@ -116,7 +116,7 @@ export const RESOLUTIONS: ReadonlyArray<readonly [command: string, label: string
   ['view.res.quarter', 'Quarter', 4],
 ]
 
-/** View ▸ 3D View's rows (`view.3d.*`) and the view each shows (`view.get3D`'s `view`). */
+/** View ▸ 3D View's rows (`view.threeD.*`) and the view each shows (`view.get3D`'s `view`). */
 export const THREE_D_VIEWS: ReadonlyArray<readonly [command: string, label: string, view: string]> = [
   ['view.threeD.activeCamera', 'Active Camera', 'activeCamera'],
   ['view.threeD.front', 'Front', 'front'],

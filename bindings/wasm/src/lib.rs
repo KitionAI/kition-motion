@@ -925,7 +925,7 @@ fn base64_encode(bytes: &[u8]) -> String {
 
 /// Families whose commands change only what this person sees or the application's own settings
 /// (the current time, previews, panels, preferences), never the project.
-const VIEWING_FAMILIES: [&str; 7] = ["time.", "playback.", "help.", "app.", "window.", "prefs.", "shortcuts."];
+const VIEWING_FAMILIES: [&str; 7] = ["time.", "playback.", "help.", "app.", "window.", "prefs.", "shortcut."];
 
 /// The `view.` commands that change the project: guides are the composition's, and the 3D view
 /// commands that move a camera move its layer. The rest of `view.` is this person's viewer.
@@ -942,7 +942,8 @@ const EDITING_VIEWS: [&str; 8] = [
 
 /// Single journaled commands that never change the project: selections, the clipboard, closing
 /// or revealing things, and exports that only write a file.
-const VIEWING_COMMANDS: [&str; 27] = [
+const VIEWING_COMMANDS: [&str; 28] = [
+    "edit.find",
     "edit.selectAll",
     "edit.deselectAll",
     "edit.selectLabelGroup",

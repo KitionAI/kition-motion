@@ -1,4 +1,4 @@
-//! Settings (`prefs.*`), keyboard shortcut presets (`shortcuts.*`), File ▸ Open Recent and
+//! Settings (`prefs.*`), keyboard shortcut presets (`shortcut.*`), File ▸ Open Recent and
 //! auto-save commands.
 
 use serde_json::{Value, json};

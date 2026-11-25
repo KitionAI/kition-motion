@@ -545,20 +545,20 @@ pub fn user_files(s: &Session) -> Vec<String> {
 
 fn check_name(name: &str) -> Result<()> {
     if name.is_empty() || name.contains(['/', '\\']) || name.starts_with('.') {
-        return Err(bad("templates", format!("bad template file name `{name}`")));
+        return Err(bad("template", format!("bad template file name `{name}`")));
     }
     Ok(())
 }
 
 fn read_user(s: &Session, file: &str) -> Result<Vec<u8>> {
     check_name(file)?;
-    let cfg = s.config.as_ref().ok_or_else(|| bad("templates", "no settings store: user templates are unavailable"))?;
+    let cfg = s.config.as_ref().ok_or_else(|| bad("template", "no settings store: user templates are unavailable"))?;
     match user_dir(s) {
         Some(d) => s.services.read_file(&d.join(file).to_string_lossy()).map_err(|e| EngineError::Other(format!("cannot read template {file}: {e}"))),
         None => cfg
             .read(&format!("{TEMPLATES_DIR}/{file}"))
             .and_then(|t| kition_motion_track::roto::rle::base64_decode(&t))
-            .ok_or_else(|| bad("templates", format!("no user template `{file}`"))),
+            .ok_or_else(|| bad("template", format!("no user template `{file}`"))),
     }
 }
 

@@ -31,10 +31,10 @@ fn keys_p(s: &Session, p: &Value) -> Vec<KeyRef> {
 /// in Settings ▸ Labels; `keyframe.setLabel` is the Timeline context menu's command).
 pub(crate) fn label_keys(s: &mut Session, p: &Value) -> Result<Value> {
     let name = str_p(p, "label").unwrap_or("Red");
-    let idx = label_index(s, name).ok_or_else(|| bad("keys.label", format!("unknown label `{name}`")))?;
+    let idx = label_index(s, name).ok_or_else(|| bad("edit.label", format!("unknown label `{name}`")))?;
     let keys = keys_p(s, p);
     if keys.is_empty() {
-        return Err(bad("keys.label", "select keyframes first"));
+        return Err(bad("edit.label", "select keyframes first"));
     }
     let cid = comp_id(s, p)?;
     let n = s.edit("Keyframe Label", None, |proj, _| {

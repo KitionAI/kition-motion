@@ -13,7 +13,7 @@ const CLICK_SLOP = 3
 
 export const sameMarker = (a: MarkerRef | null, b: MarkerRef | null) => a != null && b != null && a.layer === b.layer && a.index === b.index
 
-/** The parameters naming `marker` in the `markers.*` commands. */
+/** The parameters naming `marker` in the `marker.*` commands. */
 export const markerParams = (marker: MarkerRef) => (marker.layer == null ? { index: marker.index } : { layer: marker.layer, index: marker.index })
 
 /**

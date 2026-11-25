@@ -3475,7 +3475,7 @@ Defaults the engine states in its schemas (other defaults are named in the param
 - `file.relinkFootage` (writes): Run the recorded jobs in a worker session (sharing `footage`).
   - `dryRun` boolean, report only
   - `folder` file, recursive desktop search, no symlinks; max 100000 entries
-  - `wait` boolean, return results inline; otherwise job.list/jobs.wait
+  - `wait` boolean, return results inline; otherwise job.list/job.wait
 
 ### File > Scripts
 

@@ -12,7 +12,7 @@
 //!   n-1)` past the bottom).
 //! - A time that names nothing ([`names_nothing`]: moving the current time, the view, playback,
 //!   undo, files, settings, renders, frames saved): no object, no window.
-//! - A comp marker command (`markers.*` without `layer`) naming its marker by `at` or `index`: no
+//! - A comp marker command (`marker.*` without `layer`) naming its marker by `at` or `index`: no
 //!   object, no window, and the comp's markers as premise (`comp.markers` of the comp's item,
 //!   C8-time-3): markers have no ids, and the comp's own fields hold them. A new one at the current
 //!   time (`comp.addMarker`, `marker.set` with `new`) has the same marker premise. An existing
@@ -62,11 +62,11 @@ pub fn names_nothing(id: &str) -> bool {
         "file.",
         "help.",
         "prefs.",
-        "jobs.",
+        "job.",
         "project.",
         "renderQueue.",
-        "scopes.",
-        "templates.",
+        "scope.",
+        "template.",
         "scriptWindow.",
         "footage.",
         "face.model.",
@@ -75,7 +75,8 @@ pub fn names_nothing(id: &str) -> bool {
     PREFIXES.iter().any(|prefix| id.starts_with(prefix))
         || matches!(
             id,
-            "edit.undo"
+            "comp.newFromSelection"
+                | "edit.undo"
                 | "edit.redo"
                 | "edit.history"
                 | "edit.history.goto"
@@ -102,7 +103,7 @@ pub fn names_nothing(id: &str) -> bool {
 
 /// Commands that name a comp marker (with no `layer`).
 fn comp_marker(id: &str, params: &Value) -> bool {
-    (id == "comp.addMarker" || id.starts_with("markers.")) && params.get("layer").is_none_or(Value::is_null)
+    (id == "comp.addMarker" || id.starts_with("marker.")) && params.get("layer").is_none_or(Value::is_null)
 }
 
 /// The commands whose target parameter is `layer` or `layers` (`KitCommand::targets`), from the
@@ -315,7 +316,7 @@ fn premise_of(session: &Session, layer: &Layer, command: &str, params: &Value) -
         }
         return Some(Premise::on(id).fields(fields).positions(if timed { vec!["startTime"] } else { Vec::new() }));
     }
-    if command == "layer.addMarker" || command.starts_with("markers.") && params.get("layer").is_some_and(|layer| !layer.is_null()) {
+    if command == "layer.addMarker" || command.starts_with("marker.") && params.get("layer").is_some_and(|layer| !layer.is_null()) {
         // Markers are stored in layer time; stack position and In/Out points do not affect it.
         return Some(Premise::on(id).fields(["markers", "attrs.markers_locked", "attrs.stretch"]).positions(["startTime"]));
     }

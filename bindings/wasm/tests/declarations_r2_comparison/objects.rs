@@ -366,7 +366,7 @@ fn compare(command: &str, requirement: &Value, held: &Held) -> Verdict {
             Some("items")
         } else if command.starts_with("renderQueue.") || command.starts_with("render.") {
             Some("queue")
-        } else if ["footage.", "file.", "project."].iter().any(|prefix| command.starts_with(prefix)) {
+        } else if command == "comp.newFromSelection" || ["footage.", "file.", "project."].iter().any(|prefix| command.starts_with(prefix)) {
             Some("items")
         } else if command.starts_with("comp.") || command.starts_with("view.") || command.starts_with("templateProps.") {
             None
