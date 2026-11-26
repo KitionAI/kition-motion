@@ -20,7 +20,8 @@ const WAVEFORM_RATE: u32 = 2000;
 impl MotionDocument {
     /// What the canvas tools name the layers they make, in the editor's language: JSON
     /// `{"shape": "形状图层", "text": "文本"}` (a shape layer numbered `形状图层 2`; a text layer
-    /// named as Layer ▸ New ▸ Text names it, `文本`, `文本 2`); a missing or empty name keeps the
+    /// named as Layer ▸ New ▸ Text names it, `文本`, `文本 2`, and the name an automatically named
+    /// text layer goes back to when its text is emptied); a missing or empty name keeps the
     /// engine's.
     /// `labels` (`{"text": "Peach", …}`, by kind: text, shape, solid, adjustment, null, camera,
     /// light) are the labels the `layer.new…` commands give the layers they make from now on; an
@@ -29,7 +30,7 @@ impl MotionDocument {
         let names = serde_json::from_str::<Value>(names).unwrap_or(Value::Null);
         let name = |kind: &str| names.get(kind).and_then(Value::as_str).map(str::trim).filter(|name| !name.is_empty()).map(str::to_owned);
         self.shape_layer_name = name("shape");
-        self.text_layer_name = name("text");
+        self.session.text_layer_name = name("text");
         self.session.new_layer_labels = names.get("labels").and_then(Value::as_object).map(|labels| {
             labels.iter().filter_map(|(kind, name)| Some((kind.clone(), kition_motion_engine::color::Label::from_name(name.as_str()?)?))).collect()
         });
@@ -169,6 +170,22 @@ mod tests {
         assert_eq!(doc.new_shape_layer_name().as_deref(), Some("形状图层 2"));
         doc.set_layer_names("not json");
         assert_eq!(doc.new_shape_layer_name(), None);
+    }
+
+    /// The editor's text-layer name reaches the engine: an automatically named text layer whose
+    /// text is emptied is named so again (undo brings the typed name back with the text).
+    #[test]
+    fn an_emptied_text_layer_takes_the_editors_text_name() {
+        let mut doc = doc();
+        doc.set_layer_names(r#"{"text": "文本"}"#);
+        let text = doc.execute("layer.newText", json!({ "text": "文本" })).unwrap()["layer"].as_u64().unwrap();
+        let name = |doc: &MotionDocument| doc.session.active_comp().and_then(|c| c.layer(kition_motion_project::LayerId(text)).map(|l| l.name.clone()));
+        doc.execute("layer.setText", json!({ "layer": text, "text": "ab" })).unwrap();
+        assert_eq!(name(&doc).as_deref(), Some("ab"));
+        doc.execute("layer.setText", json!({ "layer": text, "text": "" })).unwrap();
+        assert_eq!(name(&doc).as_deref(), Some("文本"));
+        doc.execute("edit.undo", json!({})).unwrap();
+        assert_eq!(name(&doc).as_deref(), Some("ab"));
     }
 
     /// The labels the editor gives new layers by kind: a Layer ▸ New text layer, null and camera

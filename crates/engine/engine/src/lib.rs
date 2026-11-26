@@ -518,6 +518,10 @@ pub struct Session {
     pub new_layer_labels: Option<std::collections::BTreeMap<String, color::Label>>,
     /// Whether a `layer.new…` command is running (its new layers get `new_layer_labels`).
     pub labeling_new_layers: bool,
+    /// What the editor names a text layer by itself, in its language (`文本` in Chinese): the
+    /// Text tool's new layers, and the name an automatically named text layer goes back to when
+    /// its text is emptied. None: the engine's `Text` (agents and scripts). Not saved.
+    pub text_layer_name: Option<String>,
     /// The project's link to its KDM replica ([`kdm_bridge`]): the replica (made when a host
     /// first asks for it), what it last saw, and who the running command acts for.
     pub bridge: kdm_bridge::Bridge,
@@ -645,6 +649,7 @@ impl Default for Session {
             script_calls: ScriptCalls::default(),
             new_layer_labels: None,
             labeling_new_layers: false,
+            text_layer_name: None,
         }
     }
 }

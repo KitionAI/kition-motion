@@ -117,3 +117,42 @@ fn styles_render_and_round_trip() {
     assert_eq!(back, *s.project);
     assert_eq!(back.comp(cid).unwrap().global_light.angle.value.as_f64(), 33.0);
 }
+
+/// Layer ▸ Layer Styles and Layer ▸ Mask ▸ New Mask are unavailable on layers that cannot take
+/// them (the menus grey them from this), and run with the selection they act on: styles when any
+/// selected layer takes them (the others are skipped), New Mask when the first selected layer
+/// does. Run anyway (a shortcut), they say why; an explicit layer still works.
+#[test]
+fn styles_and_masks_are_unavailable_on_layers_that_cannot_take_them() {
+    let (mut s, a, _) = session();
+    let made = |s: &mut Session, command: &str| s.execute(command, json!({})).unwrap()["layer"].as_u64().unwrap();
+    let nul = made(&mut s, "layer.newNull");
+    let camera = made(&mut s, "layer.newCamera");
+    let light = made(&mut s, "layer.newLight");
+    let adjustment = made(&mut s, "layer.newAdjustment");
+    let styles = ["layer.style.dropShadow", "layer.style.stroke", "layer.style.showAll", "layer.style.add"];
+    for (layer, takes_styles, takes_masks) in [(a, true, true), (nul, false, false), (camera, false, false), (light, false, false), (adjustment, false, true)] {
+        s.execute("layer.select", json!({"layers": [layer]})).unwrap();
+        for id in styles {
+            assert_eq!(s.is_enabled(id), takes_styles, "{id} on layer {layer}");
+        }
+        assert_eq!(s.is_enabled("layer.addMask"), takes_masks, "New Mask on layer {layer}");
+    }
+    // Refused, each says why (the editor's sentences match these words).
+    s.execute("layer.select", json!({"layers": [nul]})).unwrap();
+    let why = s.execute("layer.style.dropShadow", json!({})).unwrap_err().to_string();
+    assert!(why.contains("no layer that takes layer styles"), "{why}");
+    assert!(s.execute("layer.addMask", json!({})).unwrap_err().to_string().contains("can't have masks"));
+    // Several layers: styles go on the ones that take them; New Mask follows the first.
+    s.execute("layer.select", json!({"layers": [nul, a]})).unwrap();
+    assert!(s.is_enabled("layer.style.dropShadow"));
+    assert!(!s.is_enabled("layer.addMask"));
+    s.execute("layer.style.dropShadow", json!({})).unwrap();
+    assert_eq!(styles_of(&s, a), vec![("dropShadow".to_string(), true)]);
+    s.execute("layer.select", json!({"layers": [a, nul]})).unwrap();
+    assert!(s.is_enabled("layer.addMask"));
+    // An explicit layer needs no selection that takes them.
+    s.execute("layer.select", json!({"layers": [camera]})).unwrap();
+    s.execute("layer.addMask", json!({"layer": a})).unwrap();
+    s.execute("layer.style.stroke", json!({"layers": [a]})).unwrap();
+}

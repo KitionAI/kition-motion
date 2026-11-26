@@ -113,7 +113,7 @@ pub(super) fn text_down(doc: &mut MotionDocument, st: &mut ToolState, p: Pt) {
     }
     // Named as Layer ▸ New ▸ Text names a text layer, in the editor's language (`setLayerNames`).
     let mut params = json!({ "text": "", "position": p, "justify": "left", "edit": true });
-    if let (Some(name), Some(fields)) = (doc.text_layer_name.clone(), params.as_object_mut()) {
+    if let (Some(name), Some(fields)) = (doc.session.text_layer_name.clone(), params.as_object_mut()) {
         fields.insert("name".to_owned(), json!(name));
     }
     match doc.tool_run("layer.newText", params) {

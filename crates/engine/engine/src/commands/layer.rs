@@ -1100,6 +1100,18 @@ fn precompose(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({"comp": new.0.0, "layer": new.1.0}))
 }
 
+/// Why Layer ▸ Mask ▸ New Mask cannot run on the layer it would add to (the editor turns it into
+/// its own sentence).
+const NO_MASKS: &str = "this layer can't have masks (cameras, lights, null objects and 3D models have none)";
+
+/// New Mask adds to the first selected layer: enabled when that layer takes masks, so the menu
+/// row is unavailable on a camera, light, null or 3D model.
+fn has_mask_layer(s: &Session) -> std::result::Result<(), String> {
+    has_layers(s)?;
+    let first = s.active_comp().zip(s.state.selected_layers.first()).and_then(|(comp, id)| comp.layer(*id));
+    if first.is_some_and(Layer::can_have_masks) { Ok(()) } else { Err(NO_MASKS.into()) }
+}
+
 fn add_mask(s: &mut Session, p: &Value) -> Result<Value> {
     let (cid, lid) = layer_p(s, p, "layer.addMask")?;
     let layer = s.project.comp(cid).and_then(|c| c.layer(lid)).ok_or(EngineError::NoComp)?.clone();
@@ -1119,7 +1131,7 @@ fn add_mask(s: &mut Session, p: &Value) -> Result<Value> {
     let uid = s.edit("New Mask", None, |proj, _| {
         let mut next = proj.next_id;
         let l = layer_mut(proj, cid, lid)?;
-        let masks = l.props.sub_mut("masks").ok_or_else(|| bad("layer.addMask", "this layer can't have masks"))?;
+        let masks = l.props.sub_mut("masks").ok_or_else(|| bad("layer.addMask", NO_MASKS))?;
         let n = masks.children.len();
         let g = build::mask(&mut Ids(&mut next), &format!("Mask {}", n + 1), path, mode, crate::prefs::mask_color(cycle, n));
         let uid = g.uid;
@@ -1231,6 +1243,7 @@ fn set_text(s: &mut Session, p: &Value) -> Result<Value> {
         s.save_prefs();
     }
     let t = s.time();
+    let default = super::text_edit::default_text_name(s);
     let range = text_range_p(p);
     // Character attributes with only a caret (no selected text) set the insertion style.
     if let Some(r) = range.clone().filter(|r| r.is_empty() && str_p(p, "text").is_none())
@@ -1264,8 +1277,15 @@ fn set_text(s: &mut Session, p: &Value) -> Result<Value> {
         pr.set_value_at(lt, KV::Text(Box::new(doc.clone())));
         // Named after its text (the whole first line, as it is typed) until renamed by hand.
         let after = super::text_edit::first_line_name(&doc.text);
-        if str_p(p, "text").is_some() && !after.is_empty() && after != l.name && super::text_edit::name_is_automatic(&l.name, &before) {
+        let automatic = str_p(p, "text").is_some() && super::text_edit::name_is_automatic(&l.name, &before);
+        if automatic && !after.is_empty() && after != l.name {
             l.name = after;
+        } else if automatic
+            && doc.text.is_empty()
+            && let Some(name) = super::text_edit::emptied_name(proj, cid, lid, &default)
+        {
+            // Emptied: back to the default text-layer name.
+            layer_mut(proj, cid, lid)?.name = name;
         }
         Ok(())
     })?;
@@ -1571,7 +1591,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Mask"],
             Some("Cmd+Shift+N"),
             "{layer?, shape?: rect|ellipse|rounded|polygon|star, rect?: [x,y,w,h] (layer space; a polygon or star fits its width), mode?}",
-            has_layers,
+            has_mask_layer,
             add_mask
         ),
         cmd!("layer.setMask", "Mask Mode", [], None, "{layer?, mask: index|uid|name, mode?, inverted?}", has_layers, mask_props),

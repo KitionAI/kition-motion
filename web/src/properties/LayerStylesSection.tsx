@@ -22,8 +22,9 @@ export const LAYER_STYLES: ReadonlyArray<readonly [id: string, label: string]> =
 /** A new drop shadow's settings: farther, larger and darker than the engine's, so it shows on a dark background. */
 export const DROP_SHADOW = { distance: 20, size: 20, opacity: 100 }
 
-/** Layers that take styles: the ones that draw pixels of their own. */
-const NO_STYLES = new Set(['Camera', 'Light', 'Null', 'Adjustment', 'Audio'])
+/** Layers that take styles: the ones that draw pixels of their own (not an adjustment layer: the engine's `can_have_styles`). */
+const NO_STYLES = new Set(['Camera', 'Light', 'Null', 'Audio'])
+const takesStyles = (layer: MotionLayer) => !NO_STYLES.has(layer.type) && !layer.switches.adjustment
 
 /**
  * The layer's styles (Layer ▸ Layer Styles): an Add menu with each style it does not have yet; each
@@ -34,10 +35,12 @@ const NO_STYLES = new Set(['Camera', 'Light', 'Null', 'Adjustment', 'Audio'])
 export function LayerStylesSection({ layer, group }: { layer: MotionLayer; group: TreeNode | undefined }) {
   const { run, t, phrase } = useKitEditor()
   const { readOnly } = usePanel()
-  if (NO_STYLES.has(layer.type)) return null
   const styles = group?.children?.filter((child) => child.children) ?? []
   const has = new Set(styles.map((style) => style.match))
   const applied = styles.filter((style) => style.match !== 'blendingOptions')
+  // A layer that takes no styles shows none to add (one made an adjustment layer keeps the ones it has).
+  const takes = takesStyles(layer)
+  if (!takes && applied.length === 0) return null
   const missing = LAYER_STYLES.filter(([id]) => !has.has(id))
   return (
     <Section
@@ -50,7 +53,7 @@ export function LayerStylesSection({ layer, group }: { layer: MotionLayer; group
         <MenuButton placement="auto"
           align="end"
           trigger={({ open, toggle }) => (
-            <Button variant="ghost" aria-expanded={open} disabled={readOnly || missing.length === 0} onClick={toggle} data-testid="motion-style-add">
+            <Button variant="ghost" aria-expanded={open} disabled={readOnly || !takes || missing.length === 0} onClick={toggle} data-testid="motion-style-add">
               <Plus size={14} aria-hidden="true" />
               {t('style.add')}
             </Button>

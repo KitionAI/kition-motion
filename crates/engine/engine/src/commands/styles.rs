@@ -13,6 +13,18 @@ use serde_json::{Value, json};
 use super::{CommandSpec, b_p, bad, f_p, has_comp, has_layers, layer_mut, layer_p, layers_p, str_p, time_p};
 use crate::{EngineError, Result, Session, cmd};
 
+/// Why a Layer ▸ Layer Styles command cannot run (the editor turns it into its own sentence).
+const NO_STYLE_LAYER: &str = "no layer that takes layer styles (footage, solid, precomp, text or shape layer)";
+
+/// The commands that add styles add them to the selected layers that take styles and skip the
+/// rest: enabled when one of the selected layers takes them, so the menu rows are unavailable on
+/// cameras, lights, nulls and adjustment layers.
+fn has_style_layer(s: &Session) -> std::result::Result<(), String> {
+    has_layers(s)?;
+    let comp = s.active_comp().ok_or("no active composition")?;
+    if s.state.selected_layers.iter().any(|id| comp.layer(*id).is_some_and(|l| l.can_have_styles())) { Ok(()) } else { Err(NO_STYLE_LAYER.into()) }
+}
+
 /// Selected (or given) layers that take layer styles.
 fn style_layers(s: &Session, p: &Value) -> Result<(ItemId, Vec<LayerId>)> {
     let (cid, ids) = layers_p(s, p)?;
@@ -23,7 +35,7 @@ fn style_layers(s: &Session, p: &Value) -> Result<(ItemId, Vec<LayerId>)> {
 fn add_styles(s: &mut Session, p: &Value, cmd: &str, styles: &[&str], enabled: bool, label: &str) -> Result<Value> {
     let (cid, ids) = style_layers(s, p)?;
     if ids.is_empty() {
-        return Err(bad(cmd, "no layer that takes layer styles (footage, solid, precomp, text or shape layer)"));
+        return Err(bad(cmd, NO_STYLE_LAYER));
     }
     // `params`: the style's settings in the same step (one style at a time), names checked first.
     let params = match p.get("params") {
@@ -238,7 +250,7 @@ fn list(s: &mut Session, p: &Value) -> Result<Value> {
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!("layer.style.convertToEditable", "Convert to Editable Styles", ["Layer", "Layer Styles"], None, "{layers?}", no_psd_styles, convert),
-        cmd!("layer.style.showAll", "Show All", ["Layer", "Layer Styles"], None, "{layers?}", has_layers, show_all),
+        cmd!("layer.style.showAll", "Show All", ["Layer", "Layer Styles"], None, "{layers?}", has_style_layer, show_all),
         cmd!("layer.style.removeAll", "Remove All Styles", ["Layer", "Layer Styles"], None, "{layers?}", has_layers, remove_all),
         cmd!(
             "layer.style.dropShadow",
@@ -246,7 +258,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Layer Styles"],
             None,
             "{layers?, params?: {setting: value} (size, color, opacity, …; names as the answer lists them)}",
-            has_layers,
+            has_style_layer,
             drop_shadow
         ),
         cmd!(
@@ -255,7 +267,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Layer Styles"],
             None,
             "{layers?, params?: {setting: value} (size, color, opacity, …; names as the answer lists them)}",
-            has_layers,
+            has_style_layer,
             inner_shadow
         ),
         cmd!(
@@ -264,7 +276,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Layer Styles"],
             None,
             "{layers?, params?: {setting: value} (size, color, opacity, …; names as the answer lists them)}",
-            has_layers,
+            has_style_layer,
             outer_glow
         ),
         cmd!(
@@ -273,7 +285,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Layer Styles"],
             None,
             "{layers?, params?: {setting: value} (size, color, opacity, …; names as the answer lists them)}",
-            has_layers,
+            has_style_layer,
             inner_glow
         ),
         cmd!(
@@ -282,7 +294,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Layer Styles"],
             None,
             "{layers?, params?: {setting: value} (size, color, opacity, …; names as the answer lists them)}",
-            has_layers,
+            has_style_layer,
             bevel_emboss
         ),
         cmd!(
@@ -291,7 +303,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Layer Styles"],
             None,
             "{layers?, params?: {setting: value} (size, color, opacity, …; names as the answer lists them)}",
-            has_layers,
+            has_style_layer,
             satin
         ),
         cmd!(
@@ -300,7 +312,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Layer Styles"],
             None,
             "{layers?, params?: {setting: value} (size, color, opacity, …; names as the answer lists them)}",
-            has_layers,
+            has_style_layer,
             color_overlay
         ),
         cmd!(
@@ -309,7 +321,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Layer Styles"],
             None,
             "{layers?, params?: {setting: value} (size, color, opacity, …; names as the answer lists them)}",
-            has_layers,
+            has_style_layer,
             gradient_overlay
         ),
         cmd!(
@@ -318,7 +330,7 @@ pub fn specs() -> Vec<CommandSpec> {
             ["Layer", "Layer Styles"],
             None,
             "{layers?, params?: {setting: value} (size, color, opacity, …; names as the answer lists them)}",
-            has_layers,
+            has_style_layer,
             stroke
         ),
         cmd!(
@@ -327,7 +339,7 @@ pub fn specs() -> Vec<CommandSpec> {
             [],
             None,
             "{style: dropShadow|innerShadow|outerGlow|innerGlow|bevelEmboss|satin|colorOverlay|gradientOverlay|stroke (or display name), layers?, params?: {setting: value}}",
-            has_layers,
+            has_style_layer,
             add
         ),
         cmd!("layer.style.remove", "Remove Layer Style", [], None, "{layer?, style: id|name|uid|layerStyles}", has_layers, remove),

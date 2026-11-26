@@ -450,6 +450,13 @@ const timecodeName = (seconds: number, fps: number) => timecode(seconds, fps).re
  */
 const OWN_SHORTCUTS = ['project.newFolder', 'comp.new', 'comp.settings', 'layer.newText', 'layer.newSolid', 'layer.newCamera', 'layer.newLight', 'layer.settings', 'layer.rename', 'time.set', 'file.import', 'file.exportMovie', 'keyframe.interpolation', 'keyframe.velocity', 'layer.precompose', 'layer.timeStretch', 'file.exportLottie', 'animation.savePreset', 'animation.applyPreset', ...Object.keys(OVERLAY_ROWS), ...RESOLUTIONS.map(([command]) => command), ...Object.keys(SHORTCUT_OVERRIDES)]
 
+/**
+ * Shortcuts that run on a selected layer even while their command is unavailable for it (its menu
+ * row greyed), so the engine's refusal shows as the editor's sentence saying why: New Mask on a
+ * camera, light, null object or 3D model.
+ */
+const SAY_WHY_SHORTCUTS: ReadonlySet<string> = new Set(['layer.addMask'])
+
 export function App({ host, phrase }: { host: HostConnection; phrase: Phrases }) {
   const t = useMemo(() => createKitStrings(CATALOGS, host.init.locale), [host])
   const manifest = useMemo(engineManifest, [])
@@ -1439,7 +1446,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     // The editor's own commands take their menu shortcuts here (Cmd+Alt+N, Cmd+K, Cmd+Y…), before the engine would run them without values.
     for (const id of OWN_SHORTCUTS) {
       const shortcut = SHORTCUT_OVERRIDES[id] ?? editor.byId.get(id)?.shortcut
-      if (shortcut && shortcutMatches(shortcut, event) && (editor.enabled(id) || id === 'comp.new')) {
+      if (shortcut && shortcutMatches(shortcut, event) && (editor.enabled(id) || id === 'comp.new' || (SAY_WHY_SHORTCUTS.has(id) && anySelected))) {
         if (!host.readOnly || id === 'time.set') dispatch(id)
         return true
       }

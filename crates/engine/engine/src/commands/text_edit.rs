@@ -112,6 +112,23 @@ pub(crate) fn name_is_automatic(name: &str, before: &str) -> bool {
     name.is_empty() || name == before || DEFAULT_TEXT_NAMES.contains(&stem) || (!before.is_empty() && (stem == before || stem == without_number(before)))
 }
 
+/// The name an automatically named text layer goes back to when its text is emptied: the
+/// editor's default text-layer name (`Session::text_layer_name`, else `Text`), numbered as other
+/// layers of that name are (`文本 2`); a layer already named so keeps its name.
+pub(crate) fn emptied_name(proj: &Project, cid: ItemId, lid: LayerId, default: &str) -> Option<String> {
+    let comp = proj.comp(cid)?;
+    let own = &comp.layer(lid)?.name;
+    if without_number(own) == default {
+        return None;
+    }
+    Some(comp.unique_layer_name(default))
+}
+
+/// The default text-layer name of `s` (see [`emptied_name`]).
+pub(crate) fn default_text_name(s: &Session) -> String {
+    s.text_layer_name.clone().filter(|name| !name.trim().is_empty()).unwrap_or_else(|| "Text".to_owned())
+}
+
 /// Edit a layer's Source Text at the CTI (one undo step, or merged by `merge`), then set the
 /// session's selection.
 pub(crate) fn edit_doc(
@@ -123,6 +140,7 @@ pub(crate) fn edit_doc(
 ) -> Result<()> {
     let cid = s.active_comp_id().ok_or(EngineError::NoComp)?;
     let t = s.time();
+    let default = default_text_name(s);
     s.edit(label, merge, |proj, st| {
         let l = layer_mut(proj, cid, lid)?;
         let lt = l.layer_time(t);
@@ -135,10 +153,17 @@ pub(crate) fn edit_doc(
         let before = first_line_name(&doc.text);
         f(&mut doc, st)?;
         let after = first_line_name(&doc.text);
+        let emptied = doc.text.is_empty();
         pr.set_value_at(lt, KV::Text(Box::new(doc)));
-        // Text layers are named after their text until renamed.
-        if before != after && !after.is_empty() && name_is_automatic(&l.name, &before) {
+        // Text layers are named after their text until renamed; emptied, the default name.
+        let automatic = name_is_automatic(&l.name, &before);
+        if before != after && !after.is_empty() && automatic {
             l.name = after;
+        } else if emptied
+            && automatic
+            && let Some(name) = emptied_name(proj, cid, lid, &default)
+        {
+            layer_mut(proj, cid, lid)?.name = name;
         }
         Ok(())
     })

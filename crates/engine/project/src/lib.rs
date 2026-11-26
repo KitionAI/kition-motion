@@ -885,6 +885,11 @@ impl Layer {
     pub fn has_video(&self) -> bool {
         self.source.is_av() && self.switches.video
     }
+    /// Whether the layer takes masks: layers with a picture of their own have a Masks group
+    /// (cameras, lights, nulls and 3D models have none), and Layer ▸ Mask adds to it.
+    pub fn can_have_masks(&self) -> bool {
+        self.props.sub("masks").is_some()
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

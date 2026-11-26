@@ -432,3 +432,48 @@ fn a_default_text_layer_name_in_either_language_follows_the_typing() {
     s.execute("layer.setText", json!({"layer": named, "text": "Sea"})).unwrap();
     assert_eq!(name(&s, named), "Textures", "a name given by hand stays");
 }
+
+/// An automatically named text layer whose text is emptied goes back to the default text-layer
+/// name (the editor's, else `Text`), through the panel (`layer.setText`) and typing on the canvas
+/// alike; typing again names it after the text; undo and redo bring the names back with the text;
+/// a name given by hand never changes.
+#[test]
+fn an_emptied_text_layer_goes_back_to_the_default_name() {
+    let mut s = Session::default();
+    s.execute("comp.new", json!({"name": "C", "width": 640, "height": 360, "duration": 4})).unwrap();
+    let name = |s: &Session, t: u64| s.active_comp().unwrap().layer(LayerId(t)).unwrap().name.clone();
+    // The panel, no name from the editor: `Text`.
+    let a = s.execute("layer.newText", json!({"text": "Text"})).unwrap()["layer"].as_u64().unwrap();
+    s.execute("layer.setText", json!({"layer": a, "text": "ab"})).unwrap();
+    assert_eq!(name(&s, a), "ab");
+    s.execute("layer.setText", json!({"layer": a, "text": ""})).unwrap();
+    assert_eq!(name(&s, a), "Text", "emptied, the default name");
+    s.execute("edit.undo", json!({})).unwrap();
+    assert_eq!((name(&s, a), doc(&s, a).text), ("ab".to_string(), "ab".to_string()), "undo brings the name back with the text");
+    s.execute("edit.redo", json!({})).unwrap();
+    assert_eq!((name(&s, a), doc(&s, a).text), ("Text".to_string(), String::new()));
+    s.execute("layer.setText", json!({"layer": a, "text": "cd"})).unwrap();
+    assert_eq!(name(&s, a), "cd", "typed again, named after the text");
+    // The editor's name, numbered when another layer has it.
+    s.text_layer_name = Some("文本".into());
+    let other = s.execute("layer.newText", json!({"text": "文本"})).unwrap()["layer"].as_u64().unwrap();
+    assert_eq!(name(&s, other), "文本");
+    s.execute("layer.setText", json!({"layer": a, "text": ""})).unwrap();
+    assert_eq!(name(&s, a), "文本 2");
+    // Typing on the canvas: select all and delete.
+    let b = s.execute("layer.newText", json!({"text": "xy"})).unwrap()["layer"].as_u64().unwrap();
+    assert_eq!(name(&s, b), "xy");
+    s.execute("text.edit", json!({"layer": b})).unwrap();
+    s.execute("text.setSelection", json!({"select": "all"})).unwrap();
+    s.execute("text.delete", json!({})).unwrap();
+    s.execute("text.endEdit", json!({})).unwrap();
+    assert_eq!((name(&s, b), doc(&s, b).text), ("文本 3".to_string(), String::new()));
+    s.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(name(&s, b), "xy");
+    // A layer already named so keeps its name; a name given by hand stays.
+    s.execute("layer.setText", json!({"layer": other, "text": ""})).unwrap();
+    assert_eq!(name(&s, other), "文本");
+    let named = s.execute("layer.newText", json!({"text": "Sky", "name": "Title"})).unwrap()["layer"].as_u64().unwrap();
+    s.execute("layer.setText", json!({"layer": named, "text": ""})).unwrap();
+    assert_eq!(name(&s, named), "Title", "a name given by hand stays");
+}

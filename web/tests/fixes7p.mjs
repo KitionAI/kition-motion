@@ -5,8 +5,8 @@
 //    click first. 2. The Text tool: typing deleted again and left with Esc leaves no undo step:
 //    Undo takes back what was done before the click, and never brings back an empty layer named
 //    after the deleted text. 3. Enable Time Remapping (Cmd/Ctrl+Alt+T) on a shape layer, Add
-//    Expression (Alt+Shift+=) with no property selected, and Layer ▸ Mask ▸ New Mask and a layer
-//    style on a null object say why in the editor's words (zh and en).
+//    Expression (Alt+Shift+=) with no property selected, and New Mask's shortcut on a null object
+//    say why in the editor's words (zh and en); a layer style's row is unavailable on it (7q).
 //    4. A Render Queue job that fails (the host cannot write its file) says so in the interface's
 //    language: no host or engine text in the row or its tooltip; that text goes to the console.
 //    Results are read from the engine (read-only queries), the elements and their text. Prints
@@ -162,8 +162,8 @@ try {
 
   // 3. Refusals reached with the keys and a layer the command cannot take: the editor's sentence alone.
   for (const [locale, remap, expression, masks, styles] of [
-    ['zh-CN', '只有素材图层和合成图层能做时间重映射（影片、声音、图片、预合成）。', '请先在时间轴上选中一个属性，表达式会加在它上面。', '蒙版只能加在有画面的图层上，摄像机、灯光、空对象和 3D 模型都不行。', '图层样式只能加在素材、纯色、预合成、文本和形状图层上，调整图层不行。'],
-    ['en', 'Only footage and composition layers can be time-remapped (movies, sounds, pictures, pre-comps).', 'Select a property in the timeline first: the expression goes on it.', 'Masks go only on layers with a picture, not on cameras, lights, null objects or 3D models.', 'Layer styles go only on footage, solid, pre-comp, text and shape layers, not on adjustment layers.'],
+    ['zh-CN', '只有素材图层和合成图层能做时间重映射（影片、声音、图片、预合成）。', '请先在时间轴上选中一个属性，表达式会加在它上面。', '蒙版只能加在有画面的图层上，摄像机、灯光、空对象和 3D 模型都不行。', '图层样式只能加在素材、纯色、预合成、文本和形状图层上，摄像机、灯光、空对象和调整图层都不行。'],
+    ['en', 'Only footage and composition layers can be time-remapped (movies, sounds, pictures, pre-comps).', 'Select a property in the timeline first: the expression goes on it.', 'Masks go only on layers with a picture, not on cameras, lights, null objects or 3D models.', 'Layer styles go only on footage, solid, pre-comp, text and shape layers, not on cameras, lights, null objects or adjustment layers.'],
   ]) {
     await reopen(locale)
     await selectShape()
@@ -184,21 +184,23 @@ try {
     await h.until(async () => warnings.some((line) => line.includes('time remapping needs')) && warnings.some((line) => line.includes('prop.setExpression')), 20)
     page.off('console', listen)
     h.step(`${locale}: the engine’s own words for both go to the developer console`, warnings.some((line) => line.includes('time remapping needs')) && warnings.some((line) => line.includes('prop.setExpression')), warnings.join(' | '))
-    // A null object selected: Layer ▸ Mask ▸ New Mask, and Layer ▸ Layer Styles ▸ Drop Shadow.
+    // A null object selected: New Mask from its shortcut says why (since 7q its Layer ▸ Mask row
+    // and the Layer ▸ Layer Styles rows are greyed for a null: fixes7q.mjs checks them, and the
+    // reworded layer-styles sentence).
     const nul = await newLayer('null')
     await h.until(async () => (await h.layer(nul))?.selected)
-    for (const [submenu, row, said, what] of [
-      ['menu:Layer/Mask', 'command:layer.addMask', masks, 'Layer ▸ Mask ▸ New Mask'],
-      ['menu:Layer/Layer Styles', 'command:layer.style.dropShadow', styles, 'Layer ▸ Layer Styles ▸ Drop Shadow'],
-    ]) {
-      await kit.locator('.kui-toast').last().getByRole('button').first().click().catch(() => undefined)
-      before = await kit.locator('.kui-toast').count()
-      await kit.getByTestId('motion-menu-Layer').click()
-      await kit.locator(`[role=menu] [data-kit-ui-id="${submenu}"]`).first().hover()
-      await kit.locator(`[role=menu] [data-kit-ui-id="${row}"]`).last().click()
-      const text = await toastAfter(before)
-      h.step(`${locale}: ${what} on a null object says “${said}” and nothing else`, text === said, text)
-    }
+    await kit.locator('.kui-toast').last().getByRole('button').first().click().catch(() => undefined)
+    await h.focusEditor()
+    before = await kit.locator('.kui-toast').count()
+    await page.keyboard.press(`${h.primary}+Alt+Shift+KeyN`)
+    const text = await toastAfter(before)
+    h.step(`${locale}: New Mask (Cmd/Ctrl+Alt+Shift+N) on a null object says “${masks}” and nothing else`, text === masks, text)
+    await kit.getByTestId('motion-menu-Layer').click()
+    await kit.locator('[role=menu] [data-kit-ui-id="menu:Layer/Layer Styles"]').first().hover()
+    const styleRow = kit.locator('[role=menu] [data-kit-ui-id="command:layer.style.dropShadow"]').last()
+    await styleRow.waitFor()
+    h.step(`${locale}: Layer ▸ Layer Styles ▸ Drop Shadow on a null object is unavailable (its sentence: ${styles})`, await styleRow.isDisabled())
+    for (let i = 0; i < 3 && (await kit.locator('[role=menu]').count()) > 0; i += 1) await page.keyboard.press('Escape')
   }
 
   // 4. A Render Queue job the host cannot write: the row says so in the interface's language.
