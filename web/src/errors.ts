@@ -7,6 +7,9 @@ const KNOWN: ReadonlyArray<readonly [RegExp, string]> = [
   [/\block(ed)?\b/i, 'error.locked'],
   [/no (layers? )?(is |are )?selected|nothing (is )?selected|no selection|select (a|one|the|some)? ?(layer|layers)\b|needs? (a )?selected layer/i, 'error.select'],
   [/no effect (has been )?applied/i, 'error.noLastEffect'],
+  // Wiggler and Smoother with too few keyframes of one property (keyframe.wiggle, keyframe.smooth).
+  [/select at least 2 keyframes/i, 'error.twoKeys'],
+  [/select at least 3 keyframes/i, 'error.threeKeys'],
   [/out of range|must be (positive|between|greater|less|at least|at most|finite)|not a (valid )?number|invalid value|too (large|small|long|short)/i, 'error.value'],
 ]
 

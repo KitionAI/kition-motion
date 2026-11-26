@@ -281,7 +281,9 @@ fn sample_curve(
 
 fn grouped_selection(s: &Session) -> std::collections::BTreeMap<(LayerId, Uid), Vec<Tick>> {
     let mut g: std::collections::BTreeMap<(LayerId, Uid), Vec<Tick>> = Default::default();
-    for k in &s.state.selected_keys {
+    // Each selected key once, and only keys that are there (a reference left at a time that
+    // holds no key counts for nothing, so the count asked for is the keys really selected).
+    for k in crate::live_keys(s.active_comp(), &s.state.selected_keys) {
         g.entry((k.layer, k.prop)).or_default().push(k.time);
     }
     for v in g.values_mut() {
@@ -324,6 +326,7 @@ fn parse_wiggle(p: &Value) -> Result<WiggleOpts> {
 
 /// Shared driver: for every property with ≥ `min` selected keys, replace its keys with
 /// `f(keys, first, last, spatial, layer_maps)`; select every key in each range afterwards.
+/// Answers the keys in the ranges before and after, and whether anything changed.
 #[allow(clippy::type_complexity)]
 fn run_on_selection(
     s: &mut Session,
@@ -338,6 +341,7 @@ fn run_on_selection(
         return Err(bad(cmd, format!("select at least {min} keyframes of a property")));
     }
     let (mut before, mut after) = (0usize, 0usize);
+    let revision = s.revision;
     s.edit(label, None, |proj, st| {
         let comp = proj.comp_mut(cid).ok_or(EngineError::NoComp)?;
         let fr = comp.frame_rate;
@@ -367,7 +371,9 @@ fn run_on_selection(
         st.selected_keys = sel;
         Ok(())
     })?;
-    Ok(json!({"before": before, "after": after}))
+    // `changed`: whether the keys are any different (no undo step when they are not), so the
+    // editor can say why nothing happened.
+    Ok(json!({"before": before, "after": after, "changed": s.revision != revision}))
 }
 
 fn wiggle(s: &mut Session, p: &Value) -> Result<Value> {

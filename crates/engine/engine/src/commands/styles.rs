@@ -239,7 +239,7 @@ pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!("layer.style.convertToEditable", "Convert to Editable Styles", ["Layer", "Layer Styles"], None, "{layers?}", no_psd_styles, convert),
         cmd!("layer.style.showAll", "Show All", ["Layer", "Layer Styles"], None, "{layers?}", has_layers, show_all),
-        cmd!("layer.style.removeAll", "Remove All", ["Layer", "Layer Styles"], None, "{layers?}", has_layers, remove_all),
+        cmd!("layer.style.removeAll", "Remove All Styles", ["Layer", "Layer Styles"], None, "{layers?}", has_layers, remove_all),
         cmd!(
             "layer.style.dropShadow",
             "Drop Shadow",

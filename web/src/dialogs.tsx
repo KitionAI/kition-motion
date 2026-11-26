@@ -747,7 +747,10 @@ function WigglerDialog({ dialog, onDone }: { dialog: Extract<MotionDialog, { kin
       testId="motion-wiggler-dialog"
       onSubmit={() => {
         if (perSecond === null || howFar === null) return
-        void run('keyframe.wiggle', { apply, noise, dimensions, ...(dimensions === 'one' ? { dimension: 0 } : {}), frequency: perSecond, magnitude: howFar })
+        // Nothing done is said, never silent (a refusal says why through the editor's report).
+        void run('keyframe.wiggle', { apply, noise, dimensions, ...(dimensions === 'one' ? { dimension: 0 } : {}), frequency: perSecond, magnitude: howFar }).then((answer) => {
+          if (parseAnswer<{ changed?: boolean }>(answer)?.changed === false) toast.info(t('wiggler.nothing'))
+        })
         onDone()
       }}
       onClose={onDone}
@@ -794,7 +797,9 @@ function SmootherDialog({ onDone }: { onDone: () => void }) {
       testId="motion-smoother-dialog"
       onSubmit={() => {
         if (value === null) return
-        void run('keyframe.smooth', { tolerance: value })
+        void run('keyframe.smooth', { tolerance: value }).then((answer) => {
+          if (parseAnswer<{ changed?: boolean }>(answer)?.changed === false) toast.info(t('smoother.nothing'))
+        })
         onDone()
       }}
       onClose={onDone}

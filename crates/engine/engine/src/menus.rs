@@ -890,7 +890,7 @@ Layer
     ---
     Convert to Editable Styles | layer.style.convertToEditable
     Show All | layer.style.showAll
-    Remove All | layer.style.removeAll
+    Remove All Styles | layer.style.removeAll
     ---
     Drop Shadow | layer.style.dropShadow
     Inner Shadow | layer.style.innerShadow

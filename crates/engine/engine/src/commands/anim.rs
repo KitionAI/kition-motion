@@ -351,7 +351,8 @@ fn info(s: &mut Session, p: &Value) -> Result<Value> {
                 Some(KeyRef { layer: l, prop: k.get("prop")?.as_u64()?, time: Tick::from_seconds_f64(k.get("time")?.as_f64()?) })
             })
             .collect(),
-        _ => s.state.selected_keys.clone(),
+        // The selection is a set of keys: each once, and only keys that are there.
+        _ => crate::live_keys(Some(comp), &s.state.selected_keys),
     };
     let mut out = vec![];
     for r in refs {

@@ -19,6 +19,7 @@ import { Select, Textarea, useEngineQuery, useKitEditor } from '@kition/sdk/edit
 import { keyTimes } from '../timeline/keys'
 import type { TreeNode } from '../timeline/tree'
 import { NumberField } from '../ValueField'
+import { useTypingUndo } from '../typingUndo'
 import { ColorSwatch, hexOf } from './ColorSwatch'
 import { KeyDiamond } from './KeyDiamond'
 import { usePanel } from './PropertyTree'
@@ -43,7 +44,11 @@ export function fontMatches<F extends { family: string }>(families: readonly F[]
 
 let sessions = 0
 
-/** The text box: the content, live while typing (one undo step per visit), committed on blur or Cmd+Enter. */
+/**
+ * The text box: the content, live while typing (one undo step per visit), committed on blur or
+ * Cmd+Enter. Cmd/Ctrl+Z in it undoes only this visit's typing (`useTypingUndo`); the box is made
+ * anew for each layer (its `key`), so nothing typed for one layer is ever undone into another.
+ */
 function ContentBox({ node, focusNow, onFocused }: { node: TreeNode; focusNow: boolean; onFocused: () => void }) {
   const { t, phrase } = useKitEditor()
   const { layer, time, frame, readOnly } = usePanel()
@@ -52,6 +57,10 @@ function ContentBox({ node, focusNow, onFocused }: { node: TreeNode; focusNow: b
   const typing = useRef<{ gesture: string; from: string } | null>(null)
   const box = useRef<HTMLTextAreaElement>(null)
   const send = useSender('layer.setText')
+  const history = useTypingUndo((next) => {
+    setText(next)
+    if (typing.current) send({ layer: layer.id, text: next }, typing.current.gesture)
+  }, box)
   useEffect(() => {
     if (!typing.current) setText(value)
   }, [value])
@@ -78,12 +87,15 @@ function ContentBox({ node, focusNow, onFocused }: { node: TreeNode; focusNow: b
         onFocus={() => {
           sessions += 1
           typing.current = { gesture: `text-${layer.id}-${sessions}`, from: value }
+          history.begin(text)
         }}
         onChange={(event) => {
           setText(event.target.value)
+          history.record(event.target.value)
           if (typing.current) send({ layer: layer.id, text: event.target.value }, typing.current.gesture)
         }}
         onKeyDown={(event) => {
+          if (history.key(event)) return
           if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
             event.preventDefault()
             event.currentTarget.blur()
@@ -98,6 +110,7 @@ function ContentBox({ node, focusNow, onFocused }: { node: TreeNode; focusNow: b
         }}
         onBlur={() => {
           typing.current = null
+          history.end()
         }}
         data-testid="motion-text-content"
       />
@@ -200,7 +213,7 @@ export function TextControls({ node, focusNow, onFocused, selection }: { node: T
   const [fontQuery, setFontQuery] = useState('')
   const send = useSender('layer.setText')
   const sendScrub = useSender('layer.setText')
-  if (!selection) return <div className="motion-text" data-testid="motion-text-controls">{source ? <ContentBox node={source} focusNow={focusNow} onFocused={onFocused} /> : null}</div>
+  if (!selection) return <div className="motion-text" data-testid="motion-text-controls">{source ? <ContentBox key={layer.id} node={source} focusNow={focusNow} onFocused={onFocused} /> : null}</div>
   const c = selection.character
   const p = selection.paragraph
   const mixed = new Set(selection.mixed)
@@ -236,7 +249,7 @@ export function TextControls({ node, focusNow, onFocused, selection }: { node: T
   )
   return (
     <div className="motion-text" data-testid="motion-text-controls" data-editing={selection.editing || undefined}>
-      {source ? <ContentBox node={source} focusNow={focusNow} onFocused={onFocused} /> : null}
+      {source ? <ContentBox key={layer.id} node={source} focusNow={focusNow} onFocused={onFocused} /> : null}
       {selection.editing ? (
         <p className="kui-muted motion-text-scope" data-testid="motion-text-scope">
           {selection.range && selection.range[0] !== selection.range[1] ? t('text.scope.selection', { count: selection.range[1] - selection.range[0] }) : t('text.scope.caret')}
@@ -256,6 +269,7 @@ export function TextControls({ node, focusNow, onFocused, selection }: { node: T
               const nextStyles = families.find((entry) => entry.family === next)?.styles ?? []
               set({ font: next, style: nextStyles.includes(style) ? style : (nextStyles[0] ?? 'Regular') })
             }}
+            className="motion-text-font"
             testId="motion-text-font"
           />
         </Item>

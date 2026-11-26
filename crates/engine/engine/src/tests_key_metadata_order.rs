@@ -111,3 +111,52 @@ fn attribute_edit_deduplicates_legacy_refs_and_drops_stale_refs_without_snapping
     let opacity = s.active_comp().unwrap().layer(LayerId(layer)).unwrap().props.find(prop).unwrap();
     assert!(opacity.keys.iter().all(|k| k.out_interp == Interp::Linear));
 }
+
+/// A keyframe move undone: the selected key is selected where it is back (not at the time it was
+/// moved to), a click on it then selects it once, and the selection is a set everywhere
+/// (`keyframe.info` lists each key once, a key given twice is selected once). Redo takes the
+/// selection along again. Before, the selection kept a reference to the moved-to time, which
+/// `keyframe.info` read as the nearest key: the same key twice, and Wiggler found nothing to do.
+#[test]
+fn a_moved_key_undone_and_clicked_again_is_selected_once() {
+    let (mut s, layer) = setup();
+    for time in [0, 1, 2] {
+        add(&mut s, layer, "transform/opacity", time, json!(time * 30));
+    }
+    let prop = uid(&s, layer, "transform/opacity");
+    let at = |frame: i64| json!({"layer": layer, "prop": prop, "time": frame as f64 / 30.0});
+    s.execute_checked("keyframe.select", json!({"keys": [at(30)]})).unwrap();
+    s.execute_checked("keyframe.move", json!({"delta": 0.5})).unwrap();
+    assert_eq!(s.state.selected_keys, vec![key(layer, prop, 45)]);
+    s.execute_checked("edit.undo", json!({})).unwrap();
+    assert_eq!(s.state.selected_keys, vec![key(layer, prop, 30)], "the selection follows the key back");
+    s.execute_checked("keyframe.select", json!({"keys": [at(30)], "add": true})).unwrap();
+    assert_eq!(s.state.selected_keys, vec![key(layer, prop, 30)]);
+    let info = s.execute_checked("keyframe.info", json!({})).unwrap();
+    assert_eq!(info.as_array().map(Vec::len), Some(1), "{info}");
+    s.execute_checked("keyframe.select", json!({"keys": [at(30), at(30), at(60)]})).unwrap();
+    assert_eq!(s.state.selected_keys, vec![key(layer, prop, 30), key(layer, prop, 60)], "a key given twice is selected once");
+    // A stale reference (as an undo left one before) never stands for its neighbour.
+    s.state.selected_keys = vec![key(layer, prop, 45), key(layer, prop, 30)];
+    assert_eq!(s.execute_checked("keyframe.info", json!({})).unwrap().as_array().map(Vec::len), Some(1));
+    let refused = s.execute_checked("keyframe.wiggle", json!({"frequency": 5, "magnitude": 10})).unwrap_err().to_string();
+    assert!(refused.contains("select at least 2 keyframes"), "{refused}");
+    // Redo moves the key and its selection again.
+    s.execute_checked("keyframe.select", json!({"keys": [at(30)]})).unwrap();
+    s.execute_checked("edit.redo", json!({})).unwrap();
+    assert_eq!(s.state.selected_keys, vec![key(layer, prop, 45)]);
+}
+
+/// Wiggler and Smoother say whether they changed anything (the editor says why when not).
+#[test]
+fn wiggler_answers_whether_it_changed_the_keys() {
+    let (mut s, layer) = setup();
+    for (time, value) in [(0.0, 0), (1.0 / 30.0, 50)] {
+        s.execute_checked("prop.addKey", json!({"layer": layer, "path": "transform/opacity", "time": time, "value": value})).unwrap();
+    }
+    let prop = uid(&s, layer, "transform/opacity");
+    s.execute_checked("keyframe.select", json!({"keys": [{"layer": layer, "prop": prop, "time": 0.0}, {"layer": layer, "prop": prop, "time": 1.0 / 30.0}]}))
+        .unwrap();
+    let answer = s.execute_checked("keyframe.wiggle", json!({"frequency": 5, "magnitude": 10})).unwrap();
+    assert_eq!(answer["changed"], json!(false), "keys one frame apart leave no room: {answer}");
+}

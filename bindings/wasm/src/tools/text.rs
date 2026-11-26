@@ -111,7 +111,12 @@ pub(super) fn text_down(doc: &mut MotionDocument, st: &mut ToolState, p: Pt) {
         }
         return;
     }
-    match doc.tool_run("layer.newText", json!({ "text": "", "position": p, "justify": "left", "edit": true })) {
+    // Named as Layer ▸ New ▸ Text names a text layer, in the editor's language (`setLayerNames`).
+    let mut params = json!({ "text": "", "position": p, "justify": "left", "edit": true });
+    if let (Some(name), Some(fields)) = (doc.text_layer_name.clone(), params.as_object_mut()) {
+        fields.insert("name".to_owned(), json!(name));
+    }
+    match doc.tool_run("layer.newText", params) {
         Ok(_) => st.typing = Some(st.merge_key("type")),
         Err(error) => st.status = Some(error),
     }

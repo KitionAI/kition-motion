@@ -243,7 +243,7 @@ impl Runtime {
         // script from a nested call (every host request does), and the thread's runtime would
         // fail every expression with "reached the maximum stack size" after a few hundred.
         let src = format!("try{{{}\n}}catch(__e){{throw __e}}", crate::rewrite::rewrite(text));
-        let s = Script::parse(Source::from_bytes(src.as_bytes()), None, &mut self.ctx).map_err(|e| format_error(&e.to_string(), line_count(text)));
+        let s = Script::parse(Source::from_bytes(src.as_bytes()), None, &mut self.ctx).map_err(|e| format_error(&e.to_string(), Some(text)));
         self.scripts.insert(text.to_string(), s.clone());
         s
     }
@@ -268,7 +268,7 @@ impl Runtime {
             to_js(&crate::host::Resp::List(b.selector.iter().map(|x| crate::host::Resp::Num(*x)).collect()), ctx),
         ];
         if let Err(e) = self.begin.call(&JsValue::undefined(), &args, ctx) {
-            return Run::Done(Err(format_error(&e.to_string(), line_count(text))));
+            return Run::Done(Err(format_error(&e.to_string(), Some(text))));
         }
         let result = script.evaluate(ctx).and_then(|v| self.finish.call(&JsValue::undefined(), &[v], ctx));
         let pending = FRAMES.with(|f| f.borrow().last().is_some_and(|fr| !fr.misses.is_empty()));
@@ -277,7 +277,7 @@ impl Runtime {
         }
         Run::Done(match result {
             Ok(v) => detach(&v, ctx, 0),
-            Err(e) => Err(format_error(&e.to_string(), line_count(text))),
+            Err(e) => Err(format_error(&e.to_string(), Some(text))),
         })
     }
 }
@@ -299,7 +299,7 @@ fn detach(v: &JsValue, ctx: &mut Context, depth: usize) -> Result<Out, String> {
     if let Some(s) = v.as_string() {
         return Ok(Out::Str(s.to_std_string_escaped()));
     }
-    let err = |e: boa_engine::JsError| format_error(&e.to_string(), usize::MAX);
+    let err = |e: boa_engine::JsError| format_error(&e.to_string(), None);
     if let Some(o) = v.as_object() {
         if o.is_array() && depth < 4 {
             let arr = JsArray::from_object(o).map_err(err)?;
@@ -342,12 +342,16 @@ fn out_vec(o: &Out, n: usize) -> Vec<f64> {
     v
 }
 
-/// Make boa's messages read like the target app's: `Error at line N: message`.
-fn format_error(msg: &str, max_line: usize) -> String {
+/// Make boa's messages read like the target app's: `Error at line N: message`. `text` is the
+/// user's expression (None for a value read after it ran): the line is clamped to it, and a name
+/// that is not defined, which boa reports without a position when it stands alone (`wobble`), gets
+/// the line where the name first appears in it.
+fn format_error(msg: &str, text: Option<&str>) -> String {
     let msg = msg.trim();
     let first = msg.lines().next().unwrap_or("").trim();
+    let max_line = text.map_or(usize::MAX, line_count);
     // The wrapper's closing brace sits one line below the user's text.
-    let line = find_line(msg).map(|l| l.min(max_line.max(1)));
+    let line = find_line(msg).or_else(|| text.and_then(|text| undefined_name_line(first, text))).map(|l| l.min(max_line.max(1)));
     // Drop the position boa appends to the first line (` at line 2, col 5`, ` (unknown at :2:11)`).
     let mut text = first.split(" at line ").next().unwrap_or(first).trim();
     if let Some(i) = text.rfind(" (")
@@ -366,6 +370,26 @@ fn format_error(msg: &str, max_line: usize) -> String {
 
 fn line_count(text: &str) -> usize {
     text.lines().count()
+}
+
+/// For `ReferenceError: NAME is not defined`, the 1-based line of `text` where NAME first stands
+/// as a name of its own (not part of a longer name, not a property after a dot).
+fn undefined_name_line(message: &str, text: &str) -> Option<usize> {
+    let rest = message.split("ReferenceError: ").nth(1)?;
+    let name = rest.split(" is not defined").next().filter(|_| rest.contains(" is not defined"))?.trim();
+    let word = |c: char| c.is_alphanumeric() || c == '_' || c == '$';
+    if name.is_empty() || !name.chars().all(word) {
+        return None;
+    }
+    text.lines()
+        .position(|line| {
+            line.match_indices(name).any(|(at, _)| {
+                let before = line.get(..at).and_then(|head| head.chars().next_back());
+                let after = line.get(at + name.len()..).and_then(|tail| tail.chars().next());
+                !before.is_some_and(|c| word(c) || c == '.') && !after.is_some_and(word)
+            })
+        })
+        .map(|index| index + 1)
 }
 
 /// Line number from `at line N` (parser errors), else the user script's (`<main>`) backtrace

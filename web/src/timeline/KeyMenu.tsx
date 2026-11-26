@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ContextMenu, MenuItem, MenuSeparator, useKitEditor, type ContextMenuPoint } from '@kition/sdk/editor'
 import { INTERPOLATIONS } from './interp'
+import { distinctKeys, type SelectedKey } from './keys'
 import { ASSISTANT_NEEDS, SHORTCUT_OVERRIDES } from '../menus'
 
 /**
@@ -19,8 +20,9 @@ export function KeyMenu({ at, onClose, onCommand }: { at: ContextMenuPoint | nul
   useEffect(() => {
     if (!at) return undefined
     let current = true
-    void query<Array<{ spatial?: string | null; roving?: boolean; path?: string }>>('keyframe.info', {}).then(async (list) => {
-      if (!current || !Array.isArray(list)) return
+    void query<Array<SelectedKey & { spatial?: string | null; roving?: boolean }>>('keyframe.info', {}).then(async (answer) => {
+      if (!current || !Array.isArray(answer)) return
+      const list = distinctKeys(answer)
       const moving = list.filter((key) => typeof key.spatial === 'string')
       const spatial = moving.length > 0
       const roving = spatial && moving.every((key) => key.roving === true)

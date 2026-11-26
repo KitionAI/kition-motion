@@ -2,7 +2,7 @@
 // A Render Queue job's folder box that is empty is automatic: typed into and emptied again, a
 // change to PNG sequence gives it the sequence folder `<comp>_序列`, and its frames land there; a
 // sequence job whose box is left empty still writes into `<comp>_序列` (its row says so before it
-// renders); a folder a new job took from the job before it is a default, so a change to a sequence
+// renders; since 7n the job keeps that folder, so the project holds where it renders); a folder a new job took from the job before it is a default, so a change to a sequence
 // gives it a sequence folder and a change back gives the inherited folder again, while a folder
 // typed in the job's own dialog stays. (7m) A box holding the composition's sequence folder is
 // automatic too, even after typing or when typed by hand: a movie job never saves into it. The cache-full ▾'s three rows start their text at one left
@@ -116,7 +116,8 @@ try {
   console.log(`FILES ${h.which}: ${firstFiles.join(' | ')}`)
 
   // A sequence job whose folder box is left empty at OK: its row says it goes into the sequence
-  // folder, and the render puts the frames there (never loose in the project's folder).
+  // folder, and the render puts the frames there (never loose in the project's folder). (7n) The
+  // job keeps that folder (not one named at render time in the interface's language).
   await addJob()
   await h.until(async () => (await jobs()).length === 2)
   const second = (await jobs())[1]
@@ -130,10 +131,10 @@ try {
   await h.until(async () => (await kit.getByTestId('motion-job-name').inputValue()) === 'loose')
   await twoFrames()
   await closeWith('motion-job-dialog-ok')
-  await h.until(async () => !((await job(second.id))?.output?.output ?? '').includes('/') && ((await job(second.id))?.output?.output ?? '').startsWith('loose'))
+  await h.until(async () => ((await job(second.id))?.output?.output ?? '').startsWith(`${own}/loose`))
   const stored = (await job(second.id))?.output?.output ?? ''
   await h.until(async () => (await folderOf(second.id).getAttribute('data-folder')) === own)
-  h.step(`OK with the box empty: the job keeps no folder, and its row says 存到：${own}/`, !stored.includes('/') && (await folderOf(second.id).getAttribute('data-folder')) === own && ((await folderOf(second.id).textContent()) ?? '').includes(`${own}/`), `${stored} · ${await folderOf(second.id).textContent()}`)
+  h.step(`OK with the box empty: the job keeps the sequence folder ${own}/ itself, and its row says 存到：${own}/`, stored.startsWith(`${own}/loose`) && (await folderOf(second.id).getAttribute('data-folder')) === own && ((await folderOf(second.id).textContent()) ?? '').includes(`${own}/`), `${stored} · ${await folderOf(second.id).textContent()}`)
   const secondFiles = (await renderNew(second.id)).filter((path) => path.includes('loose'))
   h.step(`rendered (2 frames), the frames land in ${own}/ as the row said, none loose`, (await state(second.id)) === 'done' && secondFiles.length === 2 && secondFiles.every((path) => path.startsWith(`${own}/loose_`)), secondFiles.join(' | '))
   console.log(`FILES ${h.which}: ${secondFiles.join(' | ')}`)

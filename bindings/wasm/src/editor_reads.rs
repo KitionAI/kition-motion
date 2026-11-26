@@ -19,13 +19,17 @@ const WAVEFORM_RATE: u32 = 2000;
 
 impl MotionDocument {
     /// What the canvas tools name the layers they make, in the editor's language: JSON
-    /// `{"shape": "形状图层"}` (numbered `形状图层 2`); a missing or empty name keeps the engine's.
+    /// `{"shape": "形状图层", "text": "文本"}` (a shape layer numbered `形状图层 2`; a text layer
+    /// named as Layer ▸ New ▸ Text names it, `文本`, `文本 2`); a missing or empty name keeps the
+    /// engine's.
     /// `labels` (`{"text": "Peach", …}`, by kind: text, shape, solid, adjustment, null, camera,
     /// light) are the labels the `layer.new…` commands give the layers they make from now on; an
     /// unknown label name is left out, and without `labels` new layers get the engine's.
     pub fn set_layer_names(&mut self, names: &str) {
         let names = serde_json::from_str::<Value>(names).unwrap_or(Value::Null);
-        self.shape_layer_name = names.get("shape").and_then(Value::as_str).map(str::trim).filter(|name| !name.is_empty()).map(str::to_owned);
+        let name = |kind: &str| names.get(kind).and_then(Value::as_str).map(str::trim).filter(|name| !name.is_empty()).map(str::to_owned);
+        self.shape_layer_name = name("shape");
+        self.text_layer_name = name("text");
         self.session.new_layer_labels = names.get("labels").and_then(Value::as_object).map(|labels| {
             labels.iter().filter_map(|(kind, name)| Some((kind.clone(), kition_motion_engine::color::Label::from_name(name.as_str()?)?))).collect()
         });

@@ -3,6 +3,7 @@ import { LinkIcon as Linked, UnlinkIcon as Unlinked } from '@kition/tessera/icon
 import { Checkbox, GradientSlider, IconButton, Select, TextInput, useKitEditor } from '@kition/sdk/editor'
 import type { MotionLayer } from '../motion'
 import { editableNumbers, type TreeNode } from '../timeline/tree'
+import { useTypingUndo } from '../typingUndo'
 import { NumberField } from '../ValueField'
 import { GradientEditor } from './GradientEditor'
 import { ColorSwatch, hexOf } from './ColorSwatch'
@@ -149,22 +150,34 @@ function TextField({ value, label, onCommit, testId, readOnly }: { value: string
   const [text, setText] = useState(value)
   const typing = useRef(false)
   const dropped = useRef(false)
+  // Cmd/Ctrl+Z here undoes only this visit's typing (the field may show another layer's value next).
+  const field = useRef<HTMLInputElement>(null)
+  const history = useTypingUndo(setText, field)
   useEffect(() => {
     if (!typing.current) setText(value)
   }, [value])
   return (
     <TextInput
+      ref={field}
       value={text}
       aria-label={label}
       readOnly={readOnly}
-      onFocus={() => (typing.current = true)}
-      onChange={(event) => setText(event.target.value)}
+      onFocus={() => {
+        typing.current = true
+        history.begin(text)
+      }}
+      onChange={(event) => {
+        setText(event.target.value)
+        history.record(event.target.value)
+      }}
       onBlur={() => {
         typing.current = false
+        history.end()
         if (!dropped.current && text !== value) onCommit(text)
         dropped.current = false
       }}
       onKeyDown={(event) => {
+        if (history.key(event)) return
         if (event.key === 'Enter') event.currentTarget.blur()
         if (event.key === 'Escape') {
           event.preventDefault()

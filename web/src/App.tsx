@@ -52,6 +52,7 @@ import { CacheFullMenu } from './CacheFullMenu'
 import { EDITOR_KEYS, pressed } from './keys'
 import { AudioMeters, createMeterFeed, usePreviewAudio } from './audio'
 import { INTERPOLATIONS } from './timeline/interp'
+import { distinctKeys, type SelectedKey } from './timeline/keys'
 import { SamplerContext, WaveformContext, type CurveSampler, type Waveform, type WaveformReader } from './timeline/samples'
 import { isThreeD } from './timeline/tree'
 
@@ -1114,7 +1115,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   useEffect(() => {
     if (!session.doc) return
     // And the labels the Layer ▸ New commands give new layers, by kind.
-    void session.doc.invoke('setLayerNames', JSON.stringify({ shape: t('layerName.shape'), labels: NEW_LAYER_LABELS })).catch(() => undefined)
+    void session.doc.invoke('setLayerNames', JSON.stringify({ shape: t('layerName.shape'), text: t('layerName.text'), labels: NEW_LAYER_LABELS })).catch(() => undefined)
   }, [session.doc, t])
   // The Pen's option on a shape layer: draw a mask on it instead of a new path in it.
   const [penMasks, setPenMasks] = useState(false)
@@ -1307,8 +1308,9 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       return undefined
     }
     let current = true
-    void query<Array<{ spatial?: string | null; roving?: boolean }>>('keyframe.info', {}).then(async (keys) => {
-      if (!current || !Array.isArray(keys)) return
+    void query<Array<SelectedKey & { spatial?: string | null; roving?: boolean }>>('keyframe.info', {}).then(async (answer) => {
+      if (!current || !Array.isArray(answer)) return
+      const keys = distinctKeys(answer)
       const moving = keys.filter((key) => typeof key.spatial === 'string')
       const spatial = moving.length > 0
       const roving = spatial && moving.every((key) => key.roving === true)

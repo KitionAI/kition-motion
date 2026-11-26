@@ -184,7 +184,7 @@ export const TRIED_ROWS: Readonly<Record<string, Record<string, unknown>>> = {
   // Add Expression acts on the properties selected in the timeline: hidden until one is.
   'prop.setExpression': {},
   'layer.freezeFrame': {},
-  // Layer Styles ▸ Remove All: hidden unless a selected layer has a style.
+  // Layer Styles ▸ Remove All Styles: hidden unless a selected layer has a style.
   'layer.style.removeAll': {},
   // Enable Time Remapping: hidden unless a footage or composition layer is selected.
   'layer.enableTimeRemap': {},
@@ -361,7 +361,7 @@ const MENUS = (overlays: Overlays, alignTo: AlignTo, skipFrames: boolean, remapO
           [styleLabel('Gradient Overlay', 'gradientOverlay', styled), 'layer.style.gradientOverlay'],
           [styleLabel('Stroke', 'stroke', styled), 'layer.style.stroke'],
           SEPARATOR,
-          ['Remove All', 'layer.style.removeAll'],
+          ['Remove All Styles', 'layer.style.removeAll'],
         ],
       ],
       [

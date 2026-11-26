@@ -94,10 +94,17 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
   const readOnly = useReadOnly()
   const [width, setWidth] = usePanelWidth()
   const first = info.transform?.layer
-  const layer = first != null ? info.layers.find((item) => item.id === first) : undefined
+  const wanted = first != null ? info.layers.find((item) => item.id === first) : undefined
   const chosen = info.layers.filter((item) => item.selected)
   const selected = chosen.length
-  const tree = useEngineQuery<{ properties?: TreeNode; text?: TextSelection; lightKind?: string }>('layer.tree', layer ? { layer: layer.id, depth: TREE_DEPTH, time: info.time } : { layer: -1 })
+  const answer = useEngineQuery<{ id?: number; properties?: TreeNode; text?: TextSelection; lightKind?: string }>('layer.tree', wanted ? { layer: wanted.id, depth: TREE_DEPTH, time: info.time } : { layer: -1 })
+  // The layer the panel shows is the one its tree answer is for: just after another layer is
+  // selected, until that layer's tree arrives, the panel goes on showing the previous layer whole
+  // (its name, its fields, edits to it), never one layer's values under another layer's name, so
+  // no field shows or starts typing from another layer's values (the Source Text box a new text
+  // layer focuses once its own tree is there).
+  const layer = wanted && answer ? (answer.id === wanted.id ? wanted : info.layers.find((item) => item.id === answer.id)) : undefined
+  const tree = layer ? answer : null
   const root = layer && tree?.properties ? tree.properties : null
   const top = root?.children ?? []
   const group = (match: string) => top.find((node) => node.match === match)
@@ -112,11 +119,11 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
     const ids = new Set(info.layers.map((item) => item.id))
     const before = known.current
     known.current = ids
-    if (before && layer && layer.type === 'Text' && !before.has(layer.id) && !onCanvas.current) {
+    if (before && wanted && wanted.type === 'Text' && !before.has(wanted.id) && !onCanvas.current) {
       remember('Text:text', true)
-      setFresh(layer.id)
+      setFresh(wanted.id)
     }
-  }, [info.layers, layer])
+  }, [info.layers, wanted])
   const focused = useCallback(() => setFresh(null), [])
   return (
     <aside className="kui-panel motion-side" data-side="right" style={{ width }} data-testid="motion-properties-panel">
@@ -155,7 +162,7 @@ export function PropertiesPanel({ info, onAddEffect, typingOnCanvas = false, ali
               </Section>
             ) : null}
           </PanelContext.Provider>
-        ) : layer ? null : (
+        ) : wanted ? null : (
           <p className="kui-muted motion-empty" data-testid="motion-properties-empty">
             {t('selectLayer')}
           </p>

@@ -1264,7 +1264,7 @@ fn set_text(s: &mut Session, p: &Value) -> Result<Value> {
         pr.set_value_at(lt, KV::Text(Box::new(doc.clone())));
         // Named after its text (the whole first line, as it is typed) until renamed by hand.
         let after = super::text_edit::first_line_name(&doc.text);
-        if str_p(p, "text").is_some() && !after.is_empty() && after != l.name && (l.name == before || l.name.starts_with("Text") || l.name.is_empty()) {
+        if str_p(p, "text").is_some() && !after.is_empty() && after != l.name && super::text_edit::name_is_automatic(&l.name, &before) {
             l.name = after;
         }
         Ok(())

@@ -807,6 +807,8 @@ fn select_keys(s: &mut Session, p: &Value) -> Result<Value> {
     } else {
         s.state.selected_keys = sel;
     }
+    // A selection is a set: a key given twice, or one already selected, is there once.
+    s.state.selected_keys = crate::live_keys(s.active_comp(), &s.state.selected_keys);
     // From the Timeline, selected keys select their properties and layers too, as in After
     // Effects, so the Graph Editor shows them (#252).
     if b_p(p, "selectProperties").unwrap_or(false) && !s.state.selected_keys.is_empty() {

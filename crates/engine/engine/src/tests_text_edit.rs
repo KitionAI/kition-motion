@@ -323,3 +323,31 @@ fn a_text_layer_typed_into_keeps_its_name_following_the_whole_text_until_renamed
     s.execute("layer.setText", json!({"layer": t, "text": "Hello world!"})).unwrap();
     assert_eq!(name(&mut s), "Title", "renamed by hand, the name stays");
 }
+
+/// A text layer still has the name it got by itself in any language the editor speaks, numbered
+/// or not (`文本 2` from Layer ▸ New ▸ Text in Chinese, `Text` from the Text tool): typing names
+/// it after its text, through `layer.setText` (the panel) and through typing on the canvas alike.
+/// A name given by hand that merely starts with a default (`Textures`) stays.
+#[test]
+fn a_default_text_layer_name_in_either_language_follows_the_typing() {
+    let mut s = Session::default();
+    s.execute("comp.new", json!({"name": "C", "width": 640, "height": 360, "duration": 4})).unwrap();
+    let name = |s: &Session, t: u64| s.active_comp().unwrap().layer(kition_motion_project::LayerId(t)).unwrap().name.clone();
+    let made = |s: &mut Session, params: serde_json::Value| s.execute("layer.newText", params).unwrap()["layer"].as_u64().unwrap();
+    let first = made(&mut s, json!({"text": "文本"}));
+    let second = made(&mut s, json!({"text": "文本"}));
+    assert_eq!((name(&s, first), name(&s, second)), ("文本".to_string(), "文本 2".to_string()));
+    s.execute("layer.setText", json!({"layer": second, "text": "Hey"})).unwrap();
+    assert_eq!(name(&s, second), "Hey", "文本 2 follows what is typed");
+    // The Text tool's layer: no text yet, named in the editor's language (or the engine's).
+    for default in ["文本", "Text"] {
+        let tool = made(&mut s, json!({"text": "", "name": default, "edit": true}));
+        assert!(name(&s, tool).starts_with(default), "{}", name(&s, tool));
+        s.execute("text.insert", json!({"text": "Yo"})).unwrap();
+        assert_eq!(name(&s, tool), "Yo", "typed on the canvas, {default} follows the text");
+        s.execute("text.endEdit", json!({})).unwrap();
+    }
+    let named = made(&mut s, json!({"text": "Sky", "name": "Textures"}));
+    s.execute("layer.setText", json!({"layer": named, "text": "Sea"})).unwrap();
+    assert_eq!(name(&s, named), "Textures", "a name given by hand stays");
+}

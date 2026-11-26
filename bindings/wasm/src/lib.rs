@@ -211,6 +211,10 @@ pub struct MotionDocument {
     /// What the canvas tools name a new shape layer (`形状图层` in Chinese), numbered; `None`: the
     /// engine's English name. The editor sets it in its language (`setLayerNames`).
     pub(crate) shape_layer_name: Option<String>,
+    /// What the Text tool names a new text layer (`文本` in Chinese), as Layer ▸ New ▸ Text does
+    /// (numbered by the engine when a layer has that name); `None`: the engine's. Set with
+    /// `setLayerNames`.
+    pub(crate) text_layer_name: Option<String>,
 }
 
 /// A native host (`bindings/headless`) needs the document to be `Send`: checked here, where the
@@ -269,6 +273,7 @@ impl MotionDocument {
             pen_masks: false,
             render_snapshot: None,
             shape_layer_name: None,
+            text_layer_name: None,
         };
         doc.lend_footage();
         doc
@@ -1613,7 +1618,7 @@ pub mod web {
             self.0.drop_render_snapshot()
         }
 
-        /// What the canvas tools name new layers, as JSON `{shape}` (see [`MotionDocument::set_layer_names`]).
+        /// What the canvas tools name new layers, as JSON `{shape, text}` (see [`MotionDocument::set_layer_names`]).
         #[wasm_bindgen(js_name = setLayerNames)]
         pub fn set_layer_names(&mut self, names: &str) {
             self.0.set_layer_names(names)

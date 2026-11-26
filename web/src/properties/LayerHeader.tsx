@@ -2,6 +2,7 @@ import { cameraOrLight } from '../timeline/SwitchCells'
 import { useEffect, useRef, useState } from 'react'
 import { Field, Select, TextInput, useKitEditor } from '@kition/sdk/editor'
 import type { MotionInfo, MotionLayer } from '../motion'
+import { useTypingUndo } from '../typingUndo'
 
 /**
  * The top of the Properties panel: the layer's name (typed in place), its type, its blending
@@ -21,6 +22,9 @@ export function LayerHeader({ info, layer, readOnly, count }: { info: MotionInfo
   const modes = blendModes(byId.get('layer.setBlendMode')?.schema)
   const [name, setName] = useState(layer.name)
   const dropped = useRef(false)
+  // Cmd/Ctrl+Z here undoes only this visit's typing (the field shows every layer's name in turn).
+  const field = useRef<HTMLInputElement>(null)
+  const history = useTypingUndo(setName, field)
   useEffect(() => setName(layer.name), [layer.name, layer.id])
   const others = info.layers.filter((other) => other.id !== layer.id)
   return (
@@ -32,11 +36,17 @@ export function LayerHeader({ info, layer, readOnly, count }: { info: MotionInfo
       ) : null}
       <div className="motion-layer-title">
         <TextInput
+          ref={field}
           value={name}
           aria-label={t('props.layerName')}
           readOnly={readOnly}
-          onChange={(event) => setName(event.target.value)}
+          onFocus={() => history.begin(name)}
+          onChange={(event) => {
+            setName(event.target.value)
+            history.record(event.target.value)
+          }}
           onKeyDown={(event) => {
+            if (history.key(event)) return
             if (event.key === 'Enter') event.currentTarget.blur()
             if (event.key === 'Escape') {
               event.preventDefault()
@@ -46,6 +56,7 @@ export function LayerHeader({ info, layer, readOnly, count }: { info: MotionInfo
             }
           }}
           onBlur={() => {
+            history.end()
             const next = name.trim()
             if (!dropped.current && next && next !== layer.name) void run('layer.rename', { layer: layer.id, name: next })
             else setName(layer.name)

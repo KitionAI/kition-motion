@@ -838,6 +838,11 @@ button.motion-switch:focus-visible {
   gap: 2px;
 }
 
+/* A text layer always has a font: the font box has nothing to clear. */
+.motion-text-font .kui-combobox-clear {
+  display: none;
+}
+
 .motion-text-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -161,6 +161,19 @@ pub trait Importer: Send + Sync {
     fn add_frames(&self, _paths: &[String]) {}
 }
 
+/// The keyframe selection as every reader counts it: a set (each reference once, in its first
+/// place) of the references that point at a key of `comp` by its exact stored time (one left at
+/// a time that holds no key now never stands for the key nearest to it).
+pub(crate) fn live_keys(comp: Option<&Comp>, keys: &[KeyRef]) -> Vec<KeyRef> {
+    let Some(comp) = comp else { return vec![] };
+    let mut seen = std::collections::HashSet::new();
+    keys.iter()
+        .filter(|k| comp.layer(k.layer).and_then(|l| l.props.find(k.prop)).is_some_and(|p| p.keys.iter().any(|key| key.time == k.time)))
+        .filter(|k| seen.insert(**k))
+        .copied()
+        .collect()
+}
+
 /// A keyframe reference: layer, property uid, key time (layer time).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct KeyRef {
@@ -460,6 +473,9 @@ pub struct Session {
     pub sys_memory: Option<sysinfo::SysMemory>,
     /// The keyframe drag in progress (`keyframe.move` with a merge key).
     pub key_move: Option<KeyMove>,
+    /// The project an undo or redo just left, for [`Session::sanitize_state`] to move the
+    /// keyframe selection along with the keys the step moved (taken there).
+    pub keys_moved_from: Option<Arc<Project>>,
     /// Reads the system's memory in the background for [`Session::memory_tick`].
     pub memory_watch: sysinfo::MemoryWatch,
     /// Switches Affect Nested Comps as last applied (a change empties the layer cache).
@@ -611,6 +627,7 @@ impl Default for Session {
             script_windows: script_windows::ScriptWindows::default(),
             sys_memory: None,
             key_move: None,
+            keys_moved_from: None,
             memory_watch: Default::default(),
             applied_nested_switches: None,
             offload: None,
@@ -792,6 +809,7 @@ impl Session {
         self.history.redo.push((label, cur.clone()));
         self.history.merge_key = None;
         self.step_kdm(steps, true, floor, &cur);
+        self.keys_moved_from = Some(cur);
         self.sanitize_state();
         self.select_returned_layers(&before);
         self.bump();
@@ -812,6 +830,7 @@ impl Session {
         self.history.undo.push((label, cur.clone()));
         self.history.merge_key = None;
         self.step_kdm(steps, false, floor, &cur);
+        self.keys_moved_from = Some(cur);
         self.sanitize_state();
         self.select_returned_layers(&before);
         self.bump();
@@ -837,8 +856,43 @@ impl Session {
         }
     }
 
-    /// Drop selections that no longer exist.
+    /// After an undo or redo (`before`: the project the step left, from
+    /// [`Session::sanitize_state`]): a selected keyframe the step moved is selected where it is now. On each property, the key times the step took away and
+    /// the ones it brought, in time order, pair up as one key's old and new place (a move of
+    /// several keys keeps their order). A selected key whose place pairs with none (a pasted key
+    /// the undo took away) keeps its reference: a redo brings it back selected, and until then
+    /// nothing counts it ([`live_keys`]).
+    fn follow_selected_keys(&mut self, before: &Project) {
+        let Some(cid) = self.active_comp_id() else { return };
+        let (Some(now), Some(was)) = (self.project.comp(cid), before.comp(cid)) else { return };
+        let times =
+            |comp: &Comp, k: &KeyRef| comp.layer(k.layer).and_then(|l| l.props.find(k.prop)).map(|p| p.keys.iter().map(|key| key.time).collect::<Vec<_>>());
+        let followed: Vec<KeyRef> = self
+            .state
+            .selected_keys
+            .iter()
+            .map(|k| {
+                let (Some(here), Some(there)) = (times(now, k), times(was, k)) else { return *k };
+                if here.contains(&k.time) {
+                    return *k;
+                }
+                let gone: Vec<Tick> = there.iter().copied().filter(|t| !here.contains(t)).collect();
+                let came: Vec<Tick> = here.iter().copied().filter(|t| !there.contains(t)).collect();
+                match gone.iter().position(|t| *t == k.time).and_then(|i| came.get(i)) {
+                    Some(t) if gone.len() == came.len() => KeyRef { time: *t, ..*k },
+                    _ => *k,
+                }
+            })
+            .collect();
+        self.state.selected_keys = followed;
+    }
+
+    /// Drop selections that no longer exist; after an undo or redo, the keyframe selection first
+    /// follows the keys the step moved ([`Session::follow_selected_keys`]).
     pub fn sanitize_state(&mut self) {
+        if let Some(before) = self.keys_moved_from.take() {
+            self.follow_selected_keys(&before);
+        }
         let p = self.project.clone();
         self.state.open_comps.retain(|c| p.comp(*c).is_some());
         if self.state.active_comp.is_some_and(|c| p.comp(c).is_none()) {
@@ -851,6 +905,11 @@ impl Session {
             self.state.selected_keys.retain(|k| ids.contains(&k.layer));
             self.state.selected_vertices.retain(|v| ids.contains(&v.layer));
         }
+        // A selection is a set. A reference to a time that holds no key now stays (a redo may
+        // bring that key back, selected), but nothing that reads the selection counts it
+        // ([`live_keys`]).
+        let mut seen = std::collections::HashSet::new();
+        self.state.selected_keys.retain(|k| seen.insert(*k));
         if let Some((l, t)) = self.state.current_track
             && self.active_comp().and_then(|c| c.layer(l)).and_then(|l| l.tracker(t)).is_none()
         {

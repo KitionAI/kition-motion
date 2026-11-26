@@ -1014,6 +1014,16 @@ fn error_messages_point_at_the_users_line() {
     assert!(f.err("5 +").starts_with("Error at line 1: SyntaxError"));
 }
 
+/// A name that is not defined, standing alone (boa gives it no position), is reported on the line
+/// where it stands, not without a line.
+#[test]
+fn a_bare_undefined_name_says_its_line() {
+    let f = fx();
+    assert_eq!(f.err("wobble"), "Error at line 1: ReferenceError: wobble is not defined");
+    assert_eq!(f.err("var a = 1;\n// a.wobble is not it\n\nwobble"), "Error at line 4: ReferenceError: wobble is not defined");
+    assert_eq!(f.err("var wobbles = 1;\nwobble"), "Error at line 2: ReferenceError: wobble is not defined");
+}
+
 /// Text Expression Selector: Amount evaluated per unit with textIndex / textTotal /
 /// selectorValue.
 #[test]

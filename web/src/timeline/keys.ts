@@ -38,3 +38,18 @@ export function keysOf(element: Element): KeyRef[] {
 
 /** What `keyframe.info` answers per selected keyframe (the fields the timeline reads). */
 export type SelectedKey = { layer: number; path: string; compTime: number }
+
+/**
+ * The selected keyframes `keyframe.info` answers, each once (by layer, property and time): a
+ * selection is a set, so the counts the menus read (Edit Value for one, Wiggler for two, Smoother
+ * for three) are of distinct keyframes.
+ */
+export function distinctKeys<K extends SelectedKey>(list: readonly K[]): K[] {
+  const seen = new Set<string>()
+  return list.filter((key) => {
+    const id = keyId({ layer: key.layer, path: key.path, time: key.compTime })
+    if (seen.has(id)) return false
+    seen.add(id)
+    return true
+  })
+}

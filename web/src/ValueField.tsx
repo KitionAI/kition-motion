@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useTypingUndo } from './typingUndo'
 
 /** A value as the field shows it: at most `decimals` decimals. */
 const rounded = (value: number, decimals: number) => {
@@ -59,8 +60,10 @@ let gestures = 0
 
 /**
  * One number of a property (the Properties panel's and the timeline's): commits on Enter or
- * blur, Escape drops the typed text. With `onScrub`, a press dragged left or right scrubs the
- * value (Shift ×10, Alt ×0.1); a press without a drag starts typing.
+ * blur; Escape drops the typed text and changes nothing. Cmd/Ctrl+Z while typing undoes only
+ * this visit's typing, down to the value the field showed when it took the focus. With
+ * `onScrub`, a press dragged left or right scrubs the value (Shift ×10, Alt ×0.1); a press
+ * without a drag starts typing.
  */
 export function NumberField({ value, label, onCommit, testId, readOnly, onScrub, speed = 1, min = -Infinity, max = Infinity, decimals = 2, unit, mixed = false, fit }: NumberFieldProps) {
   const show = (next: number) => (mixed && next === value ? '' : String(rounded(next, decimals)))
@@ -68,12 +71,20 @@ export function NumberField({ value, label, onCommit, testId, readOnly, onScrub,
   const scrub = useRef<Scrub | null>(null)
   const input = useRef<HTMLInputElement>(null)
   const [focused, setFocused] = useState(false)
+  // Escape pressed: the blur that follows puts the value back instead of committing.
+  const dropped = useRef(false)
+  const history = useTypingUndo(setText, input)
   // The field holds the whole value in `text`; a narrow one shows it shortened until it is focused.
   const shown = fit && !focused ? fitted(text, fit) : text
   useEffect(() => {
     if (!scrub.current?.moved) setText(show(value))
   }, [value, mixed]) // eslint-disable-line react-hooks/exhaustive-deps
   const commit = () => {
+    if (dropped.current) {
+      dropped.current = false
+      setText(show(value))
+      return
+    }
     const next = Number(text.trim().replace(',', '.'))
     if (text.trim() !== '' && Number.isFinite(next) && (mixed || next !== rounded(value, decimals))) onCommit(Math.min(max, Math.max(min, next)))
     else setText(show(value))
@@ -101,8 +112,13 @@ export function NumberField({ value, label, onCommit, testId, readOnly, onScrub,
         inputMode="decimal"
         readOnly={readOnly}
         aria-readonly={readOnly}
-        onChange={(event) => setText(event.target.value)}
-        onFocus={(event) => {
+        onChange={(event) => {
+          setText(event.target.value)
+          history.record(event.target.value)
+        }}
+        onFocus={() => {
+          dropped.current = false
+          history.begin(text)
           if (!fit) return
           // Typing shows the whole value; where it replaces the shortened one, select it once it is there.
           setFocused(true)
@@ -111,6 +127,7 @@ export function NumberField({ value, label, onCommit, testId, readOnly, onScrub,
         }}
         onBlur={() => {
           setFocused(false)
+          history.end()
           commit()
         }}
         onPointerDown={(event) => {
@@ -152,10 +169,13 @@ export function NumberField({ value, label, onCommit, testId, readOnly, onScrub,
           setText(show(value))
         }}
         onKeyDown={(event) => {
+          if (history.key(event)) return
           if (event.key === 'Enter') event.currentTarget.blur()
           if (event.key === 'Escape') {
-            // The typed value is dropped: the editor (and Focus) does not hear this Escape as well.
+            // The typed value is dropped (the blur commits nothing): the editor (and Focus) does
+            // not hear this Escape as well.
             event.preventDefault()
+            dropped.current = true
             setText(show(value))
             event.currentTarget.blur()
           }

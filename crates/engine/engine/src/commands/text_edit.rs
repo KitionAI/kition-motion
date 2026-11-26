@@ -90,6 +90,28 @@ pub(crate) fn first_line_name(text: &str) -> String {
     text.lines().next().unwrap_or("").chars().take(40).collect()
 }
 
+/// The name a text layer gets by itself in each language the editor speaks (Layer ▸ New ▸ Text
+/// and the Text tool, `layer.newText` with no text): English and Chinese.
+const DEFAULT_TEXT_NAMES: &[&str] = &["Text", "文本"];
+
+/// `name` without the number a second layer of the same name gets (`Text 2` → `Text`).
+fn without_number(name: &str) -> &str {
+    match name.rsplit_once(' ') {
+        Some((stem, n)) if !stem.is_empty() && !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) => stem,
+        _ => name,
+    }
+}
+
+/// Whether a text layer's `name` is still one it got by itself, so the layer is named after its
+/// text as it is typed: empty, a text layer's default name in any language the editor speaks, or
+/// the first line of its text before this edit (`before`), each with or without the number a
+/// second layer of that name gets (`Text 2`, `文本 3`). A name given by hand is anything else.
+/// Shared by every path that changes a text layer's text (`layer.setText`, typing on the canvas).
+pub(crate) fn name_is_automatic(name: &str, before: &str) -> bool {
+    let stem = without_number(name);
+    name.is_empty() || name == before || DEFAULT_TEXT_NAMES.contains(&stem) || (!before.is_empty() && (stem == before || stem == without_number(before)))
+}
+
 /// Edit a layer's Source Text at the CTI (one undo step, or merged by `merge`), then set the
 /// session's selection.
 pub(crate) fn edit_doc(
@@ -115,7 +137,7 @@ pub(crate) fn edit_doc(
         let after = first_line_name(&doc.text);
         pr.set_value_at(lt, KV::Text(Box::new(doc)));
         // Text layers are named after their text until renamed.
-        if before != after && !after.is_empty() && (l.name == before || l.name.starts_with("Text") || l.name.is_empty()) {
+        if before != after && !after.is_empty() && name_is_automatic(&l.name, &before) {
             l.name = after;
         }
         Ok(())

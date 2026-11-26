@@ -4,7 +4,7 @@ import { Button, Checkbox, Dialog, Field, IconButton, Select, TextInput, formatT
 import { presetFolder } from './dialogs'
 import { SEQUENCES, sequenceName, writeExport } from './ExportDialog'
 import { parseAnswer, type ProjectItem, type ProjectSummary } from './footage'
-import { counted } from './strings'
+import { CATALOGS, counted } from './strings'
 
 /**
  * The Render Queue: export jobs kept in the project (the engine's `renderQueue.*`: each job is a
@@ -211,17 +211,27 @@ function defaultFolder(format: QueueFormat, compName: string, t: Strings, taken:
   return typeof last === 'string' ? (presetFolder(last) ?? '') : ''
 }
 
-/** The name of a composition's image-sequence folder, before any number. */
-const sequenceBase = (compName: string, t: Strings) => presetFolder(fileName(t('queue.sequenceFolder', { name: fileName(compName) || 'Composition' }))) || 'sequence'
+/** A composition's image-sequence folder name, before any number, from a `queue.sequenceFolder` pattern. */
+const baseFrom = (pattern: string, compName: string) => presetFolder(fileName(pattern.replace('{name}', fileName(compName) || 'Composition'))) || 'sequence'
+
+/** The name of a composition's image-sequence folder in the interface's language, before any number (what a new folder is called). */
+const sequenceBase = (compName: string, t: Strings) => baseFrom(t('queue.sequenceFolder', { name: '{name}' }), compName)
+
+/**
+ * The sequence-folder names the editor makes for a composition in every language it speaks
+ * (`Comp 1_sequence`, `Comp 1_序列`), before any number: which ones the editor made does not
+ * depend on the language the interface shows now.
+ */
+const sequenceBases = (compName: string) => [...new Set(Object.values(CATALOGS).map((catalog) => catalog['queue.sequenceFolder']).filter((pattern): pattern is string => typeof pattern === 'string').map((pattern) => baseFrom(pattern, compName)))]
 
 /**
  * Whether a job's folder is still one the editor chose for it (none, or its composition's
- * image-sequence folder, numbered or not) rather than one the person typed or took from a preset.
+ * image-sequence folder in any language, numbered or not) rather than one the person typed or
+ * took from a preset.
  */
-function automaticFolder(folder: string, compName: string, t: Strings) {
+function automaticFolder(folder: string, compName: string) {
   if (!folder) return true
-  const base = sequenceBase(compName, t)
-  return folder === base || (folder.startsWith(`${base} `) && /^\d+$/.test(folder.slice(base.length + 1)))
+  return sequenceBases(compName).some((base) => folder === base || (folder.startsWith(`${base} `) && /^\d+$/.test(folder.slice(base.length + 1))))
 }
 
 /** An image sequence's own folder, named after its composition, numbered past the folders in `taken`. */
@@ -240,7 +250,9 @@ const foldersOf = (items: readonly QueueItem[] | undefined, t: Strings) => new S
 /**
  * The folder a job really writes to: its own, or for an image sequence without one its
  * composition's sequence folder (`Comp 1_sequence`): frames never land loose in the project's
- * folder. The job's row shows this folder, so what it shows is what the render does.
+ * folder. The job's row shows this folder, so what it shows is what the render does. A sequence
+ * job keeps its folder from when it is made or becomes a sequence (the project holds it, so every
+ * language renders to the same place); only a job saved without one falls back to this name.
  */
 function jobFolder(item: QueueItem, t: Strings) {
   const { folder } = outputOf(item)
@@ -529,13 +541,13 @@ function JobDialog({ item, comp, queued, onClose }: { item: QueueItem | null; co
   // is empty or holds the composition's sequence folder is automatic whatever was typed before (a
   // typed name equal to the generated one cannot be told apart from it); any other folder typed or
   // taken from a preset in this job's dialog stays.
-  const [startedAuto] = useState(() => automaticFolder(settings0.folder, compName, t) || (item != null && inheritedFolders.get(item.id) === settings0.folder))
+  const [startedAuto] = useState(() => automaticFolder(settings0.folder, compName) || (item != null && inheritedFolders.get(item.id) === settings0.folder))
   const [autoFolder, setAutoFolder] = useState(startedAuto)
-  const isAuto = (value: string) => autoFolder || automaticFolder(value.trim(), compName, t)
+  const isAuto = (value: string) => autoFolder || automaticFolder(value.trim(), compName)
   /** The folder a job that is not a sequence gets by itself: never the composition's sequence folder. */
   const movieFolder = (format: QueueFormat) => {
     const folder = startedAuto && !SEQUENCES.has(settings0.format) ? settings0.folder : defaultFolder(format, compName, t, new Set())
-    return folder && automaticFolder(folder, compName, t) ? '' : folder
+    return folder && automaticFolder(folder, compName) ? '' : folder
   }
   const changeFormat = (format: QueueFormat) => {
     if (!isAuto(settings.folder) || SEQUENCES.has(format) === SEQUENCES.has(settings.format)) return set({ format })
@@ -567,8 +579,15 @@ function JobDialog({ item, comp, queued, onClose }: { item: QueueItem | null; co
   const sizeOk = settings.size !== 'custom' || (w !== null && h !== null)
   const folder = presetFolder(settings.folder)
   const valid = spanOk && sizeOk && rateOk && folder !== null && !/[\\/:*?"<>|]/.test(settings.name)
-  // A job that is not a sequence never keeps the composition's sequence folder: that box is automatic.
-  const finalFolder = () => (folder && !SEQUENCES.has(settings.format) && automaticFolder(folder, compName, t) ? movieFolder(settings.format) : (folder ?? ''))
+  // A job that is not a sequence never keeps the composition's sequence folder (in any language):
+  // that box is automatic. A sequence left without a folder gets the composition's sequence folder
+  // (the one an empty box always meant), kept in the job now: where it renders never depends on
+  // the interface language at render time.
+  const finalFolder = () => {
+    if (folder && !SEQUENCES.has(settings.format) && automaticFolder(folder, compName)) return movieFolder(settings.format)
+    if (!folder && SEQUENCES.has(settings.format)) return sequenceBase(compName, t)
+    return folder ?? ''
+  }
   const final = (): JobSettings => ({ ...settings, start: startAt ?? 0, end: endAt ?? 1, width: w ?? settings.width, height: h ?? settings.height, frameRate: settings.frameRate === null ? null : customRate, folder: finalFolder() })
   const save = async () => {
     if (!valid || !item) return
