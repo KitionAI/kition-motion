@@ -4,6 +4,14 @@ type Strings = (key: string, values?: Record<string, string | number>) => string
 
 /** Engine refusals people meet often, as the string key of a short sentence that says what to do. */
 const KNOWN: ReadonlyArray<readonly [RegExp, string]> = [
+  // Layer ▸ Time ▸ Enable Time Remapping (Cmd/Ctrl+Alt+T) on a layer that has no source time (layer.enableTimeRemap).
+  [/time remapping needs a footage or composition layer/i, 'error.timeRemap'],
+  // Animation ▸ Add Expression (Alt+Shift+=) with no property selected (prop.setExpression).
+  [/select a property in the timeline/i, 'error.selectProperty'],
+  // Layer ▸ Mask ▸ New Mask on a camera, light, null or 3D model (layer.addMask, mask.new).
+  [/can't have masks/i, 'error.noMasks'],
+  // Layer ▸ Layer Styles on a camera, light, null or adjustment layer (layer.style.*).
+  [/no layer that takes layer styles/i, 'error.noStyles'],
   [/\block(ed)?\b/i, 'error.locked'],
   [/no (layers? )?(is |are )?selected|nothing (is )?selected|no selection|select (a|one|the|some)? ?(layer|layers)\b|needs? (a )?selected layer/i, 'error.select'],
   [/no effect (has been )?applied/i, 'error.noLastEffect'],
@@ -12,6 +20,11 @@ const KNOWN: ReadonlyArray<readonly [RegExp, string]> = [
   [/select at least 3 keyframes/i, 'error.threeKeys'],
   [/out of range|must be (positive|between|greater|less|at least|at most|finite)|not a (valid )?number|invalid value|too (large|small|long|short)/i, 'error.value'],
 ]
+
+/** The editor's short sentence for an engine refusal it knows (a string key), or undefined. */
+export function knownRefusal(text: string): string | undefined {
+  return KNOWN.find(([pattern]) => pattern.test(text))?.[1]
+}
 
 /** The engine's error text: an Error's message, or the value itself. */
 export function errorText(error: unknown) {
@@ -41,11 +54,34 @@ export class Said extends Error {}
 export function motionReport(t: Strings, commandFailed: string) {
   return (title: string, error: unknown) => {
     const text = errorText(error)
-    const known = title === commandFailed ? KNOWN.find(([pattern]) => pattern.test(text)) : undefined
+    const known = title === commandFailed ? knownRefusal(text) : undefined
     if (known) {
       console.warn(`${title}: ${text}`)
-      toast('error', t(known[1]))
+      toast('error', t(known))
     } else if (title === commandFailed) failed(t, t('error.failed'), error, t('error.unchanged'))
     else failed(t, title, error)
   }
+}
+
+/**
+ * Why a job failed, as a Render Queue row says it (its "Failed: …"): the editor's own words (a
+ * [`Said`]), else the translated line that the reason is in the developer console, where the
+ * engine's (or the host's) own text goes with the job's name.
+ */
+export function failedReason(t: Strings, job: string, error: unknown) {
+  console.warn(`${job}: ${errorText(error)}`)
+  return error instanceof Said ? error.message : t('error.details')
+}
+
+/**
+ * What the status bar shows for a canvas tool's message: its hints are the editor's phrases
+ * (`known`: the phrase table has them), shown translated; anything else is a command of the tool
+ * the engine refused, in its own English, which goes to the developer console while the status
+ * bar says the editor's sentence for it, or that the step did not work.
+ */
+export function toolStatus(t: Strings, phrase: (text: string) => string, known: (text: string) => boolean, text: string) {
+  if (!text || known(text)) return phrase(text)
+  console.warn(`${t('error.failed')}: ${text}`)
+  const said = knownRefusal(text)
+  return said ? t(said) : t('error.tool')
 }

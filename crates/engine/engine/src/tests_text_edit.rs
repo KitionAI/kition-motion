@@ -7,6 +7,7 @@ use serde_json::json;
 
 use crate::Session;
 use crate::commands::text_edit::layer_doc;
+use kition_motion_project::LayerId;
 
 fn session(text: &str) -> (Session, u64) {
     let mut s = Session::default();
@@ -214,13 +215,64 @@ fn an_abandoned_type_tool_click_leaves_no_undo_step() {
     s.execute("edit.redo", json!({})).unwrap();
     assert_eq!(s.active_comp().unwrap().layers.len(), 1);
     assert!(s.history.redo.is_empty());
-    // Typed and then deleted again: the typing was a step, so the deletion is one too, as before.
+    // Typed and then deleted again (each its own step here): the steps were the layer's alone, so
+    // they go too, and Undo never brings back an empty layer named after the deleted text.
     s.execute("layer.newText", json!({"text": "", "position": [100, 200], "justify": "left", "edit": true})).unwrap();
     s.execute("text.insert", json!({"text": "x"})).unwrap();
     s.execute("text.delete", json!({"direction": "backward"})).unwrap();
     s.execute("text.endEdit", json!({})).unwrap();
     assert_eq!(s.active_comp().unwrap().layers.len(), 1);
+    assert_eq!(labels(&s), before, "neither the made layer, its typing nor its deletion is a step");
+    assert!(s.history.redo.is_empty());
+}
+
+/// The Type tool's typing (one merged step), deleted again and left: no step of the visit stays,
+/// and Undo takes back what was done before the click (7p: the first Undo brought back an empty
+/// layer named "a", the second named it "Text", the third removed it).
+#[test]
+fn typing_deleted_again_on_a_type_tool_layer_leaves_no_undo_step() {
+    let mut s = Session::default();
+    s.execute("comp.new", json!({"name": "C", "width": 640, "height": 360, "duration": 4})).unwrap();
+    let solid = s.execute("layer.newSolid", json!({"name": "Back"})).unwrap()["layer"].as_u64().unwrap();
+    s.execute("prop.set", json!({"layer": solid, "path": "transform/opacity", "value": 60})).unwrap();
+    let labels = |s: &Session| s.history.undo.iter().map(|u| u.0.clone()).collect::<Vec<_>>();
+    let before = labels(&s);
+    let t = s.execute("layer.newText", json!({"text": "", "position": [100, 200], "justify": "left", "edit": true, "name": "Text"})).unwrap()["layer"]
+        .as_u64()
+        .unwrap();
+    for text in ["a", "b"] {
+        s.execute("text.insert", json!({"text": text, "merge": "type:1"})).unwrap();
+    }
+    assert_eq!(s.active_comp().unwrap().layer(LayerId(t)).unwrap().name, "ab", "named after its text while typed");
+    for _ in 0..2 {
+        s.execute("text.delete", json!({"direction": "backward", "merge": "type:1"})).unwrap();
+    }
+    s.execute("text.endEdit", json!({})).unwrap();
+    assert_eq!(labels(&s), before);
+    assert!(s.history.redo.is_empty(), "Redo brings neither the layer nor its typing back");
+    let ids: Vec<u64> = s.active_comp().unwrap().layers.iter().map(|l| l.id.0).collect();
+    assert_eq!(ids, [solid]);
+    s.execute("edit.undo", json!({})).unwrap();
+    let opacity = s.execute("prop.get", json!({"layer": solid, "path": "transform/opacity"})).unwrap()["value"].as_f64();
+    assert_eq!(opacity, Some(100.0), "the first Undo is the step before the click");
+}
+
+/// A visit that changed something besides its own layer keeps its steps: the empty layer's
+/// deletion is a step of its own, as before.
+#[test]
+fn a_type_tool_visit_that_changed_another_layer_keeps_its_steps() {
+    let mut s = Session::default();
+    s.execute("comp.new", json!({"name": "C", "width": 640, "height": 360, "duration": 4})).unwrap();
+    let solid = s.execute("layer.newSolid", json!({"name": "Back"})).unwrap()["layer"].as_u64().unwrap();
+    s.execute("layer.newText", json!({"text": "", "position": [100, 200], "justify": "left", "edit": true})).unwrap();
+    s.execute("text.insert", json!({"text": "x"})).unwrap();
+    s.execute("prop.set", json!({"layer": solid, "path": "transform/opacity", "value": 60})).unwrap();
+    s.execute("text.delete", json!({"direction": "backward"})).unwrap();
+    s.execute("text.endEdit", json!({})).unwrap();
+    assert_eq!(s.active_comp().unwrap().layers.len(), 1);
     assert_eq!(s.history.undo.last().map(|u| u.0.as_str()), Some("Delete Empty Text Layer"));
+    let opacity = s.execute("prop.get", json!({"layer": solid, "path": "transform/opacity"})).unwrap()["value"].as_f64();
+    assert_eq!(opacity, Some(60.0));
 }
 
 #[test]

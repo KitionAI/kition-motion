@@ -6,7 +6,7 @@
 //! Positions are character indices. The selection is `anchor..caret` (either order).
 
 use kition_motion_keyframe::{CharStyle, TextDoc, Value as KV};
-use kition_motion_project::{LayerId, LayerSource};
+use kition_motion_project::{ItemId, LayerId, LayerSource, Project};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -180,30 +180,55 @@ fn edit(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(state_json(s))
 }
 
-/// Whether the history's last step made layer `lid` of composition `cid` and nothing else: the
-/// project without that layer is the state before the step.
-fn made_by_last_step(s: &Session, cid: kition_motion_project::ItemId, lid: LayerId) -> bool {
-    let Some((_, before)) = s.history.undo.last() else { return false };
-    let mut without = (*s.project).clone();
-    let Some(comp) = without.comp_mut(cid) else { return false };
+/// `project` without layer `lid` of composition `cid`, its id counter as `like`'s (ids taken are
+/// not content); `None` when the layer is not there.
+fn without_layer(project: &Project, cid: ItemId, lid: LayerId, like: &Project) -> Option<Project> {
+    let mut without = project.clone();
+    let comp = without.comp_mut(cid)?;
     let count = comp.layers.len();
     comp.layers.retain(|l| l.id != lid);
     if comp.layers.len() == count {
-        return false;
+        return None;
     }
-    // Making the layer took an id; the counter is not content.
-    without.next_id = before.next_id;
-    without.same_content(before)
+    without.next_id = like.next_id;
+    Some(without)
 }
 
-/// `text.endEdit`: stop editing. A Type-tool layer left empty is deleted: when nothing happened
-/// since the click that made it, its step is withdrawn (no undo step, nothing to redo), else the
-/// deletion is a step of its own.
+/// How many of the history's last steps are layer `lid`'s alone, counting the step that made it:
+/// the step that made the layer (and nothing else) and every step since, each of which changed
+/// that layer and nothing else (the Type tool's typing, merged into one step, and any change to
+/// the layer's text or style during the visit). `None` when a step since changed anything else,
+/// or the step that made the layer is not in the history.
+fn steps_of_made_layer(s: &Session, cid: ItemId, lid: LayerId) -> Option<usize> {
+    let mut after: &Project = &s.project;
+    for (k, (_, before)) in s.history.undo.iter().rev().enumerate() {
+        let rest = without_layer(after, cid, lid, before)?;
+        match without_layer(before, cid, lid, before) {
+            // The layer was there before this step: the step changed it alone, or the visit is not the layer's alone.
+            Some(rest_before) if rest.same_content(&rest_before) => after = &**before,
+            Some(_) => return None,
+            // This step made the layer: made it and nothing else.
+            None => return rest.same_content(before).then_some(k + 1),
+        }
+    }
+    None
+}
+
+/// `text.endEdit`: stop editing. A Type-tool layer left empty is deleted. When every step since
+/// the click that made it was that layer's alone (nothing typed, or typing deleted again), those
+/// steps are withdrawn: the visit leaves no undo step and nothing to redo, as if the click had
+/// not been made (an undo then never brings back an empty layer, under a name typed and deleted).
+/// Else the deletion is a step of its own.
 fn end_edit(s: &mut Session, _: &Value) -> Result<Value> {
     let Some(e) = s.state.text_edit.take() else { return Ok(Value::Null) };
     if e.created && layer_doc(s, e.layer).is_some_and(|d| d.text.is_empty()) {
         let cid = s.active_comp_id().ok_or(EngineError::NoComp)?;
-        if made_by_last_step(s, cid, e.layer) && s.withdraw_last_step() {
+        if let Some(steps) = steps_of_made_layer(s, cid, e.layer) {
+            for _ in 0..steps {
+                if !s.withdraw_last_step() {
+                    break;
+                }
+            }
             s.state.selected_layers.retain(|l| *l != e.layer);
             s.bump();
             return Ok(Value::Null);

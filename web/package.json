@@ -54,6 +54,7 @@
     "test:fixes7k": "node tests/fixes7k.mjs chromium && node tests/fixes7k.mjs webkit",
     "test:fixes7m": "node tests/fixes7m.mjs chromium && node tests/fixes7m.mjs webkit",
     "test:fixes7o": "node tests/fixes7o.mjs chromium && node tests/fixes7o.mjs webkit",
+    "test:fixes7p": "node tests/fixes7p.mjs chromium && node tests/fixes7p.mjs webkit",
     "test:outside": "node tests/outside.mjs chromium && node tests/outside.mjs webkit",
     "test:contract": "node ../../kition-sdk/tools/check-manifest.mjs ../kit.json --module public/engine"
   },

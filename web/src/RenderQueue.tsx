@@ -5,7 +5,7 @@ import { presetFolder } from './dialogs'
 import { SEQUENCES, sequenceName, writeExport } from './ExportDialog'
 import { parseAnswer, type ProjectItem, type ProjectSummary } from './footage'
 import { CATALOGS, counted } from './strings'
-import { failed } from './errors'
+import { failed, failedReason } from './errors'
 
 /**
  * The Render Queue: export jobs kept in the project (the engine's `renderQueue.*`: each job is a
@@ -364,7 +364,7 @@ export function useRenderQueue({ doc, host, run, query, t }: { doc: KitEngine | 
           update(id, { state: 'done', elapsed: performance.now() - started, file: paths.length === 1 ? shown(paths[0]) : t('queue.files', { count: paths.length, first: shown(paths[0] ?? '') }) })
         } catch (error) {
           await doc.invoke<boolean>('exportCancel').catch(() => false)
-          update(id, { state: 'failed', elapsed: performance.now() - started, error: error instanceof Error ? error.message : String(error) })
+          update(id, { state: 'failed', elapsed: performance.now() - started, error: failedReason(t, `render queue job ${id} (${file})`, error) })
         }
       }
       // Jobs this run never reached (Stop All) wait for the next.
@@ -499,7 +499,7 @@ export function RenderQueuePanel({ queue, onClose }: { queue: RenderQueueRuns; o
                         <span>{t('queue.progress', { done: job.done, total: job.total, elapsed: clock(elapsed), left: left == null ? '–' : clock(left) })}</span>
                       </>
                     ) : (
-                      <span title={job.error}>{t(`queue.state.${job.state}`, { file: job.file ?? '', error: job.error ?? '', elapsed: clock(job.elapsed ?? 0) })}</span>
+                      <span>{t(`queue.state.${job.state}`, { file: job.file ?? '', error: job.error ?? '', elapsed: clock(job.elapsed ?? 0) })}</span>
                     )}
                   </div>
                 ) : !canRender ? (

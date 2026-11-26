@@ -24,14 +24,14 @@ import {
   Select,
 } from '@kition/sdk/editor'
 import { engineManifest } from './engine'
-import { CATALOGS, counted } from './strings'
+import { CATALOGS, PHRASES, counted } from './strings'
 import { learnEffectNames } from './effectNames'
 import { describe, picturePanBounds, timecode } from './motion'
 import { ARRANGE, ASSISTANT_NEEDS, type Convertible, KIT, KIT_RUNS, type SelectedKeys, MOTION_PRIMARY, OVERLAY_ROWS, RESOLUTIONS, SHORTCUT_OVERRIDES, THREE_D_VIEWS, type AlignTo, type ThreeDView, TRIED_ROWS, VIEW_MENUS, hiddenRow, menuRows, shortcutCommands, waitingRowStyles, waitingRows } from './menus'
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, rememberEffect, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
-import { Said, failed, motionReport } from './errors'
+import { Said, failed, motionReport, toolStatus } from './errors'
 import { MotionDialogs, toHex, type MotionDialog, type Rgb } from './dialogs'
 import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
@@ -46,6 +46,7 @@ import { CanvasGuides, OVERLAY_KEYS, useOverlays } from './CanvasGuides'
 import { RegionOfInterest, type Region } from './RegionOfInterest'
 import { SecondView } from './SecondView'
 import { installPointerdownFallback } from './pointerFallback'
+import { installFocusBack } from './focusBack'
 import { ITEM_MIME, parseAnswer, relativePath, useFootage, type ProjectItem, type ProjectSummary } from './footage'
 import { RenderQueuePanel, compsOf, useRenderQueue } from './RenderQueue'
 import { CacheFullMenu } from './CacheFullMenu'
@@ -772,6 +773,8 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
   const [dialog, setDialog] = useState<MotionDialog | null>(null)
   // The first press after a drag-and-drop gets its pointerdown in WebKit too (pointerFallback.ts).
   useEffect(() => installPointerdownFallback(document), [])
+  // A focused field taken out with its layer (the editor's Undo from that field): the keys are the editor's again.
+  useEffect(() => installFocusBack(document), [])
   // View's rulers, guides, grid and safe areas, and what a moved layer snaps to (the engine's Selection tool asks).
   const { overlays, toggle: toggleOverlay } = useOverlays()
   // View ▸ Grid Settings…: the grid's spacing (composition pixels), kept in this browser.
@@ -1399,12 +1402,14 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     [dispatch, effects, hidden, checked, lastEffect, phrase, rows, t, wholeWorkArea, state],
   )
 
-  // What the active tool says (the engine's words, translated), else how to use the Pen.
+  // What the active tool says (its hints, translated; a refused step in the editor's words, the
+  // engine's own to the console), else how to use the Pen.
+  const toolSays = useMemo(() => (tools.status ? toolStatus(t, phrase, (text) => Object.hasOwn(PHRASES['zh-CN'] ?? {}, text), tools.status) : null), [tools.status, t, phrase])
   const anySelected = state?.layers.some((layer) => layer.selected) ?? false
   // On a selected shape layer the Pen draws a new path in it, or a mask with its option on.
   const shapeSelected = state?.layers.find((layer) => layer.selected)?.type === 'Shape'
   const penHint = !anySelected ? 'pen.hint.shape' : shapeSelected && !penMasks ? 'pen.hint.path' : 'pen.hint.mask'
-  const toolHint = tools.status ? phrase(tools.status) : tools.active === 'pen' && !host.readOnly ? t(penHint) : null
+  const toolHint = toolSays ? toolSays : tools.active === 'pen' && !host.readOnly ? t(penHint) : null
 
   // The timeline's own keys (Delete, Cmd+D, …) come first.
   const timelineKeys: TimelineKeys = useRef(null)
