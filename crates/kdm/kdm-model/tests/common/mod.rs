@@ -1,4 +1,4 @@
-//! Shared test helpers: a small project to edit, and a two-replica harness over
+//! Shared test helpers: a small project to edit, and a document with its drafts over
 //! `KitSession<MotionModel>`. Included by several `tests/*.rs` binaries, each of which uses only
 //! some of these.
 #![allow(dead_code)]
@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use kdm_model::MotionModel;
-use kition_kit::kdm::{ActorId, DocId, Origin, Replica};
+use kition_kit::kdm::{ActorId, DocId, Origin, Replica, Version};
 use kition_kit::session::{KitModel, KitSession, MemoryBlobs};
 use kition_motion_color::Label;
 use kition_motion_project::{Comp, ItemId, ItemKind, Keyframe, Layer, LayerId, LayerSource, Project, Solid, Value, build};
@@ -107,22 +107,42 @@ pub fn first(project: &Project) -> Session {
     KitSession::from_replica(replica, Box::new(MemoryBlobs::default())).unwrap_or_else(|error| panic!("attach: {error}"))
 }
 
-/// A peer session starting from a snapshot of `of`, under a different actor.
+/// A session starting from a snapshot of `of`, under a different actor (as a draft's engine or a
+/// reopened document opens).
 pub fn peer(of: &Session, value: u64) -> Session {
     let snapshot = of.snapshot().unwrap_or_else(|error| panic!("snapshot: {error}"));
     KitSession::open_snapshot(&snapshot, Box::new(MemoryBlobs::default()), actor(value)).unwrap_or_else(|error| panic!("open_snapshot: {error}"))
 }
 
-/// Exchanges changes until both replicas converge (or panics after a generous number of rounds).
-pub fn sync(a: &mut Session, b: &mut Session) {
-    for _ in 0..8 {
-        a.import_changes(&b.export_changes(&a.version()).unwrap_or_else(|error| panic!("export: {error}"))).unwrap_or_else(|error| panic!("import: {error}"));
-        b.import_changes(&a.export_changes(&b.version()).unwrap_or_else(|error| panic!("export: {error}"))).unwrap_or_else(|error| panic!("import: {error}"));
-        if a.version() == b.version() {
-            return;
-        }
-    }
-    panic!("the replicas did not converge");
+/// A draft of `doc`: a replica forked from it now, under actor `value` (so it mints ids in its own
+/// slot, as a draft's engine does), and the version it forked at.
+pub fn draft(doc: &Session, value: u64) -> (Session, Version) {
+    (peer(doc, value), doc.version())
+}
+
+/// Takes `draft`'s changes since `base` into `doc` as the person accepting them
+/// (`merge_changes`, data model 6.6 rules D1 to D9): one undo step of the person; refused as a
+/// whole on a collision, changing nothing.
+pub fn try_merge(
+    doc: &mut Session,
+    draft: &Session,
+    base: &Version,
+) -> Result<(Option<kition_kit::kdm::UndoScope>, kition_kit::session::Damage), kition_kit::session::KitError> {
+    let changes = draft.export_changes(base).unwrap_or_else(|error| panic!("export: {error}"));
+    doc.merge_changes(&changes, &person("doc"))
+}
+
+/// [`try_merge`], which must apply as one step of the person; the document's view is then
+/// exactly what its replica holds.
+pub fn merge(doc: &mut Session, draft: &Session, base: &Version) {
+    let (scope, _) = try_merge(doc, draft, base).unwrap_or_else(|error| panic!("merge: {error}"));
+    assert_eq!(scope, Some(kition_kit::kdm::UndoScope::Person), "the merge is one step of the person's");
+    assert_view_is_replica(doc);
+}
+
+/// Asserts the session's view is what a fresh read of its replica gives.
+pub fn assert_view_is_replica(session: &Session) {
+    assert_same_content(&session.model().project, &read(session.replica()), "the view is the replica's");
 }
 
 /// Asserts `a` and `b` hold the same content, id counters aside (the first difference shown).

@@ -2,15 +2,16 @@
 //! from the root"): `Project.items` lists every item, an item's `comp` its composition, a
 //! composition's `layers` its layers, a layer's `props` its property tree, a property's `keys`
 //! its keyframes, and `Project.renderQueue` the Render Queue. The list is a KDM `list` (a movable
-//! list): two replicas adding items offline keep both; a delete unlists the item in the same
-//! transaction; and the repair after a merge lists an item no list holds, and drops a second
-//! listing or a listing of a deleted item, the same way on every replica.
+//! list): a draft and the document adding items each keep both when the draft merges; a delete
+//! unlists the item in the same transaction; and the repair after stored changes are taken in
+//! lists an item no list holds, and drops a second listing or a listing of a deleted item, the
+//! same way on every replica that takes them.
 
 mod common;
 
 use std::collections::{BTreeSet, HashSet};
 
-use common::{actor, add_layer, demo, first, peer, person, record, solid, sync};
+use common::{actor, add_layer, demo, draft, first, merge, peer, person, record, solid};
 use kdm_model::{MotionModel, MotionSession};
 use kition_kit::kdm::{DocId, FieldKind, KdmError, ObjectId, Origin, Replica, Schema};
 use kition_kit::session::KitModel;
@@ -161,10 +162,10 @@ fn a_new_item_is_listed_and_a_deleted_one_unlisted_in_the_same_transaction() {
 }
 
 #[test]
-fn items_added_on_two_replicas_offline_are_both_listed_alike() {
+fn items_added_by_a_draft_and_the_document_are_both_listed() {
     let d = demo();
     let mut a = first(&d.project);
-    let mut b = peer(&a, 2);
+    let (mut b, base) = draft(&a, 2);
 
     let mut after_a = a.model().project.clone();
     let from_a = solid(&mut after_a, "From A", [1.0, 1.0, 0.0]);
@@ -175,21 +176,17 @@ fn items_added_on_two_replicas_offline_are_both_listed_alike() {
     let folder = after_b.add_item("Folder B", kition_motion_color::Label::None, None, kition_motion_project::ItemKind::Folder);
     record(&mut b, &person("b"), &after_b);
 
-    sync(&mut a, &mut b);
-    assert_eq!(a.state_hash().unwrap(), b.state_hash().unwrap());
-    assert_eq!(items(a.replica()), items(b.replica()), "one order on both");
+    merge(&mut a, &b, &base);
     let listed = items(a.replica());
     assert_eq!(listed.len(), d.project.items.len() + 3);
     assert_eq!(listed.iter().collect::<HashSet<_>>().len(), listed.len(), "each once");
     for id in [from_a, from_b, folder] {
-        assert!(a.model().project.items.contains_key(&id), "{id:?} on a");
-        assert!(b.model().project.items.contains_key(&id), "{id:?} on b");
+        assert!(a.model().project.items.contains_key(&id), "{id:?} merged");
     }
-    common::assert_same_content(&a.model().project, &b.model().project, "converged");
 }
 
-/// A peer's raw changes (an object-model batch, or another kit build) can leave the list wrong;
-/// the repair every replica runs puts it right, and both replicas end equal.
+/// Raw changes (an object-model batch, or another kit build) can leave the list wrong; the
+/// repair every replica that takes them runs puts it right, and both replicas end equal.
 #[test]
 fn the_repair_lists_unlisted_items_and_drops_second_and_dead_listings() {
     let d = demo();
@@ -218,7 +215,6 @@ fn the_repair_lists_unlisted_items_and_drops_second_and_dead_listings() {
     let changes = raw.export_changes(&since).unwrap();
     a.import_changes(&changes).unwrap();
     b.import_changes(&changes).unwrap();
-    sync(&mut a, &mut b);
     assert_eq!(a.state_hash().unwrap(), b.state_hash().unwrap());
     for session in [&a, &b] {
         let listed = items(session.replica());

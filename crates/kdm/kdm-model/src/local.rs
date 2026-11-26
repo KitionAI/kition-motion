@@ -2,7 +2,7 @@
 //! preferences (notify when done, storage overflow folders: paths on this machine) and what a
 //! render on this machine left on each Render Queue item (its status, when it started, how long
 //! it took, where it wrote). The replica holds the queue's definition (what to render, and how);
-//! a collaborator's render never changes another's statuses, and a machine that has not rendered
+//! a render on another machine never changes this one's statuses, and a machine that has not rendered
 //! an item shows it queued (its Render box checked) or unqueued.
 //!
 //! [`keep`] carries this state across a reload of the view from the replica; [`strip`] removes

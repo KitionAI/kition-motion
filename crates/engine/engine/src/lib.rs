@@ -774,8 +774,8 @@ impl Session {
     }
 
     /// Undoes the last step. A step the replica holds is undone on the replica too, and the
-    /// project becomes what the replica holds then (any collaborator's edits that arrived since
-    /// kept); see [`kdm_bridge`].
+    /// project becomes what the replica holds then (a merged draft's or an imported file's
+    /// changes made since kept); see [`kdm_bridge`].
     pub fn undo(&mut self) -> bool {
         if self.history.undo.is_empty() {
             return false;
@@ -789,9 +789,9 @@ impl Session {
         let before = self.active_layer_ids();
         let cur = std::mem::replace(&mut self.project, p);
         self.history.kdm.set_redo(&cur, steps);
-        self.history.redo.push((label, cur));
+        self.history.redo.push((label, cur.clone()));
         self.history.merge_key = None;
-        self.step_kdm(steps, true, floor);
+        self.step_kdm(steps, true, floor, &cur);
         self.sanitize_state();
         self.select_returned_layers(&before);
         self.bump();
@@ -809,9 +809,9 @@ impl Session {
         let before = self.active_layer_ids();
         let cur = std::mem::replace(&mut self.project, p);
         self.history.kdm.set_undo(&cur, steps);
-        self.history.undo.push((label, cur));
+        self.history.undo.push((label, cur.clone()));
         self.history.merge_key = None;
-        self.step_kdm(steps, false, floor);
+        self.step_kdm(steps, false, floor, &cur);
         self.sanitize_state();
         self.select_returned_layers(&before);
         self.bump();

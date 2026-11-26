@@ -185,7 +185,7 @@ pub fn read_document(replica: &Replica) -> KdmResult<(Project, Ids)> {
             parts.controls = controls.objects;
             match &mut comp.graphics_template {
                 Some(template) => template.controls = read_controls,
-                // Controls a collaborator added while another's template was not there yet.
+                // Controls raw changes listed while the template was not there.
                 None if !read_controls.is_empty() => comp.graphics_template = Some(GraphicsTemplate { name: String::new(), controls: read_controls }),
                 None => {}
             }
@@ -193,7 +193,7 @@ pub fn read_document(replica: &Replica) -> KdmResult<(Project, Ids)> {
             let mut read: ReadLayers = Vec::new();
             let in_comp: HashSet<ObjectId> = replica.list(&comp_object, "layers")?.into_iter().filter(|l| replica.exists(l)).collect();
             for layer_object in replica.list(&comp_object, "layers")? {
-                // A layer listed twice (two concurrent moves) is read once, where it is first listed.
+                // A layer raw changes listed twice is read once, where it is first listed.
                 if !replica.exists(&layer_object) || !listed.insert(layer_object.clone()) {
                     continue;
                 }
@@ -366,7 +366,7 @@ impl Tree<'_> {
 /// ([`crate::repair_id`]) above them all, and another actor's ids in that actor's slot (counting
 /// those would move this actor into the other's slot, where both then mint the same ids). A
 /// session that reloads its view must still never *lower* its own counter to this (an id it
-/// handed out may live only in an undo step, or on a peer that has not yet seen its deletion).
+/// handed out may live only in an undo or redo step).
 pub(crate) fn next_id_hint(project: &Project, floor: u64) -> u64 {
     let end = floor.saturating_add(SLOT_SIZE).min(REPAIR_BASE);
     let mut max = 0u64;

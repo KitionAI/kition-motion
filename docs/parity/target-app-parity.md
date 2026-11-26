@@ -20,7 +20,7 @@ The difference column is the feature's recorded gap.
 | `motion.keys.basics` Keyframe and set properties, Easy Ease the keys, add expressions; read the values back | P0 | has | After Effects 2026 (26.5) | — |
 | `motion.layer.basics` Make solid, text, shape and null layers, rename, blend, parent and trim them; text edits keep CJK and emoji | P0 | has | After Effects 2026 (26.5) | — |
 | `motion.mask.basics` Draw a mask from vertices, set its mode, close it and feather it | P0 | has | After Effects 2026 (26.5) | — |
-| `motion.model.objects` The object model is reached from its root: query follows fields, batch edits them, replicas converge | P0 | partial | — | Raw assignments, key-list edits, item creation/deletion, owned property creation and layer reordering have guarded contracts. Remaining structural classes and private outside-created receipt fields remain under review. |
+| `motion.model.objects` The object model is reached from its root: query follows fields, batch edits them, a draft's edits merge | P0 | partial | — | Raw assignments, key-list edits, item creation/deletion, owned property creation and layer reordering have guarded contracts. Remaining structural classes and private outside-created receipt fields remain under review. |
 | `motion.agent.design` An agent is told what a designer would change, with the commands that change it | P1 | has | — | — |
 | `motion.agent.draft` An agent works in a draft over a conversation | P1 | has | — | — |
 | `motion.agent.preview` An agent previews a composition at a time, or a contact sheet over a range, whatever the editor shows | P1 | has | — | — |

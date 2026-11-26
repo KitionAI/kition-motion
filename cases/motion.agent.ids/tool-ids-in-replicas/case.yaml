@@ -3,9 +3,9 @@ id: motion.agent.ids/tool-ids-in-replicas
 feature: motion.agent.ids
 intent: >-
   The schema names `id` as the tool id of items and layers (read-only, optional) and owns a
-  comp item's composition and a layer's property tree; an item or layer a batch created without
-  an id, or holding an id another item or layer holds, is numbered by the repair alike on every
-  replica.
+  comp item's composition and a layer's property tree; an item or layer a draft's batch created
+  without an id, or holding an id another item or layer holds, is numbered by the repair when the
+  draft merges.
 layer: gate
 source:
   kind: synthetic

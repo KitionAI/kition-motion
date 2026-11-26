@@ -12,7 +12,7 @@
 //! The model never embeds blobs (footage is referenced by path), so a
 //! [`kition_kit::session::MemoryBlobs`] that is never written to is enough.
 
-use kition_kit::kdm::{ActorId, Origin, Replica, UndoScope, Version};
+use kition_kit::kdm::{ActorId, Origin, Replica, UndoOutcome, UndoScope, Version};
 use kition_kit::session::{Damage, KitError, KitSession, MemoryBlobs};
 use kition_motion_project::Project;
 
@@ -32,8 +32,16 @@ impl std::fmt::Debug for MotionSession {
 }
 
 /// The first id [`Project::alloc`] hands out on behalf of `actor`: a per-actor slot of the id
-/// space. Engine ids are the objects' own data (see the crate docs), so two actors that each
+/// space. Engine ids are the objects' own data (see the crate docs), so two replicas that each
 /// mint one without exchanging first must not mint the same: each mints from its own slot.
+///
+/// The line of changes has one writer at a time; what mints beside the document is a draft, a
+/// replica forked from it (`@kition/kit-editor` opens a draft's engine as it reopens a document,
+/// from the document's bytes and its replica, under a fresh actor), whose objects and ids merge
+/// in beside the document's (data model 6.6, rules D1 to D9). The slot is the session's, never
+/// the file's: a `.kmotion` holds the first id past every id its content holds
+/// ([`Project::content_next_id`]), so opening a project, with or without its stored replica,
+/// writes nothing of the actor into what it saves.
 ///
 /// `(((actor as u64) % (2^20 − 1)) + 1) << 32`: 2^20 − 1 slots (two actors share one only by a
 /// one-in-a-million chance, and even then collide only on an id both mint before exchanging;
@@ -158,21 +166,45 @@ impl MotionSession {
 
     /// Undoes this replica's last undo step in `scope` (never imports or repairs, and never the
     /// other scope's steps, Kition platform KitModel 1.1 M12a), repairs the result and reloads the
-    /// view. Answers whether there was one, and the damage.
-    pub fn undo_in(&mut self, scope: UndoScope) -> Result<(bool, Damage)> {
+    /// view. Answers which steps the undo took off the stack ([`UndoOutcome`]: a step with nothing
+    /// left to change, its objects gone since, is passed over and the one below it taken back),
+    /// and the damage. An empty stack answers an empty outcome.
+    pub fn undo_in(&mut self, scope: UndoScope) -> Result<(UndoOutcome, Damage)> {
         self.group = None;
         if !self.inner.can_undo_in(scope) {
-            return Ok((false, Damage::None));
+            return Ok((UndoOutcome::default(), Damage::None));
         }
-        self.inner.undo_in(scope)
+        self.inner.undo_in_outcome(scope)
     }
 
-    pub fn redo_in(&mut self, scope: UndoScope) -> Result<(bool, Damage)> {
+    /// Redoes this replica's last undone step in `scope`, answering as [`MotionSession::undo_in`].
+    pub fn redo_in(&mut self, scope: UndoScope) -> Result<(UndoOutcome, Damage)> {
         self.group = None;
         if !self.inner.can_redo_in(scope) {
-            return Ok((false, Damage::None));
+            return Ok((UndoOutcome::default(), Damage::None));
         }
-        self.inner.redo_in(scope)
+        self.inner.redo_in_outcome(scope)
+    }
+
+    /// Takes a draft's changes (made on a replica forked from this one) in as one transaction of
+    /// `origin` (`Replica::merge_changes`, data model 6.6), the kit's repair of the merged state
+    /// inside it: one undo step of the person, also when an agent made the draft (M12a), whose
+    /// undo gives back the exact state before. Answers the undo scope the step went to (none for
+    /// an empty draft or a `system` origin) and the damage. A refused merge, or one whose repair
+    /// fails, changes nothing.
+    pub fn merge_changes(&mut self, bytes: &[u8], origin: &Origin) -> Result<(Option<UndoScope>, Damage)> {
+        self.end_undo_group();
+        self.inner.merge_changes(bytes, origin)
+    }
+
+    /// Writes the state `snapshot` holds (a snapshot or content of this document, as a host's
+    /// checkpoint keeps it) over the replica as one transaction of `origin`, keyed by object id,
+    /// so every object the two share keeps its id, the kit's repair of the restored state inside
+    /// it: one undo step of `origin`'s scope unless it is a `system` or `import` one. Nothing
+    /// changes when the states are equal; another document's snapshot is refused.
+    pub fn restore_state(&mut self, snapshot: &[u8], origin: &Origin) -> Result<Damage> {
+        self.end_undo_group();
+        self.inner.restore_state(snapshot, origin)
     }
 
     pub fn can_undo_in(&self, scope: UndoScope) -> bool {
@@ -183,8 +215,8 @@ impl MotionSession {
         self.inner.can_redo_in(scope)
     }
 
-    /// Imports remote or stored changes (ending any open undo group first, so it stays one
-    /// step), repairs the merged state and reloads the view.
+    /// Imports stored changes that follow this replica's version, in order (ending any open undo
+    /// group first, so it stays one step), repairs the result and reloads the view.
     pub fn import_changes(&mut self, bytes: &[u8]) -> Result<Damage> {
         self.end_undo_group();
         self.inner.import_changes(bytes)

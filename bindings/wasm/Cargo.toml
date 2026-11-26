@@ -26,10 +26,8 @@ kition-motion-text = { workspace = true }
 image = { workspace = true }
 # The frame cache packs the viewer's frames without loss (the render crate uses the same).
 lz4_flex = { version = "0.11", default-features = false, features = ["std", "safe-encode", "safe-decode", "checked-decode"] }
+# `modelReply` checks a reply is JSON without building it (`serde::de::IgnoredAny`).
+serde = { workspace = true }
 serde_json = { workspace = true }
 # How long the viewer's frames take to render (a clock that works in a browser).
 web-time = { workspace = true }
-
-[dev-dependencies]
-# The Kition platform convergence suite (L6), on the same kition-sdk revision.
-kition-convergence = { workspace = true }

@@ -1,4 +1,4 @@
-//! Kition's collaboration members (engine contract 2): the project as a KDM replica.
+//! Kition's replica members (engine contract 2): the project as a KDM replica.
 //!
 //! The engine keeps its own `Session` (the command bridge to the replica,
 //! `kition_motion_engine::kdm_bridge`), not a `kition_kit::session::KitSession` directly, so
@@ -75,16 +75,17 @@ impl MotionDocument {
         self.session.export_changes(&since).map_err(|error| error.to_string())
     }
 
-    /// Imports a peer's (or stored) changes. Answers what went stale on screen: always a full
-    /// repaint (the engine tracks no finer damage on its replica).
+    /// Imports stored changes that follow the replica's version, in order. Answers what went
+    /// stale on screen: always a full repaint (the engine tracks no finer damage on its replica).
     pub fn import_changes(&mut self, bytes: &[u8]) -> Result<Damage, String> {
         let damage = self.session.import_changes(bytes).map_err(|error| error.to_string())?;
         self.lend_footage();
         Ok(if damage == Damage::None { Damage::None } else { Damage::Full })
     }
 
-    /// The project's replica as a snapshot, for a peer to open as a new replica of the same
-    /// project (opening the saved bytes does not: `.kmotion` carries no replica).
+    /// The project's replica as a snapshot, for a host's store or a draft to open as a new
+    /// replica of the same project (opening the saved bytes does not: `.kmotion` carries no
+    /// replica).
     pub fn snapshot(&mut self) -> Result<Vec<u8>, String> {
         self.session.snapshot().map_err(|error| error.to_string())
     }
@@ -158,15 +159,15 @@ impl MotionDocument {
         Ok(Vec::new())
     }
 
-    /// Adds a peer's blobs: a no-op, Motion never embeds one.
+    /// Adds a draft's or a snapshot's blobs: a no-op, Motion never embeds one.
     pub fn add_blobs(&mut self, _bytes: &[u8]) -> Result<(), String> {
         Ok(())
     }
 
     /// How many times the project left its replica because it refused a write or an undo. The
     /// project keeps working, undoing from its own history; the next request makes a fresh
-    /// replica, which collaborators must resync (its full [`MotionDocument::snapshot`]). Hosts
-    /// watch this.
+    /// replica, a new KDM document whose full [`MotionDocument::snapshot`] a host stores again.
+    /// Hosts watch this.
     pub fn kdm_resets(&self) -> u32 {
         u32::try_from(self.session.kdm_resets()).unwrap_or(u32::MAX)
     }
@@ -323,7 +324,7 @@ mod tests {
         assert_eq!(reopened.doc_id(), Some(id), "the reopened replica keeps its document id");
     }
 
-    /// With no file yet (empty bytes), the replica alone opens: a peer's full change export
+    /// With no file yet (empty bytes), the replica alone opens: another replica's full change export
     /// becomes the same project, identity and version, and it saves as a new `.kmotion`.
     #[test]
     fn a_replica_opens_without_a_file() {
@@ -388,9 +389,10 @@ mod tests {
     }
 
     /// `a` saves with its replica; `b` opens with it. `a` edits further (a keyframe moved and a
-    /// layer moved in the stack); `b.importChanges(a.exportChanges(b.version()))` converges `b`.
+    /// layer moved in the stack); `b.importChanges(a.exportChanges(b.version()))` takes them in
+    /// order, and `b` holds what `a` holds.
     #[test]
-    fn two_documents_converge_through_export_and_import_changes() {
+    fn a_document_follows_another_through_export_and_import_changes() {
         let mut a = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
         a.version().unwrap();
         extra_edit(&mut a);

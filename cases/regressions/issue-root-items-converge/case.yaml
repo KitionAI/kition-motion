@@ -3,11 +3,11 @@ id: regressions/issue-root-items-converge
 feature: motion.model.objects
 dimension: collab
 intent: >-
-  Project.items (schema 2) lists every item and every object type is reachable from the root; two
-  replicas adding items offline converge with both listed in one order; a delete unlists the item
-  in the same transaction; the repair every replica runs lists an unlisted item and drops a second
-  or dead listing, and the replicas end equal; a schema 1 replica is refused (no migration), never
-  read as an empty project.
+  Project.items (schema 2) lists every item and every object type is reachable from the root; a
+  draft and the document adding items each keep theirs listed once when the draft merges; a delete
+  unlists the item in the same transaction; the repair every replica runs after raw changes lists
+  an unlisted item and drops a second or dead listing, and the replicas that take them end equal; a
+  schema 1 replica is refused (no migration), never read as an empty project.
 layer: gate
 source:
   kind: probe
@@ -16,7 +16,6 @@ source:
 input: []
 steps:
   - cargo-test: { package: kdm-model, test: items_list }
-  - cargo-test: { package: kdm-model, test: convergence }
 expected:
   - actual: out:exit
     compare: exit

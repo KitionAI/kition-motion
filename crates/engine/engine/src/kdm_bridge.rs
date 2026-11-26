@@ -1,12 +1,13 @@
 //! The command bridge to the project's KDM replica.
 //!
-//! The session's replica ([`kdm_model::MotionSession`]) is the project's shared source of truth;
-//! [`Session::project`] is the engine's own view of it. Commands run exactly as before on the
-//! in-memory [`Project`] (through [`Session::edit`], which never changes); [`Session::execute`]
-//! then writes what the *whole command* changed as one transaction, diffed against
-//! [`Session::synced`] (the project as the replica last saw it), so a command that runs others
-//! (`engine.batch`, a grouped step) still replicates as one. Each new history step remembers how
-//! many replica undo steps it took ([`crate::KdmSteps`]).
+//! The session's replica ([`kdm_model::MotionSession`]) is the project's source of truth for the
+//! host (its stored replica, checkpoints, drafts and receipts); [`Session::project`] is the
+//! engine's own view of it. Commands run exactly as before on the in-memory [`Project`] (through
+//! [`Session::edit`], which never changes); [`Session::execute`] then writes what the *whole
+//! command* changed as one transaction, diffed against [`Session::synced`] (the project as the
+//! replica last saw it), so a command that runs others (`engine.batch`, a grouped step) still
+//! replicates as one. Each new history step remembers how many replica undo steps it took
+//! ([`crate::KdmSteps`]).
 //!
 //! **Lazy.** The replica is made when a host first asks for it ([`Session::ensure_kdm`]: its
 //! version, snapshot or changes), from the project as it is then: a session no host shares
@@ -14,12 +15,17 @@
 //!
 //! **Undo is per person.** [`Session::undo`]/[`Session::redo`] step the replica as many times as
 //! the history step is worth, then take what the replica holds as the project — its own snapshot
-//! when the two hold the same (so a single-user session's states, and its saved state, stay the
-//! very ones it made), else the replica's (folding in a collaborator's edits that arrived since).
-//! A step worth no replica steps (taken before the replica existed, after a reset, or on a line
-//! a history jump made) is replayed onto the replica as a change of its own when no collaborator's
-//! change arrived since (its snapshot is then exactly right); otherwise the project stays what
-//! the replica holds, rather than drop those edits.
+//! when the two hold the same (so the session's states, and its saved state, stay the very ones
+//! it made), else the replica's (keeping a merged draft's or an imported file's changes made
+//! since). A step worth no replica steps (taken before the replica existed, after a reset, or on
+//! a line a history jump made) is replayed onto the replica as a change of its own when nothing
+//! was merged or imported since (its snapshot is then exactly right); otherwise the project stays
+//! what the replica holds, rather than drop those changes.
+//!
+//! **Drafts and restores.** A draft's changes ([`Session::merge_draft`], `mergeChanges`) and an
+//! earlier state written back ([`Session::restore_version`], `restoreState`) are taken in as a
+//! command's edit is: one entry of the person's history worth one replica step, so one Undo
+//! takes them back and one Redo brings them again.
 //!
 //! **Not replicated:** [`crate::EditorState`] (selections, open compositions, current times,
 //! clipboards: this person's own) and the history's branches. A jump to another state of the
@@ -71,9 +77,9 @@ pub struct Bridge {
     pub(crate) depth: u32,
     /// Where the history stood when a change was held back because an analysis was streaming.
     pub(crate) deferred: Option<HistoryMark>,
-    /// No collaborator's change arrived since the history line was last made this session's
-    /// own (opening, a reset, a history jump): a step the replica holds nothing of is replayed
-    /// onto it as a change of its own.
+    /// Nothing was imported or merged since the history line was last made this session's own
+    /// (opening, a reset, a history jump): a step the replica holds nothing of is replayed onto
+    /// it as a change of its own.
     pub(crate) clean: bool,
 }
 
@@ -108,7 +114,7 @@ impl Session {
     /// How many times the project left its replica because the replica refused a write or an
     /// undo (a project it cannot hold, or a bug). The project keeps working, undoing from its own
     /// history; the next request for the replica makes a fresh one, which is a new KDM document:
-    /// collaborators need its full [`Session::snapshot`] to join again. Hosts watch this.
+    /// a host stores its full [`Session::snapshot`] again. Hosts watch this.
     pub fn kdm_resets(&self) -> u64 {
         self.bridge.resets
     }
@@ -151,8 +157,8 @@ impl Session {
             self.history.merge_key = None;
             self.open_or_close_kdm_group(false);
             if !self.history.undo.is_empty() {
-                // The other scope's steps are like a collaborator's to this one: a step the
-                // replica holds nothing of is no longer replayed from its snapshot.
+                // The other scope's steps are like an import to this one: a step the replica
+                // holds nothing of is no longer replayed from its snapshot.
                 self.bridge.clean = false;
             }
             std::mem::swap(&mut self.history, &mut self.other_history);
@@ -195,17 +201,17 @@ impl Session {
         self.bridge.replica.as_mut().map(|m| m.get_mut().unwrap_or_else(PoisonError::into_inner))
     }
 
-    /// The replica's version (its own actor's and every peer's it has merged).
+    /// The replica's version (its line of changes and their count).
     pub fn version(&mut self) -> Result<Version> {
         Ok(self.ensure_kdm().ok_or_else(no_replica)?.version())
     }
 
-    /// The replica as a snapshot, for a peer to [`Session::open_snapshot`].
+    /// The replica as a snapshot, for a host's store or a draft to [`Session::open_snapshot`].
     pub fn snapshot(&mut self) -> Result<Vec<u8>> {
         self.ensure_kdm().ok_or_else(no_replica)?.snapshot().map_err(kdm_error)
     }
 
-    /// SHA-256 of the replicated state: equal on replicas that converged.
+    /// SHA-256 of the replicated state: equal on replicas that hold the same state.
     pub fn state_hash(&mut self) -> Result<String> {
         self.ensure_kdm().ok_or_else(no_replica)?.state_hash().map_err(kdm_error)
     }
@@ -215,11 +221,11 @@ impl Session {
         self.ensure_kdm().ok_or_else(no_replica)?.export_changes(since).map_err(kdm_error)
     }
 
-    /// Imports a collaborator's (or stored) changes into the replica. The project follows;
+    /// Imports stored changes that follow the replica's version, in order. The project follows;
     /// anything local not written yet is written first (even a running analysis's frames so far),
     /// so nothing of it is lost. An import that fails after its changes landed (the repair after
-    /// the merge refused) still follows the replica when the view loaded from it; when even the
-    /// view could not be loaded, the project leaves the replica ([`Session::kdm_resets`]).
+    /// it refused) still follows the replica when the view loaded from it; when even the view
+    /// could not be loaded, the project leaves the replica ([`Session::kdm_resets`]).
     pub fn import_changes(&mut self, bytes: &[u8]) -> Result<Damage> {
         self.ensure_kdm().ok_or_else(no_replica)?;
         if let Some(mark) = self.bridge.deferred.take() {
@@ -290,8 +296,9 @@ impl Session {
     /// for it (a `.kmotion` cannot carry its own). The host vouches that the two were saved
     /// together, but the file is what the person saved: when the replica does not hold the
     /// file's content, the file wins — its content is recorded onto the replica as one `import`
-    /// change (not an undo step), keeping the replica's own identity, so collaborators get it as
-    /// ordinary changes. A file the replica cannot hold is an error (the host opens it plainly).
+    /// change (not an undo step), keeping the replica's own identity and every object the two
+    /// share under its id. A file the replica cannot hold is an error (the host opens it
+    /// plainly).
     pub fn open_with_replica(&mut self, path: &str, snapshot: &[u8]) -> Result<()> {
         self.execute("file.open", serde_json::json!({ "path": path }))?;
         let file = self.project.clone();
@@ -469,9 +476,18 @@ impl Session {
 
     /// Undoes (or redoes) `steps` replica transactions and makes the result the project, in
     /// place of the snapshot [`Session::undo`]/[`Session::redo`] already set it to (see the
-    /// module docs). `floor` is the project's id counter before the step: the replica's own
-    /// reconstruction never lowers it.
-    pub(crate) fn step_kdm(&mut self, steps: u32, undo: bool, floor: u64) {
+    /// module docs). `moved` is the state of the history entry just moved to the other stack (the
+    /// key of its replica steps there). `floor` is the project's id counter before the step: the
+    /// replica's own reconstruction never lowers it.
+    ///
+    /// The engine's history stays in step with the replica's by what each replica call took off
+    /// its stack ([`kdm_model::kition_kit::kdm::UndoOutcome`]): a replica step with nothing left
+    /// to change (its objects deleted since, by a merged draft or an import) is passed over, and
+    /// the call goes on to the step below it, which belongs to the history entry below this one.
+    /// Those steps leave the entries below ([`Session::take_steps_below`]), and the moved entry
+    /// counts the steps the replica actually took back. A replica whose history no longer holds
+    /// the entry's steps is left, as a refused step is: the project is the entry's own snapshot.
+    pub(crate) fn step_kdm(&mut self, steps: u32, undo: bool, floor: u64, moved: &Arc<Project>) {
         if self.bridge.replica.is_none() {
             self.bridge.synced = self.project.clone();
             return;
@@ -488,20 +504,126 @@ impl Session {
             return;
         }
         let Some(kdm) = self.bridge.replica.as_mut().map(|m| m.get_mut().unwrap_or_else(PoisonError::into_inner)) else { return };
-        for _ in 0..steps {
-            let scope = self.history_scope;
-            let ok = matches!(if undo { kdm.undo_in(scope) } else { kdm.redo_in(scope) }, Ok((true, _)));
-            if !ok {
+        let scope = self.history_scope;
+        let mut owed = usize::try_from(steps).unwrap_or(usize::MAX);
+        let (mut made, mut beyond) = (0u32, 0usize);
+        while owed > 0 {
+            let outcome = match if undo { kdm.undo_in(scope) } else { kdm.redo_in(scope) } {
+                Ok((outcome, _)) => outcome,
+                Err(_) => {
+                    self.detach_kdm();
+                    return;
+                }
+            };
+            let took = outcome.steps();
+            if took == 0 {
                 self.detach_kdm();
                 return;
             }
+            made = made.saturating_add(u32::from(outcome.is_done()));
+            beyond = took.saturating_sub(owed);
+            owed = owed.saturating_sub(took);
         }
         self.project = view_of(kdm, &self.project, floor);
         self.bridge.synced = self.project.clone();
+        if undo {
+            self.history.kdm.set_redo(moved, made);
+        } else {
+            self.history.kdm.set_undo(moved, made);
+        }
+        self.take_steps_below(undo, beyond);
     }
 
-    /// After an import: the project follows the replica, and per-person state that named
-    /// something the import removed (a selected layer, the active composition) moves on.
+    /// Takes `beyond` replica steps off the history entries on top of the undo stack (after an
+    /// undo) or the redo stack (after a redo): the replica took them with the entry just moved,
+    /// passed over together with it. An entry left with none leaves the history; one the replica
+    /// took only some steps of keeps the rest. An entry that holds no replica step stays.
+    fn take_steps_below(&mut self, undo: bool, mut beyond: usize) {
+        let mut at = if undo { self.history.undo.len() } else { self.history.redo.len() };
+        while beyond > 0 && at > 0 {
+            at -= 1;
+            let stack = if undo { &self.history.undo } else { &self.history.redo };
+            let Some(state) = stack.get(at).map(|entry| entry.1.clone()) else { break };
+            let held = usize::try_from(if undo { self.history.kdm.undo_steps(&state) } else { self.history.kdm.redo_steps(&state) }).unwrap_or(usize::MAX);
+            if held == 0 {
+                continue;
+            }
+            let left = held.saturating_sub(beyond);
+            beyond = beyond.saturating_sub(held);
+            let left = u32::try_from(left).unwrap_or(u32::MAX);
+            if undo {
+                self.history.kdm.set_undo(&state, left);
+                if left == 0 {
+                    self.history.undo.remove(at);
+                }
+            } else {
+                self.history.kdm.set_redo(&state, left);
+                if left == 0 {
+                    self.history.redo.remove(at);
+                }
+            }
+        }
+    }
+
+    /// Takes a draft's changes (made on a replica forked from this one, `mergeChanges`) into the
+    /// project as one undo step in the scope the replica records it in (the person's, also when
+    /// an agent made the draft: KitModel M12a, the editor merges with the agent's origin and the
+    /// person accepts it; none for an empty draft or a `system` origin): changes not written yet
+    /// are written first, the project and the person's state follow the replica, and one Undo
+    /// takes the whole draft back, the kit's repair of it included. Answers that scope and the
+    /// damage. A refused merge changes nothing.
+    pub fn merge_draft(&mut self, bytes: &[u8], origin: &Origin) -> Result<(Option<UndoScope>, Damage)> {
+        self.take_in("Merge Draft", |kdm| kdm.merge_changes(bytes, origin))
+    }
+
+    /// Writes the state a snapshot holds (a checkpoint of this project, `replica/restore`) over
+    /// the project by object id, as one undo step of `origin`'s scope, taken in as a merged draft
+    /// is ([`Session::merge_draft`]). Nothing changes when the states are equal; another
+    /// document's snapshot is refused.
+    pub fn restore_version(&mut self, snapshot: &[u8], origin: &Origin) -> Result<Damage> {
+        let scope = UndoScope::of(origin.kind);
+        self.take_in("Restore Version", |kdm| kdm.restore_state(snapshot, origin).map(|damage| (scope, damage))).map(|(_, damage)| damage)
+    }
+
+    /// One transaction `write` makes on the replica, taken into the project as a command's step:
+    /// the project follows the replica, and the history of the scope `write` answers (none for a
+    /// `system` or `import` origin) gets an entry worth the one replica undo step. A write that
+    /// failed after its transaction landed still follows the replica when the view loaded from
+    /// it, as an import does; otherwise the project leaves the replica.
+    fn take_in(
+        &mut self,
+        label: &str,
+        write: impl FnOnce(&mut MotionSession) -> kdm_model::kition_kit::session::Result<(Option<UndoScope>, Damage)>,
+    ) -> Result<(Option<UndoScope>, Damage)> {
+        self.ensure_kdm().ok_or_else(no_replica)?;
+        if let Some(mark) = self.bridge.deferred.take() {
+            self.record_steps(mark);
+        }
+        self.flush_kdm();
+        self.open_or_close_kdm_group(false);
+        let kdm = self.bridge.replica.as_mut().map(|m| m.get_mut().unwrap_or_else(PoisonError::into_inner)).ok_or_else(no_replica)?;
+        let before = kdm.version();
+        let result = write(&mut *kdm);
+        let changed = kdm.version() != before;
+        let loaded = changed && (result.is_ok() || kdm.view_loaded());
+        if loaded {
+            let previous = self.project.clone();
+            self.follow_kdm();
+            if let Ok((Some(scope), _)) = &result {
+                let levels = self.prefs.general.undo_levels.max(1) as usize;
+                self.in_scope(Some(*scope), |session| {
+                    session.history.record(label, previous.clone(), levels);
+                    session.history.kdm.set_undo(&previous, 1);
+                });
+            }
+        } else if changed {
+            self.detach_kdm();
+        }
+        result.map_err(kdm_error)
+    }
+
+    /// After an import, a merge or a restore: the project follows the replica, and per-person
+    /// state that named something it removed (a selected layer, the active composition) moves on.
     fn follow_kdm(&mut self) {
         let floor = self.project.next_id;
         let Some(kdm) = self.bridge.replica.as_mut().map(|m| m.get_mut().unwrap_or_else(PoisonError::into_inner)) else { return };

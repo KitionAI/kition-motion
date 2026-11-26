@@ -1,6 +1,6 @@
 //! Comparing projects across replicas.
 //!
-//! Engine ids are data (the crate docs), so two replicas that converged hold the very same ids;
+//! Engine ids are data (the crate docs), so two replicas that hold one state hold the very same ids;
 //! what differs is each one's id counter ([`kition_motion_project::Project::next_id`]), which
 //! bounds the ids that replica may mint next, and each machine's own render state
 //! ([`crate::local`]): neither is replicated.

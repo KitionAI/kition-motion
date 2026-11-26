@@ -1,0 +1,30 @@
+format: 1
+id: motion.collab.drafts/merge-repairs-and-ids
+feature: motion.collab.drafts
+intent: >-
+  A draft forked from the document, the document edited meanwhile, the draft merged (data model
+  6.6): edits of different layers, keys, switches, markers, guides and template controls all
+  survive; what the merge leaves that the engine cannot hold is repaired (a layer using a deleted
+  precomposition, a matte naming a deleted layer, parenting and nesting cycles, two keys at one
+  time, two Render Queue items with one id, a layer without an id or with an item's id); ids the
+  draft and the document mint never meet, and the document keeps minting in its own range; a
+  draft that keys a deleted layer, or typed in a comment the document also changed, is refused
+  and changes nothing. Through the engine: a draft's layer and the document's both survive, the
+  merge is one undo step, and a file reread between an edit and its undo keeps the file's change.
+layer: gate
+source:
+  kind: synthetic
+  from: crates/kdm/kdm-model/tests/replicas.rs
+  license: Apache-2.0
+input: []
+steps:
+  - cargo-test: { package: kdm-model, test: replicas }
+  - cargo-test: { package: kdm-model, test: actor_id_ranges }
+  - cargo-test: { package: kdm-model, test: parts }
+  - cargo-test: { package: kition-motion-engine, test: kdm_bridge }
+expected:
+  - actual: out:exit
+    compare: exit
+    value: 0
+since: "2026-11-26"
+timeout_s: 120

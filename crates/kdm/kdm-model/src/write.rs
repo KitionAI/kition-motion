@@ -92,8 +92,8 @@ impl<'a> Parts<'a> {
 }
 
 /// Makes text field `field` of `object` read `after` where it read `before`, with one deletion
-/// and one insertion (the common prefix and suffix kept), so a concurrent edit elsewhere in the
-/// text keeps its place. When the field does not hold `before` (never expected) it is rewritten
+/// and one insertion (the common prefix and suffix kept), so undoing an earlier edit elsewhere in
+/// the text keeps this one's place. When the field does not hold `before` (never expected) it is rewritten
 /// whole.
 fn splice_text(tx: &mut Tx<'_>, object: &ObjectId, field: &str, before: &str, after: &str) -> KdmResult<bool> {
     if before == after {

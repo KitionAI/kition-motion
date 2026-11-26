@@ -4,18 +4,19 @@
 //! [`MotionModel`] implements [`KitModel`]: it is the engine's materialised view of a replica, the
 //! same [`Project`] the rest of the engine already knows. Items, compositions, layers, every group
 //! and property of a layer's property tree, every keyframe and every Render Queue item become KDM
-//! objects of their own, so concurrent edits to different ones merge finely; [`write_document`]
-//! and [`write_changes`] are the engine command bridge's entry points: writing a whole project in
-//! one creating transaction, or only what a command changed.
+//! objects of their own, so a draft's edits and the document's made meanwhile to different ones
+//! merge finely (data model 6.6, rules D1 to D9); [`write_document`] and [`write_changes`] are
+//! the engine command bridge's entry points: writing a whole project in one creating
+//! transaction, or only what a command changed.
 //!
 //! **Ids are data.** Motion's own ids (`ItemId`, `LayerId`, property uids, Graphics Templates
 //! control ids: everything [`Project::alloc`] hands out) are written as fields of their objects
 //! and read back exactly, so every replica — and every reload — names an object by the same id.
 //! References a model field holds by engine id deep inside a value (a `Value::Layer` of a Layer
 //! Control, a Graphics Templates link, a media-replacement value, a tracker's target) therefore
-//! stay valid across replicas without translation. What keeps two collaborators from minting the
-//! same id before they exchange anything is that each actor mints from its own slot of the id
-//! space ([`slot_base`]); the references the merge must check or repair (a layer's source item,
+//! stay valid across replicas without translation. What keeps a document and its draft from minting
+//! the same id before the draft merges is that each actor mints from its own slot of the id
+//! space ([`slot_base`]); the references a merge must check or repair (a layer's source item,
 //! its parent, its track matte, a Render Queue item's composition, an item's folder) are KDM
 //! `ref` fields naming the target's object, translated back to engine ids on read.
 //!
@@ -32,12 +33,13 @@
 //! no migration; its room is opened again from the `.kmotion` file).
 //!
 //! **Where each field lives** (`model/schema.json`): a struct's own fields are a KDM `map` (one
-//! register per field: two people changing a composition's duration and its background colour
-//! both keep their change), except the fields that are objects, lists or references of their
+//! register per field: a draft changing a composition's duration while the document changes its
+//! background colour keeps both changes), except the fields that are objects, lists or references of their
 //! own, and an item's and a layer's `name`, a `string` field of its own an agent renames with one
 //! `set`. A layer's switches are a map of their own (one register per switch). Markers, guides
-//! and template controls are objects of their own, so two people adding one each keep both; a
-//! marker's comment is a `text` field, merged by character. Footage is referenced by path, never
+//! and template controls are objects of their own, so a draft and the document adding one each
+//! keep both; a marker's comment is a `text` field (a draft that typed in a comment the document
+//! also changed does not merge, rule D5). Footage is referenced by path, never
 //! embedded (no blobs). What one machine's renders leave on the Render Queue (statuses) and its
 //! Render Queue preferences are not replicated (`local`). Keyframes are a list per
 //! property; they have no ids in the engine, so a write aligns the old and new key lists (by
@@ -169,8 +171,8 @@ impl KitModel for MotionModel {
     /// This machine's render state ([`local`]: not in the replica) stays as it was.
     ///
     /// The id counter never goes down: an id this replica handed out may be gone from the view
-    /// (deleted by a peer, or undone) yet still live on a peer or in an undo step, so minting it
-    /// again would give two objects one id.
+    /// (deleted by a merged draft or an import, or undone) yet still live in an undo or redo step,
+    /// so minting it again would give two objects one id.
     fn apply(&mut self, replica: &Replica, _changed: &BTreeSet<ObjectId>, _blobs: &dyn BlobSource) -> Result<Damage> {
         let (mut project, ids) = read::read_document(replica).map_err(kit_err)?;
         local::keep(&self.project, &mut project);

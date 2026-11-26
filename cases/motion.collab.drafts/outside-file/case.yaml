@@ -1,0 +1,26 @@
+format: 1
+id: motion.collab.drafts/outside-file
+feature: motion.collab.drafts
+intent: >-
+  A .kmotion changed outside Kition (another program renamed a layer) opened again with the
+  replica the host stored for it (Kit UI protocol UI-R1), in the editor through the development
+  host: the rename shows, the rest is the project the person saved, every layer keeps its engine
+  id, the replica keeps its document id, and every object of the stored replica keeps its object
+  id. In Chromium and WebKit.
+layer: gate
+source:
+  kind: synthetic
+  from: web/tests/outside.mjs
+  license: Apache-2.0
+input: []
+steps:
+  - exec:
+      cmd: [node, web/tests/outside.mjs, chromium]
+expected:
+  - actual: out:exec
+    compare: exit
+    value: 0
+tags: [browser]
+requires: [chromium]
+timeout_s: 300
+since: "2026-11-26"

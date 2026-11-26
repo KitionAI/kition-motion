@@ -1,4 +1,4 @@
-//! Decimal-string encoding of the ticks concurrent edits reason about exactly (a layer's start,
+//! Decimal-string encoding of the ticks a merge and the repair reason about exactly (a layer's start,
 //! in and out points, a keyframe's time); see the crate docs for why a KDM `integer` (or any JSON
 //! number) is not safe at every `Tick`.
 

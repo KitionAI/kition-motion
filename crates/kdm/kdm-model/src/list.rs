@@ -1,6 +1,6 @@
 //! Ordered lists of objects (a composition's layers, a group's children, a property's keys, the
 //! Render Queue): a write makes the live list exactly the target order with the fewest moves,
-//! so a concurrent edit elsewhere in the list keeps its place.
+//! so a draft's edit elsewhere in the list keeps its place when it merges (data model 6.6, D6).
 
 use std::collections::HashSet;
 

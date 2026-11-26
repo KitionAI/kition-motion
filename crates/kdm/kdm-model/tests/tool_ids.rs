@@ -1,13 +1,13 @@
 //! Tool ids (KitObjectModel OM9, task card C8-motion): every item and layer holds the id the
 //! engine gave it (the `.kmotion` file's id) in its read-only `id` field, which the schema names
 //! as the type's tool id; a comp's composition and a layer's property tree are held by refs
-//! declared `owns`, so a change inside them is told under the item or layer. The post-merge repair
-//! numbers an item or layer that has no id (a batch created it) or one another item or layer of
-//! the project holds, the same on every replica.
+//! declared `owns`, so a change inside them is told under the item or layer. The repair after a
+//! draft's merge numbers an item or layer that has no id (a batch created it) or one another item
+//! or layer of the project holds.
 
 mod common;
 
-use common::{demo, first, peer, person, sync};
+use common::{demo, draft, first, merge, person};
 use kition_kit::kdm::ObjectId;
 use serde_json::{Map, Value, json};
 
@@ -27,13 +27,13 @@ fn the_schema_declares_tool_ids_and_what_items_and_layers_own() {
     assert_eq!(parsed.schema_version, 1, "project membership is a query view without manual order in schema 1");
 }
 
-/// A layer a collaborator's batch created without an id is given one by the repair, the same on
-/// both replicas, and the engine reads the layer with it.
+/// A layer a draft's batch created without an id is given one by the repair when the draft
+/// merges, and the engine reads the layer with it.
 #[test]
-fn a_layer_created_without_an_id_is_numbered_alike_on_every_replica() {
+fn a_layer_a_draft_created_without_an_id_is_numbered_when_it_merges() {
     let d = demo();
     let mut a = first(&d.project);
-    let mut b = peer(&a, 2);
+    let (mut b, base) = draft(&a, 2);
     let layer = a.replica().objects_of_type("Layer").into_iter().next().unwrap();
     let comp = a.replica().objects_of_type("Comp").into_iter().next().unwrap();
     let mut values = Map::new();
@@ -60,33 +60,29 @@ fn a_layer_created_without_an_id_is_numbered_alike_on_every_replica() {
         Ok(())
     })
     .unwrap();
-    sync(&mut a, &mut b);
+    merge(&mut a, &b, &base);
     let made: Vec<ObjectId> = a.replica().objects_of_type("Layer");
-    assert_eq!(made.len(), b.replica().objects_of_type("Layer").len());
+    assert_eq!(made.len(), b.replica().objects_of_type("Layer").len(), "the draft's layer merged");
     let mut stored: Vec<u64> = made.iter().map(|object| a.replica().get(object, "id").unwrap().as_u64().expect("every layer numbered")).collect();
-    let mut on_b: Vec<u64> = made.iter().map(|object| b.replica().get(object, "id").unwrap().as_u64().unwrap()).collect();
     stored.sort_unstable();
-    on_b.sort_unstable();
-    assert_eq!(stored, on_b, "both replicas write the same ids");
     let mut unique = stored.clone();
     unique.dedup();
     assert_eq!(unique, stored, "every layer has its own id");
 }
 
-/// A layer whose id an item of the project holds (two replicas that each numbered a new object
-/// alike) is given a repair id: items and layers share one id space.
+/// A layer whose id an item of the project holds (a draft's batch that numbered it so) is given a
+/// repair id when the draft merges: items and layers share one id space.
 #[test]
 fn a_layer_holding_an_items_id_is_given_another() {
     let d = demo();
     let mut a = first(&d.project);
-    let mut b = peer(&a, 2);
+    let (mut b, base) = draft(&a, 2);
     let item = a.replica().objects_of_type("Item").into_iter().next().unwrap();
     let item_id = a.replica().get(&item, "id").unwrap();
     let layer = a.replica().objects_of_type("Layer").into_iter().next().unwrap();
     b.record(&person("b"), |tx| Ok(tx.set(&layer, "id", item_id.clone())?)).unwrap();
-    sync(&mut a, &mut b);
+    merge(&mut a, &b, &base);
     let now = a.replica().get(&layer, "id").unwrap();
-    assert_eq!(now, b.replica().get(&layer, "id").unwrap(), "the same on both replicas");
     assert_ne!(now, item_id, "the layer was given an id of its own");
     assert!(now.as_u64().is_some(), "{now}");
 }

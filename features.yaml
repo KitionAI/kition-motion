@@ -92,15 +92,25 @@ features:
     cases: [motion.agent.draft/title-solid]
     since: "2026-11-17"
   - id: motion.model.objects
-    title: "The object model is reached from its root: query follows fields, batch edits them, replicas converge"
+    title: "The object model is reached from its root: query follows fields, batch edits them, a draft's edits merge"
     dimension: [ai, collab]
     priority: P0
     status: partial
-    paths: [crates/kdm/kdm-model/model/schema.json, crates/kdm/kdm-model/src/settle.rs, crates/kdm/kdm-model/src/write.rs, crates/kdm/kdm-model/src/read.rs, crates/kdm/kdm-model/src/validate.rs, bindings/wasm/src/collab.rs, bindings/wasm/tests/convergence.rs, kit.json]
+    paths: [crates/kdm/kdm-model/model/schema.json, crates/kdm/kdm-model/src/settle.rs, crates/kdm/kdm-model/src/write.rs, crates/kdm/kdm-model/src/read.rs, crates/kdm/kdm-model/src/validate.rs, bindings/wasm/src/collab.rs, kit.json]
     gap: "Raw assignments, key-list edits, item creation/deletion, owned property creation and layer reordering have guarded contracts. Remaining structural classes and private outside-created receipt fields remain under review. Raw object ids are not stable across a reopen: the kit builds its replica from the plain-JSON file on every open, so an id held from one opening is refused not-found in the next, and an agent re-observes it (tool ids survive, as kition-sdk data-model.md says for such kits); ids stable across reopen are after the launch."
     requirements: [A4, AX4, M1, M2]
-    cases: [regressions/issue-root-items-reachable, regressions/issue-root-items-converge, regressions/issue-platform-convergence, regressions/issue-c8-motion-pin-raw-batch, regressions/issue-c8-motion-pin-raw-key, regressions/issue-c8-motion-pin-key-structure, regressions/issue-c8-motion-pin-item-delete, regressions/issue-c8-motion-pin-raw-containers]
+    cases: [regressions/issue-root-items-reachable, regressions/issue-root-items-converge, regressions/issue-c8-motion-pin-raw-batch, regressions/issue-c8-motion-pin-raw-key, regressions/issue-c8-motion-pin-key-structure, regressions/issue-c8-motion-pin-item-delete, regressions/issue-c8-motion-pin-raw-containers]
     since: "2026-11-17"
+  - id: motion.collab.drafts
+    title: "Drafts merge in and earlier versions restore as one undo step; receipts, replies in tool ids and the object model come from the engine; a file changed outside keeps its replica"
+    dimension: [collab, ai, data-safety]
+    priority: P1
+    status: partial
+    paths: [bindings/wasm/src/drafts.rs, bindings/wasm/src/lib.rs, bindings/wasm/src/collab.rs, crates/engine/engine/src/kdm_bridge.rs, crates/kdm/kdm-model/src/session.rs, crates/kdm/kdm-model/src/validate.rs, crates/kdm/kdm-model/tests/replicas.rs, crates/engine/project/src/lib.rs, web/tests/outside.mjs, web/package.json]
+    target: "Kit UI protocol section 7 (replica/restore, UI-R1); engine contract members mergeChanges, compareChanges, restoreState, changesSince, modelReply, modelBatch, modelDescribe (K3a)"
+    gap: Engine tests merge a draft, compare it first, restore a version, answer receipts and replies and run the object model, and a browser test reopens a file changed outside; no browser case drives a draft or a restore in the editor yet.
+    cases: [motion.collab.drafts/engine-members, motion.collab.drafts/merge-repairs-and-ids, motion.collab.drafts/outside-file]
+    since: "2026-11-26"
   - id: motion.platform.document-text
     title: "document.text: every composition's text layers as plain text for a host's search, cut at a limit"
     dimension: [platform]

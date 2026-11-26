@@ -1,22 +1,26 @@
-//! Deterministic repair after a merge, an undo/redo, or an import ([`KitModel::validate`]): every
-//! replica runs the same steps over the same merged state, so they all write the same repair.
+//! Deterministic repair after a draft's merge, an undo/redo, or an import ([`KitModel::validate`]):
+//! every replica runs the same steps over the same state, so they all write the same repair.
 //!
-//! What a merge can leave that the engine must never see, and what becomes of it (the same as
+//! What a draft's merge (data model 6.6: the draft's edits and the document's made meanwhile, each
+//! valid alone), an undo over later edits, or raw changes (an object-model batch, stored changes
+//! of another build) can leave that the engine must never see, and what becomes of it (the same as
 //! the engine's own edits do it, where they do):
 //! - a layer whose source item was deleted (a precomposition deleted while someone used it) is
 //!   deleted, as `project.delete` deletes the layers using an item; so is a Render Queue item
 //!   whose composition is gone;
 //! - a parent, track matte or folder that is gone (or not in the layer's composition) is cleared;
-//!   parenting, folder and precomposition cycles made by two concurrent edits are broken;
-//! - list entries naming a deleted object are dropped, and an object two concurrent moves listed
-//!   twice keeps its first listing;
+//!   parenting, folder and precomposition cycles made by a draft's edit and the document's are
+//!   broken;
+//! - list entries naming a deleted object are dropped, and an object raw changes listed twice
+//!   keeps its first listing;
 //! - `Project.items` lists every live item once, repairing missing, stale or duplicate listings;
-//! - a property's keys are put back in time order, two keys at one time (added concurrently)
-//!   keep one;
+//! - a property's keys are put back in time order, two keys at one time (one the draft added, one
+//!   the document) keep one;
 //! - a marker, guide or Graphics Templates control listed twice keeps its first listing, and one
-//!   nothing live lists any more (its composition or layer, or its control group, deleted while
-//!   someone added it) is deleted;
-//! - an id two actors minted alike (only possible if they share an id slot, see
+//!   nothing live lists any more (raw changes that deleted its composition, layer or control
+//!   group) is deleted;
+//! - an id two objects hold alike (raw changes that numbered one so, two Render Queue items a
+//!   draft and the document numbered alike, or two actors that share an id slot, see
 //!   [`crate::slot_base`]) is given a repair id of its own, Render Queue ids included.
 //!
 //! [`KitModel::validate`]: kition_kit::session::KitModel::validate

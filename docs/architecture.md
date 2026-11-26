@@ -79,7 +79,13 @@ text animators and shape contents are groups in the same tree.
 A project file (`.kmotion`) is the project as readable JSON, headed by `savedBy` (the Kition Motion
 version that wrote it) and `schema`; `.ecprojx` is the same data as XML (File ▸ Save a Copy As
 XML). Saving goes through `Project::to_file_json`, which checks that the text reads back before
-anything is written (JSON can't hold NaN or infinity), and files are written atomically. Opening
+anything is written (JSON can't hold NaN or infinity), and files are written atomically. A file
+holds the project's content only, never a session's or a machine's state: its `next_id` is the
+first id past every id the content holds (`Project::content_next_id`, not the id range a session's
+replica mints from), and what a render left on the Render Queue and the Render Queue preferences
+stay on the machine, so an unchanged project saves the bytes it was opened from and two sessions
+that open one file save the same bytes. The person's view (open compositions, current times,
+selections, zoom, preview resolution) is the editor's state and never in the file. Opening
 a file that a newer Kition Motion saved shows a warning: fields this version doesn't know are
 dropped if it saves the project. Save, Save As, Save a Copy and Increment and Save keep the
 file's format (`.ecprojx` stays XML).

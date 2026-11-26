@@ -1290,19 +1290,39 @@ impl Project {
     }
     /// Make sure `next_id` exceeds every id in the project (after loading or merging).
     pub fn fix_next_id(&mut self) {
-        let mut m = self.next_id;
+        self.next_id = self.next_id.max(self.content_next_id());
+    }
+    /// The first id past every id the content holds (items, layers, property uids, Graphics
+    /// Templates controls, Render Queue items; at least 1): what a file writes as `next_id`, so a
+    /// file holds no session's id counter (a replica's actor mints from a slot of its own, far
+    /// above, and two sessions that open one file and save it unchanged write the same bytes).
+    pub fn content_next_id(&self) -> u64 {
+        fn controls(list: &[template_props::EgControl], m: &mut u64, depth: usize) {
+            for control in list {
+                *m = (*m).max(control.id.saturating_add(1));
+                if let template_props::EgKind::Group { children } = &control.kind
+                    && depth < 256
+                {
+                    controls(children, m, depth + 1);
+                }
+            }
+        }
+        let mut m = 1u64;
         for (id, it) in &self.items {
-            m = m.max(id.0 + 1);
+            m = m.max(id.0.saturating_add(1));
             if let ItemKind::Comp(c) = &it.kind {
                 for l in &c.layers {
-                    m = m.max(l.id.0 + 1).max(l.props.max_uid() + 1);
+                    m = m.max(l.id.0.saturating_add(1)).max(l.props.max_uid().saturating_add(1));
+                }
+                if let Some(template) = &c.graphics_template {
+                    controls(&template.controls, &mut m, 0);
                 }
             }
         }
         for r in &self.render_queue {
             m = m.max(r.id.saturating_add(1));
         }
-        self.next_id = m;
+        m
     }
     /// Whether `other` holds the same content. An allocated id counts (an edit may hand it out
     /// beyond the project, so it must stay taken). Shared compositions compare by pointer first,
@@ -1334,7 +1354,8 @@ impl Project {
     }
     /// The project as a content file holds it, `savedBy` (the version that wrote it) first when
     /// given: content only, without this machine's state ([`Project::forget_machine_state`]: the
-    /// Render Queue preferences, and each queue item's render state).
+    /// Render Queue preferences, and each queue item's render state) and without the session's id
+    /// counter (`next_id` is [`Project::content_next_id`]).
     fn content_text(&self, saved_by: Option<&str>) -> Result<String, serde_json::Error> {
         fn default_templates(t: &&render_templates::RenderTemplates) -> bool {
             t.is_default()
@@ -1352,13 +1373,13 @@ impl Project {
             #[serde(skip_serializing_if = "default_templates")]
             render_templates: &'a render_templates::RenderTemplates,
         }
-        let Project { schema, settings, items, next_id, render_queue, render_templates, render_prefs: _ } = self;
+        let Project { schema, settings, items, next_id: _, render_queue, render_templates, render_prefs: _ } = self;
         serde_json::to_string_pretty(&Content {
             saved_by,
             schema: *schema,
             settings,
             items,
-            next_id: *next_id,
+            next_id: self.content_next_id(),
             render_queue: render_queue.iter().map(render_queue::RenderQueueItem::definition).collect(),
             render_templates,
         })

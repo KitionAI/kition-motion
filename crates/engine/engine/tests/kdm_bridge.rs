@@ -1,9 +1,10 @@
 //! The command bridge to the project's KDM replica: every mutating command replicates as one
-//! transaction and a peer that imports it holds the same project; undo after a remote edit keeps
-//! the remote edit; a coalesced drag is one undo step; the playhead and selections write nothing;
-//! a history jump replicates as one change; ids two collaborators mint never collide; random
-//! concurrent commands converge; a replica that refuses a write is left (a visible reset) and a
-//! fresh one is made on the next request.
+//! transaction and a replica that imports it holds the same project; undo after a file reread
+//! keeps the file's change; a coalesced drag is one undo step; the playhead and selections write
+//! nothing; a history jump replicates as one change; ids a draft and the document mint never
+//! collide, and a draft's merge is repaired; random commands, undos and redos keep the replica
+//! holding the project; a replica that refuses a write is left (a visible reset) and a fresh one
+//! is made on the next request.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -26,7 +27,8 @@ fn new_session() -> Session {
     s
 }
 
-/// A second session holding a replica of `a`'s project (open on its composition).
+/// A second session holding a replica of `a`'s project (open on its composition): a reader that
+/// takes `a`'s later changes in order, or a draft of `a`.
 fn peer(a: &mut Session) -> Session {
     let mut b = Session::default();
     b.open_snapshot(&a.snapshot().unwrap()).unwrap();
@@ -40,15 +42,10 @@ fn send(from: &mut Session, to: &mut Session) {
     to.import_changes(&bytes).unwrap();
 }
 
-fn sync(a: &mut Session, b: &mut Session) {
-    for _ in 0..8 {
-        send(a, b);
-        send(b, a);
-        if a.version().unwrap() == b.version().unwrap() {
-            return;
-        }
-    }
-    panic!("the replicas did not converge");
+/// Takes `draft`'s changes since `base` into `doc` as the person's one step (`mergeChanges`).
+fn merge(doc: &mut Session, draft: &mut Session, base: &kition_motion_engine::Version) {
+    let bytes = draft.export_changes(base).unwrap();
+    doc.merge_draft(&bytes, &kition_motion_engine::kdm_bridge::local_person()).unwrap();
 }
 
 /// `a` and `b` hold the same replicated state and the same project (id counters aside).
@@ -148,26 +145,32 @@ fn ids_are_the_same_on_every_replica() {
     assert_eq!(ids(&a), ids(&b), "layer ids and property uids are the replica's own data");
 }
 
+/// A file changed outside and read again (`reconcile_reread`: an `import` change, no undo step)
+/// between the person's edit and their undo: the undo takes back only the person's edit, and the
+/// file's change stays; a reader of the replica follows each step.
 #[test]
-fn undo_after_a_remote_edit_keeps_it_and_reverts_only_the_local_one() {
+fn undo_after_a_file_reread_keeps_it_and_reverts_only_the_local_one() {
     let mut a = new_session();
     let mut b = peer(&mut a);
     let (red, green) = (layer(&a, "Red"), layer(&a, "Green"));
     a.execute("prop.set", json!({"layer": red, "path": "transform/opacity", "value": 30, "time": 1})).unwrap();
-    b.execute("layer.rename", json!({"layer": green, "name": "Remote"})).unwrap();
-    sync(&mut a, &mut b);
-    assert_same(&mut a, &mut b, "exchanged");
-    assert!(names(&a).contains(&"Remote".to_string()), "the remote rename arrived");
+    let mut file = (*a.project).clone();
+    let main = *file.comps().find(|(_, c)| c.layer(LayerId(green)).is_some()).unwrap().0;
+    file.comp_mut(main).unwrap().layer_mut(LayerId(green)).unwrap().name = "Outside".into();
+    a.reconcile_reread(&file).unwrap();
+    assert!(names(&a).contains(&"Outside".to_string()), "the file's rename arrived");
+    send(&mut a, &mut b);
+    assert_same(&mut a, &mut b, "read");
 
     assert!(a.undo(), "the local edit undoes");
     assert_eq!(opacity_keys(&a, red), vec![0.0, 100.0], "the local key edit is gone");
-    assert!(names(&a).contains(&"Remote".to_string()), "the remote rename survives the local undo");
+    assert!(names(&a).contains(&"Outside".to_string()), "the file's rename survives the local undo");
     assert!(holds(&a));
-    sync(&mut a, &mut b);
+    send(&mut a, &mut b);
     assert_same(&mut a, &mut b, "after the undo");
     assert!(a.redo());
     assert_eq!(opacity_keys(&a, red), vec![0.0, 30.0]);
-    sync(&mut a, &mut b);
+    send(&mut a, &mut b);
     assert_same(&mut a, &mut b, "after the redo");
 }
 
@@ -254,21 +257,23 @@ fn an_agent_undo_under_the_persons_later_step_keeps_the_persons_edit() {
 }
 
 #[test]
-fn layers_two_collaborators_add_at_once_both_survive_under_distinct_ids() {
+fn layers_a_draft_and_the_document_add_both_survive_under_distinct_ids() {
     let mut a = new_session();
     let mut b = peer(&mut a);
+    let base = a.version().unwrap();
     let x = a.execute("layer.newSolid", json!({"name": "FromA"})).unwrap()["layer"].as_u64().unwrap();
     let y = b.execute("layer.newSolid", json!({"name": "FromB"})).unwrap()["layer"].as_u64().unwrap();
     assert_ne!(x, y, "each actor mints from its own slot");
-    sync(&mut a, &mut b);
-    assert_same(&mut a, &mut b, "both new layers");
-    for s in [&a, &b] {
-        assert!(names(s).contains(&"FromA".into()) && names(s).contains(&"FromB".into()));
-    }
+    merge(&mut a, &mut b, &base);
+    assert!(holds(&a));
+    assert!(names(&a).contains(&"FromA".into()) && names(&a).contains(&"FromB".into()), "{:?}", names(&a));
+    assert!(a.undo(), "the merge is one undo step");
+    assert!(names(&a).contains(&"FromA".into()) && !names(&a).contains(&"FromB".into()), "{:?}", names(&a));
+    assert!(holds(&a));
 }
 
 #[test]
-fn deleting_a_precomp_a_peer_uses_removes_its_layer_on_both() {
+fn deleting_a_precomp_a_draft_uses_removes_its_layer() {
     let mut a = new_session();
     let inner = a.execute("comp.new", json!({"name": "Inner", "width": 64, "height": 64, "frameRate": 30, "duration": 1, "open": false})).unwrap()["comp"]
         .as_u64()
@@ -276,14 +281,15 @@ fn deleting_a_precomp_a_peer_uses_removes_its_layer_on_both() {
     let main = a.project.comps().find(|(_, c)| c.layers.len() == 3).map(|(id, _)| id.0).unwrap();
     a.execute("comp.open", json!({"comp": main})).unwrap();
     let mut b = peer(&mut a);
+    let base = a.version().unwrap();
     b.execute("comp.open", json!({"comp": main})).unwrap();
     b.execute("layer.addItem", json!({"item": inner})).unwrap();
     a.execute("project.delete", json!({"items": [inner]})).unwrap();
-    sync(&mut a, &mut b);
-    assert_same(&mut a, &mut b, "after the merge");
+    merge(&mut a, &mut b, &base);
+    assert!(holds(&a));
     assert!(a.project.item(kition_motion_project::ItemId(inner)).is_none());
     let uses = |s: &Session| s.project.comps().any(|(_, c)| c.layers.iter().any(|l| l.source.item() == Some(kition_motion_project::ItemId(inner))));
-    assert!(!uses(&a) && !uses(&b), "no layer uses the deleted precomposition");
+    assert!(!uses(&a), "no layer uses the deleted precomposition");
 }
 
 #[test]
@@ -433,8 +439,8 @@ fn a_write_the_replica_refuses_resets_it_and_a_fresh_one_is_made_on_request() {
     assert_same(&mut s, &mut b, "a peer joins the fresh replica");
 }
 
-/// Changes a collaborator made raw on a replica of `a`'s: the project renamed, and a layer
-/// whose start is not a tick listed in the composition (so the project cannot be read back).
+/// Changes made raw on a replica of `a`'s (stored changes that follow it): a layer whose start
+/// is not a tick listed in the composition (so the project cannot be read back).
 fn changes_the_view_cannot_load(a: &mut Session) -> Vec<u8> {
     use kdm_model::kition_kit::kdm::{ActorId, Origin as KdmOrigin, Replica};
     use kdm_model::kition_kit::session::KitModel;
@@ -520,33 +526,32 @@ fn random_command(s: &mut Session, rng: &mut Rng) -> String {
     format!("{id} {params} -> {}", if r.is_ok() { "ok" } else { "refused" })
 }
 
+/// Random commands, undos and redos with a short undo limit: after every one the replica holds
+/// the project, and a reader that takes the changes in order holds the same.
 #[test]
-fn random_concurrent_commands_converge() {
+fn random_commands_keep_the_replica_holding_the_project() {
     for seed in [3u64, 11, 2026] {
         let mut rng = Rng(seed.wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1);
         let mut a = new_session();
         a.prefs.general.undo_levels = 4;
         let mut b = peer(&mut a);
-        b.prefs.general.undo_levels = 4;
         let mut log: Vec<String> = Vec::new();
-        for step in 0..100 {
-            for (name, s) in [("a", &mut a), ("b", &mut b)] {
-                let what = random_command(s, &mut rng);
-                log.push(format!("{name}: {what}"));
-                let context = || format!("seed {seed}, step {step}, {name}; last commands:\n{}", log[log.len().saturating_sub(6)..].join("\n"));
-                assert_eq!(s.kdm_resets(), 0, "{}", context());
-                assert!(s.kdm().is_some(), "no replica: {}", context());
-                assert!(holds(s), "the project is not what its replica holds: {}", context());
-            }
+        for step in 0..200 {
+            let what = random_command(&mut a, &mut rng);
+            log.push(what);
+            let context = || format!("seed {seed}, step {step}; last commands:\n{}", log[log.len().saturating_sub(6)..].join("\n"));
+            assert_eq!(a.kdm_resets(), 0, "{}", context());
+            assert!(a.kdm().is_some(), "no replica: {}", context());
+            assert!(holds(&a), "the project is not what its replica holds: {}", context());
             if step % 5 == 4 {
-                sync(&mut a, &mut b);
+                send(&mut a, &mut b);
                 assert_same(&mut a, &mut b, &format!("seed {seed}, step {step}"));
             }
         }
-        sync(&mut a, &mut b);
+        send(&mut a, &mut b);
         assert_same(&mut a, &mut b, &format!("seed {seed}, final"));
         let mut c = peer(&mut a);
-        assert_same(&mut a, &mut c, &format!("seed {seed}: a fresh peer matches"));
+        assert_same(&mut a, &mut c, &format!("seed {seed}: a fresh replica matches"));
     }
 }
 

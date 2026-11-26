@@ -166,10 +166,10 @@ export async function start(which) {
     async items() {
       return (await h.query('project.summary', {})).items
     },
-    /** Opens the sample afresh. */
-    async open() {
+    /** Opens the sample afresh; `query` adds the development host's switches (`&replica=1`). */
+    async open(query = '') {
       const load = async () => {
-        await page.goto(`${origin}/dev.html?locale=zh-CN`)
+        await page.goto(`${origin}/dev.html?locale=zh-CN${query}`)
         await page.waitForFunction(() => document.getElementById('status')?.textContent?.includes(' open in '), null, { timeout: 60000 })
         await kit.getByTestId('motion-timeline').waitFor()
       }
