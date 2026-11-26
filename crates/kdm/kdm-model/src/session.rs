@@ -197,11 +197,20 @@ impl MotionSession {
         self.inner.merge_changes(bytes, origin)
     }
 
+    /// The replicated state merging `bytes` (a draft's changes) would give, the kit's repair of
+    /// the merged state included as [`MotionSession::merge_changes`] runs it
+    /// (`KitSession::merged_state`), so a draft's preview is what accepting it gives. Nothing
+    /// changes.
+    pub fn merged_state(&self, bytes: &[u8]) -> Result<serde_json::Value> {
+        self.inner.merged_state(bytes)
+    }
+
     /// Writes the state `snapshot` holds (a snapshot or content of this document, as a host's
     /// checkpoint keeps it) over the replica as one transaction of `origin`, keyed by object id,
     /// so every object the two share keeps its id, the kit's repair of the restored state inside
     /// it: one undo step of `origin`'s scope unless it is a `system` or `import` one. Nothing
-    /// changes when the states are equal; another document's snapshot is refused.
+    /// changes when the states are equal, or when the repair takes back all the restore wrote;
+    /// another document's snapshot is refused.
     pub fn restore_state(&mut self, snapshot: &[u8], origin: &Origin) -> Result<Damage> {
         self.end_undo_group();
         self.inner.restore_state(snapshot, origin)

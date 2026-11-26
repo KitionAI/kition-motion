@@ -40,12 +40,13 @@ impl MotionDocument {
         Ok(json!({ "damage": damage, "summary": diff_states(&before, &after).to_json(), "scope": scope.map(UndoScope::as_str) }))
     }
 
-    /// What merging a draft's changes would change in the project now, as `StateDiff` JSON;
-    /// nothing changes. Refuses what [`MotionDocument::merge_changes`] refuses.
+    /// What merging a draft's changes would change in the project now, the kit's repair of the
+    /// merged state included, as `StateDiff` JSON: the preview is what accepting gives; nothing
+    /// changes. Refuses what [`MotionDocument::merge_changes`] refuses.
     pub fn compare_changes(&self, bytes: &[u8]) -> Result<Value, String> {
         let kdm = self.session.kdm().ok_or("the project has no replica, so no draft of it")?;
         let before = kdm.replica().state_json().map_err(|error| error.to_string())?;
-        let after = kdm.replica().merged_state(bytes).map_err(|error| error.to_string())?;
+        let after = kdm.merged_state(bytes).map_err(|error| error.to_string())?;
         Ok(diff_states(&before, &after).to_json())
     }
 
@@ -244,6 +245,86 @@ mod tests {
         assert!(doc.merge_changes(b"not changes", &person()).is_err());
         assert!(doc.compare_changes(b"not changes").is_err());
         assert_eq!(doc.version().unwrap(), at, "a refused merge changes nothing");
+        assert_eq!(doc.session.kdm_resets(), 0);
+    }
+
+    /// The id of the active composition's layer named `name`.
+    fn layer_id(doc: &MotionDocument, name: &str) -> u64 {
+        doc.session.active_comp().and_then(|comp| comp.layers.iter().find(|layer| layer.name == name)).map(|layer| layer.id.0).unwrap()
+    }
+
+    /// The fixture with a second layer, "Blue", and a draft of it that parents "Red" to "Blue"
+    /// (its transform left as it is) and, with `rename`, renames "Red"; then "Blue" is deleted
+    /// here meanwhile, so the merge's repair clears the parent the draft set. Answers the document
+    /// and the draft's changes.
+    fn parented_to_a_layer_deleted_meanwhile(rename: bool) -> (MotionDocument, Vec<u8>) {
+        let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        add_solid(&mut doc, "Blue", &person());
+        let (mut draft, base) = draft_of(&mut doc);
+        let (red, blue) = (layer_id(&draft, "Red"), layer_id(&draft, "Blue"));
+        draft.execute("layer.setParent", json!({ "layers": [red], "parent": blue, "compensate": false })).unwrap();
+        if rename {
+            draft.execute("layer.rename", json!({ "layer": red, "name": "Moved" })).unwrap();
+        }
+        let changes = draft.export_changes(&base).unwrap();
+        let blue = layer_id(&doc, "Blue");
+        doc.execute("edit.delete", json!({ "layers": [blue] })).unwrap();
+        (doc, changes)
+    }
+
+    /// regressions/issue-draft-preview-repaired: a draft's preview runs the kit's repair. The
+    /// draft parents "Red" to "Blue" and renames it, "Blue" is deleted meanwhile: the repair clears
+    /// the parent, and the preview names what the merge does (the new name alone), not what the
+    /// draft's changes alone would; its merged state is the state after merging.
+    #[test]
+    fn comparing_a_draft_runs_the_kits_repair() {
+        let (mut doc, changes) = parented_to_a_layer_deleted_meanwhile(true);
+        let unrepaired = {
+            let replica = doc.session.kdm().unwrap().replica();
+            diff_states(&replica.state_json().unwrap(), &replica.merged_state(&changes).unwrap()).to_json()
+        };
+        let preview = doc.compare_changes(&changes).unwrap();
+        assert_ne!(preview, unrepaired, "the repair changes what the merge does");
+        let merged = doc.session.kdm().unwrap().merged_state(&changes).unwrap();
+        let answer = doc.merge_changes(&changes, &person()).unwrap();
+        assert_eq!(answer["summary"], preview, "the preview named what the merge did: {answer}");
+        assert_eq!(doc.replicated_state().unwrap(), merged, "the preview's merged state is the state after merging");
+        let red = doc.session.active_comp().and_then(|comp| comp.layers.iter().find(|layer| layer.name == "Moved")).unwrap();
+        assert_eq!(red.parent, None, "the parent deleted meanwhile is cleared");
+    }
+
+    /// Data model 6.6 D9 (regressions/issue-merge-changing-nothing): the person deletes "Blue" (a
+    /// named step) while an agent's draft only parents "Red" to it; the repair clears the parent
+    /// again, so the merge changes nothing and records nothing: the state, the version, the
+    /// replica's and the editor's histories and the next Undo's name stay, and that Undo takes
+    /// back the person's deletion exactly.
+    #[test]
+    fn a_draft_the_repair_takes_back_entirely_records_nothing() {
+        let agent = Origin::agent("agent:test");
+        let mut doc = MotionDocument::open("Motion.kmotion", &fixture()).unwrap();
+        add_solid(&mut doc, "Blue", &person());
+        let (mut draft, base) = draft_of(&mut doc);
+        let (red, blue) = (layer_id(&draft, "Red"), layer_id(&draft, "Blue"));
+        draft.execute_as("layer.setParent", json!({ "layers": [red], "parent": blue, "compensate": false }), &agent).unwrap();
+        let changes = draft.export_changes(&base).unwrap();
+        let before_delete = whole(&mut doc);
+        let blue = layer_id(&doc, "Blue");
+        doc.execute("edit.delete", json!({ "layers": [blue] })).unwrap();
+        let label = doc.session.history.undo.last().map(|entry| entry.0.clone());
+        assert!(label.is_some(), "the deletion is a named step");
+        let (version, before) = (doc.version().unwrap(), whole(&mut doc));
+        let (history, depth) = (doc.session.history.undo.len(), doc.session.kdm().unwrap().replica().undo_depth(UndoScope::Person));
+
+        let answer = doc.merge_changes(&changes, &agent).unwrap();
+        assert_eq!(answer["scope"], Value::Null, "no step: {answer}");
+        assert_eq!(answer["damage"], json!("none"), "{answer}");
+        assert_eq!(doc.version().unwrap(), version, "the version stays");
+        assert_eq!(whole(&mut doc), before, "the state and the project stay");
+        assert_eq!(doc.session.history.undo.len(), history, "the editor's history stays");
+        assert_eq!(doc.session.history.undo.last().map(|entry| entry.0.clone()), label, "the next Undo is still the deletion");
+        assert_eq!(doc.session.kdm().unwrap().replica().undo_depth(UndoScope::Person), depth, "the replica's history stays");
+        assert!(doc.undo().unwrap().0);
+        assert_eq!(whole(&mut doc), before_delete, "Undo takes back the person's deletion exactly");
         assert_eq!(doc.session.kdm_resets(), 0);
     }
 
