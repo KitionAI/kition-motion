@@ -57,10 +57,23 @@ function ContentBox({ node, focusNow, onFocused }: { node: TreeNode; focusNow: b
   const typing = useRef<{ gesture: string; from: string } | null>(null)
   const box = useRef<HTMLTextAreaElement>(null)
   const send = useSender('layer.setText')
-  const history = useTypingUndo((next) => {
-    setText(next)
-    if (typing.current) send({ layer: layer.id, text: next }, typing.current.gesture)
-  }, box)
+  // Before anything is typed in this visit, Cmd/Ctrl+Z is the editor's Undo: the box then follows
+  // the document, and typing after it is a visit of its own (from the text the box shows then).
+  // Once typed, it stays within this visit: the typing is a step of the document already.
+  const history = useTypingUndo(
+    (next) => {
+      setText(next)
+      if (typing.current) send({ layer: layer.id, text: next }, typing.current.gesture)
+    },
+    box,
+    {
+      untouchedOnly: true,
+      leave: () => {
+        typing.current = null
+        setText(value)
+      },
+    },
+  )
   useEffect(() => {
     if (!typing.current) setText(value)
   }, [value])
@@ -90,6 +103,10 @@ function ContentBox({ node, focusNow, onFocused }: { node: TreeNode; focusNow: b
           history.begin(text)
         }}
         onChange={(event) => {
+          if (!typing.current) {
+            sessions += 1
+            typing.current = { gesture: `text-${layer.id}-${sessions}`, from: value }
+          }
           setText(event.target.value)
           history.record(event.target.value)
           if (typing.current) send({ layer: layer.id, text: event.target.value }, typing.current.gesture)
@@ -100,11 +117,13 @@ function ContentBox({ node, focusNow, onFocused }: { node: TreeNode; focusNow: b
             event.preventDefault()
             event.currentTarget.blur()
           }
-          if (event.key === 'Escape' && typing.current) {
+          if (event.key === 'Escape') {
             // Back to the text the box had when it took the focus, in the same undo step.
             event.preventDefault()
-            setText(typing.current.from)
-            send({ layer: layer.id, text: typing.current.from }, typing.current.gesture)
+            if (typing.current) {
+              setText(typing.current.from)
+              send({ layer: layer.id, text: typing.current.from }, typing.current.gesture)
+            }
             event.currentTarget.blur()
           }
         }}

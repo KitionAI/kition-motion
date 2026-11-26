@@ -22,9 +22,10 @@ export function LayerHeader({ info, layer, readOnly, count }: { info: MotionInfo
   const modes = blendModes(byId.get('layer.setBlendMode')?.schema)
   const [name, setName] = useState(layer.name)
   const dropped = useRef(false)
-  // Cmd/Ctrl+Z here undoes only this visit's typing (the field shows every layer's name in turn).
+  // Cmd/Ctrl+Z here undoes only this visit's typing (the field shows every layer's name in turn),
+  // and with none left it is the editor's Undo, after which the field shows the layer's name.
   const field = useRef<HTMLInputElement>(null)
-  const history = useTypingUndo(setName, field)
+  const history = useTypingUndo(setName, field, { leave: () => setName(layer.name) })
   useEffect(() => setName(layer.name), [layer.name, layer.id])
   const others = info.layers.filter((other) => other.id !== layer.id)
   return (

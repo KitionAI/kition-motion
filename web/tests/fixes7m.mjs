@@ -135,7 +135,12 @@ try {
   await page.keyboard.press(`${h.primary}+KeyZ`)
   await page.waitForTimeout(250)
   const afterTwo = await opacity.inputValue()
-  h.step('typed 7, Cmd/Ctrl+Z twice in the field: it shows 50 (the value when it took the focus), not an older one', afterUndo === '50' && afterTwo === '50', `${afterUndo} / ${afterTwo}`)
+  // 7o: with nothing typed left to undo, the second Cmd/Ctrl+Z is the editor's Undo (of the 50), and the field shows the document's value.
+  await h.until(async () => (await opacity.inputValue()) === '100')
+  h.step('typed 7, Cmd/Ctrl+Z twice in the field: 50 (the value when it took the focus), then the editor’s Undo and the field shows the document’s 100', afterUndo === '50' && (await opacity.inputValue()) === '100' && (await opacityNow()) === 100, `${afterUndo} / ${afterTwo} → ${await opacity.inputValue()} (${JSON.stringify(await opacityNow())})`)
+  await page.keyboard.press(`${h.primary}+Shift+KeyZ`)
+  await h.until(async () => (await opacity.inputValue()) === '50')
+  h.step('(set-up) Cmd/Ctrl+Shift+Z there is the editor’s Redo: 50 again', (await opacity.inputValue()) === '50' && (await opacityNow()) === 50, `${await opacity.inputValue()} · ${JSON.stringify(await opacityNow())}`)
   await page.keyboard.type('8')
   await h.until(async () => (await opacity.inputValue()) === '508' || (await opacity.inputValue()) === '8')
   await page.keyboard.press('Escape')
@@ -154,7 +159,8 @@ try {
   const shownBack = await opacity.inputValue()
   await kit.getByTestId('motion-timeline').click({ position: { x: 5, y: 5 } }).catch(() => undefined)
   await page.waitForTimeout(400)
-  h.step('typed 30, Cmd/Ctrl+Z back to 50, then a click elsewhere: Opacity stays 50 (never an older value)', shownBack === '50' && (await opacityNow()) === 50, `${shownBack} · ${JSON.stringify(await opacityNow())}`)
+  // 7o: the first Cmd/Ctrl+Z takes the typing back to 50, the second is the editor's Undo (100), the third has nothing left to undo.
+  h.step('typed 30, Cmd/Ctrl+Z three times, then a click elsewhere: the field and Opacity are the document’s 100 (never the 50 or 30 the field showed)', shownBack === '100' && (await opacityNow()) === 100 && (await opacity.inputValue()) === '100', `${shownBack} · ${JSON.stringify(await opacityNow())}`)
 
   // 4. The Render Queue's sequence folder in either language.
   const jobs = async () => (await h.query('renderQueue.list', {})).items ?? []

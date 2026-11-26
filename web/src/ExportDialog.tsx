@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Button, Checkbox, Dialog, Field, Select, TextInput, toast, useKitEditor, type HostConnection, type KitEngine } from '@kition/sdk/editor'
 import type { MotionInfo } from './motion'
 import { counted } from './strings'
+import { Said, failed } from './errors'
 
 /**
  * The formats the web build renders (`bindings/wasm/src/movie.rs`), with their extensions: movies
@@ -156,7 +157,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose, onSaveFrame }
       onClose()
     } catch (error) {
       await doc.invoke<boolean>('exportCancel').catch(() => false)
-      toast.error(t('renderFailed'), { description: error instanceof Error ? error.message : String(error) })
+      failed(t, t('renderFailed'), error)
       setBusy(false)
       setStopping(false)
       setProgress(null)
@@ -172,9 +173,9 @@ export function ExportDialog({ info, doc, lottie = false, onClose, onSaveFrame }
     const name = path.split('/').pop() ?? path
     try {
       const answer = await run('file.exportLottie', { path: name, includeExpressions: expressions, textAsShapes })
-      if (answer === null) throw new Error(t('export.lottieFailed'))
+      if (answer === null) throw new Said(t('export.lottieFailed'))
       const bytes = await doc.invoke<Uint8Array | undefined>('takeFile', name)
-      if (!bytes) throw new Error(t('export.lottieFailed'))
+      if (!bytes) throw new Said(t('export.lottieFailed'))
       const written = await host.exportFile(path, bytes)
       toast.success(t('export.done', { name: written.split('/').pop() ?? written }))
       const said = (JSON.parse(answer) as { warnings?: unknown }).warnings
@@ -183,7 +184,7 @@ export function ExportDialog({ info, doc, lottie = false, onClose, onSaveFrame }
       if (list.length) setWarnings(list)
       else onClose()
     } catch (error) {
-      toast.error(t('renderFailed'), { description: error instanceof Error ? error.message : String(error) })
+      failed(t, t('renderFailed'), error)
       setBusy(false)
     }
   }

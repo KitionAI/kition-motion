@@ -61,7 +61,8 @@ let gestures = 0
 /**
  * One number of a property (the Properties panel's and the timeline's): commits on Enter or
  * blur; Escape drops the typed text and changes nothing. Cmd/Ctrl+Z while typing undoes only
- * this visit's typing, down to the value the field showed when it took the focus. With
+ * this visit's typing, down to the value the field showed when it took the focus, and then is the
+ * editor's Undo (the field showing the document's value after it). With
  * `onScrub`, a press dragged left or right scrubs the value (Shift ×10, Alt ×0.1); a press
  * without a drag starts typing.
  */
@@ -73,7 +74,8 @@ export function NumberField({ value, label, onCommit, testId, readOnly, onScrub,
   const [focused, setFocused] = useState(false)
   // Escape pressed: the blur that follows puts the value back instead of committing.
   const dropped = useRef(false)
-  const history = useTypingUndo(setText, input)
+  // Nothing left to undo here: the editor's Undo, after which the field shows the document's value.
+  const history = useTypingUndo(setText, input, { leave: () => setText(show(value)) })
   // The field holds the whole value in `text`; a narrow one shows it shortened until it is focused.
   const shown = fit && !focused ? fitted(text, fit) : text
   useEffect(() => {

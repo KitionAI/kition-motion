@@ -19,15 +19,33 @@ export function errorText(error: unknown) {
 }
 
 /**
- * Where the editor's failures go: the engine's English never stands alone. A refusal it knows reads
- * as a short sentence (select a layer, unlock it, check the value); anything else as "this did not
- * finish". The engine's own text stays in the details.
+ * A failure the editor shows, in the interface's language only: the engine's (or the host's) own
+ * text is English and may name a command, so it goes to the developer console, never into the
+ * toast. The toast is `title` (what failed) and `detail`, a translated generic line (or the
+ * message of a [`Said`], the editor's own words).
+ */
+export function failed(t: Strings, title: string, error: unknown, detail = t('error.details')) {
+  console.warn(`${title}: ${errorText(error)}`)
+  toast('error', title, error instanceof Said ? error.message : detail)
+}
+
+/** A failure the editor words itself, in the interface's language: [`failed`] shows its message. */
+export class Said extends Error {}
+
+/**
+ * Where the SDK frame's failures go (`report`), as [`failed`] shows them. A refusal of a command
+ * the editor knows reads as its short sentence alone (select a layer, unlock it, check the
+ * value); any other refused command as "this did not finish" over "nothing was changed" (a
+ * refused command changes nothing); a failed save or other step keeps its own title.
  */
 export function motionReport(t: Strings, commandFailed: string) {
   return (title: string, error: unknown) => {
     const text = errorText(error)
-    const known = KNOWN.find(([pattern]) => pattern.test(text))
-    if (known) toast('error', t(known[1]), text)
-    else toast('error', title === commandFailed ? t('error.failed') : title, text)
+    const known = title === commandFailed ? KNOWN.find(([pattern]) => pattern.test(text)) : undefined
+    if (known) {
+      console.warn(`${title}: ${text}`)
+      toast('error', t(known[1]))
+    } else if (title === commandFailed) failed(t, t('error.failed'), error, t('error.unchanged'))
+    else failed(t, title, error)
   }
 }

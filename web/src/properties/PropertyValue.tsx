@@ -150,9 +150,15 @@ function TextField({ value, label, onCommit, testId, readOnly }: { value: string
   const [text, setText] = useState(value)
   const typing = useRef(false)
   const dropped = useRef(false)
-  // Cmd/Ctrl+Z here undoes only this visit's typing (the field may show another layer's value next).
+  // Cmd/Ctrl+Z here undoes only this visit's typing (the field may show another layer's value next);
+  // with none left it is the editor's Undo, and the field follows the document again until typed in.
   const field = useRef<HTMLInputElement>(null)
-  const history = useTypingUndo(setText, field)
+  const history = useTypingUndo(setText, field, {
+    leave: () => {
+      typing.current = false
+      setText(value)
+    },
+  })
   useEffect(() => {
     if (!typing.current) setText(value)
   }, [value])
@@ -167,6 +173,7 @@ function TextField({ value, label, onCommit, testId, readOnly }: { value: string
         history.begin(text)
       }}
       onChange={(event) => {
+        typing.current = true
         setText(event.target.value)
         history.record(event.target.value)
       }}

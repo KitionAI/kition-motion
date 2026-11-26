@@ -816,6 +816,19 @@ impl Session {
         true
     }
 
+    /// Takes the last step back as if it had never been made: undone (on the replica too, as
+    /// [`Session::undo`] does) and not kept to redo. For a step its own gesture gives up, such as
+    /// a Type-tool click left without typing. False (nothing changes) when there is no step.
+    pub fn withdraw_last_step(&mut self) -> bool {
+        if !self.undo() {
+            return false;
+        }
+        if let Some((_, state)) = self.history.redo.pop() {
+            self.history.kdm.take_redo(&state);
+        }
+        true
+    }
+
     pub fn redo(&mut self) -> bool {
         if self.history.redo.is_empty() {
             return false;

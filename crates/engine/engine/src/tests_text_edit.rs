@@ -195,6 +195,35 @@ fn type_tool_layers_point_box_and_empty_cleanup() {
 }
 
 #[test]
+fn an_abandoned_type_tool_click_leaves_no_undo_step() {
+    let mut s = Session::default();
+    s.execute("comp.new", json!({"name": "C", "width": 640, "height": 360, "duration": 4})).unwrap();
+    let solid = s.execute("layer.newSolid", json!({"name": "Back"})).unwrap()["layer"].as_u64().unwrap();
+    let labels = |s: &Session| s.history.undo.iter().map(|u| u.0.clone()).collect::<Vec<_>>();
+    let before = labels(&s);
+    s.execute("layer.newText", json!({"text": "", "position": [100, 200], "justify": "left", "edit": true})).unwrap();
+    s.execute("text.endEdit", json!({})).unwrap();
+    assert_eq!(labels(&s), before, "neither the made layer nor its deletion is a step");
+    assert!(s.history.redo.is_empty(), "and Redo does not bring the layer back");
+    let ids: Vec<u64> = s.active_comp().unwrap().layers.iter().map(|l| l.id.0).collect();
+    assert_eq!(ids, [solid]);
+    assert!(s.state.text_edit.is_none());
+    // Undo now takes back the step before the click.
+    s.execute("edit.undo", json!({})).unwrap();
+    assert!(s.active_comp().unwrap().layers.is_empty());
+    s.execute("edit.redo", json!({})).unwrap();
+    assert_eq!(s.active_comp().unwrap().layers.len(), 1);
+    assert!(s.history.redo.is_empty());
+    // Typed and then deleted again: the typing was a step, so the deletion is one too, as before.
+    s.execute("layer.newText", json!({"text": "", "position": [100, 200], "justify": "left", "edit": true})).unwrap();
+    s.execute("text.insert", json!({"text": "x"})).unwrap();
+    s.execute("text.delete", json!({"direction": "backward"})).unwrap();
+    s.execute("text.endEdit", json!({})).unwrap();
+    assert_eq!(s.active_comp().unwrap().layers.len(), 1);
+    assert_eq!(s.history.undo.last().map(|u| u.0.as_str()), Some("Delete Empty Text Layer"));
+}
+
+#[test]
 fn edit_state_round_trips_through_serde() {
     let (mut s, t) = session("abc");
     s.execute("text.edit", json!({"layer": t, "select": [1, 2]})).unwrap();

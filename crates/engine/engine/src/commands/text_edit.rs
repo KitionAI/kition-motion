@@ -180,11 +180,34 @@ fn edit(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(state_json(s))
 }
 
-/// `text.endEdit`: stop editing (a Type-tool layer left empty is deleted).
+/// Whether the history's last step made layer `lid` of composition `cid` and nothing else: the
+/// project without that layer is the state before the step.
+fn made_by_last_step(s: &Session, cid: kition_motion_project::ItemId, lid: LayerId) -> bool {
+    let Some((_, before)) = s.history.undo.last() else { return false };
+    let mut without = (*s.project).clone();
+    let Some(comp) = without.comp_mut(cid) else { return false };
+    let count = comp.layers.len();
+    comp.layers.retain(|l| l.id != lid);
+    if comp.layers.len() == count {
+        return false;
+    }
+    // Making the layer took an id; the counter is not content.
+    without.next_id = before.next_id;
+    without.same_content(before)
+}
+
+/// `text.endEdit`: stop editing. A Type-tool layer left empty is deleted: when nothing happened
+/// since the click that made it, its step is withdrawn (no undo step, nothing to redo), else the
+/// deletion is a step of its own.
 fn end_edit(s: &mut Session, _: &Value) -> Result<Value> {
     let Some(e) = s.state.text_edit.take() else { return Ok(Value::Null) };
     if e.created && layer_doc(s, e.layer).is_some_and(|d| d.text.is_empty()) {
         let cid = s.active_comp_id().ok_or(EngineError::NoComp)?;
+        if made_by_last_step(s, cid, e.layer) && s.withdraw_last_step() {
+            s.state.selected_layers.retain(|l| *l != e.layer);
+            s.bump();
+            return Ok(Value::Null);
+        }
         s.edit("Delete Empty Text Layer", None, |proj, st| {
             if let Some(c) = proj.comp_mut(cid) {
                 c.layers.retain(|l| l.id != e.layer);

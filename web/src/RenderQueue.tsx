@@ -5,6 +5,7 @@ import { presetFolder } from './dialogs'
 import { SEQUENCES, sequenceName, writeExport } from './ExportDialog'
 import { parseAnswer, type ProjectItem, type ProjectSummary } from './footage'
 import { CATALOGS, counted } from './strings'
+import { failed } from './errors'
 
 /**
  * The Render Queue: export jobs kept in the project (the engine's `renderQueue.*`: each job is a
@@ -322,7 +323,7 @@ export function useRenderQueue({ doc, host, run, query, t }: { doc: KitEngine | 
       try {
         ids = (parseAnswer<number[]>(await doc.invoke<string>('renderSnapshot')) ?? []).filter((id) => typeof id === 'number')
       } catch (error) {
-        toast.error(t('queue.failed'), { description: error instanceof Error ? error.message : String(error) })
+        failed(t, t('queue.failed'), error)
       }
       const byId = new Map(items.map((item) => [item.id, item]))
       setJobs((now) => {

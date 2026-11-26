@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { toast, type HostConnection } from '@kition/sdk/editor'
+import { failed } from './errors'
 
 /**
  * Importing footage. Files go only through the host: File ▸ Import asks the host to pick one in
@@ -90,7 +91,7 @@ export function useFootage({ host, run, t }: { host: HostConnection; run: (comma
         const known = IMPORT_TYPES.includes(extension(name))
         // A movie in a codec the build names but cannot decode (VP8) says so, with what to do.
         const codec = /cannot be decoded/.test(error) ? /\b(VP8)\b/.exec(error)?.[1] : undefined
-        toast.error(t(codec ? 'import.codec' : known ? 'import.unreadable' : 'import.unsupported', { name, codec: codec ?? '' }), { description: error })
+        failed(t, t(codec ? 'import.codec' : known ? 'import.unreadable' : 'import.unsupported', { name, codec: codec ?? '' }), error)
       }
       if (placement) for (const item of items) await run('layer.addItem', { item, ...placement })
       if (items.length) toast.success(items.length === 1 ? t('import.done', { name: names[0] }) : t('import.doneMany', { count: items.length }))
@@ -109,7 +110,7 @@ export function useFootage({ host, run, t }: { host: HostConnection; run: (comma
     try {
       path = await host.pick('import', IMPORT_TYPES)
     } catch (error) {
-      toast.error(t('import.failed'), { description: error instanceof Error ? error.message : String(error) })
+      failed(t, t('import.failed'), error)
       return
     }
     if (path) await importPaths([path])
@@ -128,7 +129,7 @@ export function useFootage({ host, run, t }: { host: HostConnection; run: (comma
           const bytes = new Uint8Array(await file.arrayBuffer())
           paths.push(await host.exportFile([folder, file.name].filter(Boolean).join('/'), bytes))
         } catch (error) {
-          toast.error(t('import.failed'), { description: `${file.name}: ${error instanceof Error ? error.message : String(error)}` })
+          failed(t, t('import.failedFile', { name: file.name }), error)
         }
       }
       if (paths.length) await importPaths(paths, placement)
@@ -153,7 +154,7 @@ export function useFootage({ host, run, t }: { host: HostConnection; run: (comma
       try {
         path = await host.pick('replace', IMPORT_TYPES)
       } catch (error) {
-        toast.error(t('replace.failed', { name }), { description: error instanceof Error ? error.message : String(error) })
+        failed(t, t('replace.failed', { name }), error)
         return false
       }
       if (!path) return false

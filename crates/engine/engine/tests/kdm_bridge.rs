@@ -564,3 +564,33 @@ fn the_demo_project_round_trips_through_its_replica() {
     let b = peer(&mut s);
     assert!(kdm_model::same_content(&b.project, &s.project), "a peer opens the very same project");
 }
+
+#[test]
+fn a_type_tool_click_left_empty_leaves_no_step_on_the_engine_or_the_replica() {
+    let mut a = new_session();
+    let mut b = peer(&mut a);
+    let blue = layer(&a, "Blue");
+    a.execute("layer.rename", json!({"layer": blue, "name": "Sky"})).unwrap();
+    let steps = a.history.undo.len();
+    a.execute("layer.newText", json!({"text": "", "position": [100, 100], "justify": "left", "edit": true})).unwrap();
+    assert_eq!(a.active_comp().unwrap().layers.len(), 4, "the click made a layer to type in");
+    a.execute("text.endEdit", json!({})).unwrap();
+    assert_eq!(names(&a), ["Red", "Green", "Sky"], "the empty layer is gone");
+    assert_eq!(a.history.undo.len(), steps, "and no undo step is left");
+    assert!(a.history.redo.is_empty(), "nor anything to redo");
+    assert_eq!(a.kdm_resets(), 0);
+    assert!(holds(&a), "the replica holds the project");
+    send(&mut a, &mut b);
+    assert_same(&mut a, &mut b, "after the abandoned click");
+    // Undo takes back what was done before the click; Redo brings that back, not the layer.
+    a.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(names(&a), ["Red", "Green", "Blue"]);
+    assert!(holds(&a), "the replica follows the undo");
+    a.execute("edit.redo", json!({})).unwrap();
+    assert_eq!(names(&a), ["Red", "Green", "Sky"]);
+    assert!(a.history.redo.is_empty());
+    assert!(holds(&a), "the replica follows the redo");
+    assert_eq!(a.kdm_resets(), 0);
+    send(&mut a, &mut b);
+    assert_same(&mut a, &mut b, "after undo and redo");
+}

@@ -31,7 +31,7 @@ import { ARRANGE, ASSISTANT_NEEDS, type Convertible, KIT, KIT_RUNS, type Selecte
 import { EFFECT_PREFIX, EffectRibbon, FIND_EFFECT, FindEffectDialog, rememberEffect, type MotionEffect } from './effects'
 import { CanvasScrollbars, createViewStore } from './CanvasScrollbars'
 import { HomeTab } from './HomeTab'
-import { motionReport } from './errors'
+import { Said, failed, motionReport } from './errors'
 import { MotionDialogs, toHex, type MotionDialog, type Rgb } from './dialogs'
 import { Timeline, type TimelineKeys } from './timeline/Timeline'
 import { Transport } from './Transport'
@@ -741,7 +741,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       }
       toast.success(counted(t, 'collect.done', answer.files.length, { folder: inside }), answer.missing.length ? { description: t('collect.missing', { names: answer.missing.join(', ') }) } : undefined)
     } catch (error) {
-      toast.error(t('collect.failed'), { description: error instanceof Error ? error.message : String(error) })
+      failed(t, t('collect.failed'), error)
     }
   }
   /** The composition's current frame as a PNG beside the project. */
@@ -758,7 +758,7 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
       const written = await host.exportFile([folder, name].filter(Boolean).join('/'), bytes)
       toast.success(t('frameSaved', { name: written.split('/').pop() ?? written }))
     } catch (error) {
-      toast.error(t('frameFailed'), { description: error instanceof Error ? error.message : String(error) })
+      failed(t, t('frameFailed'), error)
     }
   }
   /** A Project item or files dragged over the composition or the timeline: taken as a copy. */
@@ -1089,13 +1089,13 @@ export function App({ host, phrase }: { host: HostConnection; phrase: Phrases })
     try {
       if ((await run('animation.savePreset', { path: file, name })) === null) return
       const bytes = await session.doc?.invoke<Uint8Array | undefined>('takeFile', file)
-      if (!bytes) throw new Error(t('preset.notWritten'))
+      if (!bytes) throw new Said(t('preset.notWritten'))
       const written = await host.exportFile([folder, inside, file].filter(Boolean).join('/'), bytes)
       // Named with the folder it went into, inside the project folder (Presets/Moves/Slide in.ecpreset).
       const shown = [inside.replace(/^\/+|\/+$/g, ''), written.split('/').pop() ?? written].filter(Boolean).join('/')
       toast.success(t('preset.saved', { name: shown }))
     } catch (error) {
-      toast.error(t('preset.saveFailed'), { description: error instanceof Error ? error.message : String(error) })
+      failed(t, t('preset.saveFailed'), error)
     }
   }
   const applyPreset = async () => {
