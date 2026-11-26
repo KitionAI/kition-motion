@@ -4,7 +4,7 @@
 // The person's edit is saved (the host keeps the replica); another program renames a layer in the
 // .kmotion; the editor reopens it with the stored snapshot: the rename shows, the rest is the
 // project the person saved, every layer keeps its engine id, the replica keeps its document id,
-// and every object of the stored replica keeps its object id. Prints PASS or FAIL per step.
+// and every object of the stored replica keeps its object id (the replica the next save stores). Prints PASS or FAIL per step.
 import { readFileSync } from 'node:fs'
 import { parseSchema, Replica } from '@kition/sdk/kdm'
 import { start } from './harness.mjs'
@@ -63,7 +63,10 @@ try {
   )
   step('the document keeps its replica id', (await docId()) === id, `${await docId()} vs ${id}`)
 
-  // The replica the next save stores holds every object it held, under the same object ids.
+  // The replica the next save (after another edit: an unchanged document has nothing to save)
+  // stores holds every object it held, under the same object ids.
+  await h.setUp([{ command: 'layer.newNull', params: {} }])
+  await until(async () => (await h.layers()).length === layers.length + 1)
   step('the next save writes the file', await save())
   const kept = await until(async () => {
     const now = await storedObjects()
@@ -72,7 +75,7 @@ try {
   step('the host keeps the replica with the outside change', kept)
   const now = (await storedObjects()) ?? {}
   const lost = Object.keys(before).filter((object) => !(object in now))
-  step('every object keeps its object id', lost.length === 0 && Object.keys(now).length === Object.keys(before).length, `lost ${lost.length} of ${Object.keys(before).length}; now ${Object.keys(now).length}`)
+  step('every object keeps its object id', lost.length === 0, `lost ${lost.length} of ${Object.keys(before).length}; now ${Object.keys(now).length}`)
   const object = Object.keys(before).find((key) => before[key].$type === 'Layer' && before[key].name === renamed.name && before[key].id === renamed.id)
   step('the renamed layer is the same object', object != null && now[object]?.name === 'Changed outside', String(object))
 } catch (error) {
