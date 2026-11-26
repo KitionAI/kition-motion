@@ -318,7 +318,7 @@ mod tests {
 
         let answer = doc.merge_changes(&changes, &agent).unwrap();
         assert_eq!(answer["scope"], Value::Null, "no step: {answer}");
-        assert_eq!(answer["damage"], json!("none"), "{answer}");
+        assert_eq!(answer["damage"], serde_json::to_value(Damage::None).unwrap(), "{answer}");
         assert_eq!(doc.version().unwrap(), version, "the version stays");
         assert_eq!(whole(&mut doc), before, "the state and the project stay");
         assert_eq!(doc.session.history.undo.len(), history, "the editor's history stays");

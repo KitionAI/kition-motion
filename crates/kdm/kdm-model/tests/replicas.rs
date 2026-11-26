@@ -105,6 +105,17 @@ fn deleting_a_precomp_a_draft_uses_removes_the_layer_using_it() {
     assert_same_content(&a.model().project, &project, "the view before the merge");
 }
 
+/// Merges `draft`'s changes since `base` into `doc`, which the repair takes back entirely: no
+/// step, the version and the state stay, and the view is still the replica's.
+fn merge_changing_nothing(doc: &mut common::Session, draft: &common::Session, base: &kition_kit::kdm::Version) {
+    let (version, state) = (doc.version(), doc.state_hash().unwrap());
+    let (scope, _) = try_merge(doc, draft, base).unwrap_or_else(|error| panic!("merge: {error}"));
+    assert_eq!(scope, None, "a merge that changes nothing records no step");
+    assert_eq!(doc.version(), version, "the version stays");
+    assert_eq!(doc.state_hash().unwrap(), state, "the state stays");
+    assert_view_is_replica(doc);
+}
+
 #[test]
 fn deleting_a_layer_a_draft_makes_a_matte_merges_cleanly() {
     let d = demo();
@@ -117,7 +128,9 @@ fn deleting_a_layer_a_draft_makes_a_matte_merges_cleanly() {
     layer_mut(&mut after_b, d.main, d.blue).track_matte =
         Some(kition_motion_project::TrackMatte { layer: d.green, kind: kition_motion_project::MatteKind::Alpha });
     record(&mut b, &person("b"), &after_b);
-    merge(&mut a, &b, &base);
+    // The repair clears the matte the draft named the deleted layer in, which is all the draft
+    // did: the merge changes nothing and records nothing (data model 6.6 D9).
+    merge_changing_nothing(&mut a, &b, &base);
     let main = a.model().project.comp(d.main).unwrap().clone();
     assert!(main.layer(d.green).is_none(), "the deleted layer stays deleted");
     assert_eq!(main.layer(d.blue).unwrap().track_matte, None, "no matte names it");
@@ -171,7 +184,9 @@ fn keys_at_one_time_on_both_sides_keep_one() {
         set_key(&mut after, d.main, d.red, "transform/opacity", 2.0, Value::Scalar(value));
         record(session, &person(name), &after);
     }
-    merge(&mut a, &b, &base);
+    // The repair keeps the document's key at 2 s, the one the draft's would have been beside:
+    // all the draft did is taken back, so the merge changes nothing and records nothing.
+    merge_changing_nothing(&mut a, &b, &base);
     let times: Vec<_> = keys(&a.model().project, d.main, d.red, "transform/opacity").iter().map(|k| k.time).collect();
     assert_eq!(times, vec![common::seconds(0.0), common::seconds(1.0), common::seconds(2.0)], "one key at 2 s");
 }
