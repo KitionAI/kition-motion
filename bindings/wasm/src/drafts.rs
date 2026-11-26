@@ -280,7 +280,8 @@ mod tests {
     fn comparing_a_draft_runs_the_kits_repair() {
         let (mut doc, changes) = parented_to_a_layer_deleted_meanwhile(true);
         let unrepaired = {
-            let replica = doc.session.kdm().unwrap().replica();
+            let kdm = doc.session.kdm().unwrap();
+            let replica = kdm.replica();
             diff_states(&replica.state_json().unwrap(), &replica.merged_state(&changes).unwrap()).to_json()
         };
         let preview = doc.compare_changes(&changes).unwrap();
