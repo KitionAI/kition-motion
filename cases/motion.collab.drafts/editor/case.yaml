@@ -1,0 +1,31 @@
+format: 1
+id: motion.collab.drafts/editor
+feature: motion.collab.drafts
+intent: >-
+  In the editor, through the development host (`&replica=1&checkpoints=1`, the sample project): the
+  person adds a null layer with Layer ▸ New ▸ Null Object; an agent's draft adds a solid (`ai/run`
+  on the draft); the draft's comparison (`draft/compare`) lists it and the project does not hold
+  it; the person renames the null layer meanwhile; the person accepts the draft (`draft/merge`, the
+  agent's origin): the timeline shows the solid's row and the new name. One click of Undo takes
+  back the solid only, Redo brings it back. A checkpoint recorded with a label at a save, a layer
+  added after it, the checkpoint restored (`replica/restore`): the timeline has the checkpoint's
+  layers, and one Undo brings the later layer back. In Chromium and WebKit.
+layer: gate
+source:
+  kind: synthetic
+  from: web/tests/drafts.mjs
+  license: Apache-2.0
+input: []
+steps:
+  - exec:
+      cmd: [node, web/tests/drafts.mjs, chromium]
+  - exec:
+      cmd: [node, web/tests/drafts.mjs, webkit]
+expected:
+  - actual: out:exec
+    compare: exit
+    value: 0
+tags: [browser]
+requires: [chromium, webkit]
+timeout_s: 300
+since: "2026-11-26"

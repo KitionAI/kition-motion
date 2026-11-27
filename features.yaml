@@ -106,10 +106,10 @@ features:
     dimension: [collab, ai, data-safety]
     priority: P1
     status: partial
-    paths: [bindings/wasm/src/drafts.rs, bindings/wasm/src/lib.rs, bindings/wasm/src/collab.rs, crates/engine/engine/src/kdm_bridge.rs, crates/kdm/kdm-model/src/session.rs, crates/kdm/kdm-model/src/validate.rs, crates/kdm/kdm-model/tests/replicas.rs, crates/engine/project/src/lib.rs, web/tests/outside.mjs, web/package.json]
+    paths: [bindings/wasm/src/drafts.rs, bindings/wasm/src/lib.rs, bindings/wasm/src/collab.rs, crates/engine/engine/src/kdm_bridge.rs, crates/kdm/kdm-model/src/session.rs, crates/kdm/kdm-model/src/validate.rs, crates/kdm/kdm-model/tests/replicas.rs, crates/engine/project/src/lib.rs, web/tests/outside.mjs, web/tests/drafts.mjs, web/package.json]
     target: "Kit UI protocol section 7 (replica/restore, UI-R1); engine contract members mergeChanges, compareChanges, restoreState, changesSince, modelReply, modelBatch, modelDescribe (K3a)"
-    gap: Engine tests merge a draft, compare it first, restore a version, answer receipts and replies and run the object model, and a browser test reopens a file changed outside; no browser case drives a draft or a restore in the editor yet.
-    cases: [motion.collab.drafts/engine-members, motion.collab.drafts/merge-repairs-and-ids, motion.collab.drafts/outside-file]
+    gap: Engine tests merge a draft, compare it first, restore a version, answer receipts and replies and run the object model, a browser test reopens a file changed outside, and test:drafts drives a draft's comparison and merge, Undo and Redo, and a checkpoint's restore in the editor. No editor test of a refused draft or a reload yet.
+    cases: [motion.collab.drafts/engine-members, motion.collab.drafts/merge-repairs-and-ids, motion.collab.drafts/outside-file, motion.collab.drafts/editor]
     since: "2026-11-26"
   - id: motion.platform.document-text
     title: "document.text: every composition's text layers as plain text for a host's search, cut at a limit"
