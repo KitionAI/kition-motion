@@ -120,7 +120,7 @@ features:
     cases: [motion.platform.document-text/text-layers]
     since: "2026-11-17"
   - id: motion.platform.document-identity
-    title: "A host asks the document id a .kmotion carries and forks a copied project (document.identity, document.fork; Kit Process Protocol 5.6): a .kmotion embeds no replica, so it carries none and forks into the same bytes"
+    title: "A host asks the document id a .kmotion carries and forks a copied project (file.identity, file.fork; Kit Process Protocol 5.6): a .kmotion embeds no replica, so it carries none and forks into the same bytes"
     dimension: [platform, data-safety]
     priority: P1
     status: has

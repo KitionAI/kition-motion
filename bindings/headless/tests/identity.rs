@@ -1,4 +1,4 @@
-//! `document.identity` and `document.fork` (Kit Process Protocol section 5.6, KitModel M7a)
+//! `file.identity` and `file.fork` (Kit Process Protocol section 5.6, KitModel M7a)
 //! through the real `kition-motion` process: a `.kmotion` is the project as JSON (`Project::to_json`)
 //! and embeds no replica; the kit makes one under a new id each time it opens a file
 //! (`MotionModel::import`). So a file carries no identity, and a fork is the same bytes with no id,
@@ -41,7 +41,7 @@ async fn a_motion_project_carries_no_identity_and_forks_into_the_same_bytes() {
     // An empty `.kmotion` (a file made for the kit before it saved a project there).
     std::fs::write(dir.join("New.kmotion"), b"").unwrap();
     let kit = launch(&dir).await;
-    assert!(kit.serves("document.identity"), "{}", kit.capabilities());
+    assert!(kit.serves("file.identity"), "{}", kit.capabilities());
 
     // No file carries an identity, a byte copy neither.
     std::fs::copy(dir.join("Cut.kmotion"), dir.join("Copy.kmotion")).unwrap();

@@ -2,9 +2,9 @@ format: 1
 id: motion.platform.document-identity/no-replica
 feature: motion.platform.document-identity
 intent: >-
-  Through the real kition-motion process, which lists the feature document.identity: a .kmotion is the
+  Through the real kition-motion process, which lists the feature file.identity: a .kmotion is the
   project as JSON and embeds no replica (the kit makes one under a new id on every open), so a
-  saved project, its byte copy and an empty .kmotion carry no identity (docId null); document.fork
+  saved project, its byte copy and an empty .kmotion carry no identity (docId null); file.fork
   writes the same bytes with no docId to a new file, which opens as the project, leaves the source
   unchanged, and never replaces an existing file (file_conflict).
 layer: gate

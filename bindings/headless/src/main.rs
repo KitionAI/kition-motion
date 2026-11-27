@@ -2,7 +2,7 @@
 //! runs (`kition-motion-kit`), served headless over the Kit Protocol by `kition-headless`, as the
 //! kit's `kit.json` declares it, with the object model
 //! (`model.describe`, `model.batch`) over the document's change exchange, and the identity a file
-//! carries (`document.identity`, `document.fork`): a `.kmotion` is the project as JSON and embeds no
+//! carries (`file.identity`, `file.fork`): a `.kmotion` is the project as JSON and embeds no
 //! replica (the kit makes one under a new id each time it opens a file), so a file carries no
 //! identity and a fork is the same bytes.
 
